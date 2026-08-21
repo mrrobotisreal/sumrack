@@ -14,15 +14,19 @@ import {
 import { LevelChip } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import { useBankItemDetail, type EncounterWithContext } from '@/db/hooks';
+import { useBankItemDetail, useItemReviewState, type EncounterWithContext } from '@/db/hooks';
+import type { CardRow, ReviewLogRow } from '@/db/repositories/reviews';
+import type { CardDirection } from '@/db/schema';
+import { DIRECTION_LABELS, formatDue, ratingName, stateName } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { speak } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { EditItemSheet } from './edit-item-sheet';
 
-/** The four FSRS directions a bank item can train (design §5) — real state lands in T06. */
-const DIRECTIONS = ['RU → EN', 'EN → RU', 'Listening', 'Production'] as const;
+/** All four FSRS directions (design §5); listening/production activate in T14/T12. */
+const DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening', 'production'];
+const HISTORY_LIMIT = 12;
 
 /**
  * Bank item detail (design §7.2): leads with encounters-in-context ("the
@@ -45,6 +49,8 @@ export function ItemDetailScreen({ id }: { id: string }) {
     void queryClient.invalidateQueries({ queryKey: ['bank-item'] });
     void queryClient.invalidateQueries({ queryKey: ['bank-word-status'] });
     void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
+    void queryClient.invalidateQueries({ queryKey: ['review-state'] });
+    void queryClient.invalidateQueries({ queryKey: ['due-count'] });
   }, [queryClient]);
 
   const confirmDelete = React.useCallback(() => {
@@ -162,24 +168,11 @@ export function ItemDetailScreen({ id }: { id: string }) {
         </View>
       </View>
 
-      {/* FSRS placeholder (honest, not broken — ticket scope note) */}
+      {/* real FSRS state per direction (T06) */}
       <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
         Reviews
       </Text>
-      <View className="overflow-hidden rounded-xl border border-border bg-surface">
-        {DIRECTIONS.map((d, i) => (
-          <View
-            key={d}
-            className={`flex-row items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}
-          >
-            <Text className="text-sm">{d}</Text>
-            <Text variant="caption">not yet scheduled</Text>
-          </View>
-        ))}
-        <View className="border-t border-border bg-surface-2 px-4 py-2">
-          <Text variant="caption">Spaced review begins with T06.</Text>
-        </View>
-      </View>
+      <ReviewStateSection bankItemId={item.id} />
 
       {/* encounters — the memory hooks */}
       <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
@@ -198,6 +191,120 @@ export function ItemDetailScreen({ id }: { id: string }) {
         onSaved={invalidate}
       />
     </ScrollView>
+  );
+}
+
+/**
+ * Per-direction FSRS state + recent review history (T06 — replaces the T05
+ * "not yet scheduled" placeholder). Directions without a card row are the
+ * not-yet-activated ones (listening/production until T14/T12).
+ */
+function ReviewStateSection({ bankItemId }: { bankItemId: string }) {
+  const state = useItemReviewState(bankItemId);
+  const cards = state.data?.cards ?? [];
+  const log = state.data?.log ?? [];
+  const cardByDirection = new Map(cards.map((c) => [c.direction, c]));
+  const directionByCardId = new Map(cards.map((c) => [c.id, c.direction]));
+
+  return (
+    <>
+      <View className="overflow-hidden rounded-xl border border-border bg-surface">
+        {DIRECTIONS.map((d, i) => (
+          <DirectionRow key={d} direction={d} card={cardByDirection.get(d)} first={i === 0} />
+        ))}
+      </View>
+
+      {log.length > 0 && (
+        <>
+          <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
+            Review history · {log.length >= 50 ? '50+' : log.length}
+          </Text>
+          <View className="overflow-hidden rounded-xl border border-border bg-surface">
+            {log.slice(0, HISTORY_LIMIT).map((entry, i) => (
+              <HistoryRow
+                key={entry.id}
+                entry={entry}
+                direction={directionByCardId.get(entry.cardId)}
+                first={i === 0}
+              />
+            ))}
+          </View>
+        </>
+      )}
+    </>
+  );
+}
+
+function DirectionRow({
+  direction,
+  card,
+  first,
+}: {
+  direction: CardDirection;
+  card: CardRow | undefined;
+  first: boolean;
+}) {
+  return (
+    <View
+      className={`flex-row items-center justify-between px-4 py-3 ${first ? '' : 'border-t border-border'}`}
+    >
+      <Text className="text-sm">{DIRECTION_LABELS[direction]}</Text>
+      {card ? (
+        <View className="items-end">
+          <Text className="text-sm">
+            {stateName(card.state)} · {formatDue(card.dueAt)}
+          </Text>
+          {card.reps > 0 && (
+            <Text variant="caption" className="mt-0.5 text-xs">
+              {card.reps} {card.reps === 1 ? 'rep' : 'reps'}
+              {card.lapses > 0 ? ` · ${card.lapses} ${card.lapses === 1 ? 'lapse' : 'lapses'}` : ''}
+              {card.stability > 0 ? ` · stability ${card.stability.toFixed(1)}d` : ''}
+            </Text>
+          )}
+        </View>
+      ) : (
+        <Text variant="caption">
+          {direction === 'listening' ? 'activates with T14' : 'activates with T12'}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function HistoryRow({
+  entry,
+  direction,
+  first,
+}: {
+  entry: ReviewLogRow;
+  direction: CardDirection | undefined;
+  first: boolean;
+}) {
+  const when = new Date(entry.reviewedAt).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  const again = entry.rating === 1;
+  return (
+    <View
+      className={`flex-row items-center justify-between px-4 py-2.5 ${first ? '' : 'border-t border-border'}`}
+    >
+      <View className="flex-row items-center gap-2">
+        <Text className={`font-ui-medium text-sm ${again ? 'text-danger' : 'text-success'}`}>
+          {ratingName(entry.rating)}
+        </Text>
+        {direction && (
+          <Text variant="caption" className="text-xs">
+            {DIRECTION_LABELS[direction]}
+          </Text>
+        )}
+      </View>
+      <Text variant="caption" className="text-xs">
+        {when}
+      </Text>
+    </View>
   );
 }
 

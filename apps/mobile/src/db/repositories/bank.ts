@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, like, ne, not, or, sql } from 'drizzle-orm';
 
 import { newId } from '../ids';
 import { normalizePhrase, normalizeRu } from '../normalize';
@@ -65,12 +65,22 @@ export interface BankFilterOptions {
   sourceStoryIds: string[];
 }
 
+export interface BankRepoHooks {
+  /**
+   * Runs after every successful addWord/addPhrase (created or deduped).
+   * T06 wires FSRS card creation here (see createRepositories) so every
+   * write path — popup, phrase sheet, manual add, future journal highlights —
+   * gets cards without knowing about the reviews repo.
+   */
+  afterAdd?: (item: BankItemRow, created: boolean) => Promise<void>;
+}
+
 /**
  * The word bank. Owns the dedup invariant (design §5): words are unique by
  * normalized lemma, phrases by normalized text — adding a known lemma again
  * attaches a new encounter, never a duplicate item.
  */
-export function createBankRepo(db: SumrakDB) {
+export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
   async function insertEncounter(
     bankItemId: string,
     surface: string,
@@ -95,6 +105,55 @@ export function createBankRepo(db: SumrakDB) {
 
   return {
     getItem: getById,
+
+    /** Batch fetch by id, order not guaranteed. Missing ids are silently absent. */
+    async getItemsByIds(ids: string[]): Promise<BankItemRow[]> {
+      if (ids.length === 0) return [];
+      return db.select().from(bankItems).where(inArray(bankItems.id, ids));
+    },
+
+    /**
+     * Distractor pool for multiple choice (design §7.3 mode 2): candidates
+     * matched to the target in tiers — same POS + level first, then same
+     * POS, then same level, then same kind — randomized within each tier.
+     * Items without a translation (needsEnrichment) never qualify: their
+     * option text would be empty. Callers overfetch and dedup display
+     * strings; fewer than 3 usable distractors means "play flashcard
+     * instead", decided by the session builder.
+     */
+    async findDistractors(target: BankItemRow, count: number): Promise<BankItemRow[]> {
+      const picked: BankItemRow[] = [];
+      const excluded = new Set<string>([target.id]);
+
+      type Cond = ReturnType<typeof and>;
+      const tiers: (() => Cond)[] = [];
+      // Tier conditions are lazy so each query excludes everything picked so far.
+      const base = () => [not(inArray(bankItems.id, [...excluded])), ne(bankItems.translation, '')];
+      if (target.pos && target.level) {
+        tiers.push(() =>
+          and(...base(), eq(bankItems.pos, target.pos!), eq(bankItems.level, target.level!)),
+        );
+      }
+      if (target.pos) tiers.push(() => and(...base(), eq(bankItems.pos, target.pos!)));
+      if (target.level) tiers.push(() => and(...base(), eq(bankItems.level, target.level!)));
+      tiers.push(() => and(...base(), eq(bankItems.kind, target.kind)));
+      tiers.push(() => and(...base()));
+
+      for (const tier of tiers) {
+        if (picked.length >= count) break;
+        const rows = await db
+          .select()
+          .from(bankItems)
+          .where(tier())
+          .orderBy(sql`RANDOM()`)
+          .limit(count - picked.length);
+        for (const row of rows) {
+          excluded.add(row.id);
+          picked.push(row);
+        }
+      }
+      return picked;
+    },
 
     async getItemWithEncounters(id: string) {
       const item = await getById(id);
@@ -136,6 +195,7 @@ export function createBankRepo(db: SumrakDB) {
       const existing = existingRows[0];
       if (existing) {
         const encounter = await insertEncounter(existing.id, input.surface, input);
+        await hooks.afterAdd?.(existing, false);
         return { item: existing, created: false, encounter };
       }
       const row: typeof bankItems.$inferInsert = {
@@ -157,7 +217,9 @@ export function createBankRepo(db: SumrakDB) {
       };
       await db.insert(bankItems).values(row);
       const encounter = await insertEncounter(row.id, input.surface, input);
-      return { item: (await getById(row.id))!, created: true, encounter };
+      const item = (await getById(row.id))!;
+      await hooks.afterAdd?.(item, true);
+      return { item, created: true, encounter };
     },
 
     /** Add a phrase — dedup on normalized text. */
@@ -171,6 +233,7 @@ export function createBankRepo(db: SumrakDB) {
       const existing = existingRows[0];
       if (existing) {
         const encounter = await insertEncounter(existing.id, input.surface, input);
+        await hooks.afterAdd?.(existing, false);
         return { item: existing, created: false, encounter };
       }
       const row: typeof bankItems.$inferInsert = {
@@ -192,7 +255,9 @@ export function createBankRepo(db: SumrakDB) {
       };
       await db.insert(bankItems).values(row);
       const encounter = await insertEncounter(row.id, input.surface, input);
-      return { item: (await getById(row.id))!, created: true, encounter };
+      const item = (await getById(row.id))!;
+      await hooks.afterAdd?.(item, true);
+      return { item, created: true, encounter };
     },
 
     /** Record an additional encounter for an existing item. */

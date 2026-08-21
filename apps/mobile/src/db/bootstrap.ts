@@ -31,12 +31,24 @@ const LEGACY_THEME_STORAGE_KEY = 'sumrak-theme';
  * 2. migrate the T01 AsyncStorage theme setting into the settings table;
  * 3. auto-import the two bundled T02 sample packs (no-op when already at
  *    the bundled version — the importer is idempotent; a bumped bundled
- *    version upgrades in place and user refs survive by design).
+ *    version upgrades in place and user refs survive by design);
+ * 4. backfill FSRS cards for bank items that predate T06 (or predate a
+ *    direction activating in T12/T14) — idempotent, no-op when healthy.
  */
 export async function runBootstrap(db: SumrakDB, repos: Repositories): Promise<void> {
   initAnalyticsSink((event, props) => void repos.stats.logEvent(event, props));
 
   await migrateLegacyThemeSetting(repos);
+
+  try {
+    const backfilled = await repos.reviews.backfillCards();
+    if (backfilled > 0) {
+      console.log(`[bootstrap] backfilled ${backfilled} FSRS cards for pre-existing bank items`);
+      track('cards_backfilled', { count: backfilled });
+    }
+  } catch (err) {
+    console.error('[bootstrap] FSRS card backfill failed (non-fatal)', err);
+  }
 
   for (const rawPack of [pack1, pack2]) {
     const packId = (rawPack as { id: string }).id;

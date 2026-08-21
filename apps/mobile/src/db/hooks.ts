@@ -20,6 +20,8 @@ export const queryKeys = {
   bankWordStatus: (lemmaNorm: string) => ['bank-word-status', lemmaNorm] as const,
   bankFilterOptions: ['bank-items', 'filter-options'] as const,
   dueCount: ['due-count'] as const,
+  itemReviewState: (bankItemId: string) => ['review-state', bankItemId] as const,
+  dailyActivity: ['daily-activity'] as const,
   tokenSearch: (q: string) => ['token-search', q] as const,
   storyProgressList: ['story-progress'] as const,
   storyProgress: (packId: string, storyId: string) => ['story-progress', packId, storyId] as const,
@@ -102,15 +104,37 @@ export function useBankItemDetail(id: string | undefined) {
   });
 }
 
-/**
- * Due-card count stub for the Today screen. Real due logic (FSRS
- * scheduling, per-direction queues) is T06 — the query shape is what
- * matters here.
- */
+/** Live due-card count (ACTIVE_DIRECTIONS) — the Today tab's headline number. */
 export function useDueCardCount() {
   return useQuery({
     queryKey: queryKeys.dueCount,
     queryFn: () => repos.reviews.countDueCards(),
+  });
+}
+
+/** Today's raw activity counters (reviews done, reading ms) — goal logic is T19. */
+export function useDailyActivity() {
+  return useQuery({
+    queryKey: queryKeys.dailyActivity,
+    queryFn: () => repos.stats.getDailyActivity(),
+  });
+}
+
+/**
+ * Per-direction FSRS cards + full review history for one bank item — the
+ * card-detail "Reviews" section (replaces the T05 placeholder).
+ */
+export function useItemReviewState(bankItemId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.itemReviewState(bankItemId ?? ''),
+    queryFn: async () => {
+      const [cards, log] = await Promise.all([
+        repos.reviews.listCardsForItem(bankItemId!),
+        repos.reviews.listReviewLogForItem(bankItemId!),
+      ]);
+      return { cards, log };
+    },
+    enabled: !!bankItemId,
   });
 }
 

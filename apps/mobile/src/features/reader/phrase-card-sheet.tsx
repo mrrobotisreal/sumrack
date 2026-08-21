@@ -73,6 +73,7 @@ function PhraseSheet({ target, onClose }: { target: PhraseCardTarget; onClose: (
         track('phrase_added_to_bank', { words: wordCount, created: result.created });
         void queryClient.invalidateQueries({ queryKey: ['bank-items'] });
         void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
+        void queryClient.invalidateQueries({ queryKey: ['due-count'] });
         onClose();
       });
   }, [target, saving, surface, translation, note, queryClient, onClose]);

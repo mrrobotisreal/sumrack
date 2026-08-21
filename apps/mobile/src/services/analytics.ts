@@ -33,7 +33,13 @@ export type AnalyticsEvent =
   | 'bank_item_viewed'
   | 'bank_item_edited'
   | 'bank_item_deleted'
-  | 'bank_manual_added';
+  | 'bank_manual_added'
+  | 'cards_backfilled'
+  | 'review_session_started'
+  | 'review_session_empty'
+  | 'review_graded'
+  | 'review_session_finished'
+  | 'review_session_abandoned';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

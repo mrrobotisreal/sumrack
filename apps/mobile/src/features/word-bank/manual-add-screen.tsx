@@ -62,6 +62,7 @@ export function ManualAddScreen() {
       void queryClient.invalidateQueries({ queryKey: ['bank-items'] });
       void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
       void queryClient.invalidateQueries({ queryKey: ['bank-word-status'] });
+      void queryClient.invalidateQueries({ queryKey: ['due-count'] });
       router.back();
     });
   }, [saving, kind, lemma, surface, translation, pos, grammar, level, note, queryClient, router]);

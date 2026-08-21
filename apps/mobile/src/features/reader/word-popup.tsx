@@ -65,6 +65,8 @@ function WordPopupSheet({ target, onClose }: { target: WordPopupTarget; onClose:
     void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
     void queryClient.invalidateQueries({ queryKey: ['bank-word-status'] });
     void queryClient.invalidateQueries({ queryKey: ['bank-item'] });
+    // Adds create FSRS cards (due immediately) — Today's count must follow.
+    void queryClient.invalidateQueries({ queryKey: ['due-count'] });
   }, [queryClient]);
 
   // Encounter-on-lookup (configurable, §7.1): once per popup open, an

@@ -12,12 +12,22 @@ import { createSyncStateRepo } from './sync-state';
  * The repository layer — the ONLY place Drizzle/SQL is allowed (roadmap §3).
  * Components and services consume these (usually via React Query hooks in
  * src/db/hooks.ts); nothing outside src/db touches the database directly.
+ *
+ * Cross-repo invariant wired here (T06): every bank add — from any write
+ * path — ensures the item's ACTIVE_DIRECTIONS FSRS cards exist. ensureCards
+ * is idempotent, and running it on deduped adds too quietly heals items
+ * that predate T06.
  */
 export function createRepositories(db: SumrakDB) {
+  const reviews = createReviewsRepo(db);
   return {
     content: createContentRepo(db),
-    bank: createBankRepo(db),
-    reviews: createReviewsRepo(db),
+    bank: createBankRepo(db, {
+      afterAdd: async (item) => {
+        await reviews.ensureCards(item.id);
+      },
+    }),
+    reviews,
     journal: createJournalRepo(db),
     reading: createReadingRepo(db),
     stats: createStatsRepo(db),
