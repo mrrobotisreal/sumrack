@@ -20,10 +20,28 @@ export const DEFAULT_REPO: GithubRepoConfig = {
   branch: 'main',
 };
 
+/**
+ * The content repo's original (misspelled) name. It was renamed on GitHub to
+ * `sumrak-content` on 2026-08-21; a device that saved settings before then
+ * still has the old name stored. GitHub redirects renamed repos, but the
+ * redirect dies the moment anyone creates a new repo under the old name — so
+ * heal the stored value once on read instead of relying on it (T09).
+ */
+const LEGACY_REPO_NAME = 'sumrack-content';
+
 export async function getRepoConfig(): Promise<GithubRepoConfig | null> {
   const stored = await repos.settings.get<GithubRepoConfig>(SETTING_KEYS.contentRepo);
   if (!stored || !stored.owner?.trim() || !stored.repo?.trim()) return null;
-  return { owner: stored.owner.trim(), repo: stored.repo.trim(), branch: stored.branch?.trim() };
+  const config: GithubRepoConfig = {
+    owner: stored.owner.trim(),
+    repo: stored.repo.trim(),
+    branch: stored.branch?.trim(),
+  };
+  if (config.repo === LEGACY_REPO_NAME && config.owner === DEFAULT_REPO.owner) {
+    config.repo = DEFAULT_REPO.repo;
+    await setRepoConfig(config);
+  }
+  return config;
 }
 
 export async function setRepoConfig(config: GithubRepoConfig): Promise<void> {

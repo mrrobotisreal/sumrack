@@ -36,6 +36,20 @@ export const StoryMetaSchema = z.strictObject({
 export type StoryMeta = z.infer<typeof StoryMetaSchema>;
 
 /**
+ * Optional ElevenLabs voice settings for one rendition (T09, additive).
+ * All fields are provider-defined 0..1 knobs except `speed` (~0.7–1.2).
+ */
+export const VoiceSettingsSchema = z.strictObject({
+  /** Lower = more expressive/variable, higher = more consistent. */
+  stability: z.number().min(0).max(1).optional(),
+  similarityBoost: z.number().min(0).max(1).optional(),
+  /** Style exaggeration; costs stability, use sparingly. */
+  style: z.number().min(0).max(1).optional(),
+  /** Playback speed multiplier applied at synthesis time. */
+  speed: z.number().min(0.7).max(1.2).optional(),
+});
+
+/**
  * Voice direction for one narration rendition (consumed by T09's
  * `pipeline audio`; carried through untouched by `annotate`).
  */
@@ -52,8 +66,11 @@ export const VoiceDirectionSchema = z.strictObject({
   stylePrompt: z.string().min(1).optional(),
   /** Free-form human notes on pacing, emphasis, pauses. */
   deliveryNotes: z.string().min(1).optional(),
+  /** Optional provider voice settings for this rendition (T09, additive). */
+  settings: VoiceSettingsSchema.optional(),
 });
 export type VoiceDirection = z.infer<typeof VoiceDirectionSchema>;
+export type VoiceSettings = z.infer<typeof VoiceSettingsSchema>;
 
 export const FrontmatterSchema = z.strictObject({
   pack: PackMetaSchema,

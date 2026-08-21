@@ -21,7 +21,30 @@ pnpm pipeline annotate s1.draft.md s2.draft.md s3.draft.md -o pack.json
 
 # validate an existing pack.json independently
 pnpm pipeline validate path/to/pack.json
+
+# narration (T09; needs ELEVENLABS_API_KEY in the env or a gitignored .env at
+# the repo root — the pipeline never prints the value). First audition:
+pnpm pipeline audio s1.draft.md s2.draft.md -o packs/my-pack --audition 3
+# …listen to packs/my-pack/audition/*.mp3, pick a seed per track, finalize:
+pnpm pipeline audio s1.draft.md s2.draft.md -o packs/my-pack \
+  --seed my-track-id=123456 --seed other-track-id=654321
+# finalize writes audio/*.opus + pack.json (with word stamps) into the pack
+# dir; a per-track stamp report (coverage %, monotonicity) prints per run.
+# Iterate story-by-story with --stories / --tracks — pack.json merges.
+
+# publish the finished pack dir into the content repo (commit; push is opt-in)
+pnpm pipeline publish packs/my-pack --content ../sumrak-content --push
 ```
+
+Audio notes: the `voice:` frontmatter drives rendering — `stylePrompt` is fed
+to ElevenLabs as `previous_text` (write it in Russian, in the story's mood, as
+if it were the narrator's preceding lines), `settings` maps to provider voice
+settings (`stability`, `style`, `speed`, `similarityBoost`), and `deliveryNotes`
+stay human-only. A track whose character alignment can't be trusted ships with
+zero word stamps (the app falls back to sentence-level karaoke) — the report
+says so; re-render with another seed rather than shipping bad stamps.
+`pipeline publish` refuses same-version content changes: bump `pack.version`
+in every draft of the pack instead.
 
 `pnpm pipeline` runs at the repo root, so relative paths resolve from there. Exit codes: `0` success, `1` validation errors (all of them listed, `file:line: message`), `2` usage.
 
