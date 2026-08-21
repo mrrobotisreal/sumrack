@@ -4,3 +4,4 @@ dist/
 apps/mobile/android/
 apps/mobile/ios/
 pnpm-lock.yaml
+packages/schema/fixtures/

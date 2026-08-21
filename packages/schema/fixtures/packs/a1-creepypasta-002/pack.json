@@ -1,0 +1,569 @@
+{
+  "id": "a1-creepypasta-002",
+  "version": 1,
+  "type": "stories",
+  "title": { "ru": "Фотография", "en": "The Photograph" },
+  "level": "A1",
+  "tags": ["creepypasta", "horror", "family", "grammar:genitive", "grammar:past-tense"],
+  "stories": [
+    {
+      "id": "the-photograph",
+      "title": { "ru": "Фотография", "en": "The Photograph" },
+      "level": "A1",
+      "audio": [],
+      "sentences": [
+        {
+          "id": "photo-s01",
+          "ru": "У меня есть старая фотография.",
+          "en": "I have an old photograph.",
+          "grammarTopics": ["possession-u-genitive"],
+          "tokens": [
+            {
+              "text": "У",
+              "lemma": "у",
+              "translation": "at (possession)",
+              "pos": "prep",
+              "grammar": "+ gen.; у меня есть = I have",
+              "level": "A1"
+            },
+            {
+              "text": "меня",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "gen.",
+              "level": "A1"
+            },
+            {
+              "text": "есть",
+              "lemma": "есть",
+              "translation": "there is",
+              "pos": "pred",
+              "grammar": "existential (у меня есть = I have)",
+              "level": "A1"
+            },
+            {
+              "text": "старая",
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "фотография",
+              "lemma": "фотография",
+              "translation": "photograph",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s02",
+          "ru": "На ней мой дом и моя семья.",
+          "en": "In it are my house and my family.",
+          "grammarTopics": ["prepositional-case", "possessive-pronouns"],
+          "tokens": [
+            {
+              "text": "На",
+              "lemma": "на",
+              "translation": "in, on",
+              "pos": "prep",
+              "grammar": "+ prep. (location); на фотографии = in the photo",
+              "level": "A1"
+            },
+            {
+              "text": "ней",
+              "lemma": "она",
+              "translation": "it (the photo)",
+              "pos": "pron",
+              "grammar": "f.sg. prep. (н- after preposition)",
+              "level": "A1"
+            },
+            {
+              "text": "мой",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "дом",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            { "text": "и", "lemma": "и", "translation": "and", "pos": "conj", "level": "A1" },
+            {
+              "text": "моя",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "семья",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s03",
+          "ru": "Мама, папа, я и бабушка.",
+          "en": "Mom, dad, me, and grandma.",
+          "grammarTopics": ["family-vocabulary"],
+          "tokens": [
+            {
+              "text": "Мама",
+              "lemma": "мама",
+              "translation": "mom",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ",", "isPunct": true },
+            {
+              "text": "папа",
+              "lemma": "папа",
+              "translation": "dad",
+              "pos": "noun",
+              "grammar": "m.sg. nom. (declines like f.)",
+              "level": "A1"
+            },
+            { "text": ",", "isPunct": true },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            { "text": "и", "lemma": "и", "translation": "and", "pos": "conj", "level": "A1" },
+            {
+              "text": "бабушка",
+              "lemma": "бабушка",
+              "translation": "grandma",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s04",
+          "ru": "Но есть проблема.",
+          "en": "But there is a problem.",
+          "grammarTopics": ["existential-est"],
+          "tokens": [
+            { "text": "Но", "lemma": "но", "translation": "but", "pos": "conj", "level": "A1" },
+            {
+              "text": "есть",
+              "lemma": "есть",
+              "translation": "there is",
+              "pos": "pred",
+              "grammar": "existential",
+              "level": "A1"
+            },
+            {
+              "text": "проблема",
+              "lemma": "проблема",
+              "translation": "a problem",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s05",
+          "ru": "В окне дома стоит человек.",
+          "en": "In the window of the house stands a man.",
+          "grammarTopics": ["prepositional-case", "genitive-case", "word-order"],
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "окне",
+              "lemma": "окно",
+              "translation": "the window",
+              "pos": "noun",
+              "grammar": "n.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "дома",
+              "lemma": "дом",
+              "translation": "of the house",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "стоит",
+              "lemma": "стоять",
+              "translation": "stands",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "человек",
+              "lemma": "человек",
+              "translation": "a man, a person",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s06",
+          "ru": "Мы не знаем его.",
+          "en": "We do not know him.",
+          "grammarTopics": ["negation", "accusative-case"],
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            { "text": "не", "lemma": "не", "translation": "not", "pos": "part", "level": "A1" },
+            {
+              "text": "знаем",
+              "lemma": "знать",
+              "translation": "know",
+              "pos": "verb",
+              "grammar": "1pl. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "его",
+              "lemma": "он",
+              "translation": "him",
+              "pos": "pron",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s07",
+          "ru": "Его лицо белое, а глаза чёрные.",
+          "en": "His face is white, and his eyes are black.",
+          "grammarTopics": ["adjective-agreement", "contrast-a"],
+          "tokens": [
+            {
+              "text": "Его",
+              "lemma": "его",
+              "translation": "his",
+              "pos": "pron",
+              "grammar": "possessive, indeclinable",
+              "level": "A1"
+            },
+            {
+              "text": "лицо",
+              "lemma": "лицо",
+              "translation": "face",
+              "pos": "noun",
+              "grammar": "n.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "белое",
+              "lemma": "белый",
+              "translation": "white",
+              "pos": "adj",
+              "grammar": "n.sg. nom.",
+              "level": "A1"
+            },
+            { "text": ",", "isPunct": true },
+            {
+              "text": "а",
+              "lemma": "а",
+              "translation": "and (contrast)",
+              "pos": "conj",
+              "grammar": "contrastive — softer than но",
+              "level": "A1"
+            },
+            {
+              "text": "глаза",
+              "lemma": "глаз",
+              "translation": "eyes",
+              "pos": "noun",
+              "grammar": "m.pl. nom. (irregular plural)",
+              "level": "A1"
+            },
+            {
+              "text": "чёрные",
+              "lemma": "чёрный",
+              "translation": "black",
+              "pos": "adj",
+              "grammar": "pl. nom.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s08",
+          "ru": "Каждый год он ближе к стеклу.",
+          "en": "Every year he is closer to the glass.",
+          "grammarTopics": ["comparative", "dative-case", "time-expressions"],
+          "tokens": [
+            {
+              "text": "Каждый",
+              "lemma": "каждый",
+              "translation": "every",
+              "pos": "pron",
+              "grammar": "m.sg. acc. (time expression)",
+              "level": "A1"
+            },
+            {
+              "text": "год",
+              "lemma": "год",
+              "translation": "year",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "ближе",
+              "lemma": "близкий",
+              "translation": "closer",
+              "pos": "adj",
+              "grammar": "comparative of близкий",
+              "level": "A2"
+            },
+            {
+              "text": "к",
+              "lemma": "к",
+              "translation": "to, toward",
+              "pos": "prep",
+              "grammar": "+ dat.",
+              "level": "A1"
+            },
+            {
+              "text": "стеклу",
+              "lemma": "стекло",
+              "translation": "the glass",
+              "pos": "noun",
+              "grammar": "n.sg. dat.",
+              "level": "A2"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s09",
+          "ru": "Вчера я снова смотрел на фотографию.",
+          "en": "Yesterday I looked at the photograph again.",
+          "grammarTopics": ["past-tense", "accusative-case"],
+          "tokens": [
+            {
+              "text": "Вчера",
+              "lemma": "вчера",
+              "translation": "yesterday",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "снова",
+              "lemma": "снова",
+              "translation": "again",
+              "pos": "adv",
+              "level": "A2"
+            },
+            {
+              "text": "смотрел",
+              "lemma": "смотреть",
+              "translation": "looked",
+              "pos": "verb",
+              "grammar": "m.sg. past (impf.); смотреть на + acc. = look at",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ acc. (direction of gaze)",
+              "level": "A1"
+            },
+            {
+              "text": "фотографию",
+              "lemma": "фотография",
+              "translation": "the photograph",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s10",
+          "ru": "Окно на ней пустое.",
+          "en": "The window in it is empty.",
+          "grammarTopics": ["adjective-agreement", "prepositional-case"],
+          "tokens": [
+            {
+              "text": "Окно",
+              "lemma": "окно",
+              "translation": "the window",
+              "pos": "noun",
+              "grammar": "n.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "in, on",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "ней",
+              "lemma": "она",
+              "translation": "it (the photo)",
+              "pos": "pron",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "пустое",
+              "lemma": "пустой",
+              "translation": "empty",
+              "pos": "adj",
+              "grammar": "n.sg. nom.",
+              "level": "A2"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        },
+        {
+          "id": "photo-s11",
+          "ru": "А сегодня утром я слышал шаги в моём доме.",
+          "en": "And this morning I heard footsteps in my house.",
+          "grammarTopics": ["past-tense", "time-expressions", "prepositional-case"],
+          "tokens": [
+            {
+              "text": "А",
+              "lemma": "а",
+              "translation": "and",
+              "pos": "conj",
+              "grammar": "contrastive opener",
+              "level": "A1"
+            },
+            {
+              "text": "сегодня",
+              "lemma": "сегодня",
+              "translation": "today",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "утром",
+              "lemma": "утро",
+              "translation": "in the morning",
+              "pos": "noun",
+              "grammar": "n.sg. instr., used adverbially; сегодня утром = this morning",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "слышал",
+              "lemma": "слышать",
+              "translation": "heard",
+              "pos": "verb",
+              "grammar": "m.sg. past (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "шаги",
+              "lemma": "шаг",
+              "translation": "footsteps",
+              "pos": "noun",
+              "grammar": "m.pl. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "моём",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "доме",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            { "text": ".", "isPunct": true }
+          ]
+        }
+      ]
+    }
+  ]
+}

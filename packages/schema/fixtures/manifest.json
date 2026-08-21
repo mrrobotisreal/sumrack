@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-21T00:00:00Z",
+  "packs": [
+    {
+      "id": "a1-creepypasta-001",
+      "version": 1,
+      "type": "stories",
+      "level": "A1",
+      "title": {
+        "ru": "Стук в стене",
+        "en": "The Knock in the Wall"
+      },
+      "bytes": 37776,
+      "files": [
+        {
+          "path": "audio/knock-in-the-wall-anton-creepy.opus",
+          "sha256": "adb0e8366eb7d36b03af364c041650eefe3a37a0c6ea82154add9e38506fb975"
+        },
+        {
+          "path": "pack.json",
+          "sha256": "946279403713d6be77b8ed14739f32d1f7d29945d943d2d00b3d4fe6dedda009"
+        }
+      ]
+    },
+    {
+      "id": "a1-creepypasta-002",
+      "version": 1,
+      "type": "stories",
+      "level": "A1",
+      "title": {
+        "ru": "Фотография",
+        "en": "The Photograph"
+      },
+      "bytes": 17805,
+      "files": [
+        {
+          "path": "pack.json",
+          "sha256": "301a40d06be2358658843c2233515f123a5ad55bba950cfd851b66092d87d102"
+        }
+      ]
+    }
+  ]
+}

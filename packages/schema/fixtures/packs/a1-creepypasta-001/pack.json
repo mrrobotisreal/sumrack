@@ -1,0 +1,1070 @@
+{
+  "id": "a1-creepypasta-001",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Стук в стене",
+    "en": "The Knock in the Wall"
+  },
+  "level": "A1",
+  "tags": [
+    "creepypasta",
+    "horror",
+    "apartment",
+    "grammar:prepositional",
+    "grammar:present-tense"
+  ],
+  "stories": [
+    {
+      "id": "knock-in-the-wall",
+      "title": {
+        "ru": "Стук в стене",
+        "en": "The Knock in the Wall"
+      },
+      "level": "A1",
+      "audio": [
+        {
+          "id": "knock-anton-creepy",
+          "voice": "elevenlabs:Anton",
+          "style": "creepy-whisper",
+          "file": "audio/knock-in-the-wall-anton-creepy.opus",
+          "durationMs": 35060,
+          "timestamps": [
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 0,
+              "startMs": 500,
+              "endMs": 920
+            },
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 1,
+              "startMs": 980,
+              "endMs": 1400
+            },
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 2,
+              "startMs": 1460,
+              "endMs": 1880
+            },
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 3,
+              "startMs": 1940,
+              "endMs": 2360
+            },
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 4,
+              "startMs": 2420,
+              "endMs": 2840
+            },
+            {
+              "sentenceId": "knock-s01",
+              "tokenIndex": 5,
+              "startMs": 2900,
+              "endMs": 3320
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 0,
+              "startMs": 3930,
+              "endMs": 4350
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 1,
+              "startMs": 4410,
+              "endMs": 4830
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 2,
+              "startMs": 4890,
+              "endMs": 5310
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 3,
+              "startMs": 5370,
+              "endMs": 5790
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 4,
+              "startMs": 5850,
+              "endMs": 6270
+            },
+            {
+              "sentenceId": "knock-s02",
+              "tokenIndex": 5,
+              "startMs": 6330,
+              "endMs": 6750
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 0,
+              "startMs": 7360,
+              "endMs": 7780
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 1,
+              "startMs": 7840,
+              "endMs": 8260
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 3,
+              "startMs": 8320,
+              "endMs": 8740
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 4,
+              "startMs": 8800,
+              "endMs": 9220
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 5,
+              "startMs": 9280,
+              "endMs": 9700
+            },
+            {
+              "sentenceId": "knock-s03",
+              "tokenIndex": 6,
+              "startMs": 9760,
+              "endMs": 10180
+            },
+            {
+              "sentenceId": "knock-s04",
+              "tokenIndex": 0,
+              "startMs": 10790,
+              "endMs": 11210
+            },
+            {
+              "sentenceId": "knock-s04",
+              "tokenIndex": 1,
+              "startMs": 11270,
+              "endMs": 11690
+            },
+            {
+              "sentenceId": "knock-s04",
+              "tokenIndex": 4,
+              "startMs": 11750,
+              "endMs": 12170
+            },
+            {
+              "sentenceId": "knock-s04",
+              "tokenIndex": 5,
+              "startMs": 12230,
+              "endMs": 12650
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 0,
+              "startMs": 13260,
+              "endMs": 13680
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 1,
+              "startMs": 13740,
+              "endMs": 14160
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 2,
+              "startMs": 14220,
+              "endMs": 14640
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 5,
+              "startMs": 14700,
+              "endMs": 15120
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 6,
+              "startMs": 15180,
+              "endMs": 15600
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 7,
+              "startMs": 15660,
+              "endMs": 16080
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 8,
+              "startMs": 16140,
+              "endMs": 16560
+            },
+            {
+              "sentenceId": "knock-s05",
+              "tokenIndex": 9,
+              "startMs": 16620,
+              "endMs": 17040
+            },
+            {
+              "sentenceId": "knock-s06",
+              "tokenIndex": 0,
+              "startMs": 17650,
+              "endMs": 18070
+            },
+            {
+              "sentenceId": "knock-s06",
+              "tokenIndex": 1,
+              "startMs": 18130,
+              "endMs": 18550
+            },
+            {
+              "sentenceId": "knock-s06",
+              "tokenIndex": 2,
+              "startMs": 18610,
+              "endMs": 19030
+            },
+            {
+              "sentenceId": "knock-s06",
+              "tokenIndex": 3,
+              "startMs": 19090,
+              "endMs": 19510
+            },
+            {
+              "sentenceId": "knock-s06",
+              "tokenIndex": 4,
+              "startMs": 19570,
+              "endMs": 19990
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 0,
+              "startMs": 20600,
+              "endMs": 21020
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 1,
+              "startMs": 21080,
+              "endMs": 21500
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 2,
+              "startMs": 21560,
+              "endMs": 21980
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 3,
+              "startMs": 22040,
+              "endMs": 22460
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 4,
+              "startMs": 22520,
+              "endMs": 22940
+            },
+            {
+              "sentenceId": "knock-s07",
+              "tokenIndex": 5,
+              "startMs": 23000,
+              "endMs": 23420
+            },
+            {
+              "sentenceId": "knock-s08",
+              "tokenIndex": 0,
+              "startMs": 24030,
+              "endMs": 24450
+            },
+            {
+              "sentenceId": "knock-s08",
+              "tokenIndex": 1,
+              "startMs": 24510,
+              "endMs": 24930
+            },
+            {
+              "sentenceId": "knock-s08",
+              "tokenIndex": 2,
+              "startMs": 24990,
+              "endMs": 25410
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 0,
+              "startMs": 26020,
+              "endMs": 26440
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 1,
+              "startMs": 26500,
+              "endMs": 26920
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 2,
+              "startMs": 26980,
+              "endMs": 27400
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 3,
+              "startMs": 27460,
+              "endMs": 27880
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 4,
+              "startMs": 27940,
+              "endMs": 28360
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 7,
+              "startMs": 28420,
+              "endMs": 28840
+            },
+            {
+              "sentenceId": "knock-s09",
+              "tokenIndex": 8,
+              "startMs": 28900,
+              "endMs": 29320
+            },
+            {
+              "sentenceId": "knock-s10",
+              "tokenIndex": 0,
+              "startMs": 29930,
+              "endMs": 30350
+            },
+            {
+              "sentenceId": "knock-s10",
+              "tokenIndex": 1,
+              "startMs": 30410,
+              "endMs": 30830
+            },
+            {
+              "sentenceId": "knock-s10",
+              "tokenIndex": 2,
+              "startMs": 30890,
+              "endMs": 31310
+            },
+            {
+              "sentenceId": "knock-s10",
+              "tokenIndex": 3,
+              "startMs": 31370,
+              "endMs": 31790
+            },
+            {
+              "sentenceId": "knock-s11",
+              "tokenIndex": 0,
+              "startMs": 32400,
+              "endMs": 32820
+            },
+            {
+              "sentenceId": "knock-s11",
+              "tokenIndex": 1,
+              "startMs": 32880,
+              "endMs": 33300
+            },
+            {
+              "sentenceId": "knock-s11",
+              "tokenIndex": 2,
+              "startMs": 33360,
+              "endMs": 33780
+            },
+            {
+              "sentenceId": "knock-s11",
+              "tokenIndex": 3,
+              "startMs": 33840,
+              "endMs": 34260
+            }
+          ]
+        }
+      ],
+      "sentences": [
+        {
+          "id": "knock-s01",
+          "ru": "Я живу один в старой квартире.",
+          "en": "I live alone in an old apartment.",
+          "grammarTopics": [
+            "present-tense",
+            "prepositional-case"
+          ],
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живу",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "один",
+              "lemma": "один",
+              "translation": "alone",
+              "pos": "num",
+              "grammar": "m.sg. nom., used as \"alone\"",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "старой",
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "квартире",
+              "lemma": "квартира",
+              "translation": "apartment",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s02",
+          "ru": "Ночью я слышу стук в стене.",
+          "en": "At night I hear a knocking in the wall.",
+          "grammarTopics": [
+            "present-tense",
+            "instrumental-adverbial",
+            "prepositional-case"
+          ],
+          "tokens": [
+            {
+              "text": "Ночью",
+              "lemma": "ночь",
+              "translation": "at night",
+              "pos": "noun",
+              "grammar": "f.sg. instr., used adverbially",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "слышу",
+              "lemma": "слышать",
+              "translation": "hear",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "стук",
+              "lemma": "стук",
+              "translation": "knocking",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "стене",
+              "lemma": "стена",
+              "translation": "wall",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s03",
+          "ru": "Стук тихий, но он не останавливается.",
+          "en": "The knocking is quiet, but it does not stop.",
+          "grammarTopics": [
+            "adjective-agreement",
+            "reflexive-verbs",
+            "negation"
+          ],
+          "tokens": [
+            {
+              "text": "Стук",
+              "lemma": "стук",
+              "translation": "the knocking",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "тихий",
+              "lemma": "тихий",
+              "translation": "quiet",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "но",
+              "lemma": "но",
+              "translation": "but",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "он",
+              "lemma": "он",
+              "translation": "it",
+              "pos": "pron",
+              "grammar": "m.sg. nom. (refers to стук)",
+              "level": "A1"
+            },
+            {
+              "text": "не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "останавливается",
+              "lemma": "останавливаться",
+              "translation": "stops",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf., refl.)",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s04",
+          "ru": "Я думаю: «Это соседи».",
+          "en": "I think: \"It's the neighbours.\"",
+          "grammarTopics": [
+            "present-tense",
+            "direct-speech"
+          ],
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думаю",
+              "lemma": "думать",
+              "translation": "think",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ":",
+              "isPunct": true
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "it (is)",
+              "pos": "pron",
+              "grammar": "demonstrative, nom.",
+              "level": "A1",
+              "spaceBefore": false
+            },
+            {
+              "text": "соседи",
+              "lemma": "сосед",
+              "translation": "the neighbours",
+              "pos": "noun",
+              "grammar": "m.pl. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s05",
+          "ru": "Но сосед говорит: «За этой стеной нет квартиры».",
+          "en": "But the neighbour says: \"There is no apartment behind that wall.\"",
+          "grammarTopics": [
+            "instrumental-case",
+            "genitive-negation",
+            "direct-speech"
+          ],
+          "tokens": [
+            {
+              "text": "Но",
+              "lemma": "но",
+              "translation": "but",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "сосед",
+              "lemma": "сосед",
+              "translation": "the neighbour",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "говорит",
+              "lemma": "говорить",
+              "translation": "says",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ":",
+              "isPunct": true
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "За",
+              "lemma": "за",
+              "translation": "behind",
+              "pos": "prep",
+              "grammar": "+ instr. (location)",
+              "level": "A1",
+              "spaceBefore": false
+            },
+            {
+              "text": "этой",
+              "lemma": "этот",
+              "translation": "that",
+              "pos": "pron",
+              "grammar": "f.sg. instr.",
+              "level": "A1"
+            },
+            {
+              "text": "стеной",
+              "lemma": "стена",
+              "translation": "wall",
+              "pos": "noun",
+              "grammar": "f.sg. instr.",
+              "level": "A1"
+            },
+            {
+              "text": "нет",
+              "lemma": "нет",
+              "translation": "there is no",
+              "pos": "pred",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "квартиры",
+              "lemma": "квартира",
+              "translation": "apartment",
+              "pos": "noun",
+              "grammar": "f.sg. gen. (after нет)",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s06",
+          "ru": "Сегодня ночью стук очень громкий.",
+          "en": "Tonight the knocking is very loud.",
+          "grammarTopics": [
+            "adjective-agreement",
+            "time-expressions"
+          ],
+          "tokens": [
+            {
+              "text": "Сегодня",
+              "lemma": "сегодня",
+              "translation": "today",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "ночью",
+              "lemma": "ночь",
+              "translation": "at night",
+              "pos": "noun",
+              "grammar": "f.sg. instr., used adverbially; сегодня ночью = tonight",
+              "level": "A1"
+            },
+            {
+              "text": "стук",
+              "lemma": "стук",
+              "translation": "the knocking",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "очень",
+              "lemma": "очень",
+              "translation": "very",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "громкий",
+              "lemma": "громкий",
+              "translation": "loud",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s07",
+          "ru": "Я стою у стены и слушаю.",
+          "en": "I stand at the wall and listen.",
+          "grammarTopics": [
+            "present-tense",
+            "genitive-case"
+          ],
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "стою",
+              "lemma": "стоять",
+              "translation": "stand",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "у",
+              "lemma": "у",
+              "translation": "at, by",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "стены",
+              "lemma": "стена",
+              "translation": "the wall",
+              "pos": "noun",
+              "grammar": "f.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "слушаю",
+              "lemma": "слушать",
+              "translation": "listen",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.); слушать = listen, слышать = hear",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s08",
+          "ru": "Вдруг стук останавливается.",
+          "en": "Suddenly the knocking stops.",
+          "grammarTopics": [
+            "reflexive-verbs"
+          ],
+          "tokens": [
+            {
+              "text": "Вдруг",
+              "lemma": "вдруг",
+              "translation": "suddenly",
+              "pos": "adv",
+              "level": "A2"
+            },
+            {
+              "text": "стук",
+              "lemma": "стук",
+              "translation": "the knocking",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "останавливается",
+              "lemma": "останавливаться",
+              "translation": "stops",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf., refl.)",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s09",
+          "ru": "Потом я слышу тихий голос: «Ты дома».",
+          "en": "Then I hear a quiet voice: \"You are home.\"",
+          "grammarTopics": [
+            "accusative-case",
+            "direct-speech"
+          ],
+          "tokens": [
+            {
+              "text": "Потом",
+              "lemma": "потом",
+              "translation": "then",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "слышу",
+              "lemma": "слышать",
+              "translation": "hear",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "тихий",
+              "lemma": "тихий",
+              "translation": "quiet",
+              "pos": "adj",
+              "grammar": "m.sg. acc. (inanimate)",
+              "level": "A1"
+            },
+            {
+              "text": "голос",
+              "lemma": "голос",
+              "translation": "voice",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": ":",
+              "isPunct": true
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "Ты",
+              "lemma": "ты",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom. (informal)",
+              "level": "A1",
+              "spaceBefore": false
+            },
+            {
+              "text": "дома",
+              "lemma": "дома",
+              "translation": "at home",
+              "pos": "adv",
+              "grammar": "дома (adv.) = at home; дом = house",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s10",
+          "ru": "Голос не в стене.",
+          "en": "The voice is not in the wall.",
+          "grammarTopics": [
+            "negation",
+            "prepositional-case"
+          ],
+          "tokens": [
+            {
+              "text": "Голос",
+              "lemma": "голос",
+              "translation": "the voice",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "стене",
+              "lemma": "стена",
+              "translation": "the wall",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "knock-s11",
+          "ru": "Он в моей комнате.",
+          "en": "It is in my room.",
+          "grammarTopics": [
+            "prepositional-case",
+            "possessive-pronouns"
+          ],
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "it",
+              "pos": "pron",
+              "grammar": "m.sg. nom. (refers to голос)",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "моей",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "комнате",
+              "lemma": "комната",
+              "translation": "room",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

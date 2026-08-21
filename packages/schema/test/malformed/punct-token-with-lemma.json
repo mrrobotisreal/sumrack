@@ -1,0 +1,50 @@
+{
+  "id": "bad-pack-001",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Тест",
+    "en": "Test"
+  },
+  "level": "A1",
+  "tags": [],
+  "stories": [
+    {
+      "id": "bad-story",
+      "title": {
+        "ru": "Тест",
+        "en": "Test"
+      },
+      "level": "A1",
+      "audio": [],
+      "sentences": [
+        {
+          "id": "bad-s01",
+          "ru": "Я дома.",
+          "en": "I am home.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "дома",
+              "lemma": "дома",
+              "translation": "at home",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true,
+              "lemma": "точка"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
