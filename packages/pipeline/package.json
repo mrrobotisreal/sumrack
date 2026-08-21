@@ -2,7 +2,23 @@
   "name": "@sumrak/pipeline",
   "version": "0.1.0",
   "private": true,
-  "description": "Authoring pipeline CLI: story draft -> annotated pack + ElevenLabs audio (real content lands in T08)",
+  "description": "Authoring pipeline CLI: story draft -> annotated pack (T08); audio + publish land in T09",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "scripts": {
+    "pipeline": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sumrak/schema": "workspace:*",
+    "yaml": "^2.8.2",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13",
+    "tsx": "^4.20.7",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.18"
+  }
 }

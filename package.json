@@ -4,6 +4,7 @@
   "private": true,
   "description": "Сумрак — personal offline-first Russian study app (monorepo root)",
   "scripts": {
+    "pipeline": "tsx packages/pipeline/src/cli.ts",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
