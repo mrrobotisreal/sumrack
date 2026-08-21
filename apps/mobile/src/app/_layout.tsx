@@ -18,6 +18,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
 
+import { DbProvider } from '@/db/provider';
 import { track } from '@/services/analytics';
 import { useThemeStore } from '@/store/theme';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -59,20 +60,23 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={navTheme}>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-        <Stack
-          screenOptions={{
-            headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
-            headerStyle: { backgroundColor: tokens.surface },
-            contentStyle: { backgroundColor: tokens.bg },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'modal' }} />
-        </Stack>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <DbProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={navTheme}>
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <Stack
+            screenOptions={{
+              headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
+              headerStyle: { backgroundColor: tokens.surface },
+              contentStyle: { backgroundColor: tokens.bg },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'modal' }} />
+            <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
+          </Stack>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </DbProvider>
   );
 }

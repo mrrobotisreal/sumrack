@@ -3,6 +3,8 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  better-sqlite3: true
+  esbuild: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.17'
@@ -26,3 +28,5 @@ minimumReleaseAgeExclude:
   - expo-dev-menu@57.0.14
 onlyBuiltDependencies:
   - unrs-resolver
+  - better-sqlite3
+  - esbuild

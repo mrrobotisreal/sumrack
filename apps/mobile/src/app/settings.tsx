@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -57,6 +57,25 @@ export default function SettingsScreen() {
           </Pressable>
         ))}
       </View>
+
+      {__DEV__ && (
+        <>
+          <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
+            Developer
+          </Text>
+          <View className="overflow-hidden rounded-xl border border-border bg-surface">
+            <Link href="/dev-db" asChild>
+              <Pressable className="flex-row items-center justify-between px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Database debug</Text>
+                  <Text variant="caption">Imported packs, stories, FTS search (T03)</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
+          </View>
+        </>
+      )}
 
       <Text variant="caption" className="mt-8 text-center">
         More settings arrive with sync (T07), voices (T11), and backup (T20).

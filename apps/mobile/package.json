@@ -8,7 +8,10 @@
     "android": "expo run:android",
     "prebuild": "expo prebuild --platform android",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:generate:custom": "drizzle-kit generate --custom"
   },
   "dependencies": {
     "@expo-google-fonts/golos-text": "^0.4.2",
@@ -16,17 +19,22 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@rn-primitives/slot": "^1.5.2",
+    "@sumrak/schema": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "expo": "~57.0.15",
+    "expo-asset": "~57.0.13",
     "expo-constants": "~57.0.13",
     "expo-dev-client": "~57.0.14",
+    "expo-file-system": "~57.0.5",
     "expo-font": "~57.0.1",
     "expo-image": "~57.0.3",
     "expo-linking": "~57.0.7",
     "expo-router": "~57.0.15",
     "expo-splash-screen": "~57.0.7",
+    "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
     "nativewind": "^4.2.6",
@@ -41,12 +49,18 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.13.3",
     "@types/react": "~19.2.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.1",
     "eslint-config-prettier": "^10.1.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^3.4.19",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
   }
 }

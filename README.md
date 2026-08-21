@@ -64,7 +64,26 @@ cd apps/mobile/android && ./gradlew assembleRelease
 pnpm typecheck     # tsc --noEmit, strict, all workspace packages
 pnpm lint          # eslint (expo config)
 pnpm format:check  # prettier
+pnpm test          # vitest: packages/schema + apps/mobile DB layer (better-sqlite3)
 ```
+
+## Database migrations (from T03)
+
+Drizzle schema lives in `apps/mobile/src/db/schema/`; migration `.sql` files in
+`apps/mobile/drizzle/` are bundled into the app (babel `inline-import`) and applied
+on startup by `DbProvider` (`useMigrations`). The DB-layer unit tests run the very
+same `.sql` files against better-sqlite3 in Node.
+
+```sh
+cd apps/mobile
+pnpm db:generate           # after editing src/db/schema/* → new numbered migration
+pnpm db:generate:custom    # empty migration for hand-written SQL (FTS5, triggers…)
+```
+
+**Rules:** migrations are additive — never edit a committed migration file; new
+files only. Repositories (`src/db/repositories/`) own ALL database access — no
+Drizzle imports outside `src/db/`. Content refs in user tables are plain stable-id
+strings, never enforced FKs (user data must survive pack reimport/removal).
 
 ## Conventions (enforced from T01 onward)
 
