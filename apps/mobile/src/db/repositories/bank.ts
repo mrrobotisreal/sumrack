@@ -54,6 +54,17 @@ export interface BankFilter {
   offset?: number;
 }
 
+export interface BankListItem extends BankItemRow {
+  encounterCount: number;
+}
+
+/** Distinct values present in the bank — drives the Словарь filter chips (T05). */
+export interface BankFilterOptions {
+  pos: string[];
+  levels: ('A1' | 'A2' | 'B1' | 'B2' | 'C1')[];
+  sourceStoryIds: string[];
+}
+
 /**
  * The word bank. Owns the dedup invariant (design §5): words are unique by
  * normalized lemma, phrases by normalized text — adding a known lemma again
@@ -193,7 +204,7 @@ export function createBankRepo(db: SumrakDB) {
       return insertEncounter(bankItemId, surface, source);
     },
 
-    async listItems(filter: BankFilter = {}): Promise<BankItemRow[]> {
+    async listItems(filter: BankFilter = {}): Promise<BankListItem[]> {
       const conds = [];
       if (filter.kind) conds.push(eq(bankItems.kind, filter.kind));
       if (filter.level) conds.push(eq(bankItems.level, filter.level));
@@ -211,13 +222,46 @@ export function createBankRepo(db: SumrakDB) {
           ),
         );
       }
-      return db
-        .select()
+      const rows = await db
+        .select({
+          item: bankItems,
+          // Literal SQL with explicit qualification (same pitfall as content.listPacks).
+          encounterCount: sql<number>`(SELECT COUNT(*) FROM encounters WHERE encounters.bank_item_id = bank_items.id)`,
+        })
         .from(bankItems)
         .where(conds.length ? and(...conds) : undefined)
         .orderBy(desc(bankItems.createdAt))
         .limit(filter.limit ?? 200)
         .offset(filter.offset ?? 0);
+      return rows.map((r) => ({ ...r.item, encounterCount: r.encounterCount }));
+    },
+
+    /** Distinct filter values actually present, so chips never dead-end. */
+    async getFilterOptions(): Promise<BankFilterOptions> {
+      const posRows = await db
+        .selectDistinct({ pos: bankItems.pos })
+        .from(bankItems)
+        .where(sql`${bankItems.pos} IS NOT NULL`);
+      const levelRows = await db
+        .selectDistinct({ level: bankItems.level })
+        .from(bankItems)
+        .where(sql`${bankItems.level} IS NOT NULL`);
+      const storyRows = await db
+        .selectDistinct({ id: bankItems.sourceStoryId })
+        .from(bankItems)
+        .where(sql`${bankItems.sourceStoryId} IS NOT NULL`);
+      const levelOrder = ['A1', 'A2', 'B1', 'B2', 'C1'] as const;
+      return {
+        pos: posRows
+          .map((r) => r.pos)
+          .filter((p): p is string => !!p)
+          .sort(),
+        levels: levelRows
+          .map((r) => r.level)
+          .filter((l): l is (typeof levelOrder)[number] => !!l)
+          .sort((a, b) => levelOrder.indexOf(a) - levelOrder.indexOf(b)),
+        sourceStoryIds: storyRows.map((r) => r.id).filter((s): s is string => !!s),
+      };
     },
 
     async countItems(kind?: 'word' | 'phrase'): Promise<number> {

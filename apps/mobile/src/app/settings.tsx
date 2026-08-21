@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect } from 'expo-router';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
+import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useThemeStore, type ThemeMode } from '@/store/theme';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -22,6 +23,7 @@ const MODES: { mode: ThemeMode; label: string; hint: string }[] = [
 export default function SettingsScreen() {
   const { mode, setMode } = useThemeStore();
   const { tokens } = useAppTheme();
+  const { encounterOnLookup, setEncounterOnLookup } = useLookupPrefs();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -56,6 +58,27 @@ export default function SettingsScreen() {
             )}
           </Pressable>
         ))}
+      </View>
+
+      <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
+        Reading
+      </Text>
+      <View className="overflow-hidden rounded-xl border border-border bg-surface">
+        <View className="flex-row items-center justify-between px-4 py-3.5">
+          <View className="flex-1 gap-0.5 pr-3">
+            <Text className="font-ui-medium">Encounter on tap-lookup</Text>
+            <Text variant="caption">
+              Tapping a word already in your bank logs a new encounter automatically
+            </Text>
+          </View>
+          <Switch
+            value={encounterOnLookup}
+            onValueChange={setEncounterOnLookup}
+            trackColor={{ false: tokens.surface2, true: tokens.accent }}
+            thumbColor={tokens.text}
+            accessibilityLabel="Encounter on tap-lookup"
+          />
+        </View>
       </View>
 
       {__DEV__ && (

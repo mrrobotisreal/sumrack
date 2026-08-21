@@ -8,15 +8,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { useStoryDetail, useStoryProgress } from '@/db/hooks';
-import type { SentenceWithTokens } from '@/db/repositories/content';
+import type { SentenceWithTokens, TokenRow } from '@/db/repositories/content';
 import { track } from '@/services/analytics';
 import { useReaderPrefs } from '@/store/reader-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
 import { SentenceRow } from './sentence-row';
 import { StoryHeader } from './story-header';
+import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
+import { WordPopup, type WordPopupTarget } from './word-popup';
 
 const POSITION_SAVE_DEBOUNCE_MS = 800;
 /** Sessions shorter than this don't count as reading time (accidental opens). */
@@ -45,6 +48,10 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
 
   const [revealed, setRevealed] = React.useState<ReadonlySet<string>>(new Set());
   const [typeSheetOpen, setTypeSheetOpen] = React.useState(false);
+  const [popupTarget, setPopupTarget] = React.useState<WordPopupTarget | null>(null);
+  const [phraseTarget, setPhraseTarget] = React.useState<PhraseCardTarget | null>(null);
+  // Drag selection in progress → the list must not scroll under the finger.
+  const [selecting, setSelecting] = React.useState(false);
 
   const listRef = React.useRef<FlatList<SentenceWithTokens>>(null);
   const restoredRef = React.useRef(false);
@@ -170,6 +177,29 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
     },
   ]);
 
+  const handleWordPress = React.useCallback(
+    (token: TokenRow, sentenceId: string) => {
+      track('word_tapped', { lemma: token.lemma ?? token.text, sentenceId });
+      setPopupTarget({ token, sentenceId, storyId });
+    },
+    [storyId],
+  );
+
+  const sentenceById = React.useMemo(() => new Map(sentences.map((s) => [s.id, s])), [sentences]);
+
+  const handlePhraseSelected = React.useCallback(
+    (selection: PhraseSelection, sentenceId: string) => {
+      const sentence = sentenceById.get(sentenceId);
+      if (!sentence) return;
+      track('phrase_selection_completed', {
+        sentenceId,
+        chunks: selection.range.end - selection.range.start + 1,
+      });
+      setPhraseTarget({ selection, sentenceRu: sentence.ru, sentenceId, storyId });
+    },
+    [sentenceById, storyId],
+  );
+
   const toggleSentence = React.useCallback((sentenceId: string) => {
     setRevealed((prev) => {
       const next = new Set(prev);
@@ -220,14 +250,19 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
         ref={listRef}
         data={sentences}
         keyExtractor={(s) => s.id}
+        scrollEnabled={!selecting}
         renderItem={({ item }) => (
           <SentenceRow
-            ru={item.ru}
+            sentenceId={item.id}
+            ruTokens={item.tokens}
             en={item.en}
             revealed={revealed.has(item.id)}
             onToggleReveal={() => toggleSentence(item.id)}
             readingStyle={readingStyle}
             translationStyle={translationStyle}
+            onWordPress={handleWordPress}
+            onPhraseSelected={handlePhraseSelected}
+            onSelectingChange={setSelecting}
           />
         )}
         ListHeaderComponent={
@@ -289,6 +324,8 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
       </View>
 
       <TypeSettingsSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} />
+      <WordPopup target={popupTarget} onClose={() => setPopupTarget(null)} />
+      <PhraseCardSheet target={phraseTarget} onClose={() => setPhraseTarget(null)} />
     </View>
   );
 }

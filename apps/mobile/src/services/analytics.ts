@@ -20,7 +20,20 @@ export type AnalyticsEvent =
   | 'reading_position_restored'
   | 'sentence_reveal_toggled'
   | 'reveal_all_toggled'
-  | 'reader_typography_changed';
+  | 'reader_typography_changed'
+  | 'word_tapped'
+  | 'word_added_to_bank'
+  | 'encounter_recorded'
+  | 'phrase_selection_completed'
+  | 'phrase_added_to_bank'
+  | 'lookup_encounter_toggled'
+  | 'speech_requested'
+  | 'bank_searched'
+  | 'bank_filter_changed'
+  | 'bank_item_viewed'
+  | 'bank_item_edited'
+  | 'bank_item_deleted'
+  | 'bank_manual_added';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

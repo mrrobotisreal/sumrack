@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { repos } from './index';
-import type { BankFilter } from './repositories/bank';
+import type { BankFilter, EncounterRow } from './repositories/bank';
+import type { ResolvedSentence } from './repositories/content';
 
 /**
  * Thin React Query read-hooks over the repositories — the query surface
@@ -14,7 +15,10 @@ export const queryKeys = {
   storyDetail: (packId: string, storyId: string) => ['story', packId, storyId] as const,
   bankItems: (filter?: BankFilter) => ['bank-items', filter ?? {}] as const,
   bankItem: (id: string) => ['bank-item', id] as const,
+  bankItemDetail: (id: string) => ['bank-item', id, 'detail'] as const,
   bankCount: ['bank-count'] as const,
+  bankWordStatus: (lemmaNorm: string) => ['bank-word-status', lemmaNorm] as const,
+  bankFilterOptions: ['bank-items', 'filter-options'] as const,
   dueCount: ['due-count'] as const,
   tokenSearch: (q: string) => ['token-search', q] as const,
   storyProgressList: ['story-progress'] as const,
@@ -54,6 +58,48 @@ export function useBankItem(id: string | undefined) {
 
 export function useBankCount() {
   return useQuery({ queryKey: queryKeys.bankCount, queryFn: () => repos.bank.countItems() });
+}
+
+export function useBankFilterOptions() {
+  return useQuery({
+    queryKey: queryKeys.bankFilterOptions,
+    queryFn: () => repos.bank.getFilterOptions(),
+  });
+}
+
+export interface EncounterWithContext extends EncounterRow {
+  /** Resolved source sentence + story; null for manual/journal encounters. */
+  context: ResolvedSentence | null;
+}
+
+/**
+ * Card-detail payload (design §7.2): the bank item plus every encounter with
+ * its sentence context resolved from content tables. Content may have been
+ * uninstalled since the encounter — context is null then, never an error.
+ */
+export function useBankItemDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.bankItemDetail(id ?? ''),
+    queryFn: async () => {
+      const item = await repos.bank.getItemWithEncounters(id!);
+      if (!item) return null;
+      const sentenceIds = [
+        ...new Set(item.encounters.map((e) => e.sentenceId).filter((s): s is string => !!s)),
+      ];
+      const resolved = new Map<string, ResolvedSentence | null>();
+      await Promise.all(
+        sentenceIds.map(async (sid) => {
+          resolved.set(sid, await repos.content.resolveSentence(sid));
+        }),
+      );
+      const encounters: EncounterWithContext[] = item.encounters.map((e) => ({
+        ...e,
+        context: e.sentenceId ? (resolved.get(e.sentenceId) ?? null) : null,
+      }));
+      return { ...item, encounters };
+    },
+    enabled: !!id,
+  });
 }
 
 /**

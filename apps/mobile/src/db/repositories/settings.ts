@@ -16,6 +16,8 @@ export const SETTING_KEYS = {
   bootstrapDone: 'bootstrapDone',
   /** Reader typography prefs (T04): { sizeStep, lineHeightStep, serif }. */
   readerTypography: 'readerTypography',
+  /** boolean (T05): tap-lookup on a banked lemma records an encounter by itself. */
+  encounterOnLookup: 'encounterOnLookup',
   /** Last backup ids per target (T20/T21). */
   lastBackupGithub: 'lastBackup.github',
   lastBackupSyncd: 'lastBackup.syncd',

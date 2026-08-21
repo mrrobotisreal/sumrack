@@ -17,6 +17,7 @@ import { Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { DbProvider } from '@/db/provider';
 import { track } from '@/services/analytics';
@@ -60,27 +61,37 @@ export default function RootLayout() {
   }
 
   return (
-    <DbProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={navTheme}>
-          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          <Stack
-            screenOptions={{
-              headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
-              headerStyle: { backgroundColor: tokens.surface },
-              contentStyle: { backgroundColor: tokens.bg },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="reader/[packId]/[storyId]"
-              options={{ headerShown: false, animation: 'fade' }}
-            />
-            <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'modal' }} />
-            <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
-          </Stack>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </DbProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <DbProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider value={navTheme}>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            <Stack
+              screenOptions={{
+                headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
+                headerStyle: { backgroundColor: tokens.surface },
+                contentStyle: { backgroundColor: tokens.bg },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="reader/[packId]/[storyId]"
+                options={{ headerShown: false, animation: 'fade' }}
+              />
+              <Stack.Screen
+                name="settings"
+                options={{ title: 'Settings', presentation: 'modal' }}
+              />
+              <Stack.Screen name="word-bank/[id]" options={{ title: 'Word bank' }} />
+              <Stack.Screen
+                name="word-bank/add"
+                options={{ title: 'Add to word bank', presentation: 'modal' }}
+              />
+              <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
+            </Stack>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </DbProvider>
+    </GestureHandlerRootView>
   );
 }

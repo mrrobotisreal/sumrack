@@ -1,11 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { WordBankScreen } from '@/features/word-bank/word-bank-screen';
 
 export default function DictionaryScreen() {
-  return (
-    <PlaceholderScreen
-      title="Словарь"
-      subtitle="Your word bank: everything highlighted, with context and mastery."
-      ticket="T05"
-    />
-  );
+  return <WordBankScreen />;
 }
