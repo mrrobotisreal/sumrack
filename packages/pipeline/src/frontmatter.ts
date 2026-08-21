@@ -68,6 +68,16 @@ export const VoiceDirectionSchema = z.strictObject({
   deliveryNotes: z.string().min(1).optional(),
   /** Optional provider voice settings for this rendition (T09, additive). */
   settings: VoiceSettingsSchema.optional(),
+  /**
+   * Optional Eleven v3 audio tag(s) prepended to the narration text, e.g.
+   * "[whispers]" — steers delivery without being spoken (verified: tag chars
+   * get ~0.1s of silence in the alignment). v3-family models only; ignored
+   * for other models. Must be [bracketed] tags.
+   */
+  audioTag: z
+    .string()
+    .regex(/^\[[^\]]+\](\s*\[[^\]]+\])*$/, 'audioTag is one or more [bracketed] v3 audio tags')
+    .optional(),
 });
 export type VoiceDirection = z.infer<typeof VoiceDirectionSchema>;
 export type VoiceSettings = z.infer<typeof VoiceSettingsSchema>;

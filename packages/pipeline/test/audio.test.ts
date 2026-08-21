@@ -246,7 +246,7 @@ describe('ElevenLabsClient key hygiene', () => {
 });
 
 /** A fake ElevenLabs backend: real HTTP shapes, deterministic audio + alignment. */
-function fakeElevenLabsFetch(mp3: Buffer): typeof fetch {
+function fakeElevenLabsFetch(mp3: Buffer, captured: unknown[] = []): typeof fetch {
   return (async (url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
     if (u.includes('/v1/voices')) {
@@ -254,6 +254,7 @@ function fakeElevenLabsFetch(mp3: Buffer): typeof fetch {
     }
     if (u.includes('/with-timestamps')) {
       const body = JSON.parse(String(init!.body)) as { text: string };
+      captured.push(body);
       const characters = Array.from(body.text);
       // 60ms per char, comfortably inside the generated audio's duration.
       return Response.json({
@@ -316,6 +317,52 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
     expect(track.file).toBe('audio/test-track-anton.opus');
     expect(track.durationMs).toBeGreaterThan(2000);
     expect(track.timestamps.length).toBe(7);
+  });
+
+  it('v3 default: audioTag prefixes the text, spans stay exact, previous_text omitted', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace('    settings:', "    audioTag: '[whispers]'\n    settings:"),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: { text: string; previous_text?: string; model_id: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.model_id).toBe('eleven_v3');
+    expect(captured[0]!.text.startsWith('[whispers] Ночь.')).toBe(true);
+    expect(captured[0]!.previous_text).toBeUndefined(); // v3 rejects it
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.coverage).toBe(1); // tag chars never stamped, tokens all are
+  });
+
+  it('non-v3 model keeps previous_text and ignores audioTag', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace('    settings:', "    audioTag: '[whispers]'\n    settings:"),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: { text: string; previous_text?: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+
+    await runFinalize([draftFile], join(work, 'pack'), client, {
+      defaultSeed: 7,
+      modelId: 'eleven_multilingual_v2',
+    });
+    expect(captured[0]!.text.startsWith('Ночь.')).toBe(true);
+    expect(captured[0]!.previous_text).toBe('Slow and quiet.');
   });
 
   it('audition renders take files and never writes pack.json', async () => {

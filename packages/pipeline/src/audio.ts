@@ -3,10 +3,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { safeParsePack, type AudioTrack, type Pack, type Story } from '@sumrak/schema';
 import { annotateDrafts } from './annotate.ts';
-import { DEFAULT_MODEL_ID, ElevenLabsClient } from './elevenlabs.ts';
+import { DEFAULT_MODEL_ID, ElevenLabsClient, isV3Model } from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import type { VoiceDirection } from './frontmatter.ts';
-import { buildNarration } from './narration.ts';
+import { buildNarration, type NarrationText } from './narration.ts';
 import { encodeOpus, probeDurationMs } from './opus.ts';
 import { mapAlignmentToStamps, type StampResult } from './stamps.ts';
 
@@ -110,14 +110,31 @@ async function renderDirection(
   seed: number,
   modelId: string | undefined,
 ): Promise<{ audio: Buffer; stampResultFor: (durationMs: number) => StampResult }> {
-  const narration = buildNarration(story);
+  const base = buildNarration(story);
+  const model = modelId ?? DEFAULT_MODEL_ID;
+  const v3 = isV3Model(model);
+  // v3 rejects previous_text; mood steering there is the leading audio tag.
+  // The tag becomes part of the rendered text, so shift every token span by
+  // the prefix length — stamp mapping stays exact, and the tag's own
+  // characters (near-silent in the alignment) are never stamped.
+  const prefix = v3 && direction.audioTag ? `${direction.audioTag} ` : '';
+  const narration: NarrationText = prefix
+    ? {
+        text: prefix + base.text,
+        spans: base.spans.map((s) => ({
+          ...s,
+          start: s.start + prefix.length,
+          end: s.end + prefix.length,
+        })),
+      }
+    : base;
   const voiceId = await client.resolveVoiceId(providerVoiceName(direction));
   const result = await client.renderWithTimestamps({
     voiceId,
     text: narration.text,
-    modelId: modelId ?? DEFAULT_MODEL_ID,
+    modelId: model,
     seed,
-    previousText: direction.stylePrompt,
+    ...(v3 ? {} : { previousText: direction.stylePrompt }),
     voiceSettings: direction.settings,
   });
   return {

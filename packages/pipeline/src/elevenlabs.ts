@@ -10,8 +10,20 @@ import type { CharAlignment } from './stamps.ts';
  */
 
 const DEFAULT_BASE_URL = 'https://api.elevenlabs.io';
-/** Multilingual v2: stable Russian prosody + character timestamp support. */
-export const DEFAULT_MODEL_ID = 'eleven_multilingual_v2';
+/**
+ * Eleven v3: the flagship expressive model (74 languages). Verified against
+ * this account: supports character timestamps and seed, accepts continuous
+ * voice settings, honors leading audio tags like "[whispers]" without
+ * speaking them — but rejects previous_text (see isV3Model callers).
+ * `eleven_multilingual_v2` remains available via --model for
+ * consistency-critical renders.
+ */
+export const DEFAULT_MODEL_ID = 'eleven_v3';
+
+/** v3-family models differ in accepted params (no previous_text). */
+export function isV3Model(modelId: string): boolean {
+  return modelId.startsWith('eleven_v3');
+}
 /** Highest-quality MP3 the with-timestamps endpoint serves on standard plans. */
 const OUTPUT_FORMAT = 'mp3_44100_128';
 const REQUEST_TIMEOUT_MS = 180_000;
@@ -144,9 +156,17 @@ export class ElevenLabsClient {
     const voices = await this.listVoices();
     const wanted = name.toLowerCase();
     const exact = voices.filter((v) => v.name.toLowerCase() === wanted);
+    // Library voice names carry taglines after a hyphen, en dash, or em dash
+    // ("Kate - Calm…", "Elen Kuragina – Golden & Dangerous").
     const byAlias = exact.length
       ? exact
-      : voices.filter((v) => v.name.split(' - ')[0]!.trim().toLowerCase() === wanted);
+      : voices.filter(
+          (v) =>
+            v.name
+              .split(/\s+[-–—]\s+/)[0]!
+              .trim()
+              .toLowerCase() === wanted,
+        );
     if (byAlias.length === 1) return byAlias[0]!.voiceId;
     const available = voices.map((v) => v.name).join(', ') || '(none)';
     throw new ElevenLabsError(
