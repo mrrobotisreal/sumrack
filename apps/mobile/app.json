@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0B0B0E",
     "android": {
-      "package": "com.winapps.sumrak",
+      "package": "io.winapps.sumrak",
       "adaptiveIcon": {
         "backgroundColor": "#0B0B0E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
