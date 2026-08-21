@@ -15,6 +15,13 @@
       "when": 1787334787992,
       "tag": "0001_fts5-search",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787336459654,
+      "tag": "0002_story-progress",
+      "breakpoints": true
     }
   ]
 }

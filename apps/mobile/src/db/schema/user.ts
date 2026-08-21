@@ -1,4 +1,12 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -185,6 +193,26 @@ export const gameSessions = sqliteTable(
     detail: text('detail', { mode: 'json' }).$type<Record<string, unknown>>(),
   },
   (t) => [index('game_sessions_started_idx').on(t.startedAt)],
+);
+
+/**
+ * Reading progress per story (T04). Keyed (packId, storyId) — story ids are
+ * only unique within their pack. User-owned: the ids are unenforced content
+ * refs, so progress survives pack reimport (same stable ids) and removal.
+ */
+export const storyProgress = sqliteTable(
+  'story_progress',
+  {
+    packId: text('pack_id').notNull(),
+    storyId: text('story_id').notNull(),
+    /** orderIdx of the topmost visible sentence — the restore point. */
+    currentSentenceIdx: integer('current_sentence_idx').notNull().default(0),
+    startedAt: integer('started_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    /** Set when the story end is first reached; rereads never clear it. */
+    finishedAt: integer('finished_at'),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.storyId] })],
 );
 
 /** Per-local-day counters feeding streaks/goals (§7.7). Date = 'YYYY-MM-DD' device-local. */

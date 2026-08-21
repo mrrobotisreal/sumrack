@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
+import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
 import { hydrateThemeFromDb } from '@/store/theme';
 
 import { runBootstrap } from './bootstrap';
@@ -28,6 +29,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
       try {
         await runBootstrap(db, repos);
         await hydrateThemeFromDb();
+        await hydrateReaderPrefsFromDb();
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error('[db] bootstrap failed', err);

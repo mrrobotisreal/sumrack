@@ -32,6 +32,7 @@ export interface SentenceWithTokens extends SentenceRow {
 }
 
 export interface StoryDetail {
+  pack: PackRow;
   story: StoryRow;
   sentences: SentenceWithTokens[];
   audio: AudioTrackRow[];
@@ -100,8 +101,11 @@ export function createContentRepo(db: SumrakDB) {
       }));
     },
 
-    /** Full reader payload: story, ordered sentences with ordered tokens, audio tracks. */
+    /** Full reader payload: pack, story, ordered sentences with ordered tokens, audio tracks. */
     async getStoryDetail(packId: string, storyId: string): Promise<StoryDetail | null> {
+      const packRows = await db.select().from(packs).where(eq(packs.id, packId)).limit(1);
+      const pack = packRows[0];
+      if (!pack) return null;
       const storyRows = await db
         .select()
         .from(stories)
@@ -132,6 +136,7 @@ export function createContentRepo(db: SumrakDB) {
         bySentence.set(tok.sentenceId, list);
       }
       return {
+        pack,
         story,
         sentences: sentenceRows.map((s) => ({ ...s, tokens: bySentence.get(s.id) ?? [] })),
         audio,

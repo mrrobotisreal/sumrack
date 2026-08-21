@@ -2,6 +2,7 @@ import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
 import { createContentRepo } from './content';
 import { createJournalRepo } from './journal';
+import { createReadingRepo } from './reading';
 import { createReviewsRepo } from './reviews';
 import { createSettingsRepo } from './settings';
 import { createStatsRepo } from './stats';
@@ -18,6 +19,7 @@ export function createRepositories(db: SumrakDB) {
     bank: createBankRepo(db),
     reviews: createReviewsRepo(db),
     journal: createJournalRepo(db),
+    reading: createReadingRepo(db),
     stats: createStatsRepo(db),
     settings: createSettingsRepo(db),
     syncState: createSyncStateRepo(db),
@@ -29,6 +31,7 @@ export type Repositories = ReturnType<typeof createRepositories>;
 export * from './bank';
 export * from './content';
 export * from './journal';
+export * from './reading';
 export * from './reviews';
 export * from './settings';
 export * from './stats';

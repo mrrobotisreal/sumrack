@@ -25,6 +25,13 @@
     --success: 90 117 72; /* #5A7548 muted moss */
     --danger: 150 50 43; /* #96322B dried blood */
     --border: 226 222 216; /* #E2DED8 */
+    --scrim: 0 0 0; /* modal/sheet backdrop wash (used with alpha) */
+    /* CEFR chip ramp — one hue journey, A1 coolest → C1 ember (UI_DESIGN §1) */
+    --level-a1: 78 101 127; /* #4E657F cool slate */
+    --level-a2: 79 112 96; /* #4F7060 sage */
+    --level-b1: 117 104 61; /* #75683D dry olive */
+    --level-b2: 130 85 47; /* #82552F rust */
+    --level-c1: 160 56 40; /* #A03828 ember (= accent) */
   }
 
   /* Dark — near-black, desaturated ember (default identity) */
@@ -38,5 +45,12 @@
     --success: 112 140 90; /* #708C5A muted moss */
     --danger: 142 59 53; /* #8E3B35 dried blood */
     --border: 38 38 46; /* #26262E */
+    --scrim: 0 0 0; /* modal/sheet backdrop wash (used with alpha) */
+    /* CEFR chip ramp — one hue journey, A1 coolest → C1 ember (UI_DESIGN §1) */
+    --level-a1: 107 127 153; /* #6B7F99 cool slate */
+    --level-a2: 110 139 121; /* #6E8B79 sage */
+    --level-b1: 143 133 90; /* #8F855A dry olive */
+    --level-b2: 156 107 69; /* #9C6B45 rust */
+    --level-c1: 179 64 47; /* #B3402F ember (= accent) */
   }
 }

@@ -17,6 +17,8 @@ export const queryKeys = {
   bankCount: ['bank-count'] as const,
   dueCount: ['due-count'] as const,
   tokenSearch: (q: string) => ['token-search', q] as const,
+  storyProgressList: ['story-progress'] as const,
+  storyProgress: (packId: string, storyId: string) => ['story-progress', packId, storyId] as const,
 };
 
 export function usePacks() {
@@ -63,6 +65,21 @@ export function useDueCardCount() {
   return useQuery({
     queryKey: queryKeys.dueCount,
     queryFn: () => repos.reviews.countDueCards(),
+  });
+}
+
+export function useStoryProgressList() {
+  return useQuery({
+    queryKey: queryKeys.storyProgressList,
+    queryFn: () => repos.reading.listProgress(),
+  });
+}
+
+export function useStoryProgress(packId: string, storyId: string) {
+  return useQuery({
+    queryKey: queryKeys.storyProgress(packId, storyId),
+    queryFn: () => repos.reading.getProgress(packId, storyId),
+    enabled: !!packId && !!storyId,
   });
 }
 

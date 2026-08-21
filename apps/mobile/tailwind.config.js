@@ -20,6 +20,13 @@ module.exports = {
         success: 'rgb(var(--success) / <alpha-value>)',
         danger: 'rgb(var(--danger) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
+        scrim: 'rgb(var(--scrim) / <alpha-value>)',
+        // CEFR chip hue ramp (A1 coolest → C1 ember) — used via LevelChip only
+        'level-a1': 'rgb(var(--level-a1) / <alpha-value>)',
+        'level-a2': 'rgb(var(--level-a2) / <alpha-value>)',
+        'level-b1': 'rgb(var(--level-b1) / <alpha-value>)',
+        'level-b2': 'rgb(var(--level-b2) / <alpha-value>)',
+        'level-c1': 'rgb(var(--level-c1) / <alpha-value>)',
       },
       fontFamily: {
         // UI chrome: Golos Text (Cyrillic-friendly, used for the Russian tab titles)

@@ -1,11 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { LibraryScreen } from '@/features/library/library-screen';
 
-export default function LibraryScreen() {
-  return (
-    <PlaceholderScreen
-      title="Библиотека"
-      subtitle="Leveled creepypasta & stories with tap-word lookup and narration."
-      ticket="T04"
-    />
-  );
+export default function LibraryTab() {
+  return <LibraryScreen />;
 }

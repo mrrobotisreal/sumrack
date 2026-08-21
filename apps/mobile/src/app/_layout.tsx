@@ -72,6 +72,10 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="reader/[packId]/[storyId]"
+              options={{ headerShown: false, animation: 'fade' }}
+            />
             <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'modal' }} />
             <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
           </Stack>

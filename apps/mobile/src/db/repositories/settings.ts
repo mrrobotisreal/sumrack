@@ -14,6 +14,8 @@ export const SETTING_KEYS = {
   pathPosition: 'pathPosition',
   /** Marks first-run bootstrap (fixture auto-import) as completed. */
   bootstrapDone: 'bootstrapDone',
+  /** Reader typography prefs (T04): { sizeStep, lineHeightStep, serif }. */
+  readerTypography: 'readerTypography',
   /** Last backup ids per target (T20/T21). */
   lastBackupGithub: 'lastBackup.github',
   lastBackupSyncd: 'lastBackup.syncd',

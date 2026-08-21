@@ -13,7 +13,14 @@ export type AnalyticsEvent =
   | 'pack_imported'
   | 'pack_removed'
   | 'debug_db_opened'
-  | 'debug_db_search';
+  | 'debug_db_search'
+  | 'story_opened'
+  | 'story_finished'
+  | 'reading_session_ended'
+  | 'reading_position_restored'
+  | 'sentence_reveal_toggled'
+  | 'reveal_all_toggled'
+  | 'reader_typography_changed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
