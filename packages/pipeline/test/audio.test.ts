@@ -228,13 +228,18 @@ describe('ElevenLabsClient key hygiene', () => {
     }
   });
 
-  it('resolves voice names case-insensitively and passes raw ids through', async () => {
+  it('resolves voice names, premade aliases, and raw ids', async () => {
     const fetchImpl = (async () =>
       Response.json({
-        voices: [{ voice_id: 'abcDEF1234567890abcd', name: 'Anton' }],
+        voices: [
+          { voice_id: 'abcDEF1234567890abcd', name: 'Anton' },
+          { voice_id: 'xyzXYZ1234567890wxyz', name: 'Callum - Husky Trickster' },
+        ],
       })) as typeof fetch;
     const client = new ElevenLabsClient(KEY, { fetchImpl });
     expect(await client.resolveVoiceId('anton')).toBe('abcDEF1234567890abcd');
+    expect(await client.resolveVoiceId('Callum')).toBe('xyzXYZ1234567890wxyz');
+    expect(await client.resolveVoiceId('Callum - Husky Trickster')).toBe('xyzXYZ1234567890wxyz');
     expect(await client.resolveVoiceId('abcDEF1234567890abcd')).toBe('abcDEF1234567890abcd');
     await expect(client.resolveVoiceId('Nobody')).rejects.toThrow(/no voice named "Nobody"/);
   });

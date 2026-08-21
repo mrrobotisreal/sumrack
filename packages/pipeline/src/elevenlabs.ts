@@ -133,22 +133,28 @@ export class ElevenLabsClient {
   }
 
   /**
-   * Resolve a draft voice name ("Anton") to a voice id. Exact
-   * case-insensitive name match against the account's voice list; a raw
-   * 20-character voice id passes through untouched.
+   * Resolve a draft voice name to a voice id. Matches the full name exactly
+   * (case-insensitive) or the short alias before the premade voices'
+   * " - tagline" suffix ("Callum" → "Callum - Husky Trickster"); a raw
+   * 20-character voice id passes through untouched. Ambiguous aliases fail
+   * loudly rather than picking one.
    */
   async resolveVoiceId(name: string): Promise<string> {
     if (/^[A-Za-z0-9]{20,}$/.test(name)) return name; // already an id
     const voices = await this.listVoices();
-    const match = voices.find((v) => v.name.toLowerCase() === name.toLowerCase());
-    if (!match) {
-      const available = voices.map((v) => v.name).join(', ') || '(none)';
-      throw new ElevenLabsError(
-        `no voice named "${name}" in this ElevenLabs account — available: ${available}`,
-        this.apiKey,
-      );
-    }
-    return match.voiceId;
+    const wanted = name.toLowerCase();
+    const exact = voices.filter((v) => v.name.toLowerCase() === wanted);
+    const byAlias = exact.length
+      ? exact
+      : voices.filter((v) => v.name.split(' - ')[0]!.trim().toLowerCase() === wanted);
+    if (byAlias.length === 1) return byAlias[0]!.voiceId;
+    const available = voices.map((v) => v.name).join(', ') || '(none)';
+    throw new ElevenLabsError(
+      byAlias.length === 0
+        ? `no voice named "${name}" in this ElevenLabs account — available: ${available}`
+        : `voice name "${name}" is ambiguous (${byAlias.map((v) => v.name).join(' / ')}) — use the full name`,
+      this.apiKey,
+    );
   }
 
   /** Render text to speech with character-level timestamps. */
