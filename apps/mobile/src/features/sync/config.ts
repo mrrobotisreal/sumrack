@@ -16,7 +16,7 @@ const PAT_KEY = 'sumrak.sync.github.pat';
 /** Prefill for the single known content repo — editable in Settings, not secret. */
 export const DEFAULT_REPO: GithubRepoConfig = {
   owner: 'mrrobotisreal',
-  repo: 'sumrack-content',
+  repo: 'sumrak-content',
   branch: 'main',
 };
 

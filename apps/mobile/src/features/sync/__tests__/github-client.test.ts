@@ -23,7 +23,7 @@ afterEach(() => {
 describe('GithubContentClient', () => {
   const client = () =>
     new GithubContentClient(
-      { owner: 'mrrobotisreal', repo: 'sumrack-content', branch: 'main' },
+      { owner: 'mrrobotisreal', repo: 'sumrak-content', branch: 'main' },
       TOKEN,
     );
 
@@ -35,7 +35,7 @@ describe('GithubContentClient', () => {
 
     const [url, init] = fn.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(
-      'https://api.github.com/repos/mrrobotisreal/sumrack-content/contents/packs/a1-creepypasta-001/pack.json?ref=main',
+      'https://api.github.com/repos/mrrobotisreal/sumrak-content/contents/packs/a1-creepypasta-001/pack.json?ref=main',
     );
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe(`Bearer ${TOKEN}`);
