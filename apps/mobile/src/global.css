@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Sumrak theme tokens — single source of truth for color VALUES
+ * (UI_DESIGN.md §1). Space-separated RGB so Tailwind alpha modifiers work.
+ *
+ * Dark is the default identity ("dark, atmospheric, restrained horror");
+ * light is the deliberate warm-paper daylight variant, not an inversion.
+ *
+ * NOTE: src/theme/colors.ts mirrors these values for the few places CSS
+ * classes cannot reach (navigation theme, status bar, splash). Keep in sync.
+ */
+
+@layer base {
+  /* Light — warm paper */
+  :root {
+    --bg: 247 245 242; /* #F7F5F2 */
+    --surface: 255 255 255; /* #FFFFFF */
+    --surface-2: 239 236 231; /* #EFECE7 */
+    --text: 26 26 31; /* #1A1A1F */
+    --text-muted: 107 104 112; /* #6B6870 */
+    --accent: 160 56 40; /* #A03828 */
+    --success: 90 117 72; /* #5A7548 muted moss */
+    --danger: 150 50 43; /* #96322B dried blood */
+    --border: 226 222 216; /* #E2DED8 */
+  }
+
+  /* Dark — near-black, desaturated ember (default identity) */
+  .dark:root {
+    --bg: 11 11 14; /* #0B0B0E */
+    --surface: 20 20 25; /* #141419 */
+    --surface-2: 28 28 36; /* #1C1C24 */
+    --text: 232 230 227; /* #E8E6E3 */
+    --text-muted: 154 151 160; /* #9A97A0 */
+    --accent: 179 64 47; /* #B3402F */
+    --success: 112 140 90; /* #708C5A muted moss */
+    --danger: 142 59 53; /* #8E3B35 dried blood */
+    --border: 38 38 46; /* #26262E */
+  }
+}

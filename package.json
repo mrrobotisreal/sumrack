@@ -1,0 +1,16 @@
+{
+  "name": "sumrak",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сумрак — personal offline-first Russian study app (monorepo root)",
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  },
+  "packageManager": "pnpm@11.22.0"
+}
