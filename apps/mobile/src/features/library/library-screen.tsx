@@ -1,13 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  SectionList,
+  View,
+} from 'react-native';
 
 import { LevelChip } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
 import { usePacks, useStories, useStoryProgressList } from '@/db/hooks';
 import type { PackRow, StoryListItem } from '@/db/repositories/content';
 import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
+import { SyncStatusLine } from '@/features/sync/sync-status-line';
+import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -32,6 +41,23 @@ export function LibraryScreen() {
     React.useCallback(() => {
       track('tab_viewed', { tab: 'Библиотека' });
     }, []),
+  );
+
+  // Pull-to-refresh always forces a sync check, bypassing the throttle
+  // (T07 ticket item 6). Content queries invalidate inside runSync.
+  const [refreshing, setRefreshing] = React.useState(false);
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    void runSync({ trigger: 'manual' }).finally(() => setRefreshing(false));
+  }, []);
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={tokens.accent}
+      colors={[tokens.accent]}
+      progressBackgroundColor={tokens.surface}
+    />
   );
 
   const sections = React.useMemo<LibrarySection[]>(() => {
@@ -62,13 +88,18 @@ export function LibraryScreen() {
 
   if (sections.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center gap-3 bg-bg px-10">
+      <ScrollView
+        className="flex-1 bg-bg"
+        contentContainerClassName="flex-1 items-center justify-center gap-3 px-10"
+        refreshControl={refreshControl}
+      >
         <Ionicons name="library-outline" size={40} color={tokens.textMuted} />
         <Text className="font-reading-bold text-xl">Библиотека пуста</Text>
         <Text variant="muted" className="text-center">
-          Sample packs import on first run; more stories arrive with content sync (T07).
+          Sample packs import on first run; pull to sync new stories from the content repo.
         </Text>
-      </View>
+        <SyncStatusLine />
+      </ScrollView>
     );
   }
 
@@ -79,6 +110,8 @@ export function LibraryScreen() {
       keyExtractor={(item) => `${item.packId}/${item.id}`}
       stickySectionHeadersEnabled={false}
       contentContainerClassName="px-4 pb-12 pt-2"
+      refreshControl={refreshControl}
+      ListHeaderComponent={<SyncStatusLine />}
       renderSectionHeader={({ section }) => <PackHeader pack={section.pack} />}
       renderItem={({ item }) => (
         <StoryRow

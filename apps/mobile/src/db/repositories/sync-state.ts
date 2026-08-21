@@ -33,6 +33,11 @@ export function createSyncStateRepo(db: SumrakDB) {
         });
     },
 
+    /** Record the manifest's total pack size after a github sync (T07). */
+    async setBytes(packId: string, bytes: number): Promise<void> {
+      await db.update(syncState).set({ bytes }).where(eq(syncState.packId, packId));
+    },
+
     async removeInstalled(packId: string): Promise<void> {
       await db.delete(syncState).where(eq(syncState.packId, packId));
     },

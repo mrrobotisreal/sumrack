@@ -61,7 +61,30 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="library"
-        options={{ title: TAB_TITLES.library.ru, tabBarIcon: tabIcon('library-outline') }}
+        options={{
+          title: TAB_TITLES.library.ru,
+          tabBarIcon: tabIcon('library-outline'),
+          headerRight: () => (
+            <>
+              <Pressable
+                onPress={() => router.push('/packs')}
+                hitSlop={8}
+                accessibilityLabel="Content packs"
+                className="mr-4"
+              >
+                <Ionicons name="cloud-download-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/settings')}
+                hitSlop={8}
+                accessibilityLabel="Settings"
+                className="mr-4"
+              >
+                <Ionicons name="person-circle-outline" size={26} color={tokens.textMuted} />
+              </Pressable>
+            </>
+          ),
+        }}
       />
       <Tabs.Screen
         name="dictionary"

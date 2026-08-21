@@ -11,7 +11,7 @@ import {
   Literata_700Bold,
   useFonts,
 } from '@expo-google-fonts/literata';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts as useGolosFonts } from 'expo-font';
 import { Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,14 +19,14 @@ import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
+import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
 import { useThemeStore } from '@/store/theme';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient();
 
 export default function RootLayout() {
   // Importing the theme store applies the persisted dark/light/system mode
@@ -91,8 +91,10 @@ export default function RootLayout() {
                 name="word-bank/add"
                 options={{ title: 'Add to word bank', presentation: 'modal' }}
               />
+              <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
               <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
             </Stack>
+            <AutoSync />
           </ThemeProvider>
         </QueryClientProvider>
       </DbProvider>

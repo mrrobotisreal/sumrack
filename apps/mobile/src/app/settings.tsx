@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect } from 'expo-router';
 import * as React from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
 import { track } from '@/services/analytics';
 import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useThemeStore, type ThemeMode } from '@/store/theme';
@@ -32,7 +33,11 @@ export default function SettingsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-bg px-4 pt-6">
+    <ScrollView
+      className="flex-1 bg-bg"
+      contentContainerClassName="px-4 pb-12 pt-6"
+      keyboardShouldPersistTaps="handled"
+    >
       <Text variant="caption" className="mb-2 uppercase tracking-wider">
         Appearance
       </Text>
@@ -81,6 +86,8 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <SyncSettingsSection />
+
       {__DEV__ && (
         <>
           <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
@@ -101,8 +108,8 @@ export default function SettingsScreen() {
       )}
 
       <Text variant="caption" className="mt-8 text-center">
-        More settings arrive with sync (T07), voices (T11), and backup (T20).
+        More settings arrive with voices (T11) and backup (T20).
       </Text>
-    </View>
+    </ScrollView>
   );
 }

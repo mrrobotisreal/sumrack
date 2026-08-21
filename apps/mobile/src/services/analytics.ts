@@ -39,7 +39,19 @@ export type AnalyticsEvent =
   | 'review_session_empty'
   | 'review_graded'
   | 'review_session_finished'
-  | 'review_session_abandoned';
+  | 'review_session_abandoned'
+  // T07 content sync. Props must never contain the PAT or any secret value.
+  | 'sync_check_started'
+  | 'sync_completed'
+  | 'sync_failed'
+  | 'sync_pack_failed'
+  | 'audio_deferred_wifi'
+  | 'audio_backfilled'
+  | 'sync_config_saved'
+  | 'sync_pat_saved'
+  | 'sync_pat_cleared'
+  | 'wifi_only_audio_toggled'
+  | 'packs_screen_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

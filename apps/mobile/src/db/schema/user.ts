@@ -249,6 +249,8 @@ export const syncState = sqliteTable('sync_state', {
   source: text('source').notNull(),
   installedAt: integer('installed_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
+  /** Total pack size from the manifest (null for bundled/local imports, T07). */
+  bytes: integer('bytes'),
 });
 
 /**

@@ -143,6 +143,22 @@ export function createContentRepo(db: SumrakDB) {
       };
     },
 
+    /** All audio tracks of a pack — sync (T07) uses this to find not-yet-downloaded audio. */
+    async listAudioTracksForPack(packId: string): Promise<AudioTrackRow[]> {
+      return db.select().from(audioTracks).where(eq(audioTracks.packId, packId));
+    },
+
+    /**
+     * Record where a track's audio file landed in app storage (T07 downloads
+     * audio after import when Wi-Fi-only deferred it; T10 plays from this).
+     */
+    async setAudioLocalUri(packId: string, file: string, localUri: string): Promise<void> {
+      await db
+        .update(audioTracks)
+        .set({ localUri })
+        .where(and(eq(audioTracks.packId, packId), eq(audioTracks.file, file)));
+    },
+
     /**
      * Resolve a stable sentence ref held by user data (bank item encounter).
      * Sentence ids are unique pack-wide; the authoring pipeline keeps them

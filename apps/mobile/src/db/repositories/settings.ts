@@ -21,6 +21,12 @@ export const SETTING_KEYS = {
   /** Last backup ids per target (T20/T21). */
   lastBackupGithub: 'lastBackup.github',
   lastBackupSyncd: 'lastBackup.syncd',
+  /** Content sync source (T07): { owner, repo, branch } — the PAT lives in secure-store, never here. */
+  contentRepo: 'sync.contentRepo',
+  /** boolean (T07, default true): only download narration audio on Wi-Fi. */
+  wifiOnlyAudio: 'sync.wifiOnlyAudio',
+  /** Epoch ms of the last manifest auto-check (T07 throttle). */
+  lastSyncCheckAt: 'sync.lastCheckAt',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */
