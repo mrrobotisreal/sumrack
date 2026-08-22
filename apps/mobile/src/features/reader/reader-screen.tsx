@@ -13,17 +13,23 @@ import { track } from '@/services/analytics';
 import { useReaderPrefs } from '@/store/reader-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { AudioBar } from './audio-bar';
 import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
 import { SentenceRow } from './sentence-row';
 import { StoryHeader } from './story-header';
 import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
+import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
 const POSITION_SAVE_DEBOUNCE_MS = 800;
 /** Sessions shorter than this don't count as reading time (accidental opens). */
 const MIN_READING_SESSION_MS = 3000;
+/** After the user scrolls by hand, karaoke auto-follow pauses this long. */
+const FOLLOW_SUSPEND_MS = 5000;
+/** Reserved space above the safe area for the narration bar (list padding). */
+const AUDIO_BAR_HEIGHT = 104;
 
 interface ReaderScreenProps {
   packId: string;
@@ -65,6 +71,43 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
 
   const readingStyle = React.useMemo(() => readingTextStyle(prefs), [prefs]);
   const translationStyle = React.useMemo(() => translationTextStyle(prefs), [prefs]);
+
+  // ---- narration + karaoke (T10) ----------------------------------------
+  const narration = useNarration({
+    packId,
+    storyId,
+    storyTitleRu: detail.data?.story.titleRu ?? '',
+    packTitleRu: detail.data?.pack.titleRu ?? '',
+    sentences,
+    tracks: detail.data?.audio ?? [],
+  });
+  const trackLoaded = narration.currentTrack != null;
+
+  // Auto-follow with gentle catch-up (UI_DESIGN §4/§5): ease the active
+  // sentence toward the upper third on every change; a manual scroll
+  // suspends following briefly so the user can look around mid-playback.
+  const followSuspendedUntilRef = React.useRef(0);
+  const { activeSentenceIdx, playing } = narration;
+  React.useEffect(() => {
+    if (activeSentenceIdx == null || !playing) return;
+    if (Date.now() < followSuspendedUntilRef.current) return;
+    if (!restoredRef.current) return;
+    listRef.current?.scrollToIndex({
+      index: activeSentenceIdx,
+      animated: true,
+      viewPosition: 0.33,
+    });
+  }, [activeSentenceIdx, playing]);
+
+  const { seekToSentence } = narration;
+  const handleSeekToSentence = React.useCallback(
+    (sentenceId: string) => {
+      // A deliberate jump is also a "keep following from here" signal.
+      followSuspendedUntilRef.current = 0;
+      seekToSentence(sentenceId);
+    },
+    [seekToSentence],
+  );
 
   React.useEffect(() => {
     track('story_opened', { packId, storyId });
@@ -263,6 +306,17 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
             onWordPress={handleWordPress}
             onPhraseSelected={handlePhraseSelected}
             onSelectingChange={setSelecting}
+            karaokeTokenIndex={
+              narration.mode === 'word' && narration.activeWord?.sentenceId === item.id
+                ? narration.activeWord.tokenIndex
+                : null
+            }
+            karaokeSentenceActive={
+              narration.mode === 'sentence' &&
+              narration.playing &&
+              narration.activeSentenceId === item.id
+            }
+            onSeekToSentence={trackLoaded ? handleSeekToSentence : null}
           />
         )}
         ListHeaderComponent={
@@ -276,7 +330,12 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
           />
         }
         ListFooterComponent={<StoryEnd finished={finished} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 48 + (narration.available ? AUDIO_BAR_HEIGHT : 0),
+        }}
+        onScrollBeginDrag={() => {
+          followSuspendedUntilRef.current = Date.now() + FOLLOW_SUSPEND_MS;
+        }}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
         onScrollToIndexFailed={(info) => {
           // Variable row heights: jump near the target, then settle exactly.
@@ -323,8 +382,14 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
         </View>
       </View>
 
+      {narration.available && <AudioBar narration={narration} />}
+
       <TypeSettingsSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} />
-      <WordPopup target={popupTarget} onClose={() => setPopupTarget(null)} />
+      <WordPopup
+        target={popupTarget}
+        onClose={() => setPopupTarget(null)}
+        segments={narration.segments}
+      />
       <PhraseCardSheet target={phraseTarget} onClose={() => setPhraseTarget(null)} />
     </View>
   );

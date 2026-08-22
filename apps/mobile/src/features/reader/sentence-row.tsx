@@ -21,6 +21,16 @@ interface SentenceRowProps {
   onWordPress: (token: TokenRow, sentenceId: string) => void;
   onPhraseSelected: (selection: PhraseSelection, sentenceId: string) => void;
   onSelectingChange: (selecting: boolean) => void;
+  /** T10 karaoke: the currently-spoken token in this sentence (word mode). */
+  karaokeTokenIndex?: number | null;
+  /** T10 karaoke: sentence-level fallback — wash the whole sentence. */
+  karaokeSentenceActive?: boolean;
+  /**
+   * T10 tap-sentence-to-seek: non-null while a narration track is loaded.
+   * Fires on taps that land on the sentence but not on a word (word taps
+   * keep opening the lookup popup).
+   */
+  onSeekToSentence?: ((sentenceId: string) => void) | null;
 }
 
 /**
@@ -40,6 +50,9 @@ function SentenceRowInner({
   onWordPress,
   onPhraseSelected,
   onSelectingChange,
+  karaokeTokenIndex,
+  karaokeSentenceActive,
+  onSeekToSentence,
 }: SentenceRowProps) {
   const { tokens } = useAppTheme();
   const handleWordPress = React.useCallback(
@@ -50,15 +63,31 @@ function SentenceRowInner({
     (selection: PhraseSelection) => onPhraseSelected(selection, sentenceId),
     [onPhraseSelected, sentenceId],
   );
+  const handleSeek = React.useMemo(
+    () => (onSeekToSentence ? () => onSeekToSentence(sentenceId) : undefined),
+    [onSeekToSentence, sentenceId],
+  );
   return (
     <View className="flex-row items-start px-5 py-2">
-      <View className="flex-1">
+      {/* Word taps (RNText onPress) win over this pressable; touches on the
+          gaps/punctuation/background seek the narration here (T10). */}
+      <Pressable
+        className={
+          karaokeSentenceActive
+            ? '-mx-2 flex-1 rounded-lg bg-accent-soft px-2'
+            : '-mx-2 flex-1 px-2'
+        }
+        onPress={handleSeek}
+        disabled={!handleSeek}
+        accessibilityLabel={handleSeek ? 'Play narration from this sentence' : undefined}
+      >
         <TokenText
           tokens={ruTokens}
           readingStyle={readingStyle}
           onWordPress={handleWordPress}
           onPhraseSelected={handlePhraseSelected}
           onSelectingChange={onSelectingChange}
+          karaokeTokenIndex={karaokeTokenIndex}
         />
         {revealed && (
           <Animated.View
@@ -68,7 +97,7 @@ function SentenceRowInner({
             <RNText style={[translationStyle, { color: tokens.textMuted }]}>{en}</RNText>
           </Animated.View>
         )}
-      </View>
+      </Pressable>
       <Pressable
         onPress={onToggleReveal}
         hitSlop={10}

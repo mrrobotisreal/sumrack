@@ -51,7 +51,17 @@ export type AnalyticsEvent =
   | 'sync_pat_saved'
   | 'sync_pat_cleared'
   | 'wifi_only_audio_toggled'
-  | 'packs_screen_opened';
+  | 'packs_screen_opened'
+  // T10 narration + karaoke
+  | 'narration_track_loaded'
+  | 'narration_play'
+  | 'narration_pause'
+  | 'narration_seek'
+  | 'narration_rate_changed'
+  | 'narration_track_switched'
+  | 'narration_finished'
+  | 'karaoke_fallback_sentence_mode'
+  | 'word_segment_played';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

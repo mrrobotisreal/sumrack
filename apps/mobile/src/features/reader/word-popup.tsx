@@ -10,9 +10,11 @@ import { queryKeys } from '@/db/hooks';
 import { normalizeRu } from '@/db/normalize';
 import type { TokenRow } from '@/db/repositories/content';
 import { track } from '@/services/analytics';
-import { speak } from '@/services/speech';
+import { getSpeechService, speak } from '@/services/speech';
 import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
+
+import type { WordSegmentPlayer } from './use-narration';
 
 export interface WordPopupTarget {
   token: TokenRow;
@@ -24,6 +26,13 @@ export interface WordPopupTarget {
 interface WordPopupProps {
   target: WordPopupTarget | null;
   onClose: () => void;
+  /**
+   * T10: narration word-segment playback for the speaker button. When the
+   * tapped word has a stamp on the loaded track, the button plays exactly
+   * that slice; otherwise it falls back to the speech service (a no-op with
+   * a disabled look until T11 registers Piper).
+   */
+  segments?: WordSegmentPlayer | null;
 }
 
 /**
@@ -35,18 +44,27 @@ interface WordPopupProps {
  * The sheet remounts per target (key below), so per-word state starts
  * fresh without reset effects.
  */
-export function WordPopup({ target, onClose }: WordPopupProps) {
+export function WordPopup({ target, onClose, segments }: WordPopupProps) {
   if (!target) return null;
   return (
     <WordPopupSheet
       key={`${target.sentenceId}:${target.token.tokenIndex}`}
       target={target}
       onClose={onClose}
+      segments={segments ?? null}
     />
   );
 }
 
-function WordPopupSheet({ target, onClose }: { target: WordPopupTarget; onClose: () => void }) {
+function WordPopupSheet({
+  target,
+  onClose,
+  segments,
+}: {
+  target: WordPopupTarget;
+  onClose: () => void;
+  segments: WordSegmentPlayer | null;
+}) {
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
   const encounterOnLookup = useLookupPrefs((s) => s.encounterOnLookup);
@@ -124,6 +142,18 @@ function WordPopupSheet({ target, onClose }: { target: WordPopupTarget; onClose:
   const inBank = !!bankStatus.data || justAdded;
   const showLemma = token.lemma && normalizeRu(token.lemma) !== normalizeRu(token.text);
 
+  // Speaker: prefer the exact narration slice of THIS surface form (T10);
+  // else the speech service (Piper once T11 lands). Neither → disabled look.
+  const hasSegment = segments?.hasSegment(target.sentenceId, token.tokenIndex) ?? false;
+  const canSpeak = hasSegment || getSpeechService().available;
+  const handleSpeak = React.useCallback(() => {
+    if (hasSegment) {
+      segments!.playSegment(target.sentenceId, token.tokenIndex);
+    } else {
+      void speak(token.lemma ?? token.text);
+    }
+  }, [hasSegment, segments, target.sentenceId, token]);
+
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-scrim/50" onPress={onClose} accessibilityLabel="Close" />
@@ -139,13 +169,23 @@ function WordPopupSheet({ target, onClose }: { target: WordPopupTarget; onClose:
           </View>
           {token.level && <LevelChip level={token.level} />}
           <Pressable
-            onPress={() => void speak(token.lemma ?? token.text)}
+            onPress={canSpeak ? handleSpeak : undefined}
+            disabled={!canSpeak}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Pronounce word"
-            className="h-11 w-11 items-center justify-center rounded-full bg-surface-2 active:bg-border"
+            accessibilityLabel={canSpeak ? 'Pronounce word' : 'No audio available for this word'}
+            accessibilityState={{ disabled: !canSpeak }}
+            className={
+              canSpeak
+                ? 'h-11 w-11 items-center justify-center rounded-full bg-surface-2 active:bg-border'
+                : 'h-11 w-11 items-center justify-center rounded-full bg-surface-2 opacity-40'
+            }
           >
-            <Ionicons name="volume-medium-outline" size={22} color={theme.textMuted} />
+            <Ionicons
+              name={canSpeak ? 'volume-medium' : 'volume-mute-outline'}
+              size={22}
+              color={canSpeak ? theme.accent : theme.textMuted}
+            />
           </Pressable>
         </View>
 

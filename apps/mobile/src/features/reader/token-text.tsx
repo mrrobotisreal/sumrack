@@ -36,6 +36,12 @@ interface TokenTextProps {
   onPhraseSelected: (selection: PhraseSelection) => void;
   /** Fires when a drag selection starts/ends — reader locks list scroll. */
   onSelectingChange: (selecting: boolean) => void;
+  /**
+   * Karaoke (T10): tokenIndex of the word to highlight as currently spoken
+   * (null/undefined = none). The chunk containing that token gets the
+   * `karaoke` treatment: accent-soft wash, full text color (UI_DESIGN §1).
+   */
+  karaokeTokenIndex?: number | null;
 }
 
 interface ChunkFrame {
@@ -74,6 +80,7 @@ export function TokenText({
   onWordPress,
   onPhraseSelected,
   onSelectingChange,
+  karaokeTokenIndex,
 }: TokenTextProps) {
   const { tokens: theme } = useAppTheme();
   const chunks = React.useMemo(() => buildChunks(tokens), [tokens]);
@@ -191,6 +198,11 @@ export function TokenText({
       >
         {chunks.map((chunk) => {
           const selected = range != null && chunk.index >= range.start && chunk.index <= range.end;
+          // Karaoke lights the whole visual chunk its token lives in, so
+          // attached punctuation glows with its word instead of splitting it.
+          const karaoke =
+            karaokeTokenIndex != null &&
+            chunk.tokens.some((t) => t.tokenIndex === karaokeTokenIndex);
           const tappable = chunk.wordToken != null;
           return (
             <RNText
@@ -198,7 +210,7 @@ export function TokenText({
               onLayout={(e) => onChunkLayout(chunk.index, e)}
               onPress={tappable ? () => onWordPress(chunk.wordToken!) : undefined}
               suppressHighlighting
-              className={selected ? 'rounded-[3px] bg-accent-soft' : undefined}
+              className={selected || karaoke ? 'rounded-[3px] bg-accent-soft' : undefined}
               style={[readingStyle, { color: theme.text }]}
             >
               {chunk.text}

@@ -27,6 +27,8 @@ export const SETTING_KEYS = {
   wifiOnlyAudio: 'sync.wifiOnlyAudio',
   /** Epoch ms of the last manifest auto-check (T07 throttle). */
   lastSyncCheckAt: 'sync.lastCheckAt',
+  /** Narration playback prefs (T10): { rate } — validated on read in use-narration. */
+  narrationPrefs: 'narration.prefs',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */
