@@ -61,7 +61,17 @@ export type AnalyticsEvent =
   | 'narration_track_switched'
   | 'narration_finished'
   | 'karaoke_fallback_sentence_mode'
-  | 'word_segment_played';
+  | 'word_segment_played'
+  // T11 on-device TTS (sherpa-onnx Piper) + voice model manager
+  | 'tts_voice_download_started'
+  | 'tts_voice_download_completed'
+  | 'tts_voice_download_failed'
+  | 'tts_voice_deleted'
+  | 'tts_voice_selected'
+  | 'tts_voice_loaded'
+  | 'tts_spoken'
+  | 'tts_piper_fallback'
+  | 'dev_tts_speak';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

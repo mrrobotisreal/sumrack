@@ -1,0 +1,49 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.winapps.sumrak'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.sherpaspeech"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+// sherpa-onnx publishes its prebuilt Android AAR (JNI libs for all ABIs +
+// the com.k2fsa.sherpa.onnx Kotlin API) only as a GitHub release asset —
+// there is no official Maven Central artifact. An ivy repository with a
+// release-URL pattern lets Gradle fetch + cache it like a normal pinned
+// dependency, so no 49 MB binary lives in this repo and `expo prebuild`
+// needs no extra steps. It must be registered on EVERY project (not just
+// this module): the app project resolves this module's transitive deps
+// against its own repositories, and android/ is generated (gitignored), so
+// the registration has to live here to survive a clean prebuild.
+// (T11; verified against v1.13.6.)
+rootProject.allprojects {
+  repositories {
+    ivy {
+      url = uri("https://github.com/k2-fsa/sherpa-onnx/releases/download")
+      patternLayout {
+        artifact "v[revision]/[artifact]-[revision].aar"
+      }
+      metadataSources { artifact() }
+      content { includeGroup "com.k2fsa.sherpa.onnx" }
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation "com.k2fsa.sherpa.onnx:sherpa-onnx:1.13.6@aar"
+  // Piper voice archives ship as .tar.bz2 (upstream format); Android has no
+  // built-in bzip2, commons-compress does the extraction natively.
+  implementation "org.apache.commons:commons-compress:1.27.1"
+}

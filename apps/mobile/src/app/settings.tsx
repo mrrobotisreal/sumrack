@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
+import { VoicesSettingsSection } from '@/features/tts/voices-settings-section';
 import { track } from '@/services/analytics';
 import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useThemeStore, type ThemeMode } from '@/store/theme';
@@ -86,6 +87,8 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <VoicesSettingsSection />
+
       <SyncSettingsSection />
 
       {__DEV__ && (
@@ -103,12 +106,21 @@ export default function SettingsScreen() {
                 <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
               </Pressable>
             </Link>
+            <Link href="/dev-tts" asChild>
+              <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Read any text</Text>
+                  <Text variant="caption">Speak arbitrary Russian, voice QA + latency (T11)</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
           </View>
         </>
       )}
 
       <Text variant="caption" className="mt-8 text-center">
-        More settings arrive with voices (T11) and backup (T20).
+        More settings arrive with AI feedback (T16) and backup (T20).
       </Text>
     </ScrollView>
   );

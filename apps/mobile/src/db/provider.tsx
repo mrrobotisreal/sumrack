@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
+import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
 import { hydrateThemeFromDb } from '@/store/theme';
@@ -32,6 +33,9 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateThemeFromDb();
         await hydrateReaderPrefsFromDb();
         await hydrateLookupPrefsFromDb();
+        // Registers the real SpeechService (Piper/system) — T05's popup
+        // speaker and all readback surfaces are live from here on.
+        await hydrateTtsFromDb();
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error('[db] bootstrap failed', err);

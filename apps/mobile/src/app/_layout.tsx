@@ -93,6 +93,7 @@ export default function RootLayout() {
               />
               <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
               <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
+              <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
             </Stack>
             <AutoSync />
           </ThemeProvider>

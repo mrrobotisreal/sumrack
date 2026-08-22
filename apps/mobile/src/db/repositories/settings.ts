@@ -29,6 +29,8 @@ export const SETTING_KEYS = {
   lastSyncCheckAt: 'sync.lastCheckAt',
   /** Narration playback prefs (T10): { rate } — validated on read in use-narration. */
   narrationPrefs: 'narration.prefs',
+  /** TTS voice selection (T11): { selectedVoiceId } — Zod-validated on read (features/tts/catalog). */
+  ttsVoice: 'tts.voice',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */
