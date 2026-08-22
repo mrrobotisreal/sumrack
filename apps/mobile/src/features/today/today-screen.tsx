@@ -5,7 +5,13 @@ import * as React from 'react';
 import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { useDailyActivity, useDueCardCount, useStories, useStoryProgressList } from '@/db/hooks';
+import {
+  useDailyActivity,
+  useDueCardCount,
+  useProductionDueCount,
+  useStories,
+  useStoryProgressList,
+} from '@/db/hooks';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -28,6 +34,7 @@ export function TodayScreen() {
   const { tokens } = useAppTheme();
 
   const due = useDueCardCount();
+  const productionDue = useProductionDueCount();
   const activity = useDailyActivity();
   const progressList = useStoryProgressList();
   const stories = useStories();
@@ -45,6 +52,7 @@ export function TodayScreen() {
   const reviewsDone = activity.data?.reviewsDone ?? 0;
   const readingMin = Math.floor((activity.data?.readingMs ?? 0) / 60_000);
   const dueCount = due.data ?? 0;
+  const pronDueCount = productionDue.data ?? 0;
 
   const continueTarget = React.useMemo(() => {
     const inProgress = (progressList.data ?? [])
@@ -104,6 +112,30 @@ export function TodayScreen() {
           </Text>
         )}
       </View>
+
+      {/* speaking practice (T12) — production cards are due only to this session */}
+      {pronDueCount > 0 && (
+        <Pressable
+          onPress={() => router.push('/review/pronunciation')}
+          accessibilityRole="button"
+          accessibilityLabel="Start pronunciation practice"
+          className="rounded-xl border border-border bg-surface p-4 active:bg-surface-2"
+        >
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text variant="caption" className="uppercase tracking-wider">
+                Speaking
+              </Text>
+              <Text className="font-ui-medium">
+                {pronDueCount === 1 ? '1 phrase' : `${pronDueCount} phrases`} to pronounce
+              </Text>
+            </View>
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+              <Ionicons name="mic-outline" size={18} color={tokens.accent} />
+            </View>
+          </View>
+        </Pressable>
+      )}
 
       {/* where I left off */}
       {continueTarget && (

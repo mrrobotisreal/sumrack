@@ -97,6 +97,10 @@ export default function RootLayout() {
                 options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
               />
               <Stack.Screen
+                name="review/pronunciation"
+                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+              />
+              <Stack.Screen
                 name="settings"
                 options={{ title: 'Settings', presentation: 'modal' }}
               />

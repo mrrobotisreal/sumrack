@@ -33,9 +33,34 @@ export interface ExtractResult {
   bytes: number;
 }
 
+export interface LoadAsrResult {
+  loadMs: number;
+  alreadyLoaded: boolean;
+}
+
+/**
+ * Raw native transcription result (T12). The pronunciation feature validates
+ * this with Zod at the boundary (asr-catalog.ts) before using it — treat
+ * this interface as a claim, not a guarantee.
+ */
+export interface NativeTranscribeResult {
+  text: string;
+  words: { word: string; startMs: number; endMs: number }[];
+  /** Pure decode time — the design §6 "< ~2s for a short phrase" number. */
+  decodeMs: number;
+  audioMs: number;
+}
+
+export interface StopRecordingResult {
+  path: string;
+  durationMs: number;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- expo's EventsMap constraint requires an any[] index signature
 export type SherpaSpeechEvents = Record<string, (...args: any[]) => void> & {
   onSpeakingStateChanged: (payload: { speaking: boolean }) => void;
+  /** ~8/s while recording: RMS input level 0..1 + elapsed time. */
+  onRecordingLevel: (payload: { level: number; elapsedMs: number }) => void;
 };
 
 declare class SherpaSpeechNativeModule extends NativeModule<SherpaSpeechEvents> {
@@ -50,6 +75,19 @@ declare class SherpaSpeechNativeModule extends NativeModule<SherpaSpeechEvents> 
   speak(text: string, rate: number): Promise<SpeakResult>;
   stop(): void;
   synthesizeToFile(text: string, rate: number, outPath: string): Promise<SynthesizeResult>;
+  loadAsr(
+    asrId: string,
+    encoderPath: string,
+    decoderPath: string,
+    joinerPath: string,
+    tokensPath: string,
+  ): Promise<LoadAsrResult>;
+  unloadAsr(): Promise<void>;
+  getLoadedAsrId(): string | null;
+  transcribeFile(wavPath: string): Promise<NativeTranscribeResult>;
+  startRecording(outPath: string): Promise<void>;
+  stopRecording(): Promise<StopRecordingResult>;
+  cancelRecording(): Promise<void>;
   sha256File(path: string): Promise<string>;
   extractTarBz2(archivePath: string, destDir: string): Promise<ExtractResult>;
   dirSize(path: string): Promise<number>;

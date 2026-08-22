@@ -6,6 +6,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
 import { VoicesSettingsSection } from '@/features/tts/voices-settings-section';
 import { track } from '@/services/analytics';
@@ -90,6 +91,7 @@ export default function SettingsScreen() {
       </View>
 
       <VoicesSettingsSection />
+      <AsrSettingsSection />
 
       <SyncSettingsSection />
 

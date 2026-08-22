@@ -1,5 +1,5 @@
 import type { BankItemRow } from '@/db/repositories/bank';
-import type { CardRow } from '@/db/repositories/reviews';
+import { MIXED_SESSION_DIRECTIONS, type CardRow } from '@/db/repositories/reviews';
 import type { Repositories } from '@/db/repositories';
 import type { CardDirection } from '@/db/schema';
 
@@ -76,7 +76,12 @@ export async function buildSession(
 ): Promise<SessionItem[]> {
   const { limit = SESSION_SIZE, now = Date.now() } = opts;
 
-  const due = await repos.reviews.listDueCards({ now, limit: limit * OVERFETCH });
+  const due = await repos.reviews.listDueCards({
+    now,
+    limit: limit * OVERFETCH,
+    // T12: production cards are due to the pronunciation session, not here.
+    directions: MIXED_SESSION_DIRECTIONS,
+  });
   const items = await repos.bank.getItemsByIds([...new Set(due.map((c) => c.bankItemId))]);
   const itemById = new Map(items.map((i) => [i.id, i]));
 

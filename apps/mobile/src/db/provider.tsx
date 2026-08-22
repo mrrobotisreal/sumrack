@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
+import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
@@ -36,6 +37,9 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         // Registers the real SpeechService (Piper/system) — T05's popup
         // speaker and all readback surfaces are live from here on.
         await hydrateTtsFromDb();
+        // ASR install state for Settings + the pronunciation game's gate
+        // (T12). The recognizer itself loads lazily at session start.
+        await refreshInstalledAsr();
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error('[db] bootstrap failed', err);

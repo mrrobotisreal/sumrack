@@ -33,7 +33,7 @@
       [
         "expo-audio",
         {
-          "recordAudioAndroid": false
+          "recordAudioAndroid": true
         }
       ]
     ],

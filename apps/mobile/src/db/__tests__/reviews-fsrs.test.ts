@@ -8,7 +8,7 @@ import { createTestDb } from './helpers';
 /** T06: FSRS scheduling logic, card-creation wiring, and distractor queries. */
 
 describe('card creation on bank add (createRepositories wiring)', () => {
-  it('addWord creates exactly the two active-direction cards', async () => {
+  it('addWord creates exactly the active-direction cards (T12 added production)', async () => {
     const repos = createRepositories(createTestDb());
     const { item } = await repos.bank.addWord({
       lemma: 'дом',
@@ -16,7 +16,7 @@ describe('card creation on bank add (createRepositories wiring)', () => {
       translation: 'house',
     });
     const cards = await repos.reviews.listCardsForItem(item.id);
-    expect(cards.map((c) => c.direction).sort()).toEqual(['en-ru', 'ru-en']);
+    expect(cards.map((c) => c.direction).sort()).toEqual(['en-ru', 'production', 'ru-en']);
     expect(cards.every((c) => c.state === State.New && c.dueAt <= Date.now())).toBe(true);
   });
 
@@ -25,7 +25,7 @@ describe('card creation on bank add (createRepositories wiring)', () => {
     const first = await repos.bank.addPhrase({ surface: 'до сих пор', translation: 'until now' });
     const again = await repos.bank.addPhrase({ surface: 'до сих пор', translation: 'until now' });
     expect(again.created).toBe(false);
-    expect(await repos.reviews.listCardsForItem(first.item.id)).toHaveLength(2);
+    expect(await repos.reviews.listCardsForItem(first.item.id)).toHaveLength(3);
   });
 
   it('a deduped add heals an item that predates T06 (no cards yet)', async () => {
@@ -35,7 +35,7 @@ describe('card creation on bank add (createRepositories wiring)', () => {
     const repos = createRepositories(db);
     expect(await repos.reviews.listCardsForItem(item.id)).toHaveLength(0);
     await repos.bank.addWord({ lemma: 'кот', surface: 'кота', translation: 'cat' });
-    expect(await repos.reviews.listCardsForItem(item.id)).toHaveLength(2);
+    expect(await repos.reviews.listCardsForItem(item.id)).toHaveLength(3);
   });
 });
 
@@ -46,9 +46,9 @@ describe('backfillCards', () => {
     await rawBank.addWord({ lemma: 'ночь', surface: 'ночь', translation: 'night' });
     await rawBank.addWord({ lemma: 'стена', surface: 'стена', translation: 'wall' });
     const repos = createRepositories(db);
-    expect(await repos.reviews.backfillCards()).toBe(4);
+    expect(await repos.reviews.backfillCards()).toBe(6);
     expect(await repos.reviews.backfillCards()).toBe(0);
-    expect(await repos.reviews.countDueCards()).toBe(4);
+    expect(await repos.reviews.countDueCards()).toBe(6);
   });
 });
 
@@ -70,7 +70,7 @@ describe('gradeCard (ts-fsrs pipeline)', () => {
     expect(againResult.card.state).toBe(State.Learning);
     expect(easyResult.card.state).toBe(State.Review);
     // Both leave the due queue for "now".
-    expect(await repos.reviews.countDueCards({ now })).toBe(2); // the two en-ru siblings
+    expect(await repos.reviews.countDueCards({ now })).toBe(4); // the en-ru + production siblings
   });
 
   it('appends a full ts-fsrs review_log entry per grade', async () => {
@@ -135,10 +135,10 @@ describe('due queue', () => {
     await repos.reviews.gradeCard(card.id, Rating.Easy, { now });
 
     const due = await repos.reviews.listDueCards({ now });
-    expect(due.map((c) => c.direction)).toEqual(['en-ru']);
+    expect(due.map((c) => c.direction).sort()).toEqual(['en-ru', 'production']);
     expect(await repos.reviews.countDueCards({ now, directions: ['ru-en'] })).toBe(0);
     // The Easy card is due again in the future.
-    expect(await repos.reviews.countDueCards({ now: card.dueAt + 30 * 86_400_000 })).toBe(2);
+    expect(await repos.reviews.countDueCards({ now: card.dueAt + 30 * 86_400_000 })).toBe(3);
   });
 
   it('orders most-overdue first', async () => {

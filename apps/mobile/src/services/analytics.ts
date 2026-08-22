@@ -72,7 +72,22 @@ export type AnalyticsEvent =
   | 'tts_voice_loaded'
   | 'tts_spoken'
   | 'tts_piper_fallback'
-  | 'dev_tts_speak';
+  | 'dev_tts_speak'
+  // T12 ASR model manager + pronunciation practice
+  | 'asr_model_download_started'
+  | 'asr_model_download_completed'
+  | 'asr_model_download_failed'
+  | 'asr_model_deleted'
+  | 'asr_loaded'
+  | 'asr_transcribed'
+  | 'pron_mic_permission_denied'
+  | 'pron_session_needs_model'
+  | 'pron_session_empty'
+  | 'pron_session_started'
+  | 'pron_attempt'
+  | 'pron_item_graded'
+  | 'pron_session_finished'
+  | 'pron_session_abandoned';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

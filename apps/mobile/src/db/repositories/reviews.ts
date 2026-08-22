@@ -22,10 +22,18 @@ export const ALL_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening', '
  * ticket): listening/production card rows are NOT created dormant — they are
  * created by T14/T12 when those game modes land, by adding the direction
  * here and letting `ensureCards`/`backfillCards` (both idempotent) fill the
- * gap. Keeping the rows absent means due queries and counts need no
- * direction filtering to stay honest.
+ * gap. T12 activated `production` (trained by the pronunciation game);
+ * `listening` arrives with T14.
  */
-export const ACTIVE_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru'];
+export const ACTIVE_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'production'];
+
+/**
+ * Directions the T06 mixed flashcard/MC session (and its Today due count)
+ * serves. `production` is deliberately NOT here: producing spoken Russian
+ * can't be trained by a flip-card, so those cards are due only to the
+ * pronunciation session (T12). T14's unified session merges the split.
+ */
+export const MIXED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru'];
 
 /**
  * One shared scheduler, default FSRS-5 parameters (no fuzz — single user,

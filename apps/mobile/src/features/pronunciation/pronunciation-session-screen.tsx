@@ -1,47 +1,41 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import type { Grade } from '@/db/repositories/reviews';
+import type { SessionResult } from '@/features/review/session-screen';
+import { SessionShell } from '@/features/review/session-shell';
+import { SummaryView } from '@/features/review/summary-view';
+import { ratingCountsAsCorrect } from '@/features/review/mapping';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { FlashcardView } from './flashcard-view';
-import { mcOutcomeToRating, ratingCountsAsCorrect } from './mapping';
-import { McView } from './mc-view';
-import { buildSession, type SessionItem } from './session';
-import { SessionShell } from './session-shell';
-import { SummaryView } from './summary-view';
+import { isAsrInstalled } from './asr-manager';
+import { preloadAsr } from './asr-service';
+import { PronunciationView } from './pronunciation-view';
+import { pronunciationScoreToRating } from './scoring';
+import { buildPronunciationSession, type PronunciationItem } from './session';
 
-export interface SessionResult {
-  cardId: string;
-  rating: Grade;
-  correct: boolean;
-  /** T06 modes plus 'pronunciation' (T12) — SummaryView is mode-agnostic. */
-  mode: SessionItem['mode'] | 'pronunciation';
-}
-
-type Phase = 'loading' | 'empty' | 'playing' | 'summary';
+type Phase = 'loading' | 'needs-model' | 'empty' | 'playing' | 'summary';
 
 /**
- * The daily review session (T06: mixed flashcards + MC; T13/T14 add modes).
- * Owns the present → grade → reschedule → persist loop: every grade goes
- * through reviews.gradeCard (FSRS + review_log) and bumps
- * daily_activity.reviewsDone immediately, so quitting mid-session loses
- * nothing already graded.
+ * The standalone 10-phrase pronunciation session (T12, design §7.3 mode 6),
+ * launched from Today. Same skeleton as T06's SessionScreen: grade → persist
+ * immediately (quitting loses nothing already graded), game_sessions row,
+ * quit-with-confirm. Grades land on the `production` direction via the
+ * standard reviews.gradeCard pipeline.
  */
-export function SessionScreen() {
+export function PronunciationSessionScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { tokens } = useAppTheme();
 
   const [phase, setPhase] = React.useState<Phase>('loading');
-  const [items, setItems] = React.useState<SessionItem[]>([]);
+  const [items, setItems] = React.useState<PronunciationItem[]>([]);
   const [index, setIndex] = React.useState(0);
-  /** Rendered by the summary; resultsRef is the accumulator event handlers use. */
   const [finalResults, setFinalResults] = React.useState<SessionResult[]>([]);
   const resultsRef = React.useRef<SessionResult[]>([]);
   const gameSessionIdRef = React.useRef<string | null>(null);
@@ -51,23 +45,26 @@ export function SessionScreen() {
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const session = await buildSession(repos);
+      if (!isAsrInstalled()) {
+        track('pron_session_needs_model');
+        setPhase('needs-model');
+        return;
+      }
+      preloadAsr(); // warm the recognizer while the first prompt renders
+      const session = await buildPronunciationSession(repos);
       if (cancelled) return;
       if (session.length === 0) {
-        track('review_session_empty');
+        track('pron_session_empty');
         setPhase('empty');
         return;
       }
-      const row = await repos.stats.startGameSession('review-mixed');
+      const row = await repos.stats.startGameSession('pronunciation');
       if (cancelled) return;
       gameSessionIdRef.current = row.id;
       startedAtRef.current = Date.now();
       setItems(session);
       setPhase('playing');
-      track('review_session_started', {
-        size: session.length,
-        mc: session.filter((s) => s.mode === 'mc').length,
-      });
+      track('pron_session_started', { size: session.length });
     })();
     return () => {
       cancelled = true;
@@ -92,20 +89,16 @@ export function SessionScreen() {
     invalidateAfterReviews();
   }, [invalidateAfterReviews]);
 
-  const grade = React.useCallback(
-    (entry: SessionItem, rating: Grade, correct: boolean, durationMs: number) => {
-      resultsRef.current.push({ cardId: entry.card.id, rating, correct, mode: entry.mode });
-      // Fire-and-forget: grading must never stall the flow (offline, local DB).
+  const complete = React.useCallback(
+    (entry: PronunciationItem, bestScore: number, attempts: number) => {
+      const rating = pronunciationScoreToRating(bestScore);
+      const correct = ratingCountsAsCorrect(rating);
+      resultsRef.current.push({ cardId: entry.card.id, rating, correct, mode: 'pronunciation' });
       void repos.reviews
-        .gradeCard(entry.card.id, rating, { durationMs })
+        .gradeCard(entry.card.id, rating)
         .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
-        .catch((err) => console.error('[review] grade failed', err));
-      track('review_graded', {
-        direction: entry.direction,
-        mode: entry.mode,
-        rating,
-        durationMs,
-      });
+        .catch((err) => console.error('[pron] grade failed', err));
+      track('pron_item_graded', { rating, bestScore, attempts, source: entry.source });
 
       const next = index + 1;
       if (next < items.length) {
@@ -114,7 +107,7 @@ export function SessionScreen() {
       }
       if (finishedRef.current) return;
       finishedRef.current = true;
-      track('review_session_finished', {
+      track('pron_session_finished', {
         itemCount: resultsRef.current.length,
         correctCount: resultsRef.current.filter((r) => r.correct).length,
         durationMs: Date.now() - startedAtRef.current,
@@ -133,14 +126,14 @@ export function SessionScreen() {
     }
     Alert.alert(
       'End session?',
-      `${resultsRef.current.length} graded so far — those reviews are already saved.`,
+      `${resultsRef.current.length} graded so far — those are already saved.`,
       [
         { text: 'Keep going', style: 'cancel' },
         {
           text: 'End session',
           style: 'destructive',
           onPress: () => {
-            track('review_session_abandoned', {
+            track('pron_session_abandoned', {
               completed: resultsRef.current.length,
               total: items.length,
             });
@@ -152,7 +145,6 @@ export function SessionScreen() {
     );
   }, [phase, items.length, persistSessionEnd, router]);
 
-  // Android hardware back = the same confirm, never a silent pop.
   React.useEffect(() => {
     if (phase !== 'playing') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -170,12 +162,36 @@ export function SessionScreen() {
     );
   }
 
+  if (phase === 'needs-model') {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <Ionicons name="cloud-download-outline" size={40} color={tokens.textMuted} />
+        <Text className="text-center font-ui-medium text-lg">Speech recognition needed</Text>
+        <Text variant="muted" className="text-center">
+          Pronunciation practice runs fully offline, but the Russian recognition model (~60 MB) has
+          to be downloaded once in Settings → Voices &amp; speech.
+        </Text>
+        <Pressable
+          onPress={() => {
+            router.back();
+            router.push('/settings');
+          }}
+          accessibilityRole="button"
+          className="mt-2 rounded-full bg-accent px-5 py-2.5 active:opacity-80"
+        >
+          <Text className="font-ui-medium text-bg">Open settings</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (phase === 'empty') {
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
-        <Text className="font-reading text-xl">Всё повторено</Text>
+        <Text className="font-reading text-xl">Нечего произносить</Text>
         <Text variant="muted" className="text-center">
-          Nothing is due right now. Read something — new words become reviews.
+          No speaking practice is due right now. Words and phrases you collect become pronunciation
+          prompts.
         </Text>
         <Pressable
           onPress={() => router.back()}
@@ -195,23 +211,11 @@ export function SessionScreen() {
   const entry = items[index]!;
   return (
     <SessionShell current={index} total={items.length} onQuit={quit}>
-      {entry.mode === 'mc' && entry.choices ? (
-        <McView
-          key={entry.card.id}
-          entry={entry}
-          onAnswer={(correct, durationMs) =>
-            grade(entry, mcOutcomeToRating(correct, durationMs), correct, durationMs)
-          }
-        />
-      ) : (
-        <FlashcardView
-          key={entry.card.id}
-          entry={entry}
-          onGrade={(rating, durationMs) =>
-            grade(entry, rating, ratingCountsAsCorrect(rating), durationMs)
-          }
-        />
-      )}
+      <PronunciationView
+        key={entry.card.id}
+        entry={entry}
+        onComplete={(bestScore, attempts) => complete(entry, bestScore, attempts)}
+      />
     </SessionShell>
   );
 }
