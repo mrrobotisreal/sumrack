@@ -176,7 +176,7 @@ export async function buildDailySession(
     const wantVariant: ListeningVariant = i % 2 === 0 ? 'pick4' : 'typed';
     session.push({
       mode: 'listening',
-      entry: await buildListeningItemForCard(repos, card, item, wantVariant),
+      entry: await buildListeningItemForCard(repos, card, item, wantVariant, { unseenAllowed }),
     });
   }
 

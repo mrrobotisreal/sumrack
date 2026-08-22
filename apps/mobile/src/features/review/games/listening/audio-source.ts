@@ -3,6 +3,7 @@ import type { BankItemRow } from '@/db/repositories/bank';
 import type { Repositories } from '@/db/repositories';
 
 import { headword } from '../../session';
+import { sentenceEligible } from '../sentence-source';
 
 /**
  * Audio-source selection for the listening quiz (T14 work item 4; the same
@@ -37,21 +38,37 @@ export function spokenText(audio: ListeningAudio): string {
 
 /**
  * Resolve the best audio source for a bank item. Segment path requires:
- * a word item with a source sentence, a downloaded track for that story,
- * and a word stamp covering the lemma's token in that sentence. Phrases go
- * straight to TTS (bank phrases don't record a token span, so a reliable
- * multi-word slice can't be reconstructed — recorded T14 deviation).
+ * a word item with a source sentence the T13 sentence-sourcing rules allow
+ * (read story / scrolled-past sentence, unless `unseenAllowed`), a
+ * downloaded track for that story, and a word stamp covering the lemma's
+ * token in that sentence. Phrases go straight to TTS (bank phrases don't
+ * record a token span, so a reliable multi-word slice can't be
+ * reconstructed — recorded T14 deviation). Ineligible/unstamped sources
+ * fall back to TTS — the item always stays playable.
  */
 export async function resolveListeningAudio(
   repos: Repositories,
   item: BankItemRow,
+  opts: { unseenAllowed?: boolean } = {},
 ): Promise<ListeningAudio> {
+  const { unseenAllowed = false } = opts;
   const fallback: ListeningAudio = { kind: 'tts', text: headword(item) };
   if (item.kind !== 'word' || !item.lemma || !item.sourceSentenceId) return fallback;
 
   const resolved = await repos.content.resolveSentence(item.sourceSentenceId);
   if (!resolved) return fallback;
   const { packId, storyId, id: sentenceId } = resolved.sentence;
+
+  // T14 ticket: listening items sourced from stories respect the T13
+  // unseen-stories toggle too (a one-entry ReadIndex feeds the shared rule).
+  if (!unseenAllowed) {
+    const progress = await repos.reading.getProgress(packId, storyId);
+    const index = {
+      progress: new Map(progress ? [[`${packId}:${storyId}`, progress]] : []),
+      storyLevel: new Map(),
+    };
+    if (!sentenceEligible(resolved.sentence, index, false)) return fallback;
+  }
 
   const tracks = (await repos.content.listAudioTracksForPack(packId)).filter(
     (t) => t.storyId === storyId && t.localUri != null,

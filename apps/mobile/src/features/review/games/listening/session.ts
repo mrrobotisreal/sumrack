@@ -46,8 +46,9 @@ export async function buildListeningItemForCard(
   card: CardRow,
   item: BankItemRow,
   wantVariant: ListeningVariant,
+  opts: { unseenAllowed?: boolean } = {},
 ): Promise<ListeningItem> {
-  const audio = await resolveListeningAudio(repos, item);
+  const audio = await resolveListeningAudio(repos, item, opts);
   track('listening_audio_resolved', { source: audio.kind, itemKind: item.kind });
   const entry: ListeningItem = {
     card,
@@ -104,9 +105,9 @@ async function buildListeningChoices(
  */
 export async function buildListeningSession(
   repos: Repositories,
-  opts: { limit?: number; now?: number } = {},
+  opts: { limit?: number; now?: number; unseenAllowed?: boolean } = {},
 ): Promise<ListeningItem[]> {
-  const { limit = LISTENING_SESSION_SIZE, now = Date.now() } = opts;
+  const { limit = LISTENING_SESSION_SIZE, now = Date.now(), unseenAllowed = false } = opts;
 
   const due = await repos.reviews.listDueCards({ now, limit, directions: ['listening'] });
   const weak = await repos.reviews.listWeakestCards({ now, limit, directions: ['listening'] });
@@ -124,7 +125,9 @@ export async function buildListeningSession(
     if (!item) continue;
     seenItems.add(card.bankItemId);
     const wantVariant: ListeningVariant = session.length % 2 === 0 ? 'pick4' : 'typed';
-    session.push(await buildListeningItemForCard(repos, card, item, wantVariant));
+    session.push(
+      await buildListeningItemForCard(repos, card, item, wantVariant, { unseenAllowed }),
+    );
   }
   return session;
 }

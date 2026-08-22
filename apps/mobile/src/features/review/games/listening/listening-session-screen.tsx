@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { useGamePrefs } from '@/store/game-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { listeningOutcomeToRating, type ListeningOutcome } from '../../mapping';
@@ -19,7 +20,9 @@ import { buildListeningSession, type ListeningItem } from './session';
  */
 export function ListeningSessionScreen() {
   const { tokens } = useAppTheme();
-  const [build] = React.useState(() => () => buildListeningSession(repos));
+  const unseenAllowed = useGamePrefs((s) => s.clozeUnseenStoriesAllowed);
+  // Captured once at mount — the session is built once; a settings change applies next launch.
+  const [build] = React.useState(() => () => buildListeningSession(repos, { unseenAllowed }));
 
   const session = useGameSession<ListeningItem>({
     mode: 'listening',

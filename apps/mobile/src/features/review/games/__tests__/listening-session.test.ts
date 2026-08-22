@@ -88,8 +88,9 @@ async function addDistractors(repos: Repositories, n: number) {
 }
 
 describe('resolveListeningAudio', () => {
-  it('picks the pack segment when a downloaded track stamps the lemma token', async () => {
+  it('picks the pack segment when a downloaded track stamps the lemma token in a read story', async () => {
     const { repos, item } = await setup({ withTrack: true, withStamp: true });
+    await repos.reading.markFinished('p1', 'st1');
     const audio = await resolveListeningAudio(repos, item);
     expect(audio).toEqual({
       kind: 'segment',
@@ -100,13 +101,23 @@ describe('resolveListeningAudio', () => {
     });
   });
 
+  it('respects the unseen-stories rule: unread source sentence → TTS unless the toggle allows it', async () => {
+    const { repos, item } = await setup({ withTrack: true, withStamp: true });
+    // No progress row: the sentence would spoil an unopened story.
+    expect(await resolveListeningAudio(repos, item)).toEqual({ kind: 'tts', text: 'слово' });
+    const allowed = await resolveListeningAudio(repos, item, { unseenAllowed: true });
+    expect(allowed.kind).toBe('segment');
+  });
+
   it('falls back to TTS of the lemma when the track has no stamp for the token', async () => {
     const { repos, item } = await setup({ withTrack: true, withStamp: false });
+    await repos.reading.markFinished('p1', 'st1');
     expect(await resolveListeningAudio(repos, item)).toEqual({ kind: 'tts', text: 'слово' });
   });
 
   it('falls back to TTS when the track audio is not downloaded', async () => {
     const { repos, item } = await setup({ withTrack: true, withStamp: true, downloaded: false });
+    await repos.reading.markFinished('p1', 'st1');
     expect(await resolveListeningAudio(repos, item)).toEqual({ kind: 'tts', text: 'слово' });
   });
 
@@ -138,6 +149,7 @@ describe('resolveListeningAudio', () => {
 describe('buildListeningItemForCard', () => {
   it('answer key is the spoken text; segment case answers the surface form', async () => {
     const { repos, item } = await setup({ withTrack: true, withStamp: true });
+    await repos.reading.markFinished('p1', 'st1');
     await addDistractors(repos, 5);
     const card = (await repos.reviews.getCard(item.id, 'listening'))!;
     const entry = await buildListeningItemForCard(repos, card, item, 'pick4');
