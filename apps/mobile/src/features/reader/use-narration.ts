@@ -224,6 +224,13 @@ export function useNarration({
         setActiveSentence(null);
         setPositionMs(Math.round(status.duration * 1000));
         trackEvent('narration_finished', {});
+        // Park the player back at 0 immediately: ExoPlayer's ENDED state is
+        // race-prone (play() at the end can re-emit didJustFinish before a
+        // rewind lands — hit on the S24 Ultra). Pause first — a seek from
+        // ENDED auto-resumes while playWhenReady is still set (seen on the
+        // emulator). UI keeps showing the full duration.
+        player.pause();
+        void player.seekTo(0);
       }
     });
     playerRef.current = player;
