@@ -24,9 +24,22 @@ import { track } from '@/services/analytics';
 import { getSpeechService, speak } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { FeedbackSection } from '@/features/ai/feedback-section';
+
 import { BankSaveSheet, type BankSaveTarget } from './bank-save-sheet';
 import { useDailyPrompt, usePromptById } from './daily-prompt';
-import { FeedbackBadge } from './feedback-badge';
+
+/**
+ * Feedback area below the editor. Queries the row itself (rather than
+ * using the wrapper's prop) so a NEW entry grows the affordance the
+ * moment its first autosave creates the row, and status transitions
+ * (queued → done from the background worker) re-render live.
+ */
+function EditorFeedback({ entryId }: { entryId: string }) {
+  const entry = useJournalEntry(entryId);
+  if (!entry.data) return null;
+  return <FeedbackSection entry={entry.data} />;
+}
 
 const AUTOSAVE_MS = 800;
 
@@ -230,7 +243,6 @@ function EntryEditor({
     [readMode, text],
   );
 
-  const status = entry?.feedbackStatus ?? 'none';
   const hasText = text.trim().length > 0;
 
   return (
@@ -349,17 +361,8 @@ function EntryEditor({
             />
           )}
 
-          {/* feedback affordance — inert until T16 */}
-          {entryId != null && (
-            <View className="mt-8 flex-row items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 opacity-70">
-              <Ionicons name="sparkles-outline" size={18} color={theme.textMuted} />
-              <View className="flex-1">
-                <Text className="font-ui-medium text-sm text-text-muted">Get AI feedback</Text>
-                <Text className="text-xs text-text-muted">Coming soon — works online only.</Text>
-              </View>
-              <FeedbackBadge status={status} />
-            </View>
-          )}
+          {/* AI feedback (T16): request/queued/error/done states + rendered diff */}
+          {entryId != null && !readMode && <EditorFeedback entryId={entryId} />}
         </ScrollView>
       </KeyboardAvoidingView>
 

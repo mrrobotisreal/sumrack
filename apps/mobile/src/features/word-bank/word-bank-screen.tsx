@@ -56,6 +56,8 @@ export function WordBankScreen() {
   const items = useBankItems(filter);
   const options = useBankFilterOptions();
   const stories = useStories();
+  /** Flagged-for-enrichment count drives the T16 call-to-action banner. */
+  const enrichable = useBankItems({ needsEnrichment: true, limit: 200 });
 
   const storyTitles = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -161,6 +163,25 @@ export function WordBankScreen() {
         {/* Mastery bands arrive with FSRS in T06 — slot reserved, inert. */}
         <FilterChip label="Mastery · T06" icon="hourglass-outline" active={false} disabled />
       </ScrollView>
+
+      {/* enrichment call-to-action (T16): visible whenever items are flagged */}
+      {(enrichable.data?.length ?? 0) > 0 && (
+        <Pressable
+          onPress={() => router.push('/word-bank/enrich')}
+          accessibilityRole="button"
+          className="mx-4 mb-2 flex-row items-center gap-3 rounded-xl border border-accent/40 bg-surface px-4 py-3 active:bg-surface-2"
+        >
+          <Ionicons name="sparkles-outline" size={16} color={theme.accent} />
+          <View className="flex-1">
+            <Text className="font-ui-medium text-sm">
+              {enrichable.data!.length} {enrichable.data!.length === 1 ? 'item' : 'items'} missing
+              details
+            </Text>
+            <Text variant="caption">Let AI propose lemma, translation, and grammar</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        </Pressable>
+      )}
 
       {items.isPending ? (
         <View className="flex-1 items-center justify-center">

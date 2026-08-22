@@ -24,6 +24,7 @@ import * as React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { AiQueue } from '@/components/ai-queue';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
 import { queryClient } from '@/lib/query-client';
@@ -126,6 +127,7 @@ export default function RootLayout() {
                 name="word-bank/add"
                 options={{ title: 'Add to word bank', presentation: 'modal' }}
               />
+              <Stack.Screen name="word-bank/enrich" options={{ title: 'Enrich with AI' }} />
               <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
               <Stack.Screen
                 name="journal/[id]"
@@ -137,6 +139,7 @@ export default function RootLayout() {
               <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
             </Stack>
             <AutoSync />
+            <AiQueue />
             {!introDone && <AnimatedSplash onDone={() => setIntroDone(true)} />}
           </ThemeProvider>
         </QueryClientProvider>

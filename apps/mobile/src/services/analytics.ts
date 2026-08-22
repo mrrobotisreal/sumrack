@@ -136,7 +136,26 @@ export type AnalyticsEvent =
   | 'note_created'
   | 'note_autosaved'
   | 'note_deleted'
-  | 'note_preview_toggled';
+  | 'note_preview_toggled'
+  // T16 OpenRouter AI service. Props carry feature tags, error codes, and
+  // counts ONLY — never entry/card text and NEVER the API key.
+  | 'ai_request_queued'
+  | 'ai_request_sent'
+  | 'ai_request_succeeded'
+  | 'ai_request_failed'
+  | 'ai_key_saved'
+  | 'ai_key_cleared'
+  | 'ai_model_changed'
+  | 'ai_key_test'
+  | 'journal_feedback_requested'
+  | 'journal_feedback_cancelled'
+  | 'enrich_screen_opened'
+  | 'enrich_proposals_requested'
+  | 'enrich_proposals_received'
+  | 'enrich_accepted'
+  | 'enrich_rejected'
+  | 'enrich_apply_failed'
+  | 'explain_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

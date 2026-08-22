@@ -31,6 +31,8 @@ interface SentenceRowProps {
    * keep opening the lookup popup).
    */
   onSeekToSentence?: ((sentenceId: string) => void) | null;
+  /** T16 "explain this": shown as a sparkle beside the revealed translation. */
+  onExplain?: (sentenceId: string) => void;
 }
 
 /**
@@ -53,6 +55,7 @@ function SentenceRowInner({
   karaokeTokenIndex,
   karaokeSentenceActive,
   onSeekToSentence,
+  onExplain,
 }: SentenceRowProps) {
   const { tokens } = useAppTheme();
   const handleWordPress = React.useCallback(
@@ -92,9 +95,22 @@ function SentenceRowInner({
         {revealed && (
           <Animated.View
             entering={FadeIn.duration(180)}
-            className="mt-1.5 border-l-2 border-accent/40 pl-3"
+            className="mt-1.5 flex-row items-start gap-2 border-l-2 border-accent/40 pl-3"
           >
-            <RNText style={[translationStyle, { color: tokens.textMuted }]}>{en}</RNText>
+            <RNText className="flex-1" style={[translationStyle, { color: tokens.textMuted }]}>
+              {en}
+            </RNText>
+            {onExplain && (
+              <Pressable
+                onPress={() => onExplain(sentenceId)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Explain this sentence with AI"
+                className="pt-0.5 active:opacity-60"
+              >
+                <Ionicons name="sparkles-outline" size={14} color={tokens.accent} />
+              </Pressable>
+            )}
           </Animated.View>
         )}
       </Pressable>

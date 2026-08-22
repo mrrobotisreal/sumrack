@@ -13,6 +13,9 @@ import { track } from '@/services/analytics';
 import { useReaderPrefs } from '@/store/reader-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { ExplainSheet } from '@/features/ai/explain-sheet';
+import type { ExplainTarget } from '@/features/ai/explain';
+
 import { AudioBar } from './audio-bar';
 import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
 import { SentenceRow } from './sentence-row';
@@ -55,6 +58,7 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
   const [revealed, setRevealed] = React.useState<ReadonlySet<string>>(new Set());
   const [typeSheetOpen, setTypeSheetOpen] = React.useState(false);
   const [popupTarget, setPopupTarget] = React.useState<WordPopupTarget | null>(null);
+  const [explainTarget, setExplainTarget] = React.useState<ExplainTarget | null>(null);
   const [phraseTarget, setPhraseTarget] = React.useState<PhraseCardTarget | null>(null);
   // Drag selection in progress → the list must not scroll under the finger.
   const [selecting, setSelecting] = React.useState(false);
@@ -317,6 +321,14 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
               narration.activeSentenceId === item.id
             }
             onSeekToSentence={trackLoaded ? handleSeekToSentence : null}
+            onExplain={() =>
+              setExplainTarget({
+                kind: 'sentence',
+                ru: item.ru,
+                en: item.en,
+                sourceTitle: detail.data?.story.titleRu,
+              })
+            }
           />
         )}
         ListHeaderComponent={
@@ -391,6 +403,7 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
         segments={narration.segments}
       />
       <PhraseCardSheet target={phraseTarget} onClose={() => setPhraseTarget(null)} />
+      <ExplainSheet target={explainTarget} onClose={() => setExplainTarget(null)} />
     </View>
   );
 }

@@ -17,6 +17,7 @@ import { repos } from '@/db';
 import { useBankItemDetail, useItemReviewState, type EncounterWithContext } from '@/db/hooks';
 import type { CardRow, ReviewLogRow } from '@/db/repositories/reviews';
 import type { CardDirection } from '@/db/schema';
+import { ExplainSheet } from '@/features/ai/explain-sheet';
 import { DIRECTION_LABELS, formatDue, ratingName, stateName } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { speak } from '@/services/speech';
@@ -39,6 +40,7 @@ export function ItemDetailScreen({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const detail = useBankItemDetail(id);
   const [editOpen, setEditOpen] = React.useState(false);
+  const [explainOpen, setExplainOpen] = React.useState(false);
 
   React.useEffect(() => {
     track('bank_item_viewed', { id });
@@ -130,12 +132,16 @@ export function ItemDetailScreen({ id }: { id: string }) {
           </Text>
         )}
         {item.needsEnrichment && (
-          <View className="mt-2 flex-row items-center gap-1.5">
+          <Pressable
+            onPress={() => router.push('/word-bank/enrich')}
+            accessibilityRole="button"
+            className="mt-2 flex-row items-center gap-1.5 active:opacity-70"
+          >
             <Ionicons name="help-circle" size={14} color={theme.danger} />
             <Text variant="caption" className="text-danger">
-              Needs info — AI enrichment arrives with T16
+              Needs info — enrich with AI →
             </Text>
-          </View>
+          </Pressable>
         )}
         {item.note && (
           <View className="mt-3 rounded-lg bg-surface-2 px-3 py-2">
@@ -147,6 +153,15 @@ export function ItemDetailScreen({ id }: { id: string }) {
 
         {/* actions */}
         <View className="mt-4 flex-row gap-2">
+          <Pressable
+            onPress={() => setExplainOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Explain with AI"
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-accent/40 py-2.5 active:bg-surface-2"
+          >
+            <Ionicons name="sparkles-outline" size={15} color={theme.accent} />
+            <Text className="font-ui-medium text-sm text-accent">Explain</Text>
+          </Pressable>
           <Pressable
             onPress={() => setEditOpen(true)}
             accessibilityRole="button"
@@ -189,6 +204,21 @@ export function ItemDetailScreen({ id }: { id: string }) {
         item={item}
         onClose={() => setEditOpen(false)}
         onSaved={invalidate}
+      />
+      <ExplainSheet
+        target={
+          explainOpen
+            ? {
+                kind: 'card',
+                headword,
+                translation: item.translation || undefined,
+                grammar: item.grammar ?? undefined,
+                pos: item.pos ?? undefined,
+                exampleRu: item.encounters.find((e) => e.context)?.context?.sentence.ru,
+              }
+            : null
+        }
+        onClose={() => setExplainOpen(false)}
       />
     </ScrollView>
   );

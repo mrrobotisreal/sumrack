@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "fx-word-1",
+      "kind": "word",
+      "surface": "словами",
+      "context": "Он говорил простыми словами, но я всё равно не понял."
+    },
+    {
+      "id": "fx-word-2",
+      "kind": "word",
+      "surface": "наверху",
+      "translation": "upstairs",
+      "context": "Кто-то ходит наверху, но дом пустой."
+    },
+    {
+      "id": "fx-phrase-1",
+      "kind": "phrase",
+      "surface": "по крайней мере",
+      "context": "По крайней мере, дверь была закрыта."
+    }
+  ],
+  "model": "anthropic/claude-sonnet-5",
+  "content": "```json\n{ \"items\": [\n  { \"id\": \"fx-word-1\", \"lemma\": \"слово\", \"translation\": \"words\", \"grammar\": \"instr. pl.\", \"pos\": \"noun\", \"level\": \"A1\" },\n  { \"id\": \"fx-word-2\", \"lemma\": \"наверху\", \"translation\": \"upstairs\", \"pos\": \"adv\", \"level\": \"A2\" },\n  { \"id\": \"fx-phrase-1\", \"translation\": \"at least\", \"pos\": \"adv\", \"level\": \"B1\" }\n] }\n```"
+}

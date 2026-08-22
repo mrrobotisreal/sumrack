@@ -49,6 +49,16 @@ export function createJournalRepo(db: SumrakDB) {
       return db.select().from(journalEntries).orderBy(desc(journalEntries.createdAt)).limit(limit);
     },
 
+    /** Entries awaiting AI feedback — the T16 queue is derived from this, oldest first. */
+    async listEntriesByStatus(status: FeedbackStatus, limit = 50): Promise<JournalEntryRow[]> {
+      return db
+        .select()
+        .from(journalEntries)
+        .where(eq(journalEntries.feedbackStatus, status))
+        .orderBy(journalEntries.updatedAt)
+        .limit(limit);
+    },
+
     async deleteEntry(id: string) {
       await db.delete(journalEntries).where(eq(journalEntries.id, id));
     },

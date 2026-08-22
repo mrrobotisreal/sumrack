@@ -42,6 +42,12 @@ export const SETTING_KEYS = {
    * (store/daily-prefs.ts), corrupt values fall back to defaults.
    */
   dailySessionPrefs: 'dailySession.prefs',
+  /**
+   * OpenRouter model id (T16), e.g. 'anthropic/claude-sonnet-5' — validated
+   * on read (features/ai/config). The API key is NEVER here: secure-store
+   * only (same rule as the GitHub PAT).
+   */
+  aiModel: 'ai.model',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

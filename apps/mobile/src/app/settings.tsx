@@ -6,6 +6,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { AiSettingsSection } from '@/features/ai/ai-settings-section';
 import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
@@ -122,6 +123,8 @@ export default function SettingsScreen() {
 
       <SyncSettingsSection />
 
+      <AiSettingsSection />
+
       {__DEV__ && (
         <>
           <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
@@ -151,7 +154,7 @@ export default function SettingsScreen() {
       )}
 
       <Text variant="caption" className="mt-8 text-center">
-        More settings arrive with AI feedback (T16) and backup (T20).
+        More settings arrive with backup (T20).
       </Text>
 
       <View className="mt-10 items-center gap-2">
