@@ -102,7 +102,22 @@ export type AnalyticsEvent =
   | 'sb_session_empty'
   | 'sb_item_graded'
   | 'sb_session_finished'
-  | 'sb_session_abandoned';
+  | 'sb_session_abandoned'
+  // T14 listening quiz + unified daily session
+  | 'listening_session_started'
+  | 'listening_session_empty'
+  | 'listening_item_graded'
+  | 'listening_session_finished'
+  | 'listening_session_abandoned'
+  | 'listening_replay'
+  | 'listening_audio_resolved'
+  | 'daily_session_started'
+  | 'daily_session_empty'
+  | 'daily_session_composed'
+  | 'daily_item_graded'
+  | 'daily_session_finished'
+  | 'daily_session_abandoned'
+  | 'daily_prefs_changed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
@@ -112,7 +127,9 @@ let sink: Sink | null = null;
 const pending: [AnalyticsEvent, AnalyticsProps | undefined][] = [];
 
 export function track(event: AnalyticsEvent, props?: AnalyticsProps) {
-  if (__DEV__) {
+  // typeof-guarded: __DEV__ only exists in the RN runtime — tested logic
+  // modules (T14 session builders) may call track() under Node/vitest.
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
     console.log(`[analytics] ${event}`, props ?? {});
   }
   if (sink) {

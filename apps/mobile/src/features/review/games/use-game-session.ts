@@ -24,7 +24,8 @@ export function useGameSession<T>(opts: {
   /** game_sessions.mode. */
   mode: string;
   /** Narrow analytics prefix — keeps the template-literal event names inside AnalyticsEvent. */
-  trackPrefix: 'cloze' | 'sb';
+  trackPrefix: 'cloze' | 'sb' | 'listening' | 'daily';
+  /** Default mode recorded per result; grade() can override per item (T14 daily mix). */
   resultMode: SessionResult['mode'];
   build: () => Promise<T[]>;
 }) {
@@ -36,6 +37,8 @@ export function useGameSession<T>(opts: {
   const [items, setItems] = React.useState<T[]>([]);
   const [index, setIndex] = React.useState(0);
   const [finalResults, setFinalResults] = React.useState<SessionResult[]>([]);
+  /** Wall-clock length of the finished session — the summary's time figure (T14). */
+  const [finalDurationMs, setFinalDurationMs] = React.useState(0);
   const resultsRef = React.useRef<SessionResult[]>([]);
   const gameSessionIdRef = React.useRef<string | null>(null);
   const startedAtRef = React.useRef(0);
@@ -82,9 +85,14 @@ export function useGameSession<T>(opts: {
 
   /** Grade the current item's card and advance (or finish). */
   const grade = React.useCallback(
-    (card: CardRow, rating: Grade, extraProps: Record<string, string | number | boolean>) => {
+    (
+      card: CardRow,
+      rating: Grade,
+      extraProps: Record<string, string | number | boolean>,
+      itemMode: SessionResult['mode'] = resultMode,
+    ) => {
       const correct = ratingCountsAsCorrect(rating);
-      resultsRef.current.push({ cardId: card.id, rating, correct, mode: resultMode });
+      resultsRef.current.push({ cardId: card.id, rating, correct, mode: itemMode });
       void repos.reviews
         .gradeCard(card.id, rating)
         .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
@@ -98,13 +106,15 @@ export function useGameSession<T>(opts: {
       }
       if (finishedRef.current) return;
       finishedRef.current = true;
+      const durationMs = Date.now() - startedAtRef.current;
       track(`${trackPrefix}_session_finished`, {
         itemCount: resultsRef.current.length,
         correctCount: resultsRef.current.filter((r) => r.correct).length,
-        durationMs: Date.now() - startedAtRef.current,
+        durationMs,
       });
       persistSessionEnd();
       setFinalResults([...resultsRef.current]);
+      setFinalDurationMs(durationMs);
       setPhase('summary');
     },
     [index, items.length, mode, trackPrefix, resultMode, persistSessionEnd],
@@ -145,5 +155,15 @@ export function useGameSession<T>(opts: {
     return () => sub.remove();
   }, [phase, quit]);
 
-  return { phase, items, index, entry: items[index], finalResults, grade, quit, router };
+  return {
+    phase,
+    items,
+    index,
+    entry: items[index],
+    finalResults,
+    finalDurationMs,
+    grade,
+    quit,
+    router,
+  };
 }

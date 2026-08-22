@@ -86,7 +86,7 @@ describe('bank repository — dedup rules', () => {
       level: 'A1',
     });
     await reviews.ensureCards(added.item.id);
-    expect(await reviews.listCardsForItem(added.item.id)).toHaveLength(3);
+    expect(await reviews.listCardsForItem(added.item.id)).toHaveLength(4);
 
     // ё/е-tolerant substring search over the bank
     expect(await bank.listItems({ search: 'стен' })).toHaveLength(1);

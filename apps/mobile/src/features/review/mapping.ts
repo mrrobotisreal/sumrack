@@ -92,3 +92,41 @@ export function sbOutcomeToRating(outcome: SbOutcome): Grade {
   if (outcome.removals > 0) return Rating.Hard;
   return outcome.durationMs <= sbFastThresholdMs(outcome.wordCount) ? Rating.Good : Rating.Hard;
 }
+
+/**
+ * Listening-quiz outcome → FSRS rating (T14):
+ *
+ *   wrong answer                       → Again
+ *   correct, slow-replay was used      → Hard  (the 0.7× crutch is a hint —
+ *                                               caps the rating, same spirit
+ *                                               as cloze's hint ladder)
+ *   pick-from-4 correct, fast          → Good
+ *   pick-from-4 correct, slow          → Hard
+ *   typed correct (no slow-replay)     → Good
+ *
+ * Normal-speed replays are free — relistening is what listening practice
+ * IS, and punishing it would teach answering on half-heard audio. The
+ * pick-4 threshold is 10 s: wider than MC's 7 s because the clock starts
+ * when the item renders and the clip itself takes ~1–3 s to play. Typed has
+ * no speed gate (typing Cyrillic on glass is slow for honest reasons).
+ * Easy is never emitted (T06 reasoning: recognition can't prove effortless
+ * recall).
+ */
+export const LISTENING_FAST_THRESHOLD_MS = 10_000;
+
+export interface ListeningOutcome {
+  variant: 'pick4' | 'typed';
+  correct: boolean;
+  /** Normal-speed replays taken (analytics only — never affects the rating). */
+  replays: number;
+  /** Slow (0.7×) replays taken — any use caps the rating at Hard. */
+  slowReplays: number;
+  durationMs: number;
+}
+
+export function listeningOutcomeToRating(outcome: ListeningOutcome): Grade {
+  if (!outcome.correct) return Rating.Again;
+  if (outcome.slowReplays > 0) return Rating.Hard;
+  if (outcome.variant === 'typed') return Rating.Good;
+  return outcome.durationMs <= LISTENING_FAST_THRESHOLD_MS ? Rating.Good : Rating.Hard;
+}

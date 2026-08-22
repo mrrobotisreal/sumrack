@@ -46,13 +46,13 @@ describe('reviews repository (shape only — logic is T06)', () => {
     const { item } = await bank.addWord({ lemma: 'кот', surface: 'кот', translation: 'cat' });
     await reviews.ensureCards(item.id);
 
-    expect(await reviews.countDueCards()).toBe(3);
+    expect(await reviews.countDueCards()).toBe(4);
     const due = await reviews.listDueCards();
-    expect(due).toHaveLength(3);
+    expect(due).toHaveLength(4);
 
     const card = due[0]!;
     await reviews.saveCard({ ...card, dueAt: Date.now() + 86_400_000, reps: 1, state: 1 });
-    expect(await reviews.countDueCards()).toBe(2);
+    expect(await reviews.countDueCards()).toBe(3);
 
     await reviews.appendReviewLog({
       cardId: card.id,

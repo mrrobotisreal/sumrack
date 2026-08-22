@@ -97,6 +97,14 @@ export default function RootLayout() {
                 options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
               />
               <Stack.Screen
+                name="review/daily"
+                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+              />
+              <Stack.Screen
+                name="review/listening"
+                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+              />
+              <Stack.Screen
                 name="review/pronunciation"
                 options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
               />

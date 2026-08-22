@@ -1,0 +1,82 @@
+import { normalizeRu } from '@/db/normalize';
+import type { BankItemRow } from '@/db/repositories/bank';
+import type { Repositories } from '@/db/repositories';
+
+import { headword } from '../../session';
+
+/**
+ * Audio-source selection for the listening quiz (T14 work item 4; the same
+ * "pack segment with valid timestamps → use it; else → TTS" rule the reader
+ * popup speaker applies via T10's WordSegmentPlayer). This standalone
+ * resolver works outside the reader: given only a bank item, it walks
+ * source sentence → downloaded audio track → word stamp, and falls back to
+ * on-device TTS (Piper via the SpeechService, which itself degrades to the
+ * system voice) whenever any link is missing. It never fails — every bank
+ * item is speakable.
+ */
+export type ListeningAudio =
+  | {
+      kind: 'segment';
+      /** Local file uri of the narration track (audio_tracks.localUri). */
+      uri: string;
+      startMs: number;
+      endMs: number;
+      /** The surface form the narrator actually says in this slice. */
+      spokenText: string;
+    }
+  | {
+      kind: 'tts';
+      /** What the TTS engine should say (word headword / phrase surface). */
+      text: string;
+    };
+
+/** The Russian a listener is expected to hear — the quiz answer key. */
+export function spokenText(audio: ListeningAudio): string {
+  return audio.kind === 'segment' ? audio.spokenText : audio.text;
+}
+
+/**
+ * Resolve the best audio source for a bank item. Segment path requires:
+ * a word item with a source sentence, a downloaded track for that story,
+ * and a word stamp covering the lemma's token in that sentence. Phrases go
+ * straight to TTS (bank phrases don't record a token span, so a reliable
+ * multi-word slice can't be reconstructed — recorded T14 deviation).
+ */
+export async function resolveListeningAudio(
+  repos: Repositories,
+  item: BankItemRow,
+): Promise<ListeningAudio> {
+  const fallback: ListeningAudio = { kind: 'tts', text: headword(item) };
+  if (item.kind !== 'word' || !item.lemma || !item.sourceSentenceId) return fallback;
+
+  const resolved = await repos.content.resolveSentence(item.sourceSentenceId);
+  if (!resolved) return fallback;
+  const { packId, storyId, id: sentenceId } = resolved.sentence;
+
+  const tracks = (await repos.content.listAudioTracksForPack(packId)).filter(
+    (t) => t.storyId === storyId && t.localUri != null,
+  );
+  if (tracks.length === 0) return fallback;
+
+  const tokens = await repos.content.getSentenceTokens(packId, sentenceId);
+  const norm = normalizeRu(item.lemma);
+  const target = tokens.find((t) => !t.isPunct && t.lemmaNorm === norm);
+  if (!target) return fallback;
+
+  for (const track of tracks) {
+    const stamps = await repos.content.getWordStamps(packId, storyId, track.id);
+    const stamp = stamps.find(
+      (s) => s.sentenceId === sentenceId && s.tokenIndex === target.tokenIndex,
+    );
+    if (stamp && stamp.endMs > stamp.startMs) {
+      return {
+        kind: 'segment',
+        uri: track.localUri!,
+        startMs: stamp.startMs,
+        endMs: stamp.endMs,
+        spokenText: target.text,
+      };
+    }
+  }
+  return fallback;
+}

@@ -10,14 +10,28 @@ import type { SessionResult } from './session-screen';
 interface SummaryViewProps {
   results: SessionResult[];
   onDone: () => void;
+  /**
+   * Wall-clock session length (T14 daily session) — rendered as a stat row
+   * with the XP placeholder when provided; older single-mode screens omit it.
+   */
+  durationMs?: number;
+}
+
+/** m:ss for the summary time stat. */
+function formatElapsed(ms: number): string {
+  const totalSec = Math.round(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
 /**
  * End-of-session summary (basic per ticket — richer stats/XP are T18/T19):
- * accuracy, counts, rating breakdown. Ember flash restraint: numbers, no
- * confetti (UI_DESIGN §4).
+ * accuracy, counts, rating breakdown, elapsed time + XP slot (T14; the XP
+ * value is a reserved placeholder — real XP rules land in T19). Ember flash
+ * restraint: numbers, no confetti (UI_DESIGN §4).
  */
-export function SummaryView({ results, onDone }: SummaryViewProps) {
+export function SummaryView({ results, onDone, durationMs }: SummaryViewProps) {
   const total = results.length;
   const correct = results.filter((r) => r.correct).length;
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -45,6 +59,20 @@ export function SummaryView({ results, onDone }: SummaryViewProps) {
           </View>
         ))}
       </View>
+
+      {durationMs != null && (
+        <View className="mt-6 w-full flex-row justify-center gap-6">
+          <View className="items-center">
+            <Text className="font-ui-bold text-xl">{formatElapsed(durationMs)}</Text>
+            <Text variant="caption">Time</Text>
+          </View>
+          <View className="items-center">
+            {/* Reserved XP slot — T19 fills in the real number. */}
+            <Text className="font-ui-bold text-xl text-text-muted">—</Text>
+            <Text variant="caption">XP</Text>
+          </View>
+        </View>
+      )}
 
       <Pressable
         onPress={onDone}

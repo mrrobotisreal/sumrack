@@ -36,6 +36,12 @@ export const SETTING_KEYS = {
    * from stories not yet read. Off = never spoil an unseen story.
    */
   clozeUnseenStoriesAllowed: 'games.clozeUnseenStoriesAllowed',
+  /**
+   * Daily-session composition (T14): { length, weights: { flashcard, mc,
+   * cloze, sentenceBuilder, listening } } — Zod-validated on read
+   * (store/daily-prefs.ts), corrupt values fall back to defaults.
+   */
+  dailySessionPrefs: 'dailySession.prefs',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

@@ -98,7 +98,8 @@ export function TodayScreen() {
         </View>
         {dueCount > 0 ? (
           <Pressable
-            onPress={() => router.push('/review/session')}
+            // T14: the default action is the unified daily session (mixed modes).
+            onPress={() => router.push('/review/daily')}
             accessibilityRole="button"
             accessibilityLabel="Start review session"
             className="mt-4 flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3.5 active:opacity-80"

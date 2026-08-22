@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { useDueCardCount, useProductionDueCount } from '@/db/hooks';
+import { useDueCardCount, useMixedDueCount, useProductionDueCount } from '@/db/hooks';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -18,6 +18,7 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
  */
 export function GamesMenuScreen() {
   const due = useDueCardCount();
+  const mixedDue = useMixedDueCount();
   const productionDue = useProductionDueCount();
 
   useFocusEffect(
@@ -27,16 +28,25 @@ export function GamesMenuScreen() {
   );
 
   const dueCount = due.data ?? 0;
+  const mixedCount = mixedDue.data ?? 0;
   const pronCount = productionDue.data ?? 0;
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-3 px-4 pb-12 pt-4">
       <GameRow
+        icon="today-outline"
+        title="Daily session"
+        subtitle={
+          dueCount > 0 ? `All modes, weighted mix · ${dueCount} due` : 'All modes, weighted mix'
+        }
+        route="/review/daily"
+      />
+      <GameRow
         icon="albums-outline"
         title="Review session"
         subtitle={
-          dueCount > 0
-            ? `Flashcards + multiple choice · ${dueCount} due`
+          mixedCount > 0
+            ? `Flashcards + multiple choice · ${mixedCount} due`
             : 'Flashcards + multiple choice'
         }
         route="/review/session"
@@ -54,6 +64,12 @@ export function GamesMenuScreen() {
         route="/review/sentence-builder"
       />
       <GameRow
+        icon="ear-outline"
+        title="Listening quiz"
+        subtitle="Pick or type what you hear — narration or Piper"
+        route="/review/listening"
+      />
+      <GameRow
         icon="mic-outline"
         title="Pronunciation"
         subtitle={
@@ -64,7 +80,7 @@ export function GamesMenuScreen() {
 
       <Text variant="caption" className="mt-3 px-1 text-center">
         Cloze and sentence builder quote only stories you&apos;ve read — change that in Settings →
-        Games. Listening quiz arrives with T14.
+        Games, where the daily session&apos;s mix and length also live.
       </Text>
     </ScrollView>
   );

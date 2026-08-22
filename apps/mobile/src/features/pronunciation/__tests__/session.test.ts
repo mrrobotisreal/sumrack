@@ -21,7 +21,12 @@ describe('production direction activation', () => {
       translation: 'a knock',
     });
     const cards = await repos.reviews.listCardsForItem(item.id);
-    expect(cards.map((c) => c.direction).sort()).toEqual(['en-ru', 'production', 'ru-en']);
+    expect(cards.map((c) => c.direction).sort()).toEqual([
+      'en-ru',
+      'listening',
+      'production',
+      'ru-en',
+    ]);
   });
 
   it('backfillCards heals pre-T12 items with a production card', async () => {

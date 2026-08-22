@@ -3,7 +3,12 @@ import { MIXED_SESSION_DIRECTIONS, type CardRow } from '@/db/repositories/review
 import type { Repositories } from '@/db/repositories';
 import { foldForAnswer } from '@/lib/text';
 
-import { buildReadIndex, pickSentenceForLemma, type SourcedSentence } from '../sentence-source';
+import {
+  buildReadIndex,
+  pickSentenceForLemma,
+  type ReadIndex,
+  type SourcedSentence,
+} from '../sentence-source';
 
 export const CLOZE_SESSION_SIZE = 10;
 export const CLOZE_TILE_COUNT = 4;
@@ -29,15 +34,46 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
+ * Build one cloze exercise for a card, or null when the card can't play:
+ * cloze blanks a single token, so words with a lemma only (phrases can't),
+ * and only when an eligible *read*-story sentence contains the lemma
+ * (sentence-source rules — skipped, never loosened). `wantVariant: 'tiles'`
+ * degrades to typed when the bank can't supply CLOZE_TILE_COUNT-1 distinct
+ * distractor surfaces. Extracted in T14 so the daily session composes the
+ * same generation the standalone game uses.
+ */
+export async function buildClozeItemForCard(
+  repos: Repositories,
+  card: CardRow,
+  item: BankItemRow,
+  index: ReadIndex,
+  opts: { unseenAllowed?: boolean; wantVariant?: ClozeVariant } = {},
+): Promise<ClozeItem | null> {
+  const { unseenAllowed = false, wantVariant = 'typed' } = opts;
+  if (item.kind !== 'word' || !item.lemma) return null;
+  const source = await pickSentenceForLemma(repos, item.lemma, index, { unseenAllowed });
+  if (!source) return null;
+  const entry: ClozeItem = { card, item, source, variant: 'typed' };
+  if (wantVariant === 'tiles') {
+    const tiles = await buildClozeTiles(repos, entry);
+    if (tiles) {
+      entry.variant = 'tiles';
+      entry.tiles = tiles;
+    }
+  }
+  return entry;
+}
+
+/**
  * Build a cloze session (design §7.3 mode 3): word cards from the due queue
  * first (most-overdue order, T06 semantics), topped up with the weakest
  * not-yet-due cards so the standalone game is always playable — each with a
  * real sentence from a *read* story containing the lemma (sentence-source
  * rules; `unseenAllowed` mirrors the settings toggle). One exercise per bank
  * item per session. Items with no eligible sentence are skipped, never
- * loosened. Variants alternate tiles/typed; a tile slot falls back to typed
- * when the bank can't supply CLOZE_TILE_COUNT-1 distinct distractor
- * surfaces (mirror of T06's MC→flashcard fallback).
+ * loosened. Variants alternate tiles/typed on even/odd slots; a tile slot
+ * falls back to typed when distractors run short (mirror of T06's
+ * MC→flashcard fallback).
  */
 export async function buildClozeSession(
   repos: Repositories,
@@ -69,22 +105,13 @@ export async function buildClozeSession(
     if (session.length >= limit) break;
     if (seenItems.has(card.bankItemId)) continue;
     const item = itemById.get(card.bankItemId);
-    // Cloze blanks a single token — words with a lemma only, phrases can't play.
-    if (!item || item.kind !== 'word' || !item.lemma) continue;
+    if (!item) continue;
     seenItems.add(card.bankItemId);
-    const source = await pickSentenceForLemma(repos, item.lemma, index, { unseenAllowed });
-    if (!source) continue;
-    session.push({ card, item, source, variant: 'typed' });
-  }
-
-  // Even slots try tiles (T06's even-slot pattern); failures stay typed.
-  for (let i = 0; i < session.length; i += 2) {
-    const entry = session[i]!;
-    const tiles = await buildClozeTiles(repos, entry);
-    if (tiles) {
-      entry.variant = 'tiles';
-      entry.tiles = tiles;
-    }
+    const entry = await buildClozeItemForCard(repos, card, item, index, {
+      unseenAllowed,
+      wantVariant: session.length % 2 === 0 ? 'tiles' : 'typed',
+    });
+    if (entry) session.push(entry);
   }
   return session;
 }

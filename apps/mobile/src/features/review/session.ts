@@ -48,8 +48,12 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-/** One swap pass so the same bank item (two directions due) isn't back-to-back. */
-function spreadSameItem(items: SessionItem[]): SessionItem[] {
+/**
+ * One swap pass so the same bank item (two directions due) isn't
+ * back-to-back. Generic over anything carrying an item id — the T14 daily
+ * session reuses it across its mixed-mode entries.
+ */
+export function spreadSameItem<T extends { item: { id: string } }>(items: T[]): T[] {
   for (let i = 1; i < items.length; i++) {
     if (items[i]!.item.id !== items[i - 1]!.item.id) continue;
     const j = items.findIndex((it, k) => k > i && it.item.id !== items[i]!.item.id);
@@ -93,7 +97,7 @@ export async function buildSession(
     if (usable.length >= limit) break;
   }
 
-  const ordered = spreadSameItem(
+  const ordered = spreadSameItem<SessionItem>(
     shuffle(usable).map(({ card, item }) => ({
       card,
       item,
@@ -114,8 +118,11 @@ export async function buildSession(
   return ordered;
 }
 
-/** null = not enough usable distractors; play this card as a flashcard. */
-async function buildMcChoices(
+/**
+ * null = not enough usable distractors; play this card as a flashcard.
+ * Exported since T14 — the daily session builds its MC slots through here.
+ */
+export async function buildMcChoices(
   repos: Repositories,
   item: BankItemRow,
   direction: CardDirection,

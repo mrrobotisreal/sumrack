@@ -20,8 +20,8 @@ export interface SessionResult {
   cardId: string;
   rating: Grade;
   correct: boolean;
-  /** T06 modes plus 'pronunciation' (T12) and the T13 games — SummaryView is mode-agnostic. */
-  mode: SessionItem['mode'] | 'pronunciation' | 'cloze' | 'sentence-builder';
+  /** T06 modes plus 'pronunciation' (T12), the T13 games, and 'listening' (T14) — SummaryView is mode-agnostic. */
+  mode: SessionItem['mode'] | 'pronunciation' | 'cloze' | 'sentence-builder' | 'listening';
 }
 
 type Phase = 'loading' | 'empty' | 'playing' | 'summary';

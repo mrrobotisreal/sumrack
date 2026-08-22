@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { repos } from './index';
 import type { BankFilter, EncounterRow } from './repositories/bank';
 import type { ResolvedSentence } from './repositories/content';
-import { MIXED_SESSION_DIRECTIONS } from './repositories/reviews';
+import { MIXED_SESSION_DIRECTIONS, UNIFIED_SESSION_DIRECTIONS } from './repositories/reviews';
 
 /**
  * Thin React Query read-hooks over the repositories — the query surface
@@ -21,6 +21,7 @@ export const queryKeys = {
   bankWordStatus: (lemmaNorm: string) => ['bank-word-status', lemmaNorm] as const,
   bankFilterOptions: ['bank-items', 'filter-options'] as const,
   dueCount: ['due-count'] as const,
+  dueCountMixed: ['due-count', 'mixed'] as const,
   dueCountProduction: ['due-count', 'production'] as const,
   itemReviewState: (bankItemId: string) => ['review-state', bankItemId] as const,
   dailyActivity: ['daily-activity'] as const,
@@ -107,13 +108,22 @@ export function useBankItemDetail(id: string | undefined) {
 }
 
 /**
- * Live due-card count for the mixed session — the Today tab's headline
- * number. Filtered to MIXED_SESSION_DIRECTIONS so the count always matches
- * what "Start session" actually serves (T12 split production off).
+ * Live due-card count for the daily session — the Today tab's headline
+ * number. Filtered to UNIFIED_SESSION_DIRECTIONS so the count always
+ * matches what Today's "Start session" (the T14 daily session) serves;
+ * production stays split off behind the Speaking card (T12).
  */
 export function useDueCardCount() {
   return useQuery({
     queryKey: queryKeys.dueCount,
+    queryFn: () => repos.reviews.countDueCards({ directions: UNIFIED_SESSION_DIRECTIONS }),
+  });
+}
+
+/** Due ru-en/en-ru cards only — what the standalone flashcard/MC session serves. */
+export function useMixedDueCount() {
+  return useQuery({
+    queryKey: queryKeys.dueCountMixed,
     queryFn: () => repos.reviews.countDueCards({ directions: MIXED_SESSION_DIRECTIONS }),
   });
 }

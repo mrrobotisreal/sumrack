@@ -22,18 +22,26 @@ export const ALL_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening', '
  * ticket): listening/production card rows are NOT created dormant — they are
  * created by T14/T12 when those game modes land, by adding the direction
  * here and letting `ensureCards`/`backfillCards` (both idempotent) fill the
- * gap. T12 activated `production` (trained by the pronunciation game);
- * `listening` arrives with T14.
+ * gap. T12 activated `production` (pronunciation game); T14 activated
+ * `listening` (listening quiz).
  */
-export const ACTIVE_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'production'];
+export const ACTIVE_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'production', 'listening'];
 
 /**
- * Directions the T06 mixed flashcard/MC session (and its Today due count)
- * serves. `production` is deliberately NOT here: producing spoken Russian
- * can't be trained by a flip-card, so those cards are due only to the
- * pronunciation session (T12). T14's unified session merges the split.
+ * Directions the T06 standalone flashcard/MC session serves. `production`
+ * and `listening` are deliberately NOT here: a flip-card can't train either
+ * skill, so those cards are due only to the game that can (pronunciation /
+ * listening quiz — both also folded into the T14 daily session).
  */
 export const MIXED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru'];
+
+/**
+ * Directions the T14 unified daily session serves — everything except
+ * `production`, which stays with the separate pronunciation entry (mic
+ * setup, ASR model gate, and room acoustics make it a deliberate act, not
+ * something to spring mid-session). Today's headline due count uses this.
+ */
+export const UNIFIED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening'];
 
 /**
  * One shared scheduler, default FSRS-5 parameters (no fuzz — single user,

@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import migrations from '../../drizzle/migrations';
 import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
+import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
@@ -36,6 +37,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateReaderPrefsFromDb();
         await hydrateLookupPrefsFromDb();
         await hydrateGamePrefsFromDb();
+        await hydrateDailyPrefsFromDb();
         // Registers the real SpeechService (Piper/system) — T05's popup
         // speaker and all readback surfaces are live from here on.
         await hydrateTtsFromDb();

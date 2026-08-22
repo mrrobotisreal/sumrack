@@ -8,6 +8,7 @@ import {
   buildReadIndex,
   pickSentenceForLemma,
   type CefrLevel,
+  type ReadIndex,
   type SourcedSentence,
 } from '../sentence-source';
 
@@ -72,6 +73,42 @@ export function arrangementCorrect(chosen: string[], answer: string[]): boolean 
 }
 
 /**
+ * Build one sentence-builder exercise for a card, or null when it can't
+ * play: word items with a lemma only, needing an eligible read-story
+ * sentence of 2–SB_MAX_WORDS words containing the lemma. Extracted in T14
+ * so the daily session composes the same generation the standalone uses.
+ */
+export async function buildSbItemForCard(
+  repos: Repositories,
+  card: CardRow,
+  item: BankItemRow,
+  index: ReadIndex,
+  opts: { unseenAllowed?: boolean } = {},
+): Promise<SbItem | null> {
+  const { unseenAllowed = false } = opts;
+  if (item.kind !== 'word' || !item.lemma) return null;
+  const source = await pickSentenceForLemma(repos, item.lemma, index, {
+    unseenAllowed,
+    maxWords: SB_MAX_WORDS,
+  });
+  if (!source) return null;
+  // A one-word "sentence" reconstructs itself — nothing to build.
+  const answerTokens = source.tokens.filter((t) => !t.isPunct);
+  if (answerTokens.length < 2) return null;
+
+  const distractors = await buildSbDistractors(repos, item, source, answerTokens);
+  const tiles: SbTile[] = shuffle([
+    ...answerTokens.map((t, i) => ({
+      id: `w${i}`,
+      text: t.text.toLocaleLowerCase('ru-RU'),
+      distractor: false,
+    })),
+    ...distractors.map((text, i) => ({ id: `d${i}`, text, distractor: true })),
+  ]);
+  return { card, item, source, answerTokens, tiles };
+}
+
+/**
  * Build a sentence-builder session (design §7.3 mode 4): same card sourcing
  * as cloze (due first, weakest fill, word items only, one per bank item),
  * each with a read-story sentence of ≤ SB_MAX_WORDS words containing the
@@ -107,27 +144,10 @@ export async function buildSbSession(
     if (session.length >= limit) break;
     if (seenItems.has(card.bankItemId)) continue;
     const item = itemById.get(card.bankItemId);
-    if (!item || item.kind !== 'word' || !item.lemma) continue;
+    if (!item) continue;
     seenItems.add(card.bankItemId);
-    const source = await pickSentenceForLemma(repos, item.lemma, index, {
-      unseenAllowed,
-      maxWords: SB_MAX_WORDS,
-    });
-    if (!source) continue;
-    // A one-word "sentence" reconstructs itself — nothing to build.
-    const answerTokens = source.tokens.filter((t) => !t.isPunct);
-    if (answerTokens.length < 2) continue;
-
-    const distractors = await buildSbDistractors(repos, item, source, answerTokens);
-    const tiles: SbTile[] = shuffle([
-      ...answerTokens.map((t, i) => ({
-        id: `w${i}`,
-        text: t.text.toLocaleLowerCase('ru-RU'),
-        distractor: false,
-      })),
-      ...distractors.map((text, i) => ({ id: `d${i}`, text, distractor: true })),
-    ]);
-    session.push({ card, item, source, answerTokens, tiles });
+    const entry = await buildSbItemForCard(repos, card, item, index, { unseenAllowed });
+    if (entry) session.push(entry);
   }
   return session;
 }
