@@ -20,6 +20,8 @@ export type ExplainTarget =
       kind: 'card';
       headword: string;
       translation?: string;
+      /** Surface form as first met — the saved grammar note describes THIS. */
+      surface?: string;
       grammar?: string;
       pos?: string;
       /** An example sentence the learner met the word in. */
@@ -44,7 +46,12 @@ export function buildExplainMessages(target: ExplainTarget): ChatMessage[] {
   } else {
     const parts = [`Explain this Russian ${target.pos ?? 'word or phrase'}: «${target.headword}»`];
     if (target.translation) parts.push(`My saved translation: "${target.translation}"`);
-    if (target.grammar) parts.push(`Saved grammar note: ${target.grammar}`);
+    if (target.surface && target.surface !== target.headword) {
+      parts.push(`I first met it as the form «${target.surface}»`);
+      if (target.grammar) parts.push(`Saved grammar note (about that form): ${target.grammar}`);
+    } else if (target.grammar) {
+      parts.push(`Saved grammar note: ${target.grammar}`);
+    }
     if (target.exampleRu) parts.push(`I met it in: «${target.exampleRu}»`);
     user = parts.join('\n');
   }

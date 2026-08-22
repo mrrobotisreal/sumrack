@@ -212,6 +212,7 @@ export function ItemDetailScreen({ id }: { id: string }) {
                 kind: 'card',
                 headword,
                 translation: item.translation || undefined,
+                surface: item.surface || undefined,
                 grammar: item.grammar ?? undefined,
                 pos: item.pos ?? undefined,
                 exampleRu: item.encounters.find((e) => e.context)?.context?.sentence.ru,

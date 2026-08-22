@@ -45,9 +45,12 @@ export function isRetriable(err: unknown): boolean {
 export function toAiError(err: unknown): AiError {
   if (err instanceof AiError) return err;
   if (err instanceof Error) {
-    // fetch() network failures surface as TypeError in RN.
     if (err.name === 'AbortError') return new AiError('timeout', 'The request timed out.');
-    if (err.name === 'TypeError') return new AiError('network', 'Network request failed.');
+    // RN fetch network failures: TypeError on web/Node, but a plain Error
+    // with this message under Hermes/whatwg-fetch (observed on the S24U).
+    if (err.name === 'TypeError' || /network request failed/i.test(err.message)) {
+      return new AiError('network', 'Network request failed.');
+    }
     return new AiError('unknown', err.message);
   }
   return new AiError('unknown', 'Something went wrong.');
