@@ -44,6 +44,7 @@ export {
   type ParsedDraft,
 } from './draft.ts';
 export { DraftError, formatIssue, type DraftIssue } from './errors.ts';
+export { ExtrasFrontmatterSchema, loadExtras, parseExtras, type PackExtras } from './extras.ts';
 export {
   FrontmatterSchema,
   PackMetaSchema,

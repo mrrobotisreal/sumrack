@@ -43,6 +43,11 @@ export const SETTING_KEYS = {
    */
   dailySessionPrefs: 'dailySession.prefs',
   /**
+   * Checkpoint/unit-quiz pass threshold (T17), fraction 0–1, default 0.8 —
+   * Zod-validated on read (features/path/threshold.ts).
+   */
+  checkpointPassThreshold: 'path.checkpointPassThreshold',
+  /**
    * OpenRouter model id (T16), e.g. 'anthropic/claude-sonnet-5' — validated
    * on read (features/ai/config). The API key is NEVER here: secure-store
    * only (same rule as the GitHub PAT).

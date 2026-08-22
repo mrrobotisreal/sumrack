@@ -12,6 +12,8 @@ import {
   useStories,
   useStoryProgressList,
 } from '@/db/hooks';
+import type { PathNode } from '@/features/path/path-model';
+import { isUnit, nextStepInfo, usePathState } from '@/features/path/use-path';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -38,6 +40,7 @@ export function TodayScreen() {
   const activity = useDailyActivity();
   const progressList = useStoryProgressList();
   const stories = useStories();
+  const path = usePathState();
 
   // Counts change while this tab is unfocused (sessions, reading) — refresh on return.
   useFocusEffect(
@@ -46,6 +49,7 @@ export function TodayScreen() {
       void queryClient.invalidateQueries({ queryKey: ['due-count'] });
       void queryClient.invalidateQueries({ queryKey: ['daily-activity'] });
       void queryClient.invalidateQueries({ queryKey: ['story-progress'] });
+      void queryClient.invalidateQueries({ queryKey: ['path'] });
     }, [queryClient]),
   );
 
@@ -138,6 +142,9 @@ export function TodayScreen() {
         </Pressable>
       )}
 
+      {/* continue on the path (T17) — current node's next uncompleted step */}
+      {path.data?.current && <PathContinueCard node={path.data.current} />}
+
       {/* where I left off */}
       {continueTarget && (
         <Pressable
@@ -162,6 +169,47 @@ export function TodayScreen() {
         </Pressable>
       )}
     </ScrollView>
+  );
+}
+
+function PathContinueCard({ node }: { node: PathNode }) {
+  const router = useRouter();
+  const { tokens } = useAppTheme();
+  const step = nextStepInfo(node);
+  const subtitle = isUnit(node)
+    ? `${node.pack.titleRu} · ${node.stepsDone}/${node.stepsTotal}`
+    : node.pack.titleRu;
+  return (
+    <Pressable
+      onPress={() => {
+        track('path_continue_tapped', { packId: node.pack.id, kind: node.kind });
+        router.push(step.route as never);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Continue the path: ${step.label}`}
+      className="rounded-xl border border-border bg-surface p-4 active:bg-surface-2"
+    >
+      <Text variant="caption" className="uppercase tracking-wider">
+        Путь
+      </Text>
+      <View className="mt-2 flex-row items-center justify-between gap-3">
+        <View className="flex-1 gap-0.5">
+          <RNText className="font-ui-medium text-base text-text" numberOfLines={1}>
+            {step.label}
+          </RNText>
+          <Text variant="caption" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+          <Ionicons
+            name={node.kind === 'checkpoint' ? 'flag-outline' : 'trail-sign-outline'}
+            size={18}
+            color={tokens.accent}
+          />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 

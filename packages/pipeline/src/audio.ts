@@ -5,6 +5,7 @@ import { safeParsePack, type AudioTrack, type Pack, type Story } from '@sumrak/s
 import { annotateDrafts } from './annotate.ts';
 import { DEFAULT_MODEL_ID, ElevenLabsClient, isV3Model } from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
+import { loadExtras } from './extras.ts';
 import type { VoiceDirection } from './frontmatter.ts';
 import { buildNarration, type NarrationText } from './narration.ts';
 import { encodeOpus, probeDurationMs } from './opus.ts';
@@ -35,6 +36,8 @@ export interface AuditionOptions extends AudioFilters {
   /** Candidate takes per direction. */
   takes: number;
   modelId?: string;
+  /** Pack extras file (lesson/prompts/exercises — course-unit packs, T17). */
+  extrasPath?: string;
 }
 
 export interface FinalizeOptions extends AudioFilters {
@@ -42,6 +45,8 @@ export interface FinalizeOptions extends AudioFilters {
   seeds?: Record<string, number>;
   defaultSeed?: number;
   modelId?: string;
+  /** Pack extras file (lesson/prompts/exercises — course-unit packs, T17). */
+  extrasPath?: string;
 }
 
 export interface TrackReport {
@@ -86,10 +91,13 @@ function planStories(
   return plans;
 }
 
-function parseAll(draftPaths: readonly string[]): { drafts: ParsedDraft[]; pack: Pack } {
+function parseAll(
+  draftPaths: readonly string[],
+  extrasPath?: string,
+): { drafts: ParsedDraft[]; pack: Pack } {
   const files = draftPaths.map((path) => ({ path, source: readFileSync(path, 'utf8') }));
   const drafts = files.map((f) => parseDraft(f.path, f.source));
-  const pack = annotateDrafts(files);
+  const pack = annotateDrafts(files, extrasPath === undefined ? undefined : loadExtras(extrasPath));
   return { drafts, pack };
 }
 
@@ -165,7 +173,7 @@ export async function runAudition(
   client: ElevenLabsClient,
   opts: AuditionOptions,
 ): Promise<AuditionTake[]> {
-  const { drafts, pack } = parseAll(draftPaths);
+  const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
   if (plans.length === 0) throw new Error('no stories with voice directions matched the filters');
 
@@ -203,7 +211,7 @@ export async function runFinalize(
   client: ElevenLabsClient,
   opts: FinalizeOptions,
 ): Promise<AudioSummary> {
-  const { drafts, pack } = parseAll(draftPaths);
+  const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
   if (plans.length === 0) throw new Error('no stories with voice directions matched the filters');
 

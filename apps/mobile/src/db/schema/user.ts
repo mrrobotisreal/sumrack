@@ -215,6 +215,28 @@ export const storyProgress = sqliteTable(
   (t) => [primaryKey({ columns: [t.packId, t.storyId] })],
 );
 
+/**
+ * Guided-path unit progress (T17). Stores ONLY the facts that cannot be
+ * derived from other state: lesson opened/read, unit-quiz outcome, and the
+ * first-completion moment (celebration + analytics fire once). Story
+ * completion and the review goal are derived live from `story_progress` /
+ * cards at read time, so Library-first, out-of-order usage earns unit
+ * credit with no special-casing (ticket's key correctness requirement).
+ * `packId` is an unenforced content ref, like every user-table ref.
+ */
+export const unitProgress = sqliteTable('unit_progress', {
+  packId: text('pack_id').primaryKey(),
+  /** First time the lesson screen was read to the end (or explicitly marked). */
+  lessonReadAt: integer('lesson_read_at'),
+  /** First time the unit quiz met the pass threshold. */
+  quizPassedAt: integer('quiz_passed_at'),
+  /** Best unit-quiz score so far, 0–100. */
+  quizBestScorePercent: real('quiz_best_score_percent'),
+  /** Set once, when every completion condition first held simultaneously. */
+  completedAt: integer('completed_at'),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 /** Per-local-day counters feeding streaks/goals (§7.7). Date = 'YYYY-MM-DD' device-local. */
 export const dailyActivity = sqliteTable('daily_activity', {
   date: text('date').primaryKey(),

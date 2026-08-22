@@ -9,6 +9,7 @@ import {
 import { alignSentence } from './align.ts';
 import { DraftError, type DraftIssue } from './errors.ts';
 import type { DraftSentence, DraftTokenRow, ParsedDraft } from './draft.ts';
+import type { PackExtras } from './extras.ts';
 
 /**
  * Assembly: parsed drafts (one per story) → a schema-valid Pack.
@@ -112,25 +113,47 @@ function assembleSentence(file: string, draft: DraftSentence, issues: DraftIssue
 }
 
 /**
- * Assemble parsed drafts into a Pack. Story order = argument order. Throws
- * {@link DraftError} with every issue found if the drafts cannot produce a
- * valid pack.
+ * Assemble parsed drafts (plus optional pack extras — lesson / prompts /
+ * exercises, T17) into a Pack. Story order = argument order. A pack with no
+ * story drafts at all (checkpoint / prompts types) assembles from extras
+ * alone, which must then carry the `pack:` meta. Throws {@link DraftError}
+ * with every issue found if the inputs cannot produce a valid pack.
  */
-export function assemblePack(drafts: readonly ParsedDraft[]): Pack {
-  if (drafts.length === 0) throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
+export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras): Pack {
+  if (drafts.length === 0 && !extras) {
+    throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
+  }
+  if (drafts.length === 0 && extras && !extras.pack) {
+    throw new DraftError([
+      {
+        file: extras.file,
+        line: 2,
+        message:
+          'a pack with no story drafts must carry its "pack:" meta in the extras frontmatter',
+      },
+    ]);
+  }
   const issues: DraftIssue[] = [];
 
   // Pack meta must be identical across all drafts of a multi-story pack.
-  const first = drafts[0]!;
-  const packMetaJson = JSON.stringify(first.frontmatter.pack);
+  const first = drafts[0];
+  const packMetaJson = JSON.stringify(first ? first.frontmatter.pack : extras!.pack);
   for (const d of drafts.slice(1)) {
     if (JSON.stringify(d.frontmatter.pack) !== packMetaJson) {
       issues.push({
         file: d.file,
         line: 2,
-        message: `frontmatter "pack" section differs from ${first.file} — all drafts of one pack must carry identical pack meta`,
+        message: `frontmatter "pack" section differs from ${first!.file} — all drafts of one pack must carry identical pack meta`,
       });
     }
+  }
+  // …and the extras' pack meta (when present next to drafts) must match too.
+  if (first && extras?.pack && JSON.stringify(extras.pack) !== packMetaJson) {
+    issues.push({
+      file: extras.file,
+      line: 2,
+      message: `extras "pack" section differs from ${first.file} — extras must carry the same pack meta as the drafts (or omit it)`,
+    });
   }
 
   // Unique story ids per pack, unique sentence ids pack-wide.
@@ -168,7 +191,7 @@ export function assemblePack(drafts: readonly ParsedDraft[]): Pack {
     audio: [], // audio tracks are attached by T09's `pipeline audio`
   }));
 
-  const meta = first.frontmatter.pack;
+  const meta = first ? first.frontmatter.pack : extras!.pack!;
   const pack: Pack = {
     id: meta.id,
     version: meta.version,
@@ -178,6 +201,27 @@ export function assemblePack(drafts: readonly ParsedDraft[]): Pack {
     tags: meta.tags,
     stories,
   };
+  if (extras?.lesson) pack.lesson = extras.lesson;
+  if (extras?.prompts) pack.prompts = extras.prompts;
+  if (extras?.exercises) pack.exercises = extras.exercises;
+
+  // Extras id hygiene: prompt/exercise ids unique within their section.
+  for (const [section, ids] of [
+    ['prompts', extras?.prompts?.map((p) => p.id)],
+    ['exercises', extras?.exercises?.map((e) => e.id)],
+  ] as const) {
+    const seen = new Set<string>();
+    for (const id of ids ?? []) {
+      if (seen.has(id)) {
+        issues.push({
+          file: extras!.file,
+          line: 2,
+          message: `duplicate ${section} id "${id}" in extras`,
+        });
+      }
+      seen.add(id);
+    }
+  }
 
   if (issues.length > 0) throw new DraftError(issues);
 
@@ -186,7 +230,7 @@ export function assemblePack(drafts: readonly ParsedDraft[]): Pack {
   if (!result.success) {
     throw new DraftError(
       result.issues.map((i) => ({
-        file: first.file,
+        file: first?.file ?? extras!.file,
         message: `assembled pack failed schema validation at ${i.path}: ${i.message}`,
       })),
     );

@@ -1,11 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { PathScreen } from '@/features/path/path-screen';
 
-export default function PathScreen() {
-  return (
-    <PlaceholderScreen
-      title="Путь"
-      subtitle="The guided journey A1 → C1: units, lessons, and checkpoint tests."
-      ticket="T17"
-    />
-  );
+export default function PathTab() {
+  return <PathScreen />;
 }

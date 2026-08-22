@@ -16,10 +16,16 @@ import { runValidate } from './validate.ts';
 const USAGE = `Sumrak authoring pipeline
 
 Usage:
-  pipeline annotate <draft.md> [more-drafts.md ...] [-o <pack.json>]
+  pipeline annotate [draft.md ...] [--extras <extras.md>] [-o <pack.json>]
       Turn draft file(s) into a schema-valid pack.json.
       One draft = one story; multi-story packs pass several drafts (identical
       "pack" frontmatter) in reading order. Default output: ./pack.json
+      --extras <file>       pack extras (T17): lesson (frontmatter meta +
+                            markdown body), journal prompts, authored
+                            exercises. Required sections for course-unit /
+                            checkpoint / prompts packs; a pack with no story
+                            drafts (checkpoint, prompts) passes ONLY --extras
+                            (its frontmatter then carries the "pack:" meta)
 
   pipeline validate <pack.json> [more.json ...]
       Validate existing pack.json file(s) against the schema.
@@ -35,6 +41,8 @@ Usage:
       --stories <id,id>     only these story ids
       --tracks <id,id>      only these track ids
       --model <id>          ElevenLabs model (default eleven_multilingual_v2)
+      --extras <file>       pack extras file (course-unit packs) — merged into
+                            the written pack.json, same as annotate
       Without --audition, renders final takes: Opus into <pack-dir>/audio/,
       word stamps mapped + checked, pack.json written (merges with a previous
       run, so tracks can be finalized story by story).
@@ -54,26 +62,42 @@ function fail(message: string, code: 1 | 2): never {
 function annotateCommand(args: string[]): void {
   const drafts: string[] = [];
   let out = 'pack.json';
+  let extras: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '-o' || arg === '--out') {
       const value = args[++i];
       if (value === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
       out = value;
+    } else if (arg === '--extras') {
+      const value = args[++i];
+      if (value === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
+      extras = value;
     } else if (arg.startsWith('-')) {
       fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
     } else {
       drafts.push(arg);
     }
   }
-  if (drafts.length === 0) fail(`annotate needs at least one draft file\n\n${USAGE}`, 2);
+  if (drafts.length === 0 && extras === undefined) {
+    fail(
+      `annotate needs at least one draft file (or --extras for a story-less pack)\n\n${USAGE}`,
+      2,
+    );
+  }
 
   try {
-    const summary = runAnnotate(drafts, out);
+    const summary = runAnnotate(drafts, out, extras);
+    const extraBits = [
+      summary.pack.lesson ? 'lesson' : null,
+      summary.pack.prompts ? `${summary.pack.prompts.length} prompts` : null,
+      summary.pack.exercises ? `${summary.pack.exercises.length} exercises` : null,
+    ].filter((b): b is string => b !== null);
     console.log(
       `✓ ${summary.pack.id} v${summary.pack.version} → ${summary.outFile}\n` +
         `  ${summary.stories} stor${summary.stories === 1 ? 'y' : 'ies'}, ` +
-        `${summary.sentences} sentences, ${summary.tokens} tokens — schema-valid`,
+        `${summary.sentences} sentences, ${summary.tokens} tokens` +
+        `${extraBits.length > 0 ? ` + ${extraBits.join(', ')}` : ''} — schema-valid`,
     );
   } catch (e) {
     if (e instanceof DraftError) {
@@ -127,6 +151,7 @@ async function audioCommand(args: string[]): Promise<void> {
   let model: string | undefined;
   let stories: string[] | undefined;
   let tracks: string[] | undefined;
+  let extras: string | undefined;
   const seeds: Record<string, number> = {};
   let defaultSeed: number | undefined;
 
@@ -151,6 +176,7 @@ async function audioCommand(args: string[]): Promise<void> {
     } else if (arg === '--stories') stories = next().split(',').filter(Boolean);
     else if (arg === '--tracks') tracks = next().split(',').filter(Boolean);
     else if (arg === '--model') model = next();
+    else if (arg === '--extras') extras = next();
     else if (arg.startsWith('-')) fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
     else drafts.push(arg);
   }
@@ -165,6 +191,7 @@ async function audioCommand(args: string[]): Promise<void> {
         stories,
         tracks,
         modelId: model,
+        extrasPath: extras,
       });
       console.log(`Rendered ${result.length} audition take(s) into ${out}/audition/:`);
       for (const t of result) {
@@ -179,6 +206,7 @@ async function audioCommand(args: string[]): Promise<void> {
         stories,
         tracks,
         modelId: model,
+        extrasPath: extras,
       });
       console.log(`✓ ${summary.pack.id} v${summary.pack.version} → ${summary.outFile}`);
       for (const r of summary.reports) {

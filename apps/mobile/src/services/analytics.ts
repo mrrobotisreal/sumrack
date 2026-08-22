@@ -155,7 +155,28 @@ export type AnalyticsEvent =
   | 'enrich_accepted'
   | 'enrich_rejected'
   | 'enrich_apply_failed'
-  | 'explain_opened';
+  | 'explain_opened'
+  // T17 guided path + checkpoints. story_opened carries a `from` prop
+  // ('library' | 'path' | 'today') so path-vs-library entry points — and the
+  // out-of-order-credit feature — are measurable.
+  | 'path_viewed'
+  | 'unit_expanded'
+  | 'lesson_opened'
+  | 'lesson_completed'
+  | 'unit_quiz_started'
+  | 'unit_quiz_item_answered'
+  | 'unit_quiz_finished'
+  | 'unit_quiz_abandoned'
+  | 'unit_completed'
+  | 'checkpoint_started'
+  | 'checkpoint_item_answered'
+  | 'checkpoint_finished'
+  | 'checkpoint_passed'
+  | 'checkpoint_failed'
+  | 'checkpoint_abandoned'
+  | 'path_continue_tapped'
+  | 'checkpoint_threshold_changed'
+  | 'path_position_advanced';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

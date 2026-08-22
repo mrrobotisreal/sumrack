@@ -37,6 +37,8 @@ const AUDIO_BAR_HEIGHT = 104;
 interface ReaderScreenProps {
   packId: string;
   storyId: string;
+  /** Entry point ('library' | 'path' | 'today') — T17 path-vs-library analytics. */
+  from?: string;
 }
 
 /**
@@ -45,7 +47,7 @@ interface ReaderScreenProps {
  * translation reveal; position auto-saved (debounced) and restored across
  * full app restarts; reaching the last sentence records completion.
  */
-export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
+export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { tokens } = useAppTheme();
@@ -114,8 +116,8 @@ export function ReaderScreen({ packId, storyId }: ReaderScreenProps) {
   );
 
   React.useEffect(() => {
-    track('story_opened', { packId, storyId });
-  }, [packId, storyId]);
+    track('story_opened', { packId, storyId, from: from ?? 'library' });
+  }, [packId, storyId, from]);
 
   // Reading time → daily_activity.readingMs (feeds the Today goal ring, §7.7).
   useFocusEffect(

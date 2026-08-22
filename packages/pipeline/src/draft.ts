@@ -59,7 +59,7 @@ export const TABLE_COLUMNS = [
 ] as const;
 
 /** NFC-normalize every string in a parsed YAML value (ё is preserved: NFC never folds ё→е). */
-function normalizeDeep(value: unknown): unknown {
+export function normalizeDeep(value: unknown): unknown {
   if (typeof value === 'string') return value.normalize('NFC');
   if (Array.isArray(value)) return value.map(normalizeDeep);
   if (value !== null && typeof value === 'object') {
