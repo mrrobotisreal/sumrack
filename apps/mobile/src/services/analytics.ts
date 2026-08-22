@@ -7,6 +7,7 @@
  */
 export type AnalyticsEvent =
   | 'app_opened'
+  | 'splash_intro_completed'
   | 'theme_mode_changed'
   | 'tab_viewed'
   | 'settings_opened'

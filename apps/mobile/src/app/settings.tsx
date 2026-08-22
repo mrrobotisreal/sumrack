@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { Link, useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
@@ -122,6 +124,17 @@ export default function SettingsScreen() {
       <Text variant="caption" className="mt-8 text-center">
         More settings arrive with AI feedback (T16) and backup (T20).
       </Text>
+
+      <View className="mt-10 items-center gap-2">
+        <Image
+          source={require('../../assets/images/icon.png')}
+          style={{ width: 72, height: 72, borderRadius: 16 }}
+          contentFit="cover"
+          accessibilityLabel="Сумрак app icon"
+        />
+        <Text className="font-display text-2xl text-accent">Сумрак</Text>
+        <Text variant="caption">v{Constants.expoConfig?.version ?? '0.0.0'}</Text>
+      </View>
     </ScrollView>
   );
 }

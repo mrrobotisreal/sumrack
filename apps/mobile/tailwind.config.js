@@ -33,6 +33,8 @@ module.exports = {
         ui: ['GolosText_400Regular'],
         'ui-medium': ['GolosText_500Medium'],
         'ui-bold': ['GolosText_700Bold'],
+        // Display / branding (Сумрак wordmark): dripping-paint horror, Cyrillic-capable
+        display: ['RubikWetPaint_400Regular'],
         // Reading (Russian story content): Literata with real Cyrillic italics
         reading: ['Literata_400Regular'],
         'reading-bold': ['Literata_700Bold'],
