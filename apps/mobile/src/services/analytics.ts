@@ -117,7 +117,26 @@ export type AnalyticsEvent =
   | 'daily_item_graded'
   | 'daily_session_finished'
   | 'daily_session_abandoned'
-  | 'daily_prefs_changed';
+  | 'daily_prefs_changed'
+  // T15 journal + notes
+  | 'journal_section_changed'
+  | 'journal_entry_opened'
+  | 'journal_entry_created'
+  | 'journal_entry_autosaved'
+  | 'journal_entry_deleted'
+  | 'journal_prompt_used'
+  | 'journal_prompt_skipped'
+  | 'journal_prompt_dismissed'
+  | 'journal_readback_used'
+  | 'journal_read_mode_toggled'
+  | 'journal_search'
+  | 'journal_search_result_opened'
+  | 'journal_highlight_saved'
+  | 'note_opened'
+  | 'note_created'
+  | 'note_autosaved'
+  | 'note_deleted'
+  | 'note_preview_toggled';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

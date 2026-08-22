@@ -127,6 +127,12 @@ export default function RootLayout() {
                 options={{ title: 'Add to word bank', presentation: 'modal' }}
               />
               <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
+              <Stack.Screen
+                name="journal/[id]"
+                options={{ headerShown: false, animation: 'fade' }}
+              />
+              <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
+              <Stack.Screen name="notes/[id]" options={{ headerShown: false, animation: 'fade' }} />
               <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
               <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
             </Stack>

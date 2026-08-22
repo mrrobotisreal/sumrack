@@ -15,7 +15,7 @@
       "files": [
         {
           "path": "audio/knock-in-the-wall-anton-creepy.opus",
-          "sha256": "adb0e8366eb7d36b03af364c041650eefe3a37a0c6ea82154add9e38506fb975"
+          "sha256": "2f67f7f35a73a0a80726c5e690e8c2f4f7cbab386b535a65bd1191c1ec6c3ae4"
         },
         {
           "path": "pack.json",
@@ -37,6 +37,23 @@
         {
           "path": "pack.json",
           "sha256": "301a40d06be2358658843c2233515f123a5ad55bba950cfd851b66092d87d102"
+        }
+      ]
+    },
+    {
+      "id": "a1-prompts-001",
+      "version": 1,
+      "type": "prompts",
+      "level": "A1",
+      "title": {
+        "ru": "Первые страницы",
+        "en": "First Pages"
+      },
+      "bytes": 5001,
+      "files": [
+        {
+          "path": "pack.json",
+          "sha256": "901a4102f687c6936332bd369c2ef60f2501d8c7be822fcb88dfc457ff261fb0"
         }
       ]
     }

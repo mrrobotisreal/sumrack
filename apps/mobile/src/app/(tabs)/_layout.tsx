@@ -115,7 +115,30 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="journal"
-        options={{ title: TAB_TITLES.journal.ru, tabBarIcon: tabIcon('create-outline') }}
+        options={{
+          title: TAB_TITLES.journal.ru,
+          tabBarIcon: tabIcon('create-outline'),
+          headerRight: () => (
+            <>
+              <Pressable
+                onPress={() => router.push('/journal/search')}
+                hitSlop={8}
+                accessibilityLabel="Search journal and notes"
+                className="mr-4"
+              >
+                <Ionicons name="search-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/settings')}
+                hitSlop={8}
+                accessibilityLabel="Settings"
+                className="mr-4"
+              >
+                <Ionicons name="person-circle-outline" size={26} color={tokens.textMuted} />
+              </Pressable>
+            </>
+          ),
+        }}
       />
     </Tabs>
   );

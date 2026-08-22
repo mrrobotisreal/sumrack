@@ -1,11 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { JournalScreen } from '@/features/journal/journal-screen';
 
-export default function JournalScreen() {
-  return (
-    <PlaceholderScreen
-      title="Журнал"
-      subtitle="Daily Russian journal with AI feedback, plus markdown study notes."
-      ticket="T15"
-    />
-  );
+export default function JournalRoute() {
+  return <JournalScreen />;
 }

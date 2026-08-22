@@ -4,6 +4,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 
 import pack1 from '@sumrak/schema/fixtures/packs/a1-creepypasta-001/pack.json';
 import pack2 from '@sumrak/schema/fixtures/packs/a1-creepypasta-002/pack.json';
+import pack3 from '@sumrak/schema/fixtures/packs/a1-prompts-001/pack.json';
 
 import { initAnalyticsSink, track } from '@/services/analytics';
 
@@ -50,7 +51,7 @@ export async function runBootstrap(db: SumrakDB, repos: Repositories): Promise<v
     console.error('[bootstrap] FSRS card backfill failed (non-fatal)', err);
   }
 
-  for (const rawPack of [pack1, pack2]) {
+  for (const rawPack of [pack1, pack2, pack3]) {
     const packId = (rawPack as { id: string }).id;
     try {
       const audioFiles = await stageBundledAudio(packId);

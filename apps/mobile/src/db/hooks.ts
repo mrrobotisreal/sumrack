@@ -28,6 +28,11 @@ export const queryKeys = {
   tokenSearch: (q: string) => ['token-search', q] as const,
   storyProgressList: ['story-progress'] as const,
   storyProgress: (packId: string, storyId: string) => ['story-progress', packId, storyId] as const,
+  journalEntries: ['journal-entries'] as const,
+  journalEntry: (id: string) => ['journal-entry', id] as const,
+  notes: ['notes'] as const,
+  note: (id: string) => ['note', id] as const,
+  journalSearch: (q: string) => ['journal-search', q] as const,
 };
 
 export function usePacks() {
@@ -181,6 +186,50 @@ export function useTokenSearch(query: string) {
   return useQuery({
     queryKey: queryKeys.tokenSearch(query),
     queryFn: () => repos.content.searchTokens(query),
+    enabled: query.trim().length > 0,
+  });
+}
+
+// --- Journal & notes (T15) -------------------------------------------------
+
+export function useJournalEntries() {
+  return useQuery({
+    queryKey: queryKeys.journalEntries,
+    queryFn: () => repos.journal.listEntries(),
+  });
+}
+
+export function useJournalEntry(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.journalEntry(id ?? ''),
+    queryFn: () => repos.journal.getEntry(id!),
+    enabled: !!id,
+  });
+}
+
+export function useNotes() {
+  return useQuery({ queryKey: queryKeys.notes, queryFn: () => repos.journal.listNotes() });
+}
+
+export function useNote(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.note(id ?? ''),
+    queryFn: () => repos.journal.getNote(id!),
+    enabled: !!id,
+  });
+}
+
+/** FTS over journal entries + notes in one shot — the Журнал tab search (design §5). */
+export function useJournalSearch(query: string) {
+  return useQuery({
+    queryKey: queryKeys.journalSearch(query),
+    queryFn: async () => {
+      const [entries, notes] = await Promise.all([
+        repos.journal.searchEntries(query),
+        repos.journal.searchNotes(query),
+      ]);
+      return { entries, notes };
+    },
     enabled: query.trim().length > 0,
   });
 }

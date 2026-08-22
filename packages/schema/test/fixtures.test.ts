@@ -38,6 +38,20 @@ describe('sample pack fixtures', () => {
     }
   });
 
+  it('a1-prompts-001 («Первые страницы») validates as a prompts pack', () => {
+    const pack = loadPack('a1-prompts-001');
+    expect(pack.type).toBe('prompts');
+    expect(pack.stories).toHaveLength(0);
+    expect(pack.prompts!.length).toBeGreaterThanOrEqual(12);
+    // level-appropriate surfacing (T15) needs both A1 and A2 prompts to filter
+    const levels = new Set(pack.prompts!.map((p) => p.level));
+    expect(levels.has('A1')).toBe(true);
+    expect(levels.has('A2')).toBe(true);
+    // prompt ids unique within the pack
+    const ids = pack.prompts!.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it('ё is preserved in content (never normalized to е)', () => {
     const raw = readFileSync(join(packDir('a1-creepypasta-002'), 'pack.json'), 'utf8');
     expect(raw).toContain('чёрные');
@@ -69,12 +83,12 @@ describe('sample pack fixtures', () => {
 });
 
 describe('manifest fixture', () => {
-  it('validates and covers both sample packs', () => {
+  it('validates and covers all sample packs', () => {
     const manifest = parseManifest(
       JSON.parse(readFileSync(join(fixturesDir, 'manifest.json'), 'utf8')),
     );
     const ids = manifest.packs.map((p) => p.id).sort();
-    expect(ids).toEqual(['a1-creepypasta-001', 'a1-creepypasta-002']);
+    expect(ids).toEqual(['a1-creepypasta-001', 'a1-creepypasta-002', 'a1-prompts-001']);
   });
 
   it('bytes and sha256 hashes match the files on disk', () => {
