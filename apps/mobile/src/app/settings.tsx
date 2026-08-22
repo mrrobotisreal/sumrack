@@ -10,6 +10,7 @@ import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-sectio
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
 import { VoicesSettingsSection } from '@/features/tts/voices-settings-section';
 import { track } from '@/services/analytics';
+import { useGamePrefs } from '@/store/game-prefs';
 import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useThemeStore, type ThemeMode } from '@/store/theme';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -29,6 +30,7 @@ export default function SettingsScreen() {
   const { mode, setMode } = useThemeStore();
   const { tokens } = useAppTheme();
   const { encounterOnLookup, setEncounterOnLookup } = useLookupPrefs();
+  const { clozeUnseenStoriesAllowed, setClozeUnseenStoriesAllowed } = useGamePrefs();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -86,6 +88,28 @@ export default function SettingsScreen() {
             trackColor={{ false: tokens.surface2, true: tokens.accent }}
             thumbColor={tokens.text}
             accessibilityLabel="Encounter on tap-lookup"
+          />
+        </View>
+      </View>
+
+      <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
+        Games
+      </Text>
+      <View className="overflow-hidden rounded-xl border border-border bg-surface">
+        <View className="flex-row items-center justify-between px-4 py-3.5">
+          <View className="flex-1 gap-0.5 pr-3">
+            <Text className="font-ui-medium">Allow unread stories</Text>
+            <Text variant="caption">
+              Cloze and sentence builder may quote sentences from stories you haven&apos;t read yet
+              (spoilers!)
+            </Text>
+          </View>
+          <Switch
+            value={clozeUnseenStoriesAllowed}
+            onValueChange={setClozeUnseenStoriesAllowed}
+            trackColor={{ false: tokens.surface2, true: tokens.accent }}
+            thumbColor={tokens.text}
+            accessibilityLabel="Allow unread stories in games"
           />
         </View>
       </View>

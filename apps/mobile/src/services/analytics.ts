@@ -87,7 +87,22 @@ export type AnalyticsEvent =
   | 'pron_attempt'
   | 'pron_item_graded'
   | 'pron_session_finished'
-  | 'pron_session_abandoned';
+  | 'pron_session_abandoned'
+  // T13 cloze + sentence builder + games menu
+  | 'games_menu_opened'
+  | 'game_launched_from_menu'
+  | 'games_unseen_stories_toggled'
+  | 'cloze_session_started'
+  | 'cloze_session_empty'
+  | 'cloze_hint_used'
+  | 'cloze_item_graded'
+  | 'cloze_session_finished'
+  | 'cloze_session_abandoned'
+  | 'sb_session_started'
+  | 'sb_session_empty'
+  | 'sb_item_graded'
+  | 'sb_session_finished'
+  | 'sb_session_abandoned';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

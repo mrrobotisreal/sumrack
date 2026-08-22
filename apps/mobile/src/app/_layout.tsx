@@ -101,6 +101,15 @@ export default function RootLayout() {
                 options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
               />
               <Stack.Screen
+                name="review/cloze"
+                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+              />
+              <Stack.Screen
+                name="review/sentence-builder"
+                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+              />
+              <Stack.Screen name="games" options={{ title: 'Games' }} />
+              <Stack.Screen
                 name="settings"
                 options={{ title: 'Settings', presentation: 'modal' }}
               />

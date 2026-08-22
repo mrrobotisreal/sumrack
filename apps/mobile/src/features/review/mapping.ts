@@ -28,3 +28,67 @@ export function mcOutcomeToRating(correct: boolean, durationMs: number): Grade {
 export function ratingCountsAsCorrect(rating: Grade): boolean {
   return rating !== Rating.Again;
 }
+
+/**
+ * Cloze outcome → FSRS rating (T13, per the ticket's explicit rules):
+ *
+ *   wrong, or "reveal" used            → Again
+ *   typed correct, no hint             → Good
+ *   typed correct, any hint used       → Hard  (hints cap the rating)
+ *   tile-pick correct, fast            → Good
+ *   tile-pick correct, slow            → Hard
+ *
+ * The tile threshold is 12 s — deliberately wider than MC's 7 s because a
+ * cloze prompt is a full sentence, not a single word. Easy is never emitted
+ * (same reasoning as MC: recognition/completion can't prove effortless
+ * recall). The hint ladder exists only on the typed variant — tiles already
+ * show the answer among the options.
+ */
+export const CLOZE_TILE_FAST_THRESHOLD_MS = 12_000;
+
+export interface ClozeOutcome {
+  variant: 'tiles' | 'typed';
+  correct: boolean;
+  /** first-letter / lemma hints taken (typed only). */
+  hintsUsed: number;
+  /** The answer was revealed (typed only) — never counts as recalled. */
+  revealed: boolean;
+  durationMs: number;
+}
+
+export function clozeOutcomeToRating(outcome: ClozeOutcome): Grade {
+  if (!outcome.correct || outcome.revealed) return Rating.Again;
+  if (outcome.variant === 'typed') {
+    return outcome.hintsUsed > 0 ? Rating.Hard : Rating.Good;
+  }
+  return outcome.durationMs <= CLOZE_TILE_FAST_THRESHOLD_MS ? Rating.Good : Rating.Hard;
+}
+
+/**
+ * Sentence-builder outcome → FSRS rating (T13):
+ *
+ *   wrong sentence                     → Again
+ *   correct, but tiles were taken back → Hard  ("mistakes recovered")
+ *   correct, slow                      → Hard
+ *   correct, fast, no take-backs       → Good
+ *
+ * "Fast" scales with sentence length: 2.5 s per word tile, floor 10 s —
+ * assembling eight tiles honestly takes time. Easy is never emitted.
+ */
+export function sbFastThresholdMs(wordCount: number): number {
+  return Math.max(10_000, wordCount * 2_500);
+}
+
+export interface SbOutcome {
+  correct: boolean;
+  /** Tiles removed from the answer row before checking (recovered mistakes). */
+  removals: number;
+  wordCount: number;
+  durationMs: number;
+}
+
+export function sbOutcomeToRating(outcome: SbOutcome): Grade {
+  if (!outcome.correct) return Rating.Again;
+  if (outcome.removals > 0) return Rating.Hard;
+  return outcome.durationMs <= sbFastThresholdMs(outcome.wordCount) ? Rating.Good : Rating.Hard;
+}

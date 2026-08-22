@@ -88,7 +88,30 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="dictionary"
-        options={{ title: TAB_TITLES.dictionary.ru, tabBarIcon: tabIcon('bookmarks-outline') }}
+        options={{
+          title: TAB_TITLES.dictionary.ru,
+          tabBarIcon: tabIcon('bookmarks-outline'),
+          headerRight: () => (
+            <>
+              <Pressable
+                onPress={() => router.push('/games')}
+                hitSlop={8}
+                accessibilityLabel="Games"
+                className="mr-4"
+              >
+                <Ionicons name="game-controller-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/settings')}
+                hitSlop={8}
+                accessibilityLabel="Settings"
+                className="mr-4"
+              >
+                <Ionicons name="person-circle-outline" size={26} color={tokens.textMuted} />
+              </Pressable>
+            </>
+          ),
+        }}
       />
       <Tabs.Screen
         name="journal"

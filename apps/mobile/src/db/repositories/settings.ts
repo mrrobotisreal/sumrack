@@ -31,6 +31,11 @@ export const SETTING_KEYS = {
   narrationPrefs: 'narration.prefs',
   /** TTS voice selection (T11): { selectedVoiceId } — Zod-validated on read (features/tts/catalog). */
   ttsVoice: 'tts.voice',
+  /**
+   * boolean (T13, default false): cloze/sentence-builder may quote sentences
+   * from stories not yet read. Off = never spoil an unseen story.
+   */
+  clozeUnseenStoriesAllowed: 'games.clozeUnseenStoriesAllowed',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

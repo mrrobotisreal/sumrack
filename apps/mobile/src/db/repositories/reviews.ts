@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import {
   fsrs,
   generatorParameters,
@@ -175,6 +175,22 @@ export function createReviewsRepo(db: SumrakDB) {
         .from(cards)
         .where(and(lte(cards.dueAt, now), inArray(cards.direction, directions)))
         .orderBy(asc(cards.dueAt))
+        .limit(limit);
+    },
+
+    /**
+     * Not-yet-due cards, weakest (lowest stability) first — T13's standalone
+     * games top up with these when the due queue alone can't fill a session
+     * (design §7.3: cloze targets "due/weak lemmas"). Practicing ahead of
+     * schedule is free extra signal for FSRS, never harm.
+     */
+    async listWeakestCards(query: DueQuery = {}): Promise<CardRow[]> {
+      const { now = Date.now(), limit = 100, directions = ACTIVE_DIRECTIONS } = query;
+      return db
+        .select()
+        .from(cards)
+        .where(and(gt(cards.dueAt, now), inArray(cards.direction, directions)))
+        .orderBy(asc(cards.stability), asc(cards.dueAt))
         .limit(limit);
     },
 
