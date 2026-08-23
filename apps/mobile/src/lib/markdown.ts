@@ -23,7 +23,23 @@ export type MarkdownBlock =
   | { kind: 'list-item'; ordered: boolean; marker: string; runs: InlineRun[] }
   | { kind: 'quote'; runs: InlineRun[] }
   | { kind: 'code'; text: string }
+  | { kind: 'table'; rows: InlineRun[][][]; headerRow: boolean }
   | { kind: 'hr' };
+
+/** Split a `| a | b |` table line into trimmed cells (`\|` escapes honored). */
+function splitTableCells(line: string): string[] {
+  const ESC = '\u0000';
+  const inner = line
+    .replace(/^\|/, '')
+    .replace(/\|\s*$/, '')
+    .replaceAll('\\|', ESC);
+  return inner.split('|').map((c) => c.replaceAll(ESC, '|').trim());
+}
+
+/** True for the `| --- | :--: |` separator row under a table header. */
+function isTableSeparator(cells: string[]): boolean {
+  return cells.length > 0 && cells.every((c) => /^:?-{2,}:?$/.test(c));
+}
 
 /** Parse inline markup into flat styled runs. Unclosed markers render literally. */
 export function parseInline(text: string): InlineRun[] {
@@ -59,6 +75,18 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
 
   let inCode = false;
   let codeLines: string[] = [];
+  let tableRows: string[][] = [];
+  let tableHasSeparator = false;
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    blocks.push({
+      kind: 'table',
+      rows: tableRows.map((cells) => cells.map(parseInline)),
+      headerRow: tableHasSeparator,
+    });
+    tableRows = [];
+    tableHasSeparator = false;
+  };
 
   for (const line of lines) {
     if (inCode) {
@@ -73,6 +101,19 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
     }
 
     const trimmed = line.trim();
+    // GFM-style table rows: | a | b | (a run of them forms one table block;
+    // the --- separator row is swallowed and marks row 1 as the header).
+    if (/^\|.*\|?$/.test(trimmed) && trimmed.length > 1) {
+      const cells = splitTableCells(trimmed);
+      if (isTableSeparator(cells)) {
+        if (tableRows.length > 0) tableHasSeparator = true;
+        continue;
+      }
+      flushParagraph();
+      tableRows.push(cells);
+      continue;
+    }
+    flushTable();
     if (/^```/.test(trimmed)) {
       flushParagraph();
       inCode = true;
@@ -129,6 +170,7 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
   }
   // EOF inside a fence: treat the collected lines as code anyway.
   if (inCode && codeLines.length > 0) blocks.push({ kind: 'code', text: codeLines.join('\n') });
+  flushTable();
   flushParagraph();
   return blocks;
 }

@@ -99,3 +99,32 @@ describe('parseMarkdown', () => {
     expect(parseMarkdown('\n\n  \n')).toEqual([]);
   });
 });
+
+describe('parseMarkdown — tables (T17 lesson renderer)', () => {
+  it('parses a GFM table with header separator into one table block', () => {
+    const blocks = parseMarkdown(
+      ['| Form | Где? |', '| --- | --- |', '| дом | в дом**е** |', '| шкаф | в шкафу |'].join('\n'),
+    );
+    expect(blocks).toHaveLength(1);
+    const table = blocks[0]!;
+    if (table.kind !== 'table') throw new Error('expected table');
+    expect(table.headerRow).toBe(true);
+    expect(table.rows).toHaveLength(3); // separator swallowed
+    expect(table.rows[0]![0]![0]!.text).toBe('Form');
+    // inline markup inside cells still parses
+    expect(table.rows[1]![1]!.some((r) => r.bold)).toBe(true);
+  });
+
+  it('a table without separator has no header row; escaped pipes stay literal', () => {
+    const blocks = parseMarkdown('| a \\| b | c |\n| d | e |');
+    const table = blocks[0]!;
+    if (table.kind !== 'table') throw new Error('expected table');
+    expect(table.headerRow).toBe(false);
+    expect(table.rows[0]![0]![0]!.text).toBe('a | b');
+  });
+
+  it('tables end at blank lines and mix with paragraphs', () => {
+    const blocks = parseMarkdown('before\n\n| a | b |\n\nafter');
+    expect(blocks.map((b) => b.kind)).toEqual(['paragraph', 'table', 'paragraph']);
+  });
+});

@@ -99,6 +99,30 @@ function renderBlock(
           {renderRuns(block.runs, { ...READING, fontFamily: 'Literata_400Regular_Italic' })}
         </View>
       );
+    case 'table':
+      return (
+        <View className="overflow-hidden rounded-lg border border-border">
+          {block.rows.map((cells, r) => (
+            <View
+              key={r}
+              className={`flex-row ${r > 0 ? 'border-t border-border' : ''} ${
+                r === 0 && block.headerRow ? 'bg-surface-2' : ''
+              }`}
+            >
+              {cells.map((runs, c) => (
+                <View key={c} className="flex-1 px-2.5 py-2">
+                  {renderRuns(
+                    runs,
+                    r === 0 && block.headerRow
+                      ? { fontFamily: 'GolosText_500Medium', fontSize: 14, lineHeight: 20 }
+                      : { fontFamily: 'Literata_400Regular', fontSize: 15, lineHeight: 22 },
+                  )}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      );
     case 'code':
       return (
         <View className="rounded-lg bg-surface-2 px-3 py-2">
