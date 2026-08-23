@@ -5,6 +5,7 @@ import { Alert, BackHandler } from 'react-native';
 
 import { repos } from '@/db';
 import type { CardRow, Grade } from '@/db/repositories/reviews';
+import { onSessionEnded, recordReviewOutcome } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 
 import { ratingCountsAsCorrect } from '../mapping';
@@ -78,6 +79,8 @@ export function useGameSession<T>(opts: {
         correctCount: results.filter((r) => r.correct).length,
       });
     }
+    // Count-based achievement sweep (mastered/bank/level) once per session (T19).
+    void onSessionEnded().catch((err) => console.warn(`[game] sweep failed`, err));
     void queryClient.invalidateQueries({ queryKey: ['due-count'] });
     void queryClient.invalidateQueries({ queryKey: ['daily-activity'] });
     void queryClient.invalidateQueries({ queryKey: ['review-state'] });
@@ -93,9 +96,10 @@ export function useGameSession<T>(opts: {
     ) => {
       const correct = ratingCountsAsCorrect(rating);
       resultsRef.current.push({ cardId: card.id, rating, correct, mode: itemMode });
+      // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak (T19).
       void repos.reviews
         .gradeCard(card.id, rating)
-        .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
+        .then(() => recordReviewOutcome(rating))
         .catch((err) => console.error(`[${mode}] grade failed`, err));
       track(`${trackPrefix}_item_graded`, { rating, ...extraProps });
 

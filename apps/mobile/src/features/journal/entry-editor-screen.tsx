@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { SelectableText, type FreeSelection } from '@/components/selectable-text';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordJournalEntryCreated } from '@/features/motivation/service';
 import { queryKeys, useJournalEntry } from '@/db/hooks';
 import type { JournalEntryRow } from '@/db/repositories/journal';
 import { chunkText } from '@/lib/free-text';
@@ -154,6 +155,7 @@ function EntryEditor({
       s.entryId = row.id;
       setEntryId(row.id);
       track('journal_entry_created', { withPrompt: !!s.attachPromptId });
+      void recordJournalEntryCreated(); // T19 XP + first-journal achievement
       if (s.attachPromptId) {
         track('journal_prompt_used', { promptId: s.attachPromptId, from: 'editor' });
       }

@@ -1,5 +1,7 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 
+import { emitMotivationEvent } from '@/services/motivation-bus';
+
 import { packs, unitProgress } from '../schema';
 import type { SumrakDB } from '../types';
 
@@ -105,6 +107,8 @@ export function createPathRepo(db: SumrakDB) {
           target: unitProgress.packId,
           set: { completedAt: now, updatedAt: now },
         });
+      // T19: first-unit achievement listens on the bus (repos stay feature-free).
+      emitMotivationEvent('unit-completed');
       return true;
     },
 

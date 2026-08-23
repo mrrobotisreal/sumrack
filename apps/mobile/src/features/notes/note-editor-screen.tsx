@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { MarkdownView } from '@/components/markdown-view';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordNoteCreated } from '@/features/motivation/service';
 import { queryKeys, useNote } from '@/db/hooks';
 import type { NoteRow } from '@/db/repositories/journal';
 import { BankSaveSheet, type BankSaveTarget } from '@/features/journal/bank-save-sheet';
@@ -96,6 +97,7 @@ function NoteEditor({ note }: { note: NoteRow | null }) {
       s.noteId = row.id;
       setNoteId(row.id);
       track('note_created', {});
+      void recordNoteCreated(); // T19 XP
     } else {
       await repos.journal.updateNote(s.noteId, payload);
       track('note_autosaved', { chars: payload.body.length });

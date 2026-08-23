@@ -27,6 +27,9 @@ import { AnimatedSplash } from '@/components/animated-splash';
 import { AiQueue } from '@/components/ai-queue';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
+import { AchievementToastHost } from '@/features/motivation/achievement-toast';
+import { NotificationRouter } from '@/features/motivation/notification-router';
+import { ReminderReplanner } from '@/features/motivation/reminder-replanner';
 import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
 import { useThemeStore } from '@/store/theme';
@@ -146,11 +149,15 @@ export default function RootLayout() {
               />
               <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
               <Stack.Screen name="notes/[id]" options={{ headerShown: false, animation: 'fade' }} />
+              <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
               <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
               <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
             </Stack>
             <AutoSync />
             <AiQueue />
+            <NotificationRouter />
+            <ReminderReplanner />
+            <AchievementToastHost />
             {!introDone && <AnimatedSplash onDone={() => setIntroDone(true)} />}
           </ThemeProvider>
         </QueryClientProvider>

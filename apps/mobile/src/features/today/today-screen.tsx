@@ -6,29 +6,23 @@ import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import {
-  useDailyActivity,
   useDueCardCount,
   useProductionDueCount,
   useStories,
   useStoryProgressList,
 } from '@/db/hooks';
+import { GoalRingCard } from '@/features/motivation/goal-ring-card';
+import { NotificationPromptCard } from '@/features/motivation/notification-prompt-card';
 import type { PathNode } from '@/features/path/path-model';
 import { isUnit, nextStepInfo, usePathState } from '@/features/path/use-path';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /**
- * Goal-ring PLACEHOLDER targets (design §7.7 defaults). T06 scope is
- * counters only — T19 brings configurable goals, streaks, and the real
- * ring; these constants exist purely so the bars have a denominator.
- */
-const PLACEHOLDER_GOAL_REVIEWS = 20;
-const PLACEHOLDER_GOAL_READING_MIN = 10;
-
-/**
- * Сегодня v1 (design §10, UI_DESIGN §4): one viewport answering, top to
- * bottom — goal state (placeholder bars over real daily_activity counters),
- * what's due (session CTA), where I left off (continue-reading card).
+ * Сегодня (design §10, UI_DESIGN §4): one viewport answering, top to
+ * bottom — goal/streak state (the real T19 ring over daily_activity +
+ * the motivation snapshot), what's due (session CTA), where I left off
+ * (continue-reading card).
  */
 export function TodayScreen() {
   const router = useRouter();
@@ -37,7 +31,6 @@ export function TodayScreen() {
 
   const due = useDueCardCount();
   const productionDue = useProductionDueCount();
-  const activity = useDailyActivity();
   const progressList = useStoryProgressList();
   const stories = useStories();
   const path = usePathState();
@@ -48,13 +41,12 @@ export function TodayScreen() {
       track('tab_viewed', { tab: 'Сегодня' });
       void queryClient.invalidateQueries({ queryKey: ['due-count'] });
       void queryClient.invalidateQueries({ queryKey: ['daily-activity'] });
+      void queryClient.invalidateQueries({ queryKey: ['motivation'] });
       void queryClient.invalidateQueries({ queryKey: ['story-progress'] });
       void queryClient.invalidateQueries({ queryKey: ['path'] });
     }, [queryClient]),
   );
 
-  const reviewsDone = activity.data?.reviewsDone ?? 0;
-  const readingMin = Math.floor((activity.data?.readingMs ?? 0) / 60_000);
   const dueCount = due.data ?? 0;
   const pronDueCount = productionDue.data ?? 0;
 
@@ -71,28 +63,11 @@ export function TodayScreen() {
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-4 px-4 pb-16 pt-4">
-      {/* goal placeholder — real counters, T19 owns the actual goal/streak logic */}
-      <View className="rounded-xl border border-border bg-surface p-4">
-        <Text variant="caption" className="uppercase tracking-wider">
-          Today
-        </Text>
-        <View className="mt-3 gap-3">
-          <GoalBar
-            icon="albums-outline"
-            label="Reviews"
-            value={reviewsDone}
-            target={PLACEHOLDER_GOAL_REVIEWS}
-            unit=""
-          />
-          <GoalBar
-            icon="book-outline"
-            label="Reading"
-            value={readingMin}
-            target={PLACEHOLDER_GOAL_READING_MIN}
-            unit=" min"
-          />
-        </View>
-      </View>
+      {/* the real goal ring + streak flame + freezes + XP (T19) */}
+      <GoalRingCard />
+
+      {/* one-time reminders opt-in, once there's a streak to protect (T19) */}
+      <NotificationPromptCard />
 
       {/* what's due */}
       <View className="rounded-xl border border-border bg-surface p-4">
@@ -210,40 +185,5 @@ function PathContinueCard({ node }: { node: PathNode }) {
         </View>
       </View>
     </Pressable>
-  );
-}
-
-function GoalBar({
-  icon,
-  label,
-  value,
-  target,
-  unit,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: number;
-  target: number;
-  unit: string;
-}) {
-  const { tokens } = useAppTheme();
-  const fraction = Math.min(1, target > 0 ? value / target : 0);
-  return (
-    <View className="gap-1.5">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-1.5">
-          <Ionicons name={icon} size={14} color={tokens.textMuted} />
-          <Text variant="caption">{label}</Text>
-        </View>
-        <Text variant="caption">
-          {value}
-          {unit} / {target}
-          {unit}
-        </Text>
-      </View>
-      <View className="h-2 overflow-hidden rounded-full bg-surface-2">
-        <View className="h-full rounded-full bg-accent" style={{ width: `${fraction * 100}%` }} />
-      </View>
-    </View>
   );
 }

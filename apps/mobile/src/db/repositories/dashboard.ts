@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
 
+import { computeStreak } from '@/lib/streak';
+
 import type { SumrakDB } from '../types';
 
 /**
@@ -275,9 +277,9 @@ export function createDashboardRepo(db: SumrakDB) {
 
     /**
      * Lifetime + recent activity from `daily_activity` (the acceptance
-     * criterion's reconciliation source). The streak here is the T18
-     * PLACEHOLDER: consecutive days with any activity, ending today or
-     * yesterday — T19 replaces it with real goal-met streak logic.
+     * criterion's reconciliation source). Since T19 the streak is the REAL
+     * goal-met streak (goal_met_at + frozen_days via lib/streak) — the same
+     * walk the Today ring uses, so the two can never disagree.
      */
     async getActivityTotals(now: Date = new Date()): Promise<ActivityTotals> {
       const totals = await db.all<{ reviews: number; reading: number; stories: number }>(sql`
@@ -298,16 +300,14 @@ export function createDashboardRepo(db: SumrakDB) {
         ORDER BY date DESC
       `);
 
-      // Streak walk: today (or yesterday, so a streak isn't "broken" before
-      // today's session happens) backwards while consecutive dates exist.
-      const activeDates = new Set(days.map((d) => d.date));
-      const cursor = new Date(now);
-      if (!activeDates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-      let activityStreak = 0;
-      while (activeDates.has(localDateKey(cursor))) {
-        activityStreak += 1;
-        cursor.setDate(cursor.getDate() - 1);
-      }
+      const metRows = await db.all<{ date: string }>(
+        sql`SELECT date FROM daily_activity WHERE goal_met_at IS NOT NULL`,
+      );
+      const frozenRows = await db.all<{ date: string }>(sql`SELECT date FROM frozen_days`);
+      const activityStreak = computeStreak(localDateKey(now), {
+        met: new Set(metRows.map((r) => r.date)),
+        frozen: new Set(frozenRows.map((r) => r.date)),
+      }).current;
 
       const byDate = new Map(days.map((d) => [d.date, d]));
       const recentDays: ActivityTotals['recentDays'] = [];

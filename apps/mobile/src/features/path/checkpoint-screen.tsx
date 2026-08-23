@@ -14,6 +14,7 @@ import {
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordCheckpointPassed } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -105,6 +106,10 @@ export function CheckpointScreen({ packId }: { packId: string }) {
         packId,
         scorePercent: score.scorePercent,
       });
+      if (passedNow) {
+        // T19: first-pass XP + first-checkpoint achievement (unlock is idempotent).
+        void recordCheckpointPassed(!previouslyPassed);
+      }
       void queryClient.invalidateQueries({ queryKey: pathQueryKey });
       setOutcome({
         scorePercent: score.scorePercent,

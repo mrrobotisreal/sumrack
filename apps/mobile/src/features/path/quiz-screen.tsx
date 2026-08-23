@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, Text as RNText, View } from 'react-native
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordUnitQuizFirstPass } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -66,7 +67,11 @@ export function QuizScreen({ packId }: { packId: string }) {
       const score = scoreOutcomes(outcomes);
       const threshold = await getPassThreshold();
       const passedQuiz = passes(score, threshold);
+      const before = await repos.path.getUnitProgress(packId);
       await repos.path.recordQuizResult(packId, score.scorePercent, passedQuiz);
+      if (passedQuiz && before?.quizPassedAt == null) {
+        void recordUnitQuizFirstPass(); // T19 XP, first pass only
+      }
       if (sessionIdRef.current) {
         await repos.stats.finishGameSession(sessionIdRef.current, {
           itemCount: score.scored,

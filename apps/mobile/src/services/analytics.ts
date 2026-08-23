@@ -184,7 +184,22 @@ export type AnalyticsEvent =
   | 'assessment_requested'
   | 'assessment_completed'
   | 'assessment_failed'
-  | 'assessment_screen_opened';
+  | 'assessment_screen_opened'
+  // T19 streaks, goals, XP, achievements, notifications. All local — the
+  // notification events log delivery *scheduling* and taps, never content.
+  | 'daily_goal_changed'
+  | 'goal_met'
+  | 'streak_freeze_consumed'
+  | 'streak_freeze_earned'
+  | 'achievement_unlocked'
+  | 'achievements_gallery_opened'
+  | 'notification_prefs_changed'
+  | 'notification_permission_result'
+  | 'notifications_replanned'
+  | 'notification_new_content'
+  | 'notification_tapped'
+  | 'notification_prompt_accepted'
+  | 'notification_prompt_dismissed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

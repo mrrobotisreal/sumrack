@@ -1,3 +1,5 @@
+import { emitMotivationEvent } from '@/services/motivation-bus';
+
 import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
 import { createContentRepo } from './content';
@@ -27,6 +29,8 @@ export function createRepositories(db: SumrakDB) {
     bank: createBankRepo(db, {
       afterAdd: async (item) => {
         await reviews.ensureCards(item.id);
+        // T19: bank-size achievements listen on the bus (repos stay feature-free).
+        emitMotivationEvent('bank-item-added');
       },
     }),
     reviews,

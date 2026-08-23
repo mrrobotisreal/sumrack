@@ -6,6 +6,11 @@ import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-na
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import {
+  onSessionEnded,
+  recordPronunciationScore,
+  recordReviewOutcome,
+} from '@/features/motivation/service';
 import type { SessionResult } from '@/features/review/session-screen';
 import { SessionShell } from '@/features/review/session-shell';
 import { SummaryView } from '@/features/review/summary-view';
@@ -95,6 +100,8 @@ export function PronunciationSessionScreen() {
         detail: { scores: scoresRef.current },
       });
     }
+    // Count-based achievement sweep (mastered/bank/level) once per session (T19).
+    void onSessionEnded().catch((err) => console.warn('[pron] sweep failed', err));
     invalidateAfterReviews();
   }, [invalidateAfterReviews]);
 
@@ -104,9 +111,12 @@ export function PronunciationSessionScreen() {
       const correct = ratingCountsAsCorrect(rating);
       resultsRef.current.push({ cardId: entry.card.id, rating, correct, mode: 'pronunciation' });
       scoresRef.current.push({ bankItemId: entry.item.id, score: bestScore });
+      // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak;
+      // a perfect best score also feeds the pron-perfect achievement (T19).
       void repos.reviews
         .gradeCard(entry.card.id, rating)
-        .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
+        .then(() => recordReviewOutcome(rating))
+        .then(() => recordPronunciationScore(bestScore))
         .catch((err) => console.error('[pron] grade failed', err));
       track('pron_item_graded', {
         rating,

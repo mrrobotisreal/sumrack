@@ -1,4 +1,4 @@
-import { desc, eq, gte, sql } from 'drizzle-orm';
+import { desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 
 import { newId } from '../ids';
 import {
@@ -7,6 +7,7 @@ import {
   assessments,
   checkpointResults,
   dailyActivity,
+  frozenDays,
   gameSessions,
 } from '../schema';
 import type { SumrakDB } from '../types';
@@ -31,7 +32,7 @@ export function createStatsRepo(db: SumrakDB) {
   return {
     /** Increment today's counters (upsert). */
     async bumpDailyActivity(
-      delta: { reviewsDone?: number; readingMs?: number; storiesFinished?: number },
+      delta: { reviewsDone?: number; readingMs?: number; storiesFinished?: number; xp?: number },
       date: string = localDateKey(),
     ): Promise<void> {
       const now = Date.now();
@@ -42,6 +43,7 @@ export function createStatsRepo(db: SumrakDB) {
           reviewsDone: delta.reviewsDone ?? 0,
           readingMs: delta.readingMs ?? 0,
           storiesFinished: delta.storiesFinished ?? 0,
+          xp: delta.xp ?? 0,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -50,9 +52,69 @@ export function createStatsRepo(db: SumrakDB) {
             reviewsDone: sql`${dailyActivity.reviewsDone} + ${delta.reviewsDone ?? 0}`,
             readingMs: sql`${dailyActivity.readingMs} + ${delta.readingMs ?? 0}`,
             storiesFinished: sql`${dailyActivity.storiesFinished} + ${delta.storiesFinished ?? 0}`,
+            xp: sql`${dailyActivity.xp} + ${delta.xp ?? 0}`,
             updatedAt: now,
           },
         });
+    },
+
+    /**
+     * Stamp the day's goal as met (once — the stamp never moves, and a later
+     * goal-config change never un-stamps history). Returns true when newly
+     * stamped, so the caller can fire goal-met side effects exactly once.
+     */
+    async markGoalMet(date: string = localDateKey()): Promise<boolean> {
+      const now = Date.now();
+      const rows = await db
+        .select({ goalMetAt: dailyActivity.goalMetAt })
+        .from(dailyActivity)
+        .where(eq(dailyActivity.date, date))
+        .limit(1);
+      const row = rows[0];
+      if (!row || row.goalMetAt != null) return false;
+      await db
+        .update(dailyActivity)
+        .set({ goalMetAt: now, updatedAt: now })
+        .where(eq(dailyActivity.date, date));
+      return true;
+    },
+
+    /** All goal-met + frozen day keys — the streak walk's inputs (lib/streak). */
+    async getStreakDays(): Promise<{ met: Set<string>; frozen: Set<string> }> {
+      const [metRows, frozenRows] = await Promise.all([
+        db
+          .select({ date: dailyActivity.date })
+          .from(dailyActivity)
+          .where(isNotNull(dailyActivity.goalMetAt)),
+        db.select({ date: frozenDays.date }).from(frozenDays),
+      ]);
+      return {
+        met: new Set(metRows.map((r) => r.date)),
+        frozen: new Set(frozenRows.map((r) => r.date)),
+      };
+    },
+
+    /** Record freeze coverage for missed days (idempotent per date). */
+    async insertFrozenDays(dates: string[]): Promise<void> {
+      if (dates.length === 0) return;
+      const now = Date.now();
+      await db
+        .insert(frozenDays)
+        .values(dates.map((date) => ({ date, consumedAt: now })))
+        .onConflictDoNothing();
+    },
+
+    /** Frozen days, most recent first (Today/settings "freeze used on …" UI). */
+    async listFrozenDays(limit = 10) {
+      return db.select().from(frozenDays).orderBy(desc(frozenDays.date)).limit(limit);
+    },
+
+    /** Lifetime XP — SUM of the per-day xp counters. */
+    async getTotalXp(): Promise<number> {
+      const rows = await db
+        .select({ total: sql<number>`COALESCE(SUM(${dailyActivity.xp}), 0)` })
+        .from(dailyActivity);
+      return rows[0]?.total ?? 0;
     },
 
     async getDailyActivity(date: string = localDateKey()): Promise<DailyActivityRow | null> {

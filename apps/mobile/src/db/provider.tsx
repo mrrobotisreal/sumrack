@@ -3,11 +3,14 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
+import { initMotivation } from '@/features/motivation/service';
 import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
+import { hydrateGoalPrefsFromDb } from '@/store/goal-prefs';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
+import { hydrateNotificationPrefsFromDb } from '@/store/notification-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
 import { hydrateThemeFromDb } from '@/store/theme';
 
@@ -38,12 +41,17 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateLookupPrefsFromDb();
         await hydrateGamePrefsFromDb();
         await hydrateDailyPrefsFromDb();
+        await hydrateGoalPrefsFromDb();
+        await hydrateNotificationPrefsFromDb();
         // Registers the real SpeechService (Piper/system) — T05's popup
         // speaker and all readback surfaces are live from here on.
         await hydrateTtsFromDb();
         // ASR install state for Settings + the pronunciation game's gate
         // (T12). The recognizer itself loads lazily at session start.
         await refreshInstalledAsr();
+        // T19: register the motivation bus, consume freezes for days missed
+        // while the app was closed, sweep achievements, replan reminders.
+        await initMotivation();
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error('[db] bootstrap failed', err);

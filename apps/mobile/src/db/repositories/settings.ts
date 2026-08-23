@@ -53,6 +53,24 @@ export const SETTING_KEYS = {
    * only (same rule as the GitHub PAT).
    */
   aiModel: 'ai.model',
+  /**
+   * Daily goal (T19, §7.7): { reviews, readingMin } — Zod-validated on read
+   * (features/motivation/goal-prefs), defaults 20 reviews + 10 min reading.
+   */
+  dailyGoal: 'goal.daily',
+  /**
+   * Streak-freeze wallet (T19): { available 0–2, lastEarnedOnDate } —
+   * Zod-validated on read (features/motivation/freeze). Per-day coverage
+   * audit lives in the `frozen_days` table, not here.
+   */
+  streakFreeze: 'streak.freeze',
+  /**
+   * Notification prefs (T19): master toggle, reminder times, quiet hours —
+   * Zod-validated on read (features/motivation/notification-prefs).
+   */
+  notificationPrefs: 'notifications.prefs',
+  /** boolean (T19): the one-time "enable reminders" Today card was dismissed. */
+  notificationPromptDismissed: 'notifications.promptDismissed',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

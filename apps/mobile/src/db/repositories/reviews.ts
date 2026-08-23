@@ -226,6 +226,32 @@ export function createReviewsRepo(db: SumrakDB) {
         .limit(200);
     },
 
+    /**
+     * Word lemmas in the T18 "mature" mastery band: MIN stability across the
+     * item's *reviewed* core-direction cards (ru-en/en-ru — the directions
+     * that vouch for knowing a word, T18 decision) ≥ `minStabilityDays`.
+     * Feeds the mastered-100 achievement (T19).
+     */
+    async countMasteredLemmas(minStabilityDays = 30): Promise<number> {
+      const rows = await db.select({ n: sql<number>`COUNT(*)` }).from(
+        db
+          .select({ bankItemId: cards.bankItemId })
+          .from(cards)
+          .innerJoin(bankItems, eq(bankItems.id, cards.bankItemId))
+          .where(
+            and(
+              eq(bankItems.kind, 'word'),
+              inArray(cards.direction, MIXED_SESSION_DIRECTIONS),
+              gt(cards.reps, 0),
+            ),
+          )
+          .groupBy(cards.bankItemId)
+          .having(sql`MIN(${cards.stability}) >= ${minStabilityDays}`)
+          .as('mastered'),
+      );
+      return rows[0]?.n ?? 0;
+    },
+
     async countDueCards(query: Omit<DueQuery, 'limit'> = {}): Promise<number> {
       const { now = Date.now(), directions = ACTIVE_DIRECTIONS } = query;
       const rows = await db

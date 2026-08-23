@@ -243,7 +243,26 @@ export const dailyActivity = sqliteTable('daily_activity', {
   reviewsDone: integer('reviews_done').notNull().default(0),
   readingMs: integer('reading_ms').notNull().default(0),
   storiesFinished: integer('stories_finished').notNull().default(0),
+  /**
+   * Stamped once (epoch ms), the first moment the day's counters reached the
+   * daily goal that was configured AT THAT MOMENT (T19). Never re-evaluated
+   * retroactively when the goal config changes — history stays honest.
+   */
+  goalMetAt: integer('goal_met_at'),
+  /** XP earned this local day (T19) — total XP = SUM over all rows. */
+  xp: integer('xp').notNull().default(0),
   updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * Days covered by a consumed streak-freeze (T19, §7.7). A frozen day counts
+ * as goal-met in the streak walk; the row is the audit record of when the
+ * freeze was spent. Freeze inventory itself lives in `settings`
+ * (`streak.freeze`) — this table is only the per-day coverage.
+ */
+export const frozenDays = sqliteTable('frozen_days', {
+  date: text('date').primaryKey(),
+  consumedAt: integer('consumed_at').notNull(),
 });
 
 export const achievements = sqliteTable('achievements', {

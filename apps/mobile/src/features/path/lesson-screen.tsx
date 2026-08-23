@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, Text as RNText, ScrollView, View } from '
 import { MarkdownView } from '@/components/markdown-view';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordLessonCompleted } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -36,7 +37,10 @@ export function LessonScreen({ packId }: { packId: string }) {
     if (markedRef.current) return;
     markedRef.current = true;
     void repos.path.markLessonRead(packId).then((first) => {
-      if (first) track('lesson_completed', { packId });
+      if (first) {
+        track('lesson_completed', { packId });
+        void recordLessonCompleted(); // T19 XP
+      }
       invalidatePath();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

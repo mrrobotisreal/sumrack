@@ -15,9 +15,9 @@ type CheckpointRow = Awaited<
 >[number];
 
 /**
- * Activity stats (design §7.6): streak (T18 provisional — any-activity
- * days until T19's real goal streak), lifetime totals, a 14-day reviews
- * chart, the pronunciation score trend, and read-only checkpoint history.
+ * Activity stats (design §7.6): the real goal-met streak (T19 — same walk
+ * as the Today ring), lifetime totals, a 14-day reviews chart, the
+ * pronunciation score trend, and read-only checkpoint history.
  */
 export function ActivitySection({
   activity,
@@ -57,7 +57,7 @@ export function ActivitySection({
           <View className="flex-row items-center gap-2">
             <Ionicons name="flame" size={18} color={tokens.accent} />
             <Text className="font-ui-medium">{activity.activityStreak}-day streak</Text>
-            <Text variant="caption">(activity-based until goals arrive)</Text>
+            <Text variant="caption">(goal-met days)</Text>
           </View>
 
           <View className="mt-3 flex-row gap-3">

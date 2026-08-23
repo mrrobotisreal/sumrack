@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-na
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { Grade } from '@/db/repositories/reviews';
+import { onSessionEnded, recordReviewOutcome } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -89,6 +90,8 @@ export function SessionScreen() {
         correctCount: results.filter((r) => r.correct).length,
       });
     }
+    // Count-based achievement sweep (mastered/bank/level) once per session (T19).
+    void onSessionEnded().catch((err) => console.warn('[review] sweep failed', err));
     invalidateAfterReviews();
   }, [invalidateAfterReviews]);
 
@@ -96,9 +99,10 @@ export function SessionScreen() {
     (entry: SessionItem, rating: Grade, correct: boolean, durationMs: number) => {
       resultsRef.current.push({ cardId: entry.card.id, rating, correct, mode: entry.mode });
       // Fire-and-forget: grading must never stall the flow (offline, local DB).
+      // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak (T19).
       void repos.reviews
         .gradeCard(entry.card.id, rating, { durationMs })
-        .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
+        .then(() => recordReviewOutcome(rating))
         .catch((err) => console.error('[review] grade failed', err));
       track('review_graded', {
         direction: entry.direction,

@@ -15,6 +15,7 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ExplainSheet } from '@/features/ai/explain-sheet';
 import type { ExplainTarget } from '@/features/ai/explain';
+import { recordReading, recordStoryFinished } from '@/features/motivation/service';
 
 import { AudioBar } from './audio-bar';
 import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
@@ -126,7 +127,8 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
       return () => {
         const ms = Date.now() - startedAt;
         if (ms >= MIN_READING_SESSION_MS) {
-          void repos.stats.bumpDailyActivity({ readingMs: ms });
+          // recordReading bumps readingMs + XP and evaluates goal/streak (T19).
+          void recordReading(ms);
           track('reading_session_ended', { packId, storyId, ms });
         }
       };
@@ -167,7 +169,8 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
     void repos.reading.markFinished(packId, storyId).then((newlyFinished) => {
       if (newlyFinished) {
         track('story_finished', { packId, storyId });
-        void repos.stats.bumpDailyActivity({ storiesFinished: 1 });
+        // Bumps storiesFinished + XP, unlocks first-story, evaluates (T19).
+        void recordStoryFinished();
       }
       invalidateProgress();
     });

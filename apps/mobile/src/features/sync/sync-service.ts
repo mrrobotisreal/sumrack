@@ -5,6 +5,7 @@ import * as Network from 'expo-network';
 
 import { db, repos } from '@/db';
 import { importPack, removePack } from '@/db/importer';
+import { notifyNewContent } from '@/features/motivation/notifications';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 import { queryKeys } from '@/db/hooks';
 import { queryClient } from '@/lib/query-client';
@@ -211,6 +212,11 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
       queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
       queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
     ]);
+  }
+
+  // T19: local "new packs available" notice (prefs/quiet-hours gated inside).
+  if (summary.installed.length > 0) {
+    void notifyNewContent(summary.installed.length);
   }
 
   summary.outcome = summary.packErrors.length > 0 ? 'error' : 'ok';

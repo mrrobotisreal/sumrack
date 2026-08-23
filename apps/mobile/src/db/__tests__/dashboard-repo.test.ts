@@ -274,6 +274,10 @@ describe('dashboard repo — activity, pronunciation trend, weak pronunciation',
     await repos.stats.bumpDailyActivity({ reviewsDone: 10, readingMs: 60_000 }, day(0));
     await repos.stats.bumpDailyActivity({ reviewsDone: 5, storiesFinished: 1 }, day(1));
     await repos.stats.bumpDailyActivity({ readingMs: 30_000 }, day(3)); // gap at day(2)
+    // T19: the streak counts goal-MET days (stamped), not any-activity days.
+    await repos.stats.markGoalMet(day(0));
+    await repos.stats.markGoalMet(day(1));
+    await repos.stats.markGoalMet(day(3));
 
     const totals = await repos.dashboard.getActivityTotals(now);
     expect(totals.reviewsDone).toBe(15);
@@ -290,6 +294,19 @@ describe('dashboard repo — activity, pronunciation trend, weak pronunciation',
     const now = new Date('2026-08-22T09:00:00');
     await repos.stats.bumpDailyActivity({ reviewsDone: 1 }, '2026-08-21');
     await repos.stats.bumpDailyActivity({ reviewsDone: 1 }, '2026-08-20');
+    await repos.stats.markGoalMet('2026-08-21');
+    await repos.stats.markGoalMet('2026-08-20');
+    expect((await repos.dashboard.getActivityTotals(now)).activityStreak).toBe(2);
+  });
+
+  it('active-but-unmet days do not extend the streak; frozen days do (T19)', async () => {
+    const { repos } = await setup();
+    const now = new Date('2026-08-22T09:00:00');
+    await repos.stats.bumpDailyActivity({ reviewsDone: 1 }, '2026-08-21'); // active, goal NOT met
+    await repos.stats.bumpDailyActivity({ reviewsDone: 20 }, '2026-08-20');
+    await repos.stats.markGoalMet('2026-08-20');
+    expect((await repos.dashboard.getActivityTotals(now)).activityStreak).toBe(0);
+    await repos.stats.insertFrozenDays(['2026-08-21']);
     expect((await repos.dashboard.getActivityTotals(now)).activityStreak).toBe(2);
   });
 
