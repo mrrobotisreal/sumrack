@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { hydrateTtsFromDb } from '@/features/tts/service';
-import { getPat, getRepoConfig } from '@/features/sync/config';
+import { DEFAULT_REPO, getPat, getRepoConfig } from '@/features/sync/config';
 import { GithubContentClient } from '@/features/sync/github-client';
 import { runSync } from '@/features/sync/sync-service';
 import { queryClient } from '@/lib/query-client';
@@ -39,12 +39,21 @@ export interface RemoteBackupListing {
   timestamp: number;
 }
 
-/** Backups available in the GitHub repo, newest first. Requires repo+PAT. */
+/**
+ * Repo config for restore: fall back to the single known content repo when
+ * settings are empty (fresh install — the whole point of this screen). The
+ * PAT is still required; there is no default for a secret.
+ */
+async function restoreRepoConfig() {
+  return (await getRepoConfig()) ?? DEFAULT_REPO;
+}
+
+/** Backups available in the GitHub repo, newest first. Requires a PAT. */
 export async function listGithubBackups(): Promise<RemoteBackupListing[]> {
-  const config = await getRepoConfig();
+  const config = await restoreRepoConfig();
   const pat = await getPat();
-  if (!config || !pat) {
-    throw new BackupError('github', 'content repo or token not configured');
+  if (!pat) {
+    throw new BackupError('github', 'GitHub token not configured');
   }
   const client = new GithubContentClient(config, pat);
   const entries = await client.listDirectory(BACKUPS_DIR);
@@ -63,10 +72,10 @@ export async function listGithubBackups(): Promise<RemoteBackupListing[]> {
 
 /** Download one backup envelope's text from GitHub. */
 export async function fetchGithubBackup(path: string): Promise<string> {
-  const config = await getRepoConfig();
+  const config = await restoreRepoConfig();
   const pat = await getPat();
-  if (!config || !pat) {
-    throw new BackupError('github', 'content repo or token not configured');
+  if (!pat) {
+    throw new BackupError('github', 'GitHub token not configured');
   }
   const client = new GithubContentClient(config, pat);
   const bytes = await client.fetchRawFile(path);
