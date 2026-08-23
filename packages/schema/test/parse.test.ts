@@ -76,20 +76,39 @@ describe('manifest schema edge cases', () => {
   });
 });
 
-describe('backup envelope stub', () => {
+describe('backup envelope (T20 format)', () => {
+  const envelope = {
+    format: 'sumrak-backup',
+    version: 1,
+    createdAt: '2026-08-21T10:00:00Z',
+    cipher: {
+      alg: 'aes-256-gcm',
+      kdf: 'pbkdf2-sha256',
+      iterations: 210000,
+      saltB64: 'c2FsdA==',
+      ivB64: 'aXY=',
+    },
+    payloadB64: 'ZGF0YQ==',
+  };
+
   it('accepts a well-formed envelope and rejects a wrong format tag', () => {
-    const envelope = {
-      format: 'sumrak-backup',
-      version: 1,
-      createdAt: '2026-08-21T10:00:00Z',
-      cipher: { alg: 'aes-256-gcm', saltB64: 'c2FsdA==', ivB64: 'aXY=' },
-      payloadB64: 'ZGF0YQ==',
-    };
     expect(safeParseBackupEnvelope(envelope).success).toBe(true);
     const wrong = { ...envelope, format: 'other-thing' };
     const result = safeParseBackupEnvelope(wrong);
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.issues[0]!.path).toBe('format');
+  });
+
+  it('rejects an envelope missing the KDF parameters', () => {
+    const legacy = {
+      ...envelope,
+      cipher: { alg: 'aes-256-gcm', saltB64: 'c2FsdA==', ivB64: 'aXY=' },
+    };
+    expect(safeParseBackupEnvelope(legacy).success).toBe(false);
+  });
+
+  it('rejects an unknown envelope version', () => {
+    expect(safeParseBackupEnvelope({ ...envelope, version: 2 }).success).toBe(false);
   });
 });

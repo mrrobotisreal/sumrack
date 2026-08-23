@@ -25,6 +25,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplash } from '@/components/animated-splash';
 import { AiQueue } from '@/components/ai-queue';
+import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
@@ -143,6 +144,7 @@ export default function RootLayout() {
               />
               <Stack.Screen name="word-bank/enrich" options={{ title: 'Enrich with AI' }} />
               <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
+              <Stack.Screen name="restore" options={{ title: 'Restore from backup' }} />
               <Stack.Screen
                 name="journal/[id]"
                 options={{ headerShown: false, animation: 'fade' }}
@@ -154,6 +156,7 @@ export default function RootLayout() {
               <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
             </Stack>
             <AutoSync />
+            <AutoBackup />
             <AiQueue />
             <NotificationRouter />
             <ReminderReplanner />

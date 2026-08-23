@@ -199,7 +199,22 @@ export type AnalyticsEvent =
   | 'notification_new_content'
   | 'notification_tapped'
   | 'notification_prompt_accepted'
-  | 'notification_prompt_dismissed';
+  | 'notification_prompt_dismissed'
+  // T20 backup & restore. Props carry trigger/code/counts/bytes ONLY —
+  // never the passphrase, derived key, PAT, or any table contents.
+  | 'backup_setup_completed'
+  | 'backup_passphrase_changed'
+  | 'backup_prefs_changed'
+  | 'backup_started'
+  | 'backup_succeeded'
+  | 'backup_failed'
+  | 'backup_pruned'
+  | 'backup_local_exported'
+  | 'backup_local_export_failed'
+  | 'restore_screen_opened'
+  | 'restore_started'
+  | 'restore_succeeded'
+  | 'restore_failed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

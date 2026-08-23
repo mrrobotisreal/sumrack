@@ -126,8 +126,8 @@ export function SyncSettingsSection() {
           accessibilityLabel="GitHub personal access token"
         />
         <Text variant="caption" className="mt-1.5">
-          Needs read-only Contents access to the content repo. Stored in the Android Keystore, never
-          in backups or logs.
+          Needs Contents access to the content repo — read-only for sync, read-write once backups
+          are enabled (T20). Stored in the Android Keystore, never in backups or logs.
         </Text>
         {patConfigured && (
           <Pressable onPress={removeToken} hitSlop={6} className="mt-2 self-start">

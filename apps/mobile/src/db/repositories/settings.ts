@@ -18,9 +18,23 @@ export const SETTING_KEYS = {
   readerTypography: 'readerTypography',
   /** boolean (T05): tap-lookup on a banked lemma records an encounter by itself. */
   encounterOnLookup: 'encounterOnLookup',
-  /** Last backup ids per target (T20/T21). */
+  /** Last successful backup per target (T20/T21): { at, name } — Zod-validated on read. */
   lastBackupGithub: 'lastBackup.github',
   lastBackupSyncd: 'lastBackup.syncd',
+  lastBackupLocal: 'lastBackup.local',
+  /**
+   * Backup targets/schedule prefs (T20): { githubEnabled, autoEnabled } —
+   * Zod-validated on read (features/backup/config).
+   */
+  backupPrefs: 'backup.prefs',
+  /**
+   * Backup KDF parameters (T20): { saltB64, iterations, createdAt }. The
+   * salt is NOT secret; the passphrase-derived key lives in secure-store
+   * only ('sumrak.backup.key'), never here.
+   */
+  backupKdf: 'backup.kdf',
+  /** SAF directory uri granted for local backup export/restore (T20). */
+  backupSafDir: 'backup.safDirUri',
   /** Content sync source (T07): { owner, repo, branch } — the PAT lives in secure-store, never here. */
   contentRepo: 'sync.contentRepo',
   /** boolean (T07, default true): only download narration audio on Wi-Fi. */
