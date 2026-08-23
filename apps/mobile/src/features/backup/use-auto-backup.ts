@@ -24,11 +24,28 @@ import { runBackup } from './service';
 /** Session-auto backups at most every 30 minutes. */
 const SESSION_MIN_INTERVAL_MS = 30 * 60 * 1000;
 
+/**
+ * Attempt throttle (device-found, first live session): while uploads FAIL
+ * (e.g. PAT lacks write access, repo down), `lastBackup.github` never
+ * advances, so without this every foreground/background would re-export and
+ * re-fail. One automatic ATTEMPT per 10 minutes per process, success or not.
+ */
+const ATTEMPT_MIN_INTERVAL_MS = 10 * 60 * 1000;
+let lastAutoAttemptAt = 0;
+
+function claimAutoAttempt(): boolean {
+  const now = Date.now();
+  if (now - lastAutoAttemptAt < ATTEMPT_MIN_INTERVAL_MS) return false;
+  lastAutoAttemptAt = now;
+  return true;
+}
+
 async function maybeDailyBackup(): Promise<void> {
   if (!(await isBackupConfigured())) return;
   if (!(await getBackupPrefs()).autoEnabled) return;
   const last = await getLastBackup(SETTING_KEYS.lastBackupGithub);
   if (last && localDateKey(new Date(last.at)) === localDateKey()) return; // already fresh today
+  if (!claimAutoAttempt()) return;
   await runBackup({ trigger: 'daily-auto' });
 }
 
@@ -40,6 +57,7 @@ async function maybeSessionBackup(): Promise<void> {
   if (Date.now() - lastAt < SESSION_MIN_INTERVAL_MS) return;
   const probe = await probeActivitySince(db, lastAt);
   if (!probe.significant) return;
+  if (!claimAutoAttempt()) return;
   await runBackup({ trigger: 'session-auto' });
 }
 
