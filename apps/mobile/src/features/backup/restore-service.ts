@@ -19,6 +19,9 @@ import { BackupError, toBackupError } from './errors';
 import { parseBackupFileName } from './naming';
 import { restoreUserData, type RestoreResult } from './restore-core';
 import { BACKUPS_DIR } from './service';
+import { SyncdClient } from './syncd-client';
+import { getSyncdConfig, getSyncdToken } from './syncd-config';
+import { reportSyncdReachability } from './syncd-status';
 
 /**
  * Restore flow (ticket item 8): source → envelope text → passphrase-derived
@@ -70,6 +73,52 @@ export async function listGithubBackups(): Promise<RemoteBackupListing[]> {
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 
+/**
+ * The syncd client for restore, or a typed error when host/token are absent
+ * (post-wipe they die with the app data — re-enter them in Settings →
+ * Backup, same story as the PAT).
+ */
+async function restoreSyncdClient(): Promise<SyncdClient> {
+  const config = await getSyncdConfig();
+  const token = await getSyncdToken();
+  if (!config || !token) {
+    throw new BackupError('syncd', 'home server not configured — set host and token first');
+  }
+  return new SyncdClient(config.host, token);
+}
+
+/** Backups stored on the home server, newest first. */
+export async function listSyncdBackups(): Promise<RemoteBackupListing[]> {
+  const client = await restoreSyncdClient();
+  try {
+    const backups = await client.listBackups();
+    reportSyncdReachability(true);
+    // `path` mirrors the GitHub listing shape; for syncd the name IS the ref.
+    return backups.map((b) => ({
+      name: b.name,
+      path: b.name,
+      size: b.size,
+      timestamp: b.timestamp,
+    }));
+  } catch (err) {
+    reportSyncdReachability(toBackupError(err).code !== 'syncd-unreachable');
+    throw err;
+  }
+}
+
+/** Download one backup envelope's text from the home server. */
+export async function fetchSyncdBackup(name: string): Promise<string> {
+  const client = await restoreSyncdClient();
+  try {
+    const text = await client.fetchBackup(name);
+    reportSyncdReachability(true);
+    return text;
+  } catch (err) {
+    reportSyncdReachability(toBackupError(err).code !== 'syncd-unreachable');
+    throw err;
+  }
+}
+
 /** Download one backup envelope's text from GitHub. */
 export async function fetchGithubBackup(path: string): Promise<string> {
   const config = await restoreRepoConfig();
@@ -91,10 +140,12 @@ export interface RestoreOutcome extends RestoreResult {
  * The whole restore, given envelope text from either source. Progress is
  * reported via `onPhase` (derivation is deliberately slow — PBKDF2).
  */
+export type RestoreSource = 'github' | 'syncd' | 'local-file';
+
 export async function restoreFromEnvelopeText(
   text: string,
   passphrase: string,
-  opts: { source: 'github' | 'local-file'; onPhase?: (phase: RestorePhase) => void } = {
+  opts: { source: RestoreSource; onPhase?: (phase: RestorePhase) => void } = {
     source: 'local-file',
   },
 ): Promise<RestoreOutcome> {

@@ -22,6 +22,7 @@ import { friendlyBackupMessage } from './errors';
 import { exportBackupToLocalFile } from './local-target';
 import { runBackup } from './service';
 import { useBackupStatus, type BackupPhase } from './store';
+import { SyncdSettingsCard } from './syncd-settings-card';
 
 /**
  * Settings → Backup (ticket item 7, design §7.8): passphrase setup/change,
@@ -50,7 +51,11 @@ export function BackupSettingsSection() {
   const [loaded, setLoaded] = React.useState(false);
   const [configured, setConfigured] = React.useState(false);
   const [kdfPresentKeyMissing, setKdfPresentKeyMissing] = React.useState(false);
-  const [prefs, setPrefs] = React.useState<BackupPrefs>({ githubEnabled: true, autoEnabled: true });
+  const [prefs, setPrefs] = React.useState<BackupPrefs>({
+    githubEnabled: true,
+    autoEnabled: true,
+    syncdEnabled: false,
+  });
   const [lastGithub, setLastGithub] = React.useState<LastBackup | null>(null);
   const [lastLocal, setLastLocal] = React.useState<LastBackup | null>(null);
 
@@ -229,16 +234,31 @@ export function BackupSettingsSection() {
               <Text variant="caption" className="mt-0.5">
                 {lastGithub ? `Last backup ${formatWhen(lastGithub.at)}` : 'No backup yet'}
               </Text>
-              {lastRun?.outcome === 'error' && lastRun.error && (
+              {/* Run-level failures (export/encrypt/gates) have no per-target rows. */}
+              {lastRun?.outcome === 'error' && !lastRun.targets && lastRun.error && (
                 <Text variant="caption" className="mt-1 text-danger">
                   {lastRun.error}
                 </Text>
               )}
-              {lastRun?.outcome === 'ok' && lastRun.name && (
-                <Text variant="caption" className="mt-1 text-success">
-                  Backed up ✓{lastRun.pruned ? ` · pruned ${lastRun.pruned} old` : ''}
-                </Text>
-              )}
+              {(() => {
+                const github = lastRun?.targets?.github;
+                if (!github) return null;
+                if (!github.ok && github.error) {
+                  return (
+                    <Text variant="caption" className="mt-1 text-danger">
+                      {github.error}
+                    </Text>
+                  );
+                }
+                if (github.ok && !github.skippedFresh) {
+                  return (
+                    <Text variant="caption" className="mt-1 text-success">
+                      Backed up ✓{github.pruned ? ` · pruned ${github.pruned} old` : ''}
+                    </Text>
+                  );
+                }
+                return null;
+              })()}
               <Pressable
                 onPress={backupNow}
                 disabled={busy}
@@ -248,8 +268,8 @@ export function BackupSettingsSection() {
                 <Text className="font-ui-medium text-text">Back up now</Text>
               </Pressable>
               <Text variant="caption" className="mt-2">
-                Snapshots go to the content repo&apos;s backups/ folder. The GitHub token needs
-                read-write Contents access for this.
+                Backs up to every enabled target. GitHub snapshots go to the content repo&apos;s
+                backups/ folder (the token needs read-write Contents access).
               </Text>
             </View>
 
@@ -280,6 +300,8 @@ export function BackupSettingsSection() {
               />
             </View>
           </View>
+
+          <SyncdSettingsCard />
 
           <View className="mt-3 overflow-hidden rounded-xl border border-border bg-surface">
             <Pressable
@@ -379,6 +401,10 @@ export function BackupSettingsSection() {
           </View>
         </>
       )}
+
+      {/* Fresh install: host/token must be settable BEFORE any passphrase
+          exists so restore-from-syncd can list the server's snapshots. */}
+      {!configured && <SyncdSettingsCard />}
 
       {!configured && (
         <View className="mt-3 overflow-hidden rounded-xl border border-border bg-surface">

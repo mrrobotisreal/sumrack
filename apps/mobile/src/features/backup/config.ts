@@ -27,9 +27,15 @@ export type KdfConfig = z.infer<typeof KdfConfigSchema>;
 const BackupPrefsSchema = z.strictObject({
   githubEnabled: z.boolean(),
   autoEnabled: z.boolean(),
+  // T21 addition — `.default` keeps prefs stored before T21 parsing cleanly.
+  syncdEnabled: z.boolean().default(false),
 });
 export type BackupPrefs = z.infer<typeof BackupPrefsSchema>;
-export const DEFAULT_BACKUP_PREFS: BackupPrefs = { githubEnabled: true, autoEnabled: true };
+export const DEFAULT_BACKUP_PREFS: BackupPrefs = {
+  githubEnabled: true,
+  autoEnabled: true,
+  syncdEnabled: false,
+};
 
 const LastBackupSchema = z.strictObject({
   at: z.number().int(),
@@ -53,18 +59,18 @@ export async function setBackupPrefs(prefs: BackupPrefs): Promise<void> {
   await repos.settings.set(SETTING_KEYS.backupPrefs, prefs);
 }
 
-export async function getLastBackup(
-  key: typeof SETTING_KEYS.lastBackupGithub | typeof SETTING_KEYS.lastBackupLocal,
-): Promise<LastBackup | null> {
+type LastBackupKey =
+  | typeof SETTING_KEYS.lastBackupGithub
+  | typeof SETTING_KEYS.lastBackupSyncd
+  | typeof SETTING_KEYS.lastBackupLocal;
+
+export async function getLastBackup(key: LastBackupKey): Promise<LastBackup | null> {
   const raw = await repos.settings.get<unknown>(key);
   const parsed = LastBackupSchema.safeParse(raw);
   return parsed.success ? parsed.data : null;
 }
 
-export async function setLastBackup(
-  key: typeof SETTING_KEYS.lastBackupGithub | typeof SETTING_KEYS.lastBackupLocal,
-  value: LastBackup,
-): Promise<void> {
+export async function setLastBackup(key: LastBackupKey, value: LastBackup): Promise<void> {
   await repos.settings.set(key, value);
 }
 

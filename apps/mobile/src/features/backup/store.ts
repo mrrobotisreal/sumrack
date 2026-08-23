@@ -9,15 +9,29 @@ export type BackupPhase = 'idle' | 'exporting' | 'encrypting' | 'uploading' | 'p
 
 export type BackupTrigger = 'manual' | 'daily-auto' | 'session-auto';
 
+export type BackupTargetId = 'github' | 'syncd';
+
+/** Per-target result of one run (T21: targets succeed/fail independently). */
+export interface TargetOutcome {
+  ok: boolean;
+  /** Target already had a snapshot today — auto runs leave it alone. */
+  skippedFresh?: boolean;
+  /** Plain-language failure, token/passphrase-free. */
+  error?: string;
+  /** How many old snapshots retention pruned on this target (0 = none). */
+  pruned?: number;
+}
+
 export interface BackupRunSummary {
   at: number;
   trigger: BackupTrigger;
+  /** 'ok' = every target that attempted an upload succeeded. */
   outcome: 'ok' | 'error' | 'skipped';
   skipReason?: 'not-configured' | 'target-disabled' | 'offline' | 'already-fresh' | 'in-flight';
   /** Uploaded file name on success. */
   name?: string;
-  /** How many old snapshots retention pruned (0 = none). */
-  pruned?: number;
+  /** Per-target outcomes for the targets this run considered. */
+  targets?: Partial<Record<BackupTargetId, TargetOutcome>>;
   /** Plain-language failure, PAT/passphrase-free. */
   error?: string;
 }

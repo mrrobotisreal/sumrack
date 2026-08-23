@@ -12,12 +12,16 @@ import { friendlyBackupMessage } from './errors';
 import { listLocalBackups, readLocalBackup, type LocalBackupFile } from './local-target';
 import {
   fetchGithubBackup,
+  fetchSyncdBackup,
   listGithubBackups,
+  listSyncdBackups,
   restoreFromEnvelopeText,
   type RemoteBackupListing,
   type RestoreOutcome,
   type RestorePhase,
+  type RestoreSource,
 } from './restore-service';
+import { isSyncdConfigured } from './syncd-config';
 
 /**
  * Settings → Restore (ticket item 8). Deliberately linear and explicit —
@@ -26,7 +30,7 @@ import {
  * the same screen with a plain message and an untouched database.
  */
 
-type Source = 'github' | 'local-file';
+type Source = RestoreSource;
 
 type Step =
   | { kind: 'pick-source' }
@@ -34,7 +38,7 @@ type Step =
   | {
       kind: 'pick-backup';
       source: Source;
-      github?: RemoteBackupListing[];
+      remote?: RemoteBackupListing[];
       local?: LocalBackupFile[];
     }
   | { kind: 'passphrase'; source: Source; name: string; ref: string }
@@ -61,11 +65,13 @@ export function RestoreScreen() {
   const [step, setStep] = React.useState<Step>({ kind: 'pick-source' });
   const [passphrase, setPassphrase] = React.useState('');
   const [patPresent, setPatPresent] = React.useState<boolean | null>(null);
+  const [syncdReady, setSyncdReady] = React.useState<boolean | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
       track('restore_screen_opened');
       void hasPat().then(setPatPresent);
+      void isSyncdConfigured().then(setSyncdReady);
     }, []),
   );
 
@@ -74,8 +80,11 @@ export function RestoreScreen() {
     void (async () => {
       try {
         if (source === 'github') {
-          const github = await listGithubBackups();
-          setStep({ kind: 'pick-backup', source, github });
+          const remote = await listGithubBackups();
+          setStep({ kind: 'pick-backup', source, remote });
+        } else if (source === 'syncd') {
+          const remote = await listSyncdBackups();
+          setStep({ kind: 'pick-backup', source, remote });
         } else {
           const local = await listLocalBackups();
           setStep({ kind: 'pick-backup', source, local });
@@ -103,7 +112,11 @@ export function RestoreScreen() {
               void (async () => {
                 try {
                   const text =
-                    source === 'github' ? await fetchGithubBackup(ref) : await readLocalBackup(ref);
+                    source === 'github'
+                      ? await fetchGithubBackup(ref)
+                      : source === 'syncd'
+                        ? await fetchSyncdBackup(ref)
+                        : await readLocalBackup(ref);
                   const outcome = await restoreFromEnvelopeText(text, pass, {
                     source,
                     onPhase: (phase) => setStep({ kind: 'running', phase }),
@@ -149,6 +162,20 @@ export function RestoreScreen() {
               <Ionicons name="cloud-outline" size={20} color={tokens.textMuted} />
             </Pressable>
             <Pressable
+              onPress={() => pickSource('syncd')}
+              className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2"
+            >
+              <View className="flex-1 gap-0.5 pr-3">
+                <Text className="font-ui-medium">Home server</Text>
+                <Text variant="caption">
+                  {syncdReady === false
+                    ? 'Needs the host and token — set them in Settings → Backup first'
+                    : 'Snapshots stored on syncd over Tailscale'}
+                </Text>
+              </View>
+              <Ionicons name="server-outline" size={20} color={tokens.textMuted} />
+            </Pressable>
+            <Pressable
               onPress={() => pickSource('local-file')}
               className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2"
             >
@@ -180,7 +207,8 @@ export function RestoreScreen() {
           <Text variant="caption" className="mb-2 uppercase tracking-wider">
             Pick a snapshot
           </Text>
-          {(step.source === 'github' ? (step.github ?? []) : (step.local ?? [])).length === 0 ? (
+          {(step.source === 'local-file' ? (step.local ?? []) : (step.remote ?? [])).length ===
+          0 ? (
             <View className="rounded-xl border border-border bg-surface px-4 py-6">
               <Text variant="muted" className="text-center">
                 No backups found{step.source === 'local-file' ? ' in that folder' : ''}.
@@ -188,12 +216,17 @@ export function RestoreScreen() {
             </View>
           ) : (
             <View className="overflow-hidden rounded-xl border border-border bg-surface">
-              {step.source === 'github'
-                ? step.github!.map((b, i) => (
+              {step.source !== 'local-file'
+                ? step.remote!.map((b, i) => (
                     <Pressable
                       key={b.path}
                       onPress={() =>
-                        setStep({ kind: 'passphrase', source: 'github', name: b.name, ref: b.path })
+                        setStep({
+                          kind: 'passphrase',
+                          source: step.source,
+                          name: b.name,
+                          ref: b.path,
+                        })
                       }
                       className={`flex-row items-center justify-between px-4 py-3.5 active:bg-surface-2 ${i > 0 ? 'border-t border-border' : ''}`}
                     >

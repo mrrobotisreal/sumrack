@@ -214,7 +214,16 @@ export type AnalyticsEvent =
   | 'restore_screen_opened'
   | 'restore_started'
   | 'restore_succeeded'
-  | 'restore_failed';
+  | 'restore_failed'
+  // T21 syncd target. Props carry target/trigger/code/counts/booleans ONLY —
+  // never the bearer token, host contents beyond presence, or archive data.
+  | 'backup_target_result'
+  | 'syncd_config_saved'
+  | 'syncd_token_saved'
+  | 'syncd_token_cleared'
+  | 'syncd_target_toggled'
+  | 'syncd_connection_test_started'
+  | 'syncd_reachability_changed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

@@ -4,25 +4,38 @@ import * as Crypto from 'expo-crypto';
 
 import { db } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
+import { localDateKey } from '@/db/repositories/stats';
 import { isOnline } from '@/features/ai/connectivity';
 import { getPat, getRepoConfig } from '@/features/sync/config';
 import { GithubContentClient } from '@/features/sync/github-client';
 import { bytesToBase64 } from '@/lib/base64';
 import { track } from '@/services/analytics';
 
-import { getBackupKey, getBackupPrefs, getKdfConfig, setLastBackup } from './config';
+import { getBackupKey, getBackupPrefs, getKdfConfig, getLastBackup, setLastBackup } from './config';
 import { encryptBackupPayload, GCM_IV_BYTES } from './crypto';
 import { BackupError, friendlyBackupMessage, toBackupError } from './errors';
 import { exportUserData } from './export-core';
 import { backupFileName } from './naming';
 import { planRetention } from './retention';
-import { useBackupStatus, type BackupRunSummary, type BackupTrigger } from './store';
+import {
+  useBackupStatus,
+  type BackupRunSummary,
+  type BackupTargetId,
+  type BackupTrigger,
+  type TargetOutcome,
+} from './store';
+import { SyncdClient } from './syncd-client';
+import { getSyncdConfig, getSyncdToken } from './syncd-config';
+import { reportSyncdReachability } from './syncd-status';
 
 /**
- * The T20 backup orchestrator: export user tables → gzip+encrypt → push to
- * `sumrak-content/backups/` (T07's GitHub client) → apply ring-buffer
- * retention. Backup failures never affect app usability — every trigger
- * treats problems as a recorded summary, not a thrown crash (design §3.1).
+ * The backup orchestrator (T20, extended by T21): export user tables →
+ * gzip+encrypt ONCE → push the same sealed snapshot to every enabled
+ * target — GitHub `backups/` (T07 client) and/or syncd on the home server —
+ * each succeeding or failing independently, then retention. Backup failures
+ * never affect app usability: every trigger treats problems as a recorded
+ * summary, not a thrown crash (design §3.1), and an unreachable tailnet
+ * host never blocks the GitHub target (or anything else).
  */
 
 export const BACKUPS_DIR = 'backups';
@@ -38,8 +51,8 @@ export interface SealedBackup {
 }
 
 /**
- * Shared export+encrypt step for every target (GitHub now, SAF export, and
- * T21's syncd later): one snapshot pipeline, three transports.
+ * Shared export+encrypt step for every target (GitHub, syncd, SAF export):
+ * one snapshot pipeline, three transports.
  */
 export async function createSealedBackup(): Promise<SealedBackup> {
   const kdf = await getKdfConfig();
@@ -73,13 +86,24 @@ export interface RunBackupOptions {
   trigger: BackupTrigger;
 }
 
-/** Entry point for every GitHub-target backup trigger; concurrent calls join. */
+/** Entry point for every remote-target backup trigger; concurrent calls join. */
 export function runBackup(opts: RunBackupOptions): Promise<BackupRunSummary> {
   if (backupInFlight) return backupInFlight;
   backupInFlight = doRunBackup(opts).finally(() => {
     backupInFlight = null;
   });
   return backupInFlight;
+}
+
+const LAST_BACKUP_KEY = {
+  github: SETTING_KEYS.lastBackupGithub,
+  syncd: SETTING_KEYS.lastBackupSyncd,
+} as const satisfies Record<BackupTargetId, string>;
+
+/** A target is fresh when its last successful snapshot is from today (local). */
+async function targetFreshToday(target: BackupTargetId): Promise<boolean> {
+  const last = await getLastBackup(LAST_BACKUP_KEY[target]);
+  return last !== null && localDateKey(new Date(last.at)) === localDateKey();
 }
 
 async function doRunBackup({ trigger }: RunBackupOptions): Promise<BackupRunSummary> {
@@ -111,12 +135,21 @@ async function doRunBackup({ trigger }: RunBackupOptions): Promise<BackupRunSumm
       : skip('not-configured');
   }
   const prefs = await getBackupPrefs();
-  if (!prefs.githubEnabled) return skip('target-disabled');
-  const config = await getRepoConfig();
-  const pat = await getPat();
-  if (!config || !pat) {
+  if (!prefs.githubEnabled && !prefs.syncdEnabled) return skip('target-disabled');
+
+  // Resolve each enabled target's config; enabled-but-unconfigured is that
+  // target's own failure, never a reason to hold up the other.
+  const github = prefs.githubEnabled
+    ? { config: await getRepoConfig(), pat: await getPat() }
+    : null;
+  const syncd = prefs.syncdEnabled
+    ? { config: await getSyncdConfig(), token: await getSyncdToken() }
+    : null;
+  const githubReady = !!(github?.config && github.pat);
+  const syncdReady = !!(syncd?.config && syncd.token);
+  if (!githubReady && !syncdReady) {
     return trigger === 'manual'
-      ? fail(new BackupError('github', 'content repo or token not configured'))
+      ? fail(new BackupError('not-configured', 'no backup target is fully configured'))
       : skip('not-configured');
   }
   if (!(await isOnline())) {
@@ -130,31 +163,86 @@ async function doRunBackup({ trigger }: RunBackupOptions): Promise<BackupRunSumm
     const sealed = await createSealedBackup();
     useBackupStatus.getState().setPhase('uploading');
 
-    const client = new GithubContentClient(config, pat);
-    const path = `${BACKUPS_DIR}/${sealed.name}`;
-    await client.putFile(path, bytesToBase64(utf8Bytes(sealed.json)), `Backup ${sealed.name}`);
-    await setLastBackup(SETTING_KEYS.lastBackupGithub, {
-      at: sealed.createdAt.getTime(),
-      name: sealed.name,
+    const targets: Partial<Record<BackupTargetId, TargetOutcome>> = {};
+    summary.targets = targets;
+
+    const runTarget = async (
+      target: BackupTargetId,
+      ready: boolean,
+      upload: () => Promise<number>,
+    ): Promise<void> => {
+      if (!ready) {
+        targets[target] = { ok: false, error: 'Not configured — add it in Settings → Backup.' };
+        track('backup_target_result', { target, trigger, ok: false, code: 'not-configured' });
+        return;
+      }
+      // The daily auto trigger tops up only the targets that missed today
+      // (e.g. syncd was unreachable this morning, GitHub already ran).
+      if (trigger === 'daily-auto' && (await targetFreshToday(target))) {
+        targets[target] = { ok: true, skippedFresh: true };
+        return;
+      }
+      try {
+        const pruned = await upload();
+        await setLastBackup(LAST_BACKUP_KEY[target], {
+          at: sealed.createdAt.getTime(),
+          name: sealed.name,
+        });
+        targets[target] = { ok: true, pruned };
+        track('backup_target_result', { target, trigger, ok: true, pruned });
+      } catch (err) {
+        const e = toBackupError(err);
+        targets[target] = { ok: false, error: friendlyBackupMessage(e) };
+        console.warn(`[backup] ${target} target failed: ${e.code}`);
+        track('backup_target_result', { target, trigger, ok: false, code: e.code });
+      }
+    };
+
+    await runTarget('github', githubReady, async () => {
+      const client = new GithubContentClient(github!.config!, github!.pat!);
+      await client.putFile(
+        `${BACKUPS_DIR}/${sealed.name}`,
+        bytesToBase64(utf8Bytes(sealed.json)),
+        `Backup ${sealed.name}`,
+      );
+      // Retention prune — a failure here never fails the backup itself.
+      useBackupStatus.getState().setPhase('pruning');
+      try {
+        return await pruneGithubBackups(client);
+      } catch (err) {
+        console.warn(`[backup] prune failed: ${toBackupError(err).code}`);
+        return 0;
+      }
     });
 
-    // Retention prune — a failure here never fails the backup itself.
-    useBackupStatus.getState().setPhase('pruning');
-    let pruned = 0;
-    try {
-      pruned = await pruneGithubBackups(client);
-    } catch (err) {
-      console.warn(`[backup] prune failed: ${toBackupError(err).code}`);
-    }
+    await runTarget('syncd', syncdReady, async () => {
+      const client = new SyncdClient(syncd!.config!.host, syncd!.token!);
+      try {
+        // syncd applies retention server-side on every upload.
+        const result = await client.putBackup(sealed.name, sealed.json);
+        reportSyncdReachability(true);
+        return result.pruned;
+      } catch (err) {
+        reportSyncdReachability(toBackupError(err).code !== 'syncd-unreachable');
+        throw err;
+      }
+    });
 
+    const attempted = Object.values(targets).filter((t) => !t.skippedFresh);
+    const failures = attempted.filter((t) => !t.ok);
     summary.name = sealed.name;
-    summary.pruned = pruned;
-    track('backup_succeeded', {
-      trigger,
-      bytes: sealed.json.length,
-      pruned,
-      secretsDropped: sealed.secretsDropped,
-    });
+    if (failures.length > 0) {
+      summary.outcome = 'error';
+      summary.error = failures[0]!.error;
+      track('backup_failed', { trigger, code: 'target-failed', failed: failures.length });
+    } else {
+      track('backup_succeeded', {
+        trigger,
+        bytes: sealed.json.length,
+        targets: Object.keys(targets).join(','),
+        secretsDropped: sealed.secretsDropped,
+      });
+    }
     useBackupStatus.getState().finishRun(summary);
     return summary;
   } catch (err) {

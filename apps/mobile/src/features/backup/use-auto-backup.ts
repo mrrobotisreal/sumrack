@@ -8,6 +8,7 @@ import { localDateKey } from '@/db/repositories/stats';
 import { probeActivitySince } from './activity-probe';
 import { getBackupPrefs, getLastBackup, isBackupConfigured } from './config';
 import { runBackup } from './service';
+import { isSyncdConfigured } from './syncd-config';
 
 /**
  * Automatic backup triggers (ticket item 5). Deviation from §9's literal
@@ -40,11 +41,31 @@ function claimAutoAttempt(): boolean {
   return true;
 }
 
+/**
+ * Last-backup stamps of every enabled remote target (T21: GitHub and syncd
+ * are independent — the daily trigger fires when EITHER missed today, and
+ * doRunBackup tops up only the stale one).
+ */
+async function enabledTargetStamps(): Promise<number[]> {
+  const prefs = await getBackupPrefs();
+  const stamps: number[] = [];
+  if (prefs.githubEnabled) {
+    stamps.push((await getLastBackup(SETTING_KEYS.lastBackupGithub))?.at ?? 0);
+  }
+  if (prefs.syncdEnabled && (await isSyncdConfigured())) {
+    stamps.push((await getLastBackup(SETTING_KEYS.lastBackupSyncd))?.at ?? 0);
+  }
+  return stamps;
+}
+
 async function maybeDailyBackup(): Promise<void> {
   if (!(await isBackupConfigured())) return;
   if (!(await getBackupPrefs()).autoEnabled) return;
-  const last = await getLastBackup(SETTING_KEYS.lastBackupGithub);
-  if (last && localDateKey(new Date(last.at)) === localDateKey()) return; // already fresh today
+  const stamps = await enabledTargetStamps();
+  const someTargetStale = stamps.some(
+    (at) => at === 0 || localDateKey(new Date(at)) !== localDateKey(),
+  );
+  if (stamps.length === 0 || !someTargetStale) return; // every enabled target fresh today
   if (!claimAutoAttempt()) return;
   await runBackup({ trigger: 'daily-auto' });
 }
@@ -52,8 +73,10 @@ async function maybeDailyBackup(): Promise<void> {
 async function maybeSessionBackup(): Promise<void> {
   if (!(await isBackupConfigured())) return;
   if (!(await getBackupPrefs()).autoEnabled) return;
-  const last = await getLastBackup(SETTING_KEYS.lastBackupGithub);
-  const lastAt = last?.at ?? 0;
+  const stamps = await enabledTargetStamps();
+  // "Since the last snapshot anywhere" — activity already captured by any
+  // target's fresh snapshot doesn't warrant another export.
+  const lastAt = stamps.length > 0 ? Math.max(...stamps) : 0;
   if (Date.now() - lastAt < SESSION_MIN_INTERVAL_MS) return;
   const probe = await probeActivitySince(db, lastAt);
   if (!probe.significant) return;

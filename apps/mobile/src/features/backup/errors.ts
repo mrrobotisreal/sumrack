@@ -13,6 +13,10 @@ export type BackupErrorCode =
   | 'offline'
   /** GitHub target failed (wraps a SyncError code in `message`). */
   | 'github'
+  /** syncd host not reachable — tailnet down, server off, wrong host (T21). */
+  | 'syncd-unreachable'
+  /** syncd target failed for a non-reachability reason (bad token, HTTP error). */
+  | 'syncd'
   /** File is not a sumrak-backup envelope (or is a corrupted one). */
   | 'invalid-envelope'
   /** Wrong passphrase OR ciphertext corruption — AES-GCM cannot tell them apart. */
@@ -56,6 +60,10 @@ export function friendlyBackupMessage(err: unknown): string {
       return 'No connection — the backup will run next time you are online.';
     case 'github':
       return `GitHub backup failed: ${e.message}. Check the repo and token in Settings (the PAT needs read-write Contents access).`;
+    case 'syncd-unreachable':
+      return 'Home server not reachable — check that Tailscale is connected on this phone and the server is up. Everything else keeps working.';
+    case 'syncd':
+      return `Home server backup failed: ${e.message}. Check the host and token in Settings → Backup.`;
     case 'invalid-envelope':
       return 'That file is not a Sumrak backup (or it is corrupted).';
     case 'decrypt-failed':

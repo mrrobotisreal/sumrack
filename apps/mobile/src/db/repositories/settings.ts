@@ -35,6 +35,12 @@ export const SETTING_KEYS = {
   backupKdf: 'backup.kdf',
   /** SAF directory uri granted for local backup export/restore (T20). */
   backupSafDir: 'backup.safDirUri',
+  /**
+   * syncd target config (T21): { host } — the tailnet base URL, Zod-validated
+   * on read (features/backup/syncd-config). The bearer token is NEVER here:
+   * secure-store only ('sumrak.backup.syncd.token'), same rule as the PAT.
+   */
+  syncdConfig: 'backup.syncd',
   /** Content sync source (T07): { owner, repo, branch } — the PAT lives in secure-store, never here. */
   contentRepo: 'sync.contentRepo',
   /** boolean (T07, default true): only download narration audio on Wi-Fi. */
