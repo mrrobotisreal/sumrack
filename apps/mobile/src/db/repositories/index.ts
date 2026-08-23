@@ -1,6 +1,7 @@
 import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
 import { createContentRepo } from './content';
+import { createDashboardRepo } from './dashboard';
 import { createJournalRepo } from './journal';
 import { createPathRepo } from './path';
 import { createReadingRepo } from './reading';
@@ -29,6 +30,7 @@ export function createRepositories(db: SumrakDB) {
       },
     }),
     reviews,
+    dashboard: createDashboardRepo(db),
     journal: createJournalRepo(db),
     path: createPathRepo(db),
     reading: createReadingRepo(db),
@@ -42,6 +44,7 @@ export type Repositories = ReturnType<typeof createRepositories>;
 
 export * from './bank';
 export * from './content';
+export * from './dashboard';
 export * from './journal';
 export * from './path';
 export * from './reading';

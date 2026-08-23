@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 
@@ -32,12 +32,18 @@ export function PronunciationSessionScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { tokens } = useAppTheme();
+  // T18 "practice now": focused sessions serve exactly these items' cards.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const focusRef = React.useRef(focus ? focus.split(',').filter(Boolean) : undefined);
 
   const [phase, setPhase] = React.useState<Phase>('loading');
   const [items, setItems] = React.useState<PronunciationItem[]>([]);
   const [index, setIndex] = React.useState(0);
   const [finalResults, setFinalResults] = React.useState<SessionResult[]>([]);
   const resultsRef = React.useRef<SessionResult[]>([]);
+  /** Per-item best scores → game_sessions.detail (T18: the dashboard's
+   *  weakest-pronunciation list reads these; T12 never recorded them). */
+  const scoresRef = React.useRef<{ bankItemId: string; score: number }[]>([]);
   const gameSessionIdRef = React.useRef<string | null>(null);
   const startedAtRef = React.useRef(0);
   const finishedRef = React.useRef(false);
@@ -51,7 +57,9 @@ export function PronunciationSessionScreen() {
         return;
       }
       preloadAsr(); // warm the recognizer while the first prompt renders
-      const session = await buildPronunciationSession(repos);
+      const session = await buildPronunciationSession(repos, {
+        focusItemIds: focusRef.current,
+      });
       if (cancelled) return;
       if (session.length === 0) {
         track('pron_session_empty');
@@ -84,6 +92,7 @@ export function PronunciationSessionScreen() {
       void repos.stats.finishGameSession(sessionId, {
         itemCount: results.length,
         correctCount: results.filter((r) => r.correct).length,
+        detail: { scores: scoresRef.current },
       });
     }
     invalidateAfterReviews();
@@ -94,11 +103,18 @@ export function PronunciationSessionScreen() {
       const rating = pronunciationScoreToRating(bestScore);
       const correct = ratingCountsAsCorrect(rating);
       resultsRef.current.push({ cardId: entry.card.id, rating, correct, mode: 'pronunciation' });
+      scoresRef.current.push({ bankItemId: entry.item.id, score: bestScore });
       void repos.reviews
         .gradeCard(entry.card.id, rating)
         .then(() => repos.stats.bumpDailyActivity({ reviewsDone: 1 }))
         .catch((err) => console.error('[pron] grade failed', err));
-      track('pron_item_graded', { rating, bestScore, attempts, source: entry.source });
+      track('pron_item_graded', {
+        rating,
+        bestScore,
+        attempts,
+        source: entry.source,
+        bankItemId: entry.item.id,
+      });
 
       const next = index + 1;
       if (next < items.length) {

@@ -176,7 +176,15 @@ export type AnalyticsEvent =
   | 'checkpoint_abandoned'
   | 'path_continue_tapped'
   | 'checkpoint_threshold_changed'
-  | 'path_position_advanced';
+  | 'path_position_advanced'
+  // T18 progress dashboard + AI CEFR assessment. Assessment props carry
+  // trigger/model/error codes only — never journal text.
+  | 'dashboard_opened'
+  | 'dashboard_practice_now'
+  | 'assessment_requested'
+  | 'assessment_completed'
+  | 'assessment_failed'
+  | 'assessment_screen_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

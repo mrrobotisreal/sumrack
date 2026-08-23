@@ -53,7 +53,31 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: TAB_TITLES.index.ru, tabBarIcon: tabIcon('today-outline') }}
+        options={{
+          title: TAB_TITLES.index.ru,
+          tabBarIcon: tabIcon('today-outline'),
+          // Dashboard entry lives on the Today header (design §10 / UI_DESIGN §3).
+          headerRight: () => (
+            <>
+              <Pressable
+                onPress={() => router.push('/dashboard')}
+                hitSlop={8}
+                accessibilityLabel="Progress dashboard"
+                className="mr-4"
+              >
+                <Ionicons name="stats-chart-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/settings')}
+                hitSlop={8}
+                accessibilityLabel="Settings"
+                className="mr-4"
+              >
+                <Ionicons name="person-circle-outline" size={26} color={tokens.textMuted} />
+              </Pressable>
+            </>
+          ),
+        }}
       />
       <Tabs.Screen
         name="path"

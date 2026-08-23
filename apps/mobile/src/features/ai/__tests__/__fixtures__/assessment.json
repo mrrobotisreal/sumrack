@@ -1,0 +1,25 @@
+{
+  "bundle": {
+    "stats": {
+      "A1 lemmas encountered / collected / reviewed-shaky / young / mature": "140 / 14 / 12 / 2 / 0",
+      "A2 lemmas encountered / collected / reviewed-shaky / young / mature": "27 / 4 / 4 / 0 / 0",
+      "Grammar topics in installed content": 42,
+      "Grammar topics seen in reading / with reviewed vocabulary": "30 / 18",
+      "Total reviews completed": 65,
+      "Total reading time (minutes)": 60,
+      "Stories finished": 5,
+      "Current activity streak (days)": 2,
+      "Pronunciation attempts / average score (0-100, speech-recognition match)": "14 / 92",
+      "Checkpoint a1-checkpoint-001": "100% (passed)"
+    },
+    "journal": [
+      {
+        "ru": "Вчера я идти в магазин с моя невеста. Мы купили много продукты и один странный зеркало. Ночью я слышал стук в стене, но я не боюсь темноты.",
+        "corrected": "Вчера я ходил в магазин с моей невестой. Мы купили много продуктов и одно странное зеркало. Ночью я слышал стук в стене, но я не боюсь темноты.",
+        "createdAt": 1787270400000
+      }
+    ]
+  },
+  "model": "anthropic/claude-sonnet-5",
+  "content": "{\n  \"skills\": {\n    \"reading\":   { \"level\": \"A1\", \"note\": \"Vocabulary encountered is overwhelmingly A1 (140 items) with only 14 collected and none mature, and total reading time is just 60 minutes across 5 short stories, indicating very limited reading volume and depth.\" },\n    \"listening\": { \"level\": \"A1\", \"note\": \"No dedicated listening-review data was provided beyond story completions, so evidence is thin; the low overall engagement (2-day streak, 65 total reviews) suggests only beginner-level exposure.\" },\n    \"writing\":   { \"level\": \"A2\", \"note\": \"The journal entry shows correct basic sentence structure but frequent errors in verb aspect (идти vs. ходил), case government (моя невеста vs. моей невестой), and noun-adjective gender agreement (странный зеркало, много продукты), typical of A2 accuracy.\" },\n    \"speaking\":  { \"level\": \"A2\", \"note\": \"This is a pronunciation-only proxy: 14 attempts with a 92/100 average speech-recognition match suggest decent articulation of practiced words, but with no conversational data this cannot indicate true spoken proficiency, so the estimate is kept conservative.\" }\n  },\n  \"recommendations\": [\n    \"Drill noun-adjective gender and case agreement (e.g., невеста/невестой, зеркало/зеркало agreement) through targeted grammar exercises.\",\n    \"Practice verb aspect pairs (идти/ходил, купить/покупать) in context to fix habitual error patterns seen in journal writing.\",\n    \"Increase reading volume and consistency (aim for daily short reading sessions) to move vocabulary from 'encountered' to 'mature' status.\",\n    \"Add structured listening practice (e.g., graded audio stories with comprehension checks) since current listening evidence is minimal.\"\n  ],\n  \"summary\": \"The learner shows an emerging A2 profile in writing with recognizable but frequent morphological errors, while reading and listening remain closer to A1 due to low volume and shallow vocabulary retention. The pronunciation proxy score is strong but not yet reflective of real speaking ability given the lack of conversational practice. Overall trajectory is positive but early-stage, with writing being the most developed skill. The most important next step is to build consistent daily reading and listening habits while reinforcing core grammar (gender/case agreement, verb aspect) to solidify A2 and progress toward B1.\"\n}"
+}

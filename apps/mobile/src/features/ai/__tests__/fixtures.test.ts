@@ -9,7 +9,13 @@ import { buildEnrichmentMessages } from '../prompts/enrichment';
 import { buildExplainMessages } from '../prompts/explain';
 import { buildJournalFeedbackMessages } from '../prompts/journal-feedback';
 import { parseFeedbackCompletion } from '../queue-core';
-import { ExplainResponseSchema, parseStoredFeedback } from '../schemas';
+import {
+  AssessmentResponseSchema,
+  ExplainResponseSchema,
+  extractJsonObject,
+  parseStoredAssessment,
+  parseStoredFeedback,
+} from '../schemas';
 
 /**
  * Recorded-fixture tests (ticket item 6): real OpenRouter responses
@@ -114,5 +120,19 @@ describe('recorded fixtures parse with the production parsers', () => {
     const fx = fixture<{ content: string }>('explain-sentence.json');
     const parsed = ExplainResponseSchema.safeParse(fx.content.trim());
     expect(parsed.success).toBe(true);
+  });
+
+  it('assessment → all four skills + recommendations, and survives a DB round-trip', () => {
+    const fx = fixture<{ model: string; content: string }>('assessment.json');
+    const parsed = AssessmentResponseSchema.safeParse(extractJsonObject(fx.content));
+    expect(parsed.success).toBe(true);
+    const data = parsed.data!;
+    for (const skill of ['reading', 'listening', 'writing', 'speaking'] as const) {
+      expect(data.skills[skill].note.length).toBeGreaterThan(0);
+    }
+    expect(data.recommendations.length).toBeGreaterThanOrEqual(2);
+    // the exact object assessments.payload stores must read back
+    const stored = { ...data, v: 1 as const, model: fx.model, createdAt: 1_000 };
+    expect(parseStoredAssessment(JSON.parse(JSON.stringify(stored)))).toEqual(stored);
   });
 });

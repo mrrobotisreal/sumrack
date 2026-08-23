@@ -107,6 +107,12 @@ export interface DailySessionOpts {
   weights?: DailyWeights;
   unseenAllowed?: boolean;
   now?: number;
+  /**
+   * T18 "practice now": restrict the session to these bank items' cards,
+   * due-agnostic (dashboard-flagged weak lemmas may not be due yet — due
+   * cards still serve first, then weakest). Composition/weights unchanged.
+   */
+  focusItemIds?: string[];
 }
 
 export async function buildDailySession(
@@ -118,6 +124,7 @@ export async function buildDailySession(
     weights = DEFAULT_DAILY_PREFS.weights,
     unseenAllowed = false,
     now = Date.now(),
+    focusItemIds,
   } = opts;
 
   const rawWeights = Object.fromEntries(
@@ -134,11 +141,13 @@ export async function buildDailySession(
     modeWeights.flashcard + modeWeights.mc + modeWeights.cloze + modeWeights['sentence-builder'] >
     0;
 
-  const due = await repos.reviews.listDueCards({
-    now,
-    limit: length * OVERFETCH,
-    directions: UNIFIED_SESSION_DIRECTIONS,
-  });
+  const due = focusItemIds
+    ? await repos.reviews.listCardsForItems(focusItemIds, UNIFIED_SESSION_DIRECTIONS, now)
+    : await repos.reviews.listDueCards({
+        now,
+        limit: length * OVERFETCH,
+        directions: UNIFIED_SESSION_DIRECTIONS,
+      });
   const items = await repos.bank.getItemsByIds([...new Set(due.map((c) => c.bankItemId))]);
   const itemById = new Map(items.map((i) => [i.id, i]));
 

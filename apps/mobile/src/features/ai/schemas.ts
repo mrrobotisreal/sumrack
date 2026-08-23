@@ -105,6 +105,57 @@ export const EnrichmentResponseSchema = z.object({
 export type EnrichmentProposal = z.infer<typeof EnrichmentProposalSchema>;
 export type EnrichmentResponse = z.infer<typeof EnrichmentResponseSchema>;
 
+// --- CEFR assessment (T18) --------------------------------------------------
+
+/** The four assessed skills. "speaking" is a proxy from pronunciation
+ *  practice scores — there is no live conversational signal; the UI must
+ *  label it as such (ticket's overstating-precision warning). */
+export const ASSESSMENT_SKILLS = ['reading', 'listening', 'writing', 'speaking'] as const;
+export type AssessmentSkill = (typeof ASSESSMENT_SKILLS)[number];
+
+export const SkillEstimateSchema = z.object({
+  level: LevelSchema,
+  /** One-two sentences: what the evidence shows for this skill. */
+  note: z.string().min(1).max(500),
+});
+
+/** What the model must return for an assessment request. */
+export const AssessmentResponseSchema = z.object({
+  skills: z.object({
+    reading: SkillEstimateSchema,
+    listening: SkillEstimateSchema,
+    writing: SkillEstimateSchema,
+    speaking: SkillEstimateSchema,
+  }),
+  /** 2–4 concrete focus recommendations, most important first. */
+  recommendations: z.array(z.string().min(1).max(500)).min(2).max(4),
+  /** Short overall picture in English. */
+  summary: z.string().min(1).max(2000),
+});
+
+export type AssessmentResponse = z.infer<typeof AssessmentResponseSchema>;
+
+/**
+ * What persists into `assessments.payload` (JSON). Carries the aggregate
+ * numbers the estimate was computed from, so a stored assessment stays
+ * interpretable even after the underlying stats move on.
+ */
+export const StoredAssessmentSchema = AssessmentResponseSchema.extend({
+  v: z.literal(1),
+  model: z.string(),
+  createdAt: z.number(),
+  /** Snapshot of the bundled aggregate numbers (loose by design). */
+  stats: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
+});
+
+export type StoredAssessment = z.infer<typeof StoredAssessmentSchema>;
+
+/** Parse a stored assessments.payload value; null = unreadable (skip row). */
+export function parseStoredAssessment(payload: unknown): StoredAssessment | null {
+  const parsed = StoredAssessmentSchema.safeParse(payload);
+  return parsed.success ? parsed.data : null;
+}
+
 // --- Explain this -----------------------------------------------------------
 
 /** Explain-this returns prose (markdown), not JSON — just bound it. */

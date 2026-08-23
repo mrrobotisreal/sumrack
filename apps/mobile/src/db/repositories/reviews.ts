@@ -202,6 +202,30 @@ export function createReviewsRepo(db: SumrakDB) {
         .limit(limit);
     },
 
+    /**
+     * Every card for a specific set of bank items (T18 "practice now"
+     * focused sessions): due-agnostic — a weak lemma the dashboard flags
+     * may not be due yet, and practicing ahead is free FSRS signal (the
+     * T13 listWeakestCards rationale). Due cards first, then weakest.
+     */
+    async listCardsForItems(
+      bankItemIds: string[],
+      directions: CardDirection[] = ACTIVE_DIRECTIONS,
+      now: number = Date.now(),
+    ): Promise<CardRow[]> {
+      if (bankItemIds.length === 0) return [];
+      return db
+        .select()
+        .from(cards)
+        .where(and(inArray(cards.bankItemId, bankItemIds), inArray(cards.direction, directions)))
+        .orderBy(
+          sql`CASE WHEN ${cards.dueAt} <= ${now} THEN 0 ELSE 1 END`,
+          asc(cards.stability),
+          asc(cards.dueAt),
+        )
+        .limit(200);
+    },
+
     async countDueCards(query: Omit<DueQuery, 'limit'> = {}): Promise<number> {
       const { now = Date.now(), directions = ACTIVE_DIRECTIONS } = query;
       const rows = await db

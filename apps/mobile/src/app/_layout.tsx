@@ -118,6 +118,8 @@ export default function RootLayout() {
                 options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
               />
               <Stack.Screen name="games" options={{ title: 'Games' }} />
+              <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
+              <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
               <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />
               <Stack.Screen
                 name="path/[packId]/quiz"

@@ -40,11 +40,15 @@ export interface PronunciationItem {
  */
 export async function buildPronunciationSession(
   repos: Repositories,
-  opts: { limit?: number; now?: number } = {},
+  opts: { limit?: number; now?: number; focusItemIds?: string[] } = {},
 ): Promise<PronunciationItem[]> {
-  const { limit = PRON_SESSION_SIZE, now = Date.now() } = opts;
+  const { limit = PRON_SESSION_SIZE, now = Date.now(), focusItemIds } = opts;
 
-  const due = await repos.reviews.listDueCards({ now, limit, directions: ['production'] });
+  // T18 "practice now": a focused session serves exactly the flagged items'
+  // production cards, due-agnostic (due first, then weakest).
+  const due = focusItemIds
+    ? await repos.reviews.listCardsForItems(focusItemIds, ['production'], now)
+    : await repos.reviews.listDueCards({ now, limit, directions: ['production'] });
   const items = await repos.bank.getItemsByIds([...new Set(due.map((c) => c.bankItemId))]);
   const itemById = new Map(items.map((i) => [i.id, i]));
 

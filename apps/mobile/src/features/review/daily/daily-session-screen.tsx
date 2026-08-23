@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
@@ -35,6 +36,9 @@ export function DailySessionScreen() {
   const { tokens } = useAppTheme();
   const unseenAllowed = useGamePrefs((s) => s.clozeUnseenStoriesAllowed);
   const prefs = useDailyPrefs((s) => s.prefs);
+  // T18 "practice now": `focus` = comma-joined bank item ids — the session
+  // narrows to those items' cards (due-agnostic) instead of the due queue.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
   // Captured once at mount — the session builds once; settings apply next launch.
   const [build] = React.useState(
     () => () =>
@@ -42,6 +46,7 @@ export function DailySessionScreen() {
         length: prefs.length,
         weights: prefs.weights,
         unseenAllowed,
+        focusItemIds: focus ? focus.split(',').filter(Boolean) : undefined,
       }),
   );
 
