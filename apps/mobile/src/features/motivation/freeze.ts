@@ -26,11 +26,21 @@ export function parseFreezeState(raw: unknown): FreezeState {
   return parsed.success ? parsed.data : DEFAULT_FREEZE_STATE;
 }
 
-/** Whether meeting the goal today (streak now `current`) earns a freeze. */
-export function earnsFreeze(state: FreezeState, current: number, todayKey: string): boolean {
+/**
+ * Whether meeting the goal today earns a freeze. `todayCounted` is required:
+ * a stalled streak re-evaluated on a fresh morning sits at the same multiple
+ * and must NOT re-earn (caught live on device — a Vienna-morning boot after
+ * a 7-day streak minted a second freeze before this gate existed).
+ */
+export function earnsFreeze(
+  state: FreezeState,
+  streak: { current: number; todayCounted: boolean },
+  todayKey: string,
+): boolean {
   return (
-    current > 0 &&
-    current % FREEZE_EARN_EVERY_DAYS === 0 &&
+    streak.todayCounted &&
+    streak.current > 0 &&
+    streak.current % FREEZE_EARN_EVERY_DAYS === 0 &&
     state.available < MAX_FREEZES &&
     state.lastEarnedOnDate !== todayKey
   );

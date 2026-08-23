@@ -62,10 +62,12 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   const todayKey = localDateKey(now);
   const goal = useGoalPrefs.getState().goal;
 
+  let stateChanged = false;
   const activity = await repos.stats.getDailyActivity(todayKey);
   if (activity && activity.goalMetAt == null && goalIsMet(goal, activity)) {
     const newly = await repos.stats.markGoalMet(todayKey);
     if (newly) {
+      stateChanged = true;
       track('goal_met', { reviews: activity.reviewsDone, readingMs: activity.readingMs });
     }
   }
@@ -81,12 +83,13 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
     for (const d of gap) days.frozen.add(d);
     freeze = { ...freeze, available: freeze.available - gap.length };
     await setFreezeState(freeze);
+    stateChanged = true;
     track('streak_freeze_consumed', { days: gap.length, oldest: gap[gap.length - 1]! });
   }
 
   const streak = computeStreak(todayKey, days);
 
-  if (earnsFreeze(freeze, streak.current, todayKey)) {
+  if (earnsFreeze(freeze, streak, todayKey)) {
     freeze = { available: freeze.available + 1, lastEarnedOnDate: todayKey };
     await setFreezeState(freeze);
     track('streak_freeze_earned', { streak: streak.current, available: freeze.available });
@@ -97,7 +100,10 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   }
 
   invalidate(['motivation'], ['daily-activity']);
-  void replanReminders();
+  // Replan only when the goal/streak state actually moved — per-grade replans
+  // would hammer the notification scheduler 20× per session for nothing.
+  // Session ends and app foregrounds replan unconditionally (due counts).
+  if (stateChanged) void replanReminders();
 }
 
 /** Count-based achievement sweep (bank size, mastery, XP level). */
@@ -114,6 +120,37 @@ export async function sweepAchievements(): Promise<void> {
   for (const { id, level: threshold } of LEVEL_ACHIEVEMENTS) {
     if (level >= threshold) await unlock(id);
   }
+}
+
+/**
+ * One-time historic unlock pass (guarded by a settings flag): event-driven
+ * achievements can't fire for things done BEFORE T19 shipped — but «Первая
+ * история» sitting locked after five finished stories would be a lie. Runs
+ * through repositories only; pron-perfect is recovered from the analytics
+ * log (every graded pronunciation item since T12 carries bestScore).
+ */
+async function backfillHistoricAchievements(): Promise<void> {
+  const FLAG = 'achievements.historyBackfilled';
+  if ((await repos.settings.get<boolean>(FLAG)) === true) return;
+
+  const [stories, entries, checkpoints, units] = await Promise.all([
+    repos.reading.listProgress(),
+    repos.journal.listEntries(1),
+    repos.stats.listCheckpointResults(),
+    repos.path.listUnitProgress(),
+  ]);
+  if (stories.some((s) => s.finishedAt != null)) await unlock('first-story');
+  if (entries.length > 0) await unlock('first-journal');
+  if (checkpoints.some((c) => c.passed)) await unlock('first-checkpoint');
+  if (units.some((u) => u.completedAt != null)) await unlock('first-unit');
+
+  const events = await repos.stats.listRecentEvents(5000);
+  const perfect = events.some(
+    (e) => e.event === 'pron_item_graded' && Number(e.props?.bestScore) >= 100,
+  );
+  if (perfect) await unlock('pron-perfect');
+
+  await repos.settings.set(FLAG, true);
 }
 
 // --- record* entry points (called from the existing write paths) ----------
@@ -176,9 +213,10 @@ export async function recordPronunciationScore(score: number): Promise<void> {
   if (score >= 100) await unlock('pron-perfect');
 }
 
-/** Session summary reached — run the (slightly heavier) count sweeps. */
+/** Session summary reached — count sweeps + a due-count-fresh replan. */
 export async function onSessionEnded(): Promise<void> {
   await sweepAchievements();
+  void replanReminders();
 }
 
 /**
@@ -199,5 +237,10 @@ export async function initMotivation(): Promise<void> {
     }
   });
   await evaluateMotivation();
+  await backfillHistoricAchievements();
   await sweepAchievements();
+  // Unconditional boot replan: evaluate only replans on state changes, but a
+  // cold start may follow a timezone/day change (or a TZ-stale alarm set) —
+  // the schedule must be rebuilt against the CURRENT local clock every boot.
+  void replanReminders();
 }

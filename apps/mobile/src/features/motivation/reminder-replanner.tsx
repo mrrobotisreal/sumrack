@@ -12,6 +12,9 @@ import { replanReminders } from './notifications';
  */
 export function ReminderReplanner() {
   React.useEffect(() => {
+    // Mount = app just became ready (cold start ends here too — AppState may
+    // never emit 'active' for a launch that starts active).
+    void replanReminders();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') void replanReminders();
     });

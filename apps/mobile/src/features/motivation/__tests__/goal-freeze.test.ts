@@ -35,19 +35,30 @@ describe('streak-freeze wallet (T19)', () => {
     expect(parseFreezeState({ available: 99 })).toEqual(DEFAULT_FREEZE_STATE);
   });
 
+  const day = (current: number, todayCounted = true) => ({ current, todayCounted });
+
   it('earns on 7-day multiples only, capped at 2, once per day', () => {
     const none = { available: 0, lastEarnedOnDate: null };
-    expect(earnsFreeze(none, 7, '2026-08-22')).toBe(true);
-    expect(earnsFreeze(none, 14, '2026-08-22')).toBe(true);
-    expect(earnsFreeze(none, 6, '2026-08-22')).toBe(false);
-    expect(earnsFreeze(none, 8, '2026-08-22')).toBe(false);
-    expect(earnsFreeze(none, 0, '2026-08-22')).toBe(false);
-    expect(earnsFreeze({ available: 2, lastEarnedOnDate: null }, 7, '2026-08-22')).toBe(false);
-    expect(earnsFreeze({ available: 1, lastEarnedOnDate: '2026-08-22' }, 7, '2026-08-22')).toBe(
-      false,
-    );
-    expect(earnsFreeze({ available: 1, lastEarnedOnDate: '2026-08-15' }, 7, '2026-08-22')).toBe(
-      true,
-    );
+    expect(earnsFreeze(none, day(7), '2026-08-22')).toBe(true);
+    expect(earnsFreeze(none, day(14), '2026-08-22')).toBe(true);
+    expect(earnsFreeze(none, day(6), '2026-08-22')).toBe(false);
+    expect(earnsFreeze(none, day(8), '2026-08-22')).toBe(false);
+    expect(earnsFreeze(none, day(0), '2026-08-22')).toBe(false);
+    expect(earnsFreeze({ available: 2, lastEarnedOnDate: null }, day(7), '2026-08-22')).toBe(false);
+    expect(
+      earnsFreeze({ available: 1, lastEarnedOnDate: '2026-08-22' }, day(7), '2026-08-22'),
+    ).toBe(false);
+    expect(
+      earnsFreeze({ available: 1, lastEarnedOnDate: '2026-08-15' }, day(7), '2026-08-22'),
+    ).toBe(true);
+  });
+
+  it('REGRESSION (device, Vienna morning): a stalled streak never re-earns on a new day', () => {
+    // 7-day streak earned yesterday; today (new local day, goal not yet met)
+    // the streak still reads 7 but today is not counted — no second freeze.
+    const state = { available: 1, lastEarnedOnDate: '2026-08-22' };
+    expect(earnsFreeze(state, day(7, false), '2026-08-23')).toBe(false);
+    // Once today's goal IS met, streak is 8 — not a multiple; still nothing.
+    expect(earnsFreeze(state, day(8, true), '2026-08-23')).toBe(false);
   });
 });
