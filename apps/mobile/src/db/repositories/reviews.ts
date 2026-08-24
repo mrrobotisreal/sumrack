@@ -131,11 +131,13 @@ export function createReviewsRepo(db: SumrakDB) {
         .from(cards);
       const have = new Set(existing.map((c) => `${c.bankItemId}:${c.direction}`));
       const now = Date.now();
-      let created = 0;
-      for (const item of items) {
-        for (const direction of directions) {
-          if (have.has(`${item.id}:${direction}`)) continue;
-          await db.insert(cards).values({
+      // T22: batched inserts (chunks of 50) instead of one round trip per
+      // card — this runs every bootstrap and used to issue N sequential
+      // INSERTs whenever a direction activated across the whole bank.
+      const missing = items.flatMap((item) =>
+        directions
+          .filter((direction) => !have.has(`${item.id}:${direction}`))
+          .map((direction) => ({
             id: newId(),
             bankItemId: item.id,
             direction,
@@ -150,11 +152,12 @@ export function createReviewsRepo(db: SumrakDB) {
             state: 0,
             lastReviewAt: null,
             createdAt: now,
-          });
-          created += 1;
-        }
+          })),
+      );
+      for (let i = 0; i < missing.length; i += 50) {
+        await db.insert(cards).values(missing.slice(i, i + 50));
       }
-      return created;
+      return missing.length;
     },
 
     async getCard(bankItemId: string, direction: CardDirection): Promise<CardRow | null> {

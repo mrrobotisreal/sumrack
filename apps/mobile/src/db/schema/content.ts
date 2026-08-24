@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -90,6 +91,15 @@ export const tokens = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.packId, t.sentenceId, t.tokenIndex] }),
     index('tokens_lemma_norm_idx').on(t.lemmaNorm),
+    // T22 perf: story-scoped reader load (getStoryDetail fires on every
+    // story open; story_id was denormalized for exactly this but never
+    // indexed — mirrors sentences_story_idx).
+    index('tokens_story_idx').on(t.packId, t.storyId, t.tokenIndex),
+    // T22 perf: dashboard vocab-by-level CTE (GROUP BY lemma_norm with
+    // level, filtered to annotated word tokens) — covering partial index.
+    index('tokens_level_lemma_idx')
+      .on(t.lemmaNorm, t.level)
+      .where(sql`is_punct = 0 AND lemma_norm IS NOT NULL AND level IS NOT NULL`),
   ],
 );
 

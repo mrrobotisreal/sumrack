@@ -1,9 +1,20 @@
 import { normalizeRu } from '@/db/normalize';
+
 import type { BankItemRow } from '@/db/repositories/bank';
 import type { Repositories } from '@/db/repositories';
 
 import { headword } from '../../session';
 import { sentenceEligible } from '../sentence-source';
+
+/**
+ * T22: the T02 fixture pack ships a deliberately SILENT narration track
+ * («Стук в стене» — fabricated word stamps over silence, built for karaoke
+ * plumbing tests before real audio existed). A listening-quiz segment
+ * sliced from it plays nothing, which reads as a broken question. Skip it
+ * here (TTS fallback takes over); the reader's narration bar still plays
+ * it, where the silence is at least attributable.
+ */
+const SILENT_FIXTURE_TRACKS = new Set(['a1-creepypasta-001:knock-anton-creepy']);
 
 /**
  * Audio-source selection for the listening quiz (T14 work item 4; the same
@@ -71,7 +82,10 @@ export async function resolveListeningAudio(
   }
 
   const tracks = (await repos.content.listAudioTracksForPack(packId)).filter(
-    (t) => t.storyId === storyId && t.localUri != null,
+    (t) =>
+      t.storyId === storyId &&
+      t.localUri != null &&
+      !SILENT_FIXTURE_TRACKS.has(`${packId}:${t.id}`),
   );
   if (tracks.length === 0) return fallback;
 

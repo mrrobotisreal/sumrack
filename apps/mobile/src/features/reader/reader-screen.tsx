@@ -28,6 +28,13 @@ import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
 const POSITION_SAVE_DEBOUNCE_MS = 800;
+/**
+ * T22 (T17/T19-reported bug): a story short enough to fit on one screen had
+ * its last sentence "viewable" during initial layout, so opening it marked
+ * it finished. A finish now requires the story to have been on screen for
+ * at least this long, with the end still visible when the dwell elapses.
+ */
+const MIN_FINISH_DWELL_MS = 5000;
 /** Sessions shorter than this don't count as reading time (accidental opens). */
 const MIN_READING_SESSION_MS = 3000;
 /** After the user scrolls by hand, karaoke auto-follow pauses this long. */
@@ -69,6 +76,9 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
   const listRef = React.useRef<FlatList<SentenceWithTokens>>(null);
   const restoredRef = React.useRef(false);
   const finishRequestedRef = React.useRef(false);
+  const mountedAtRef = React.useRef(Date.now());
+  const endVisibleRef = React.useRef(false);
+  const dwellTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingIdxRef = React.useRef<number | null>(null);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -163,18 +173,34 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
   // Flush the last position when leaving the screen.
   React.useEffect(() => flushPosition, [flushPosition]);
 
-  const finishStory = React.useCallback(() => {
-    if (finishRequestedRef.current) return;
-    finishRequestedRef.current = true;
-    void repos.reading.markFinished(packId, storyId).then((newlyFinished) => {
-      if (newlyFinished) {
-        track('story_finished', { packId, storyId });
-        // Bumps storiesFinished + XP, unlocks first-story, evaluates (T19).
-        void recordStoryFinished();
+  const finishStory = React.useCallback(
+    function finish(this: void) {
+      if (finishRequestedRef.current) return;
+      // Dwell gate — see MIN_FINISH_DWELL_MS. If we're still inside the
+      // window, arm a one-shot timer that re-checks whether the end is still
+      // visible once the dwell has genuinely elapsed.
+      const elapsed = Date.now() - mountedAtRef.current;
+      if (elapsed < MIN_FINISH_DWELL_MS) {
+        if (!dwellTimerRef.current) {
+          dwellTimerRef.current = setTimeout(() => {
+            dwellTimerRef.current = null;
+            if (endVisibleRef.current) finish();
+          }, MIN_FINISH_DWELL_MS - elapsed);
+        }
+        return;
       }
-      invalidateProgress();
-    });
-  }, [packId, storyId, invalidateProgress]);
+      finishRequestedRef.current = true;
+      void repos.reading.markFinished(packId, storyId).then((newlyFinished) => {
+        if (newlyFinished) {
+          track('story_finished', { packId, storyId });
+          // Bumps storiesFinished + XP, unlocks first-story, evaluates (T19).
+          void recordStoryFinished();
+        }
+        invalidateProgress();
+      });
+    },
+    [packId, storyId, invalidateProgress],
+  );
 
   // Restore the saved position once both the story and the progress row are in.
   React.useEffect(() => {
@@ -203,6 +229,14 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
     schedulePositionSave,
   ]);
 
+  // Clear the pending dwell timer on unmount.
+  React.useEffect(
+    () => () => {
+      if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
+    },
+    [],
+  );
+
   // Viewability drives both position saves and finished detection. FlatList
   // requires a stable callback, so the pairs are created once and dispatch
   // through a latest-value ref kept current from an effect.
@@ -215,7 +249,8 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
       const indices = viewableItems.map((v) => v.index).filter((i): i is number => i != null);
       if (indices.length === 0) return;
       schedulePositionSave(Math.min(...indices));
-      if (Math.max(...indices) === sentences.length - 1) finishStory();
+      endVisibleRef.current = Math.max(...indices) === sentences.length - 1;
+      if (endVisibleRef.current) finishStory();
     };
   }, [schedulePositionSave, finishStory, sentences.length]);
   const [viewabilityConfigCallbackPairs] = React.useState(() => [

@@ -32,9 +32,13 @@ async function fetchPathState(): Promise<PathState> {
   ]);
 
   const lemmaStats: Record<string, UnitLemmaStats> = {};
-  for (const pack of packs.filter((p) => p.type === 'course-unit')) {
-    lemmaStats[pack.id] = await repos.path.getUnitLemmaStats(pack.id);
-  }
+  const courseUnits = packs.filter((p) => p.type === 'course-unit');
+  const statsList = await Promise.all(
+    courseUnits.map((pack) => repos.path.getUnitLemmaStats(pack.id)),
+  );
+  courseUnits.forEach((pack, i) => {
+    lemmaStats[pack.id] = statsList[i]!;
+  });
 
   let state = buildPathState({
     packs,

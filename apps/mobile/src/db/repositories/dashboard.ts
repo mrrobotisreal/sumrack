@@ -339,15 +339,22 @@ export function createDashboardRepo(db: SumrakDB) {
      * (`pron_item_graded.bestScore` — every graded attempt since T12,
      * including history from before T18 started writing per-item scores
      * into `game_sessions.detail`). Grouped by device-local day.
+     *
+     * T22: windowed to the last 180 days — analytics_events grows without
+     * bound and the chart is a recent-trend view, not an archive. The
+     * overall average is computed over the same window.
      */
     async getPronunciationTrend(): Promise<{
       days: PronunciationDay[];
       overallAvg: number | null;
     }> {
+      const windowStart = Date.now() - 180 * 24 * 60 * 60 * 1000;
       const rows = await db.all<{ created_at: number; score: number }>(sql`
         SELECT created_at, CAST(json_extract(props, '$.bestScore') AS REAL) AS score
         FROM analytics_events
-        WHERE event = 'pron_item_graded' AND json_extract(props, '$.bestScore') IS NOT NULL
+        WHERE event = 'pron_item_graded'
+          AND created_at >= ${windowStart}
+          AND json_extract(props, '$.bestScore') IS NOT NULL
         ORDER BY created_at ASC
       `);
       if (rows.length === 0) return { days: [], overallAvg: null };

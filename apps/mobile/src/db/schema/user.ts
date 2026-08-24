@@ -130,7 +130,13 @@ export const reviewLog = sqliteTable(
     /** How long the answer took, when the game measured it (analytics/rating mapping). */
     durationMs: integer('duration_ms'),
   },
-  (t) => [index('review_log_card_idx').on(t.cardId, t.reviewedAt)],
+  (t) => [
+    index('review_log_card_idx').on(t.cardId, t.reviewedAt),
+    // T22 perf: the backup activity probe filters on reviewed_at alone —
+    // without this it full-scans the append-only history on every
+    // significant-session check.
+    index('review_log_reviewed_at_idx').on(t.reviewedAt),
+  ],
 );
 
 export const journalEntries = sqliteTable(
@@ -145,7 +151,12 @@ export const journalEntries = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
-  (t) => [index('journal_entries_created_idx').on(t.createdAt)],
+  (t) => [
+    index('journal_entries_created_idx').on(t.createdAt),
+    // T22 perf: activity probe filters on updated_at (notes already index
+    // updated_at; journal only indexed created_at).
+    index('journal_entries_updated_idx').on(t.updatedAt),
+  ],
 );
 
 export const notes = sqliteTable(
