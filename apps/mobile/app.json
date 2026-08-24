@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Сумрак",
+    "name": "\u0421\u0443\u043c\u0440\u0430\u043a",
     "slug": "sumrak",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "sumrak",
@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 2
     },
     "plugins": [
       "expo-router",
@@ -43,7 +44,8 @@
           "color": "#B3402F",
           "defaultChannel": "reminders"
         }
-      ]
+      ],
+      "./plugins/with-release-signing.js"
     ],
     "experiments": {
       "typedRoutes": true

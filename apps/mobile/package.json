@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:generate:custom": "drizzle-kit generate --custom"
+    "db:generate:custom": "drizzle-kit generate --custom",
+    "release:android": "./scripts/release-android.sh"
   },
   "dependencies": {
     "@expo-google-fonts/golos-text": "^0.4.2",
