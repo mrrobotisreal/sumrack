@@ -14,6 +14,8 @@ import { hydrateNotificationPrefsFromDb } from '@/store/notification-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
 import { hydrateThemeFromDb } from '@/store/theme';
 
+import { logError } from '@/services/error-log';
+
 import { runBootstrap } from './bootstrap';
 import { db, repos } from './index';
 
@@ -55,6 +57,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setReady(true);
       } catch (err) {
         console.error('[db] bootstrap failed', err);
+        logError('db', err, { fatal: true });
         if (!cancelled) setBootError(err instanceof Error ? err : new Error(String(err)));
       }
     })();
@@ -62,6 +65,10 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [success]);
+
+  React.useEffect(() => {
+    if (migrationError) logError('db', migrationError, { fatal: true });
+  }, [migrationError]);
 
   if (migrationError || bootError) {
     // Pre-theme, pre-navigation surface — deliberately plain RN styles.

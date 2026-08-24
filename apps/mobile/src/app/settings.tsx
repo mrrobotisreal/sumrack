@@ -137,6 +137,26 @@ export default function SettingsScreen() {
 
       <AiSettingsSection />
 
+      <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">
+        Diagnostics
+      </Text>
+      <View className="overflow-hidden rounded-xl border border-border bg-surface">
+        <Link href="/error-log" asChild>
+          <Pressable
+            accessibilityRole="button"
+            className="flex-row items-center justify-between px-4 py-3.5 active:bg-surface-2"
+          >
+            <View className="gap-0.5">
+              <Text className="font-ui-medium">Error log</Text>
+              <Text variant="caption">
+                Errors caught by the crash guard, stored on this device only (T22)
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+          </Pressable>
+        </Link>
+      </View>
+
       {__DEV__ && (
         <>
           <Text variant="caption" className="mb-2 mt-8 uppercase tracking-wider">

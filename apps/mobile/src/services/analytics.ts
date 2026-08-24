@@ -223,7 +223,13 @@ export type AnalyticsEvent =
   | 'syncd_token_cleared'
   | 'syncd_target_toggled'
   | 'syncd_connection_test_started'
-  | 'syncd_reachability_changed';
+  | 'syncd_reachability_changed'
+  // T22 hardening. app_error props carry scope/fatal ONLY — the message and
+  // stack live in the on-device error log file, never in analytics.
+  | 'app_error'
+  | 'error_log_viewed'
+  | 'error_log_cleared'
+  | 'error_test_triggered';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

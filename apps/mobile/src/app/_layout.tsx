@@ -24,6 +24,7 @@ import * as React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { CrashGuard } from '@/components/crash-guard';
 import { AiQueue } from '@/components/ai-queue';
 import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
@@ -33,10 +34,15 @@ import { NotificationRouter } from '@/features/motivation/notification-router';
 import { ReminderReplanner } from '@/features/motivation/reminder-replanner';
 import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
+import { installGlobalErrorLogging } from '@/services/error-log';
 import { useThemeStore } from '@/store/theme';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 SplashScreen.preventAutoHideAsync();
+
+// T22 crash guard: capture unhandled JS errors + promise rejections into the
+// local error log from the earliest possible moment (before first render).
+installGlobalErrorLogging();
 
 export default function RootLayout() {
   // Importing the theme store applies the persisted dark/light/system mode
@@ -85,83 +91,89 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={navTheme}>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            <Stack
-              screenOptions={{
-                headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
-                headerStyle: { backgroundColor: tokens.surface },
-                contentStyle: { backgroundColor: tokens.bg },
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="reader/[packId]/[storyId]"
-                options={{ headerShown: false, animation: 'fade' }}
-              />
-              <Stack.Screen
-                name="review/session"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="review/daily"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="review/listening"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="review/pronunciation"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="review/cloze"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="review/sentence-builder"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen name="games" options={{ title: 'Games' }} />
-              <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
-              <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
-              <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />
-              <Stack.Screen
-                name="path/[packId]/quiz"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="path/checkpoint/[packId]"
-                options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-              />
-              <Stack.Screen
-                name="settings"
-                options={{ title: 'Settings', presentation: 'modal' }}
-              />
-              <Stack.Screen name="word-bank/[id]" options={{ title: 'Word bank' }} />
-              <Stack.Screen
-                name="word-bank/add"
-                options={{ title: 'Add to word bank', presentation: 'modal' }}
-              />
-              <Stack.Screen name="word-bank/enrich" options={{ title: 'Enrich with AI' }} />
-              <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
-              <Stack.Screen name="restore" options={{ title: 'Restore from backup' }} />
-              <Stack.Screen
-                name="journal/[id]"
-                options={{ headerShown: false, animation: 'fade' }}
-              />
-              <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
-              <Stack.Screen name="notes/[id]" options={{ headerShown: false, animation: 'fade' }} />
-              <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
-              <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
-              <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
-            </Stack>
-            <AutoSync />
-            <AutoBackup />
-            <AiQueue />
-            <NotificationRouter />
-            <ReminderReplanner />
-            <AchievementToastHost />
-            {!introDone && <AnimatedSplash onDone={() => setIntroDone(true)} />}
+            <CrashGuard>
+              <Stack
+                screenOptions={{
+                  headerTitleStyle: { fontFamily: 'GolosText_500Medium', color: tokens.text },
+                  headerStyle: { backgroundColor: tokens.surface },
+                  contentStyle: { backgroundColor: tokens.bg },
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="reader/[packId]/[storyId]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
+                  name="review/session"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="review/daily"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="review/listening"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="review/pronunciation"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="review/cloze"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="review/sentence-builder"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen name="games" options={{ title: 'Games' }} />
+                <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
+                <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
+                <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />
+                <Stack.Screen
+                  name="path/[packId]/quiz"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="path/checkpoint/[packId]"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="settings"
+                  options={{ title: 'Settings', presentation: 'modal' }}
+                />
+                <Stack.Screen name="word-bank/[id]" options={{ title: 'Word bank' }} />
+                <Stack.Screen
+                  name="word-bank/add"
+                  options={{ title: 'Add to word bank', presentation: 'modal' }}
+                />
+                <Stack.Screen name="word-bank/enrich" options={{ title: 'Enrich with AI' }} />
+                <Stack.Screen name="packs" options={{ title: 'Content packs' }} />
+                <Stack.Screen name="restore" options={{ title: 'Restore from backup' }} />
+                <Stack.Screen name="error-log" options={{ title: 'Error log' }} />
+                <Stack.Screen
+                  name="journal/[id]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
+                <Stack.Screen
+                  name="notes/[id]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
+                <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
+                <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
+              </Stack>
+              <AutoSync />
+              <AutoBackup />
+              <AiQueue />
+              <NotificationRouter />
+              <ReminderReplanner />
+              <AchievementToastHost />
+              {!introDone && <AnimatedSplash onDone={() => setIntroDone(true)} />}
+            </CrashGuard>
           </ThemeProvider>
         </QueryClientProvider>
       </DbProvider>
