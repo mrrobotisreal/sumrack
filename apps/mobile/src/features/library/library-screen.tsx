@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { LevelChip } from '@/components/level-chip';
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { usePacks, useStories, useStoryProgressList } from '@/db/hooks';
 import type { PackRow, StoryListItem } from '@/db/repositories/content';
@@ -82,6 +83,19 @@ export function LibraryScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (packs.isError || stories.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError
+          onRetry={() => {
+            void packs.refetch();
+            void stories.refetch();
+          }}
+        />
       </View>
     );
   }

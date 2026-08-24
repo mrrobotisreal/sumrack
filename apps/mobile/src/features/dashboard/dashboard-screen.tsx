@@ -7,6 +7,7 @@ import { repos } from '@/db';
 import { getApiKey } from '@/features/ai/config';
 import { isOnline } from '@/features/ai/connectivity';
 import type { CefrLevel } from '@/components/level-chip';
+import { QueryError } from '@/components/query-error';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -123,18 +124,31 @@ export function DashboardScreen() {
     [router],
   );
 
-  const loading =
-    vocab.isPending ||
-    grammar.isPending ||
-    activity.isPending ||
-    pronunciation.isPending ||
-    weakLemmas.isPending ||
-    weakPronunciation.isPending;
+  const coreQueries = [
+    vocab,
+    grammar,
+    activity,
+    pronunciation,
+    weakLemmas,
+    weakPronunciation,
+    assessments,
+    checkpoints,
+  ];
+  const loading = coreQueries.some((q) => q.isPending);
+  const anyError = coreQueries.some((q) => q.isError);
 
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (anyError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => coreQueries.forEach((q) => void q.refetch())} />
       </View>
     );
   }

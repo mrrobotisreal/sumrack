@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { useJournalEntries, useNotes } from '@/db/hooks';
 import type { JournalEntryRow, NoteRow } from '@/db/repositories/journal';
@@ -66,56 +67,66 @@ export function JournalScreen() {
       </View>
 
       {section === 'entries' ? (
-        <FlatList
-          data={entries.data ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerClassName="px-4 pb-28 gap-2"
-          ListHeaderComponent={
-            prompt ? (
-              <Pressable
-                onPress={() => {
-                  track('journal_prompt_used', { promptId: prompt.id, from: 'tab-card' });
-                  router.push({
-                    pathname: '/journal/[id]',
-                    params: { id: 'new', promptId: prompt.id },
-                  });
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Write about today's prompt"
-                className="mb-2 rounded-2xl border border-accent/30 bg-surface p-4 active:opacity-80"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="flame-outline" size={14} color={theme.accent} />
-                  <Text variant="caption" className="uppercase tracking-wider">
-                    Prompt of the day
+        entries.isError ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <QueryError onRetry={() => void entries.refetch()} />
+          </View>
+        ) : (
+          <FlatList
+            data={entries.data ?? []}
+            keyExtractor={(item) => item.id}
+            contentContainerClassName="px-4 pb-28 gap-2"
+            ListHeaderComponent={
+              prompt ? (
+                <Pressable
+                  onPress={() => {
+                    track('journal_prompt_used', { promptId: prompt.id, from: 'tab-card' });
+                    router.push({
+                      pathname: '/journal/[id]',
+                      params: { id: 'new', promptId: prompt.id },
+                    });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Write about today's prompt"
+                  className="mb-2 rounded-2xl border border-accent/30 bg-surface p-4 active:opacity-80"
+                >
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="flame-outline" size={14} color={theme.accent} />
+                    <Text variant="caption" className="uppercase tracking-wider">
+                      Prompt of the day
+                    </Text>
+                  </View>
+                  <Text className="mt-2 font-reading text-lg leading-7">{prompt.promptRu}</Text>
+                  <Text variant="caption" className="mt-1">
+                    {prompt.promptEn}
                   </Text>
-                </View>
-                <Text className="mt-2 font-reading text-lg leading-7">{prompt.promptRu}</Text>
-                <Text variant="caption" className="mt-1">
-                  {prompt.promptEn}
-                </Text>
-              </Pressable>
-            ) : null
-          }
-          ListEmptyComponent={
-            entries.isLoading ? null : (
-              <EmptyState
-                icon="book-outline"
-                ru="Журнал ждёт твоих слов."
-                en="No entries yet — write your first one, even three sentences count."
+                </Pressable>
+              ) : null
+            }
+            ListEmptyComponent={
+              entries.isLoading ? null : (
+                <EmptyState
+                  icon="book-outline"
+                  ru="Журнал ждёт твоих слов."
+                  en="No entries yet — write your first one, even three sentences count."
+                />
+              )
+            }
+            renderItem={({ item }) => (
+              <EntryRow
+                entry={item}
+                onPress={() => {
+                  track('journal_entry_opened', { id: item.id });
+                  router.push({ pathname: '/journal/[id]', params: { id: item.id } });
+                }}
               />
-            )
-          }
-          renderItem={({ item }) => (
-            <EntryRow
-              entry={item}
-              onPress={() => {
-                track('journal_entry_opened', { id: item.id });
-                router.push({ pathname: '/journal/[id]', params: { id: item.id } });
-              }}
-            />
-          )}
-        />
+            )}
+          />
+        )
+      ) : notes.isError ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <QueryError onRetry={() => void notes.refetch()} />
+        </View>
       ) : (
         <FlatList
           data={notes.data ?? []}

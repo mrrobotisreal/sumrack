@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ActivityIndicator, Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
 import { LevelChip, type CefrLevel } from '@/components/level-chip';
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -33,10 +34,18 @@ export function PathScreen() {
     }, []),
   );
 
-  if (path.isLoading) {
+  if (path.isPending) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (path.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => void path.refetch()} />
       </View>
     );
   }

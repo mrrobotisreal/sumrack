@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import {
   useDueCardCount,
@@ -60,6 +61,31 @@ export function TodayScreen() {
     );
     return story ? { progress: inProgress, story } : null;
   }, [progressList.data, stories.data]);
+
+  const coreQueries = [due, productionDue, progressList, stories, path];
+  const loading = coreQueries.some((q) => q.isPending);
+  const anyError = coreQueries.some((q) => q.isError);
+
+  if (loading) {
+    // NativeWind has no `animate-pulse` (no CSS animation engine on native) —
+    // static bg-surface blocks stand in for the real cards' shapes so the
+    // first frame never flashes a false "0 due".
+    return (
+      <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-4 px-4 pb-16 pt-4">
+        <View className="h-28 rounded-xl bg-surface opacity-60" />
+        <View className="h-32 rounded-xl bg-surface opacity-60" />
+        <View className="h-20 rounded-xl bg-surface opacity-60" />
+      </ScrollView>
+    );
+  }
+
+  if (anyError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => coreQueries.forEach((q) => void q.refetch())} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-4 px-4 pb-16 pt-4">

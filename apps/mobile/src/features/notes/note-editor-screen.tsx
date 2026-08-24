@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { MarkdownView } from '@/components/markdown-view';
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { recordNoteCreated } from '@/features/motivation/service';
@@ -39,17 +40,46 @@ const UNTITLED = 'Заметка';
 
 /** Route-level wrapper — same remount-per-target pattern as the entry editor. */
 export function NoteEditorScreen({ id }: { id: string }) {
+  const router = useRouter();
   const isNew = id === 'new';
   const existing = useNote(isNew ? undefined : id);
 
   if (isNew) return <NoteEditor key="new" note={null} />;
-  if (existing.isLoading || !existing.data) {
+
+  if (existing.isPending) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator />
       </View>
     );
   }
+
+  if (existing.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => void existing.refetch()} />
+      </View>
+    );
+  }
+
+  if (!existing.data) {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <Text className="font-ui-medium text-lg">Note not found</Text>
+        <Text variant="muted" className="text-center">
+          This note no longer exists.
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          className="mt-2 min-h-12 items-center justify-center rounded-full border border-border bg-surface px-5 active:bg-surface-2"
+        >
+          <Text className="text-accent">Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return <NoteEditor key={id} note={existing.data} />;
 }
 

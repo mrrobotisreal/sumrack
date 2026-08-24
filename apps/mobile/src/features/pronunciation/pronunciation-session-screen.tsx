@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import {
@@ -16,6 +17,7 @@ import { SessionShell } from '@/features/review/session-shell';
 import { SummaryView } from '@/features/review/summary-view';
 import { ratingCountsAsCorrect } from '@/features/review/mapping';
 import { track } from '@/services/analytics';
+import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { isAsrInstalled } from './asr-manager';
@@ -24,7 +26,7 @@ import { PronunciationView } from './pronunciation-view';
 import { pronunciationScoreToRating } from './scoring';
 import { buildPronunciationSession, type PronunciationItem } from './session';
 
-type Phase = 'loading' | 'needs-model' | 'empty' | 'playing' | 'summary';
+type Phase = 'loading' | 'needs-model' | 'empty' | 'playing' | 'summary' | 'error';
 
 /**
  * The standalone 10-phrase pronunciation session (T12, design §7.3 mode 6),
@@ -52,37 +54,47 @@ export function PronunciationSessionScreen() {
   const gameSessionIdRef = React.useRef<string | null>(null);
   const startedAtRef = React.useRef(0);
   const finishedRef = React.useRef(false);
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (!isAsrInstalled()) {
-        track('pron_session_needs_model');
-        setPhase('needs-model');
-        return;
+      setPhase('loading');
+      try {
+        if (!isAsrInstalled()) {
+          track('pron_session_needs_model');
+          setPhase('needs-model');
+          return;
+        }
+        preloadAsr(); // warm the recognizer while the first prompt renders
+        const session = await buildPronunciationSession(repos, {
+          focusItemIds: focusRef.current,
+        });
+        if (cancelled) return;
+        if (session.length === 0) {
+          track('pron_session_empty');
+          setPhase('empty');
+          return;
+        }
+        const row = await repos.stats.startGameSession('pronunciation');
+        if (cancelled) return;
+        gameSessionIdRef.current = row.id;
+        startedAtRef.current = Date.now();
+        setItems(session);
+        setPhase('playing');
+        track('pron_session_started', { size: session.length });
+      } catch (err) {
+        if (cancelled) return;
+        logError('manual', err);
+        setPhase('error');
       }
-      preloadAsr(); // warm the recognizer while the first prompt renders
-      const session = await buildPronunciationSession(repos, {
-        focusItemIds: focusRef.current,
-      });
-      if (cancelled) return;
-      if (session.length === 0) {
-        track('pron_session_empty');
-        setPhase('empty');
-        return;
-      }
-      const row = await repos.stats.startGameSession('pronunciation');
-      if (cancelled) return;
-      gameSessionIdRef.current = row.id;
-      startedAtRef.current = Date.now();
-      setItems(session);
-      setPhase('playing');
-      track('pron_session_started', { size: session.length });
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = React.useCallback(() => setAttempt((a) => a + 1), []);
 
   const invalidateAfterReviews = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['due-count'] });
@@ -184,6 +196,24 @@ export function PronunciationSessionScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <QueryError
+          message="Couldn't build this session — something went wrong reading the database."
+          onRetry={retry}
+        />
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          className="min-h-12 items-center justify-center rounded-full border border-border bg-surface px-5 active:bg-surface-2"
+        >
+          <Text className="text-accent">Back</Text>
+        </Pressable>
       </View>
     );
   }

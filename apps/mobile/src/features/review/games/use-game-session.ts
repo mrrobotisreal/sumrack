@@ -7,11 +7,12 @@ import { repos } from '@/db';
 import type { CardRow, Grade } from '@/db/repositories/reviews';
 import { onSessionEnded, recordReviewOutcome } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
+import { logError } from '@/services/error-log';
 
 import { ratingCountsAsCorrect } from '../mapping';
 import type { SessionResult } from '../session-screen';
 
-export type GamePhase = 'loading' | 'empty' | 'playing' | 'summary';
+export type GamePhase = 'loading' | 'empty' | 'playing' | 'summary' | 'error';
 
 /**
  * The shared standalone-game session flow (T13) — the same skeleton T06's
@@ -40,34 +41,52 @@ export function useGameSession<T>(opts: {
   const [finalResults, setFinalResults] = React.useState<SessionResult[]>([]);
   /** Wall-clock length of the finished session — the summary's time figure (T14). */
   const [finalDurationMs, setFinalDurationMs] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
   const resultsRef = React.useRef<SessionResult[]>([]);
   const gameSessionIdRef = React.useRef<string | null>(null);
   const startedAtRef = React.useRef(0);
   const finishedRef = React.useRef(false);
+  /** Bumped by retry() to re-run the build effect below. */
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const session = await build();
-      if (cancelled) return;
-      if (session.length === 0) {
-        track(`${trackPrefix}_session_empty`);
-        setPhase('empty');
-        return;
+      setPhase('loading');
+      setError(null);
+      try {
+        const session = await build();
+        if (cancelled) return;
+        if (session.length === 0) {
+          track(`${trackPrefix}_session_empty`);
+          setPhase('empty');
+          return;
+        }
+        const row = await repos.stats.startGameSession(mode);
+        if (cancelled) return;
+        gameSessionIdRef.current = row.id;
+        startedAtRef.current = Date.now();
+        setItems(session);
+        setPhase('playing');
+        track(`${trackPrefix}_session_started`, { size: session.length });
+      } catch (err) {
+        if (cancelled) return;
+        // Records to the on-device error log + 'app_error' analytics (scope/fatal
+        // only — never the message, which the log file already carries).
+        logError('manual', err);
+        setError(err instanceof Error ? err.message : String(err));
+        setPhase('error');
       }
-      const row = await repos.stats.startGameSession(mode);
-      if (cancelled) return;
-      gameSessionIdRef.current = row.id;
-      startedAtRef.current = Date.now();
-      setItems(session);
-      setPhase('playing');
-      track(`${trackPrefix}_session_started`, { size: session.length });
     })();
     return () => {
       cancelled = true;
     };
     // build is stable per mount (screens pass a module fn or memoized closure).
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt]);
+
+  const retry = React.useCallback(() => {
+    setAttempt((a) => a + 1);
   }, []);
 
   const persistSessionEnd = React.useCallback(() => {
@@ -166,6 +185,8 @@ export function useGameSession<T>(opts: {
     entry: items[index],
     finalResults,
     finalDurationMs,
+    error,
+    retry,
     grade,
     quit,
     router,

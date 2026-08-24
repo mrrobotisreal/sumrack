@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { Grade } from '@/db/repositories/reviews';
 import { onSessionEnded, recordReviewOutcome } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
+import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { FlashcardView } from './flashcard-view';
@@ -25,7 +27,7 @@ export interface SessionResult {
   mode: SessionItem['mode'] | 'pronunciation' | 'cloze' | 'sentence-builder' | 'listening';
 }
 
-type Phase = 'loading' | 'empty' | 'playing' | 'summary';
+type Phase = 'loading' | 'empty' | 'playing' | 'summary' | 'error';
 
 /**
  * The daily review session (T06: mixed flashcards + MC; T13/T14 add modes).
@@ -48,32 +50,42 @@ export function SessionScreen() {
   const gameSessionIdRef = React.useRef<string | null>(null);
   const startedAtRef = React.useRef(0);
   const finishedRef = React.useRef(false);
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const session = await buildSession(repos);
-      if (cancelled) return;
-      if (session.length === 0) {
-        track('review_session_empty');
-        setPhase('empty');
-        return;
+      setPhase('loading');
+      try {
+        const session = await buildSession(repos);
+        if (cancelled) return;
+        if (session.length === 0) {
+          track('review_session_empty');
+          setPhase('empty');
+          return;
+        }
+        const row = await repos.stats.startGameSession('review-mixed');
+        if (cancelled) return;
+        gameSessionIdRef.current = row.id;
+        startedAtRef.current = Date.now();
+        setItems(session);
+        setPhase('playing');
+        track('review_session_started', {
+          size: session.length,
+          mc: session.filter((s) => s.mode === 'mc').length,
+        });
+      } catch (err) {
+        if (cancelled) return;
+        logError('manual', err);
+        setPhase('error');
       }
-      const row = await repos.stats.startGameSession('review-mixed');
-      if (cancelled) return;
-      gameSessionIdRef.current = row.id;
-      startedAtRef.current = Date.now();
-      setItems(session);
-      setPhase('playing');
-      track('review_session_started', {
-        size: session.length,
-        mc: session.filter((s) => s.mode === 'mc').length,
-      });
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = React.useCallback(() => setAttempt((a) => a + 1), []);
 
   const invalidateAfterReviews = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['due-count'] });
@@ -170,6 +182,24 @@ export function SessionScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <QueryError
+          message="Couldn't build this session — something went wrong reading the database."
+          onRetry={retry}
+        />
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          className="min-h-12 items-center justify-center rounded-full border border-border bg-surface px-5 active:bg-surface-2"
+        >
+          <Text className="text-accent">Back</Text>
+        </Pressable>
       </View>
     );
   }

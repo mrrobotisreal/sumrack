@@ -4,10 +4,12 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, Text as RNText, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { recordUnitQuizFirstPass } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
+import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ExerciseRunner } from './exercises/exercise-runner';
@@ -16,7 +18,7 @@ import { buildUnitQuizForPack } from './exercises/unit-quiz';
 import { getPassThreshold } from './threshold';
 import { pathQueryKey } from './use-path';
 
-type Phase = 'loading' | 'empty' | 'playing' | 'result';
+type Phase = 'loading' | 'empty' | 'playing' | 'result' | 'error';
 
 interface QuizResult {
   scorePercent: number;
@@ -40,27 +42,37 @@ export function QuizScreen({ packId }: { packId: string }) {
   const [specs, setSpecs] = React.useState<ExerciseSpec[]>([]);
   const [result, setResult] = React.useState<QuizResult | null>(null);
   const sessionIdRef = React.useRef<string | null>(null);
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const built = await buildUnitQuizForPack(repos, packId);
-      if (cancelled) return;
-      if (built.length < 4) {
-        setPhase('empty');
-        return;
+      setPhase('loading');
+      try {
+        const built = await buildUnitQuizForPack(repos, packId);
+        if (cancelled) return;
+        if (built.length < 4) {
+          setPhase('empty');
+          return;
+        }
+        const row = await repos.stats.startGameSession('unit-quiz');
+        if (cancelled) return;
+        sessionIdRef.current = row.id;
+        setSpecs(built);
+        setPhase('playing');
+        track('unit_quiz_started', { packId, size: built.length });
+      } catch (err) {
+        if (cancelled) return;
+        logError('manual', err);
+        setPhase('error');
       }
-      const row = await repos.stats.startGameSession('unit-quiz');
-      if (cancelled) return;
-      sessionIdRef.current = row.id;
-      setSpecs(built);
-      setPhase('playing');
-      track('unit_quiz_started', { packId, size: built.length });
     })();
     return () => {
       cancelled = true;
     };
-  }, [packId]);
+  }, [packId, attempt]);
+
+  const retry = React.useCallback(() => setAttempt((a) => a + 1), []);
 
   const finish = React.useCallback(
     async (outcomes: SpecOutcome[], durationMs: number) => {
@@ -102,6 +114,24 @@ export function QuizScreen({ packId }: { packId: string }) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <QueryError
+          message="Couldn't build this quiz — something went wrong reading the database."
+          onRetry={retry}
+        />
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          className="min-h-12 items-center justify-center rounded-full border border-border bg-surface px-5 active:bg-surface-2"
+        >
+          <Text className="text-accent">Back</Text>
+        </Pressable>
       </View>
     );
   }

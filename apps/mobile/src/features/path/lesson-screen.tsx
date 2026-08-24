@@ -5,6 +5,7 @@ import * as React from 'react';
 import { ActivityIndicator, Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
 import { MarkdownView } from '@/components/markdown-view';
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { recordLessonCompleted } from '@/features/motivation/service';
@@ -46,10 +47,18 @@ export function LessonScreen({ packId }: { packId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packId]);
 
-  if (lesson.isLoading) {
+  if (lesson.isPending) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (lesson.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => void lesson.refetch()} />
       </View>
     );
   }

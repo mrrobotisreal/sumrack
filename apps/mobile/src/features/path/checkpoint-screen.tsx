@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { recordCheckpointPassed } from '@/features/motivation/service';
@@ -125,10 +126,29 @@ export function CheckpointScreen({ packId }: { packId: string }) {
     [packId, queryClient, data.data?.everPassed],
   );
 
-  if (data.isLoading || !data.data) {
+  if (data.isPending) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (data.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => void data.refetch()} />
+      </View>
+    );
+  }
+
+  if (!data.data) {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <Ionicons name="flag-outline" size={36} color={tokens.textMuted} />
+        <Text variant="muted" className="text-center">
+          This checkpoint isn&apos;t installed. Sync content in Библиотека first.
+        </Text>
       </View>
     );
   }

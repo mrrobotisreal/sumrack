@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { LevelChip, type CefrLevel } from '@/components/level-chip';
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { useBankFilterOptions, useBankItems, useStories } from '@/db/hooks';
 import type { BankFilter, BankListItem } from '@/db/repositories/bank';
@@ -186,6 +187,10 @@ export function WordBankScreen() {
       {items.isPending ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={theme.accent} />
+        </View>
+      ) : items.isError ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <QueryError onRetry={() => void items.refetch()} />
         </View>
       ) : (items.data?.length ?? 0) === 0 ? (
         <EmptyState searching={!!deferredSearch.trim() || anyFilterActive} />

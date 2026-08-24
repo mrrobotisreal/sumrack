@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -24,6 +25,14 @@ export function AchievementsScreen() {
       track('achievements_gallery_opened');
     }, []),
   );
+
+  if (unlocked.isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-bg px-8">
+        <QueryError onRetry={() => void unlocked.refetch()} />
+      </View>
+    );
+  }
 
   const unlockedAt = new Map((unlocked.data ?? []).map((a) => [a.id, a.unlockedAt]));
   const count = unlockedAt.size;

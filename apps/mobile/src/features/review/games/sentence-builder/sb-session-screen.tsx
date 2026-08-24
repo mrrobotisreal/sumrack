@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { useGamePrefs } from '@/store/game-prefs';
@@ -46,6 +47,24 @@ export function SbSessionScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
+      </View>
+    );
+  }
+
+  if (session.phase === 'error') {
+    return (
+      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+        <QueryError
+          message="Couldn't build this session — something went wrong reading the database."
+          onRetry={session.retry}
+        />
+        <Pressable
+          onPress={() => session.router.back()}
+          accessibilityRole="button"
+          className="min-h-12 items-center justify-center rounded-full border border-border bg-surface px-5 active:bg-surface-2"
+        >
+          <Text className="text-accent">Back</Text>
+        </Pressable>
       </View>
     );
   }

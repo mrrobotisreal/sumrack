@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { track } from '@/services/analytics';
+import { logError } from '@/services/error-log';
 
 import { Field } from './edit-item-sheet';
 import { LevelPicker, type CefrLevelOrNull } from './level-picker';
@@ -57,14 +58,20 @@ export function ManualAddScreen() {
             level: level ?? undefined,
           })
         : repos.bank.addPhrase({ ...common, surface: surface.trim() });
-    void write.then((result) => {
-      track('bank_manual_added', { kind, created: result.created });
-      void queryClient.invalidateQueries({ queryKey: ['bank-items'] });
-      void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
-      void queryClient.invalidateQueries({ queryKey: ['bank-word-status'] });
-      void queryClient.invalidateQueries({ queryKey: ['due-count'] });
-      router.back();
-    });
+    void write
+      .then((result) => {
+        track('bank_manual_added', { kind, created: result.created });
+        void queryClient.invalidateQueries({ queryKey: ['bank-items'] });
+        void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
+        void queryClient.invalidateQueries({ queryKey: ['bank-word-status'] });
+        void queryClient.invalidateQueries({ queryKey: ['due-count'] });
+        router.back();
+      })
+      .catch((err) => {
+        logError('manual', err);
+        setSaving(false);
+        setError("Couldn't save — something went wrong writing to the database.");
+      });
   }, [saving, kind, lemma, surface, translation, pos, grammar, level, note, queryClient, router]);
 
   return (
