@@ -36,6 +36,8 @@ pnpm pipeline audio s1.draft.md s2.draft.md -o packs/my-pack \
 pnpm pipeline publish packs/my-pack --content ../sumrak-content --push
 ```
 
+**Voice ids must resolve to a voice on the ElevenLabs account** — the resolver matches the alias before " - tagline" in the account's voice list. Copy the id from a recently published draft (e.g. `elevenlabs:Ivan` for creepy-whisper in pack 003 v2) rather than inventing one; a wrong id fails at the first render call. (T22: the worked example previously said `elevenlabs:Anton`, a fixture-era id.)
+
 Audio notes: the `voice:` frontmatter drives rendering — `stylePrompt` is fed
 to ElevenLabs as `previous_text` (write it in Russian, in the story's mood, as
 if it were the narrator's preceding lines), `settings` maps to provider voice
@@ -107,7 +109,7 @@ story:
   level: A1 # may differ from the pack level
 voice: # OPTIONAL — voice direction for narration (used by `pipeline audio`, T09)
   - id: photo-anton-creepy # audio track id this rendition will get
-    voice: elevenlabs:Anton # provider-prefixed voice id
+    voice: elevenlabs:Ivan # provider-prefixed voice id
     style: creepy-whisper # short style label
     stylePrompt: >- # prompt-style delivery description
       Slow, hushed, uneasy narration — a man describing something

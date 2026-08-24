@@ -17,13 +17,15 @@
  *    dev workflows never break; scripts/release-android.sh refuses to run
  *    without them, so a real release is always properly signed.
  *
- * 2. `ndk { abiFilters "arm64-v8a" }` on the release buildType only. The
- *    sherpa-onnx AAR ships JNI libs for all four ABIs (~392 MB debug APK,
- *    T11); the S24 Ultra is arm64-only and this app targets exactly one
- *    device, so release builds strip the other three. Debug builds keep
- *    all ABIs (emulators).
+ * 2. `ndk { abiFilters "arm64-v8a" }` in defaultConfig. The sherpa-onnx AAR
+ *    ships JNI libs for all four ABIs (~392 MB debug APK, T11); the S24
+ *    Ultra is arm64-only and the dev emulators on this Apple-Silicon Mac
+ *    run arm64 system images, so every build strips the other three.
+ *    (buildType-level ndk.abiFilters does NOT filter prebuilt AAR jniLibs —
+ *    verified in T22; defaultConfig does. An Intel-emulator need would mean
+ *    removing this.)
  */
-const { withAppBuildGradle } = require('expo/config-plugins');
+const { withAppBuildGradle, withGradleProperties } = require('expo/config-plugins');
 
 const SIGNING_BLOCK = `        release {
             // Injected by plugins/with-release-signing.js (T22). Reads the
@@ -40,6 +42,18 @@ const SIGNING_BLOCK = `        release {
 
 /** @param {import('expo/config').ExpoConfig} config */
 function withReleaseSigning(config) {
+  // The RN gradle plugin merges `reactNativeArchitectures` into abiFilters,
+  // so the property is the authoritative arch switch — the ndk block below
+  // alone gets unioned away (verified in T22).
+  config = withGradleProperties(config, (config) => {
+    const props = config.modResults;
+    const existing = props.find(
+      (p) => p.type === 'property' && p.key === 'reactNativeArchitectures',
+    );
+    if (existing && existing.type === 'property') existing.value = 'arm64-v8a';
+    else props.push({ type: 'property', key: 'reactNativeArchitectures', value: 'arm64-v8a' });
+    return config;
+  });
   return withAppBuildGradle(config, (config) => {
     let gradle = config.modResults.contents;
 
@@ -59,8 +73,8 @@ function withReleaseSigning(config) {
 
     if (!gradle.includes('abiFilters "arm64-v8a"')) {
       gradle = gradle.replace(
-        /(\n)(\s*)(signingConfig System\.getenv\("SUMRAK_KEYSTORE_PATH"\))/,
-        '$1$2// arm64-only release (T22): the sherpa-onnx AAR carries 4 ABIs.\n$2ndk { abiFilters "arm64-v8a" }\n$2$3',
+        /(\n)(\s*)(versionName "[^"]+"\n)/,
+        '$1$2$3$2// arm64-only (T22): the sherpa-onnx AAR carries 4 ABIs; this app\n$2// targets exactly one arm64 device (+ arm64 emulators on this Mac).\n$2ndk { abiFilters "arm64-v8a" }\n',
       );
     }
 
