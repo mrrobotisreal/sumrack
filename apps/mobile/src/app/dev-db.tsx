@@ -87,7 +87,9 @@ export default function DevDbScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={() => query.trim() && track('debug_db_search', { query })}
+          onSubmitEditing={() =>
+            query.trim() && track('debug_db_search', { chars: query.trim().length })
+          }
           placeholder="Search lemma or surface form… (e.g. стена)"
           placeholderTextColor={tokens.textMuted}
           autoCapitalize="none"

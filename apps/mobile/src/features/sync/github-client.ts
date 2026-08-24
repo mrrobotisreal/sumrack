@@ -1,4 +1,14 @@
+import { z } from 'zod';
 import { SyncError } from './errors';
+
+const GithubDirEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  sha: z.string(),
+  size: z.number().int().nonnegative().catch(0),
+  type: z.string().catch('file'),
+});
+const GithubDirListingSchema = z.array(GithubDirEntrySchema);
 
 /**
  * Minimal GitHub contents-API client (design §3.3: "the app reads via the
@@ -135,20 +145,14 @@ export class GithubContentClient {
       throw err;
     }
     const json = (await res.json()) as unknown;
-    if (!Array.isArray(json)) {
-      throw new SyncError('http', `${path} is not a directory`, { path });
+    // T22: Zod at the boundary (every other network response in the app is
+    // schema-parsed; this one silently coerced — a malformed entry could
+    // feed a garbage sha into backup-retention deleteFile).
+    const parsed = GithubDirListingSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new SyncError('http', `${path} is not a directory listing`, { path });
     }
-    return json
-      .filter(
-        (e): e is Record<string, unknown> => typeof e === 'object' && e !== null && 'name' in e,
-      )
-      .map((e) => ({
-        name: String(e.name),
-        path: String(e.path),
-        sha: String(e.sha),
-        size: Number(e.size ?? 0),
-        type: String(e.type ?? 'file'),
-      }));
+    return parsed.data;
   }
 
   /**
