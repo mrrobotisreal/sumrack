@@ -43,7 +43,7 @@
     --text-muted: 154 151 160; /* #9A97A0 */
     --accent: 179 64 47; /* #B3402F */
     --success: 112 140 90; /* #708C5A muted moss */
-    --danger: 142 59 53; /* #8E3B35 dried blood */
+    --danger: 206 106 96; /* #CE6A60 dried blood, lightened for AA text contrast on all dark surfaces (T22 a11y; was #8E3B35 @ 2.65:1) */
     --border: 38 38 46; /* #26262E */
     --scrim: 0 0 0; /* modal/sheet backdrop wash (used with alpha) */
     /* CEFR chip ramp — one hue journey, A1 coolest → C1 ember (UI_DESIGN §1) */

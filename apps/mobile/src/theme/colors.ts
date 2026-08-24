@@ -27,7 +27,7 @@ export const colors: Record<ThemeScheme, ColorTokens> = {
     textMuted: '#9A97A0',
     accent: '#B3402F',
     success: '#708C5A',
-    danger: '#8E3B35',
+    danger: '#CE6A60',
     border: '#26262E',
   },
   light: {

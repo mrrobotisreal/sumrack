@@ -39,6 +39,8 @@ module.exports = {
         reading: ['Literata_400Regular'],
         'reading-bold': ['Literata_700Bold'],
         'reading-italic': ['Literata_400Regular_Italic'],
+        // Error log stack traces (T22) — Android generic monospace
+        mono: ['monospace'],
       },
       fontSize: {
         // UI type scale per UI_DESIGN §2: 12 / 14 / 16 / 20 / 24 / 30
