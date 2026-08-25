@@ -9,6 +9,10 @@ const GithubDirEntrySchema = z.object({
   type: z.string().catch('file'),
 });
 const GithubDirListingSchema = z.array(GithubDirEntrySchema);
+const GithubFileMetaSchema = z.object({
+  size: z.number().int().nonnegative().catch(0),
+  download_url: z.string().min(1).nullable().catch(null),
+});
 
 /**
  * Minimal GitHub contents-API client (design §3.3: "the app reads via the
@@ -130,21 +134,36 @@ export class GithubContentClient {
   }
 
   /**
-   * URL + headers for handing one raw-content file to a NATIVE downloader
-   * (T23 model archives: ~67 MB must stream straight to disk, never through
-   * JS memory, so the legacy FileSystem download API does the transfer).
-   * SECURITY: the headers carry the PAT — pass them only into the download
-   * call itself; never log, persist, or attach them to errors/analytics.
+   * Resolve a short-lived signed download URL for one file, for handing to
+   * a NATIVE downloader (T23 model archives: ~67 MB must stream straight
+   * to disk, never through JS memory). Streaming that much raw content
+   * THROUGH api.github.com dies on-device (HTTP/2 RST_STREAM CANCEL,
+   * observed reproducibly on 64 MB archives — S25, 2026-08-25); the
+   * contents metadata's `download_url` instead points at
+   * raw.githubusercontent.com with a signed token param — built for file
+   * delivery and needing NO auth header. SECURITY: the returned URL embeds
+   * that short-lived token — pass it straight into the download call;
+   * never log, persist, or attach it to errors/analytics.
    */
-  rawDownloadDescriptor(path: string): { url: string; headers: Record<string, string> } {
-    return {
-      url: this.contentsUrl(path, true),
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: 'application/vnd.github.raw+json',
-        'X-GitHub-Api-Version': API_VERSION,
-      },
-    };
+  async getFileDownloadUrl(path: string): Promise<string> {
+    // Cache-bust with a throwaway param (GitHub ignores unknown params):
+    // the contents API serves ~60s-cached responses (T07 note), and a
+    // cached download_url embeds an already-minted signed token that can
+    // be EXPIRED by the time it's reused — observed on-device 2026-08-25
+    // as raw.githubusercontent 404s on repeat installs of the same file
+    // while first-time paths succeeded. A unique URL misses that cache,
+    // so every install gets a freshly minted token.
+    const base = this.contentsUrl(path, true);
+    const url = `${base}${base.includes('?') ? '&' : '?'}fresh=${Date.now()}`;
+    const res = await this.request(url, path, {
+      method: 'GET',
+      accept: 'application/vnd.github+json',
+    });
+    const parsed = GithubFileMetaSchema.safeParse((await res.json()) as unknown);
+    if (!parsed.success || parsed.data.download_url === null) {
+      throw new SyncError('http', `no download url for ${path}`, { path });
+    }
+    return parsed.data.download_url;
   }
 
   /**

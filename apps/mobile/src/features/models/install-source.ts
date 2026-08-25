@@ -23,17 +23,21 @@ import {
  * never transit JS memory.
  */
 
-export interface ModelDownloadSpec {
-  source: ModelSourceKind;
-  url: string;
-  /**
-   * Auth headers for content-repo downloads (carry the PAT — only ever
-   * passed into the download call, never logged or attached to errors).
-   */
-  headers?: Record<string, string>;
-  sha256: string;
-  bytes: number;
-}
+export type ModelDownloadSpec =
+  | { source: 'upstream-fallback'; url: string; sha256: string; bytes: number }
+  | {
+      /**
+       * Content-repo downloads resolve their URL just in time: a signed,
+       * short-lived raw.githubusercontent.com URL from the contents API
+       * (streaming ~67 MB through api.github.com itself gets the HTTP/2
+       * stream reset on-device — see getFileDownloadUrl). The resolved URL
+       * embeds a token: pass it only into the download call, never log it.
+       */
+      source: 'content-repo';
+      resolveUrl: () => Promise<string>;
+      sha256: string;
+      bytes: number;
+    };
 
 /**
  * Ordered download specs for one model. Content-repo resolution requires
@@ -55,11 +59,9 @@ export async function resolveModelDownloadSpecs(ref: ModelRef): Promise<ModelDow
     const manifest = await getModelsManifest(client);
     return planModelSources(ref, manifest).map((planned): ModelDownloadSpec => {
       if (planned.source === 'content-repo') {
-        const { url, headers } = client.rawDownloadDescriptor(planned.path);
         return {
           source: 'content-repo',
-          url,
-          headers,
+          resolveUrl: () => client.getFileDownloadUrl(planned.path),
           sha256: planned.sha256,
           bytes: planned.bytes,
         };
@@ -116,15 +118,11 @@ export async function downloadModelArchive(
   for (const spec of specs) {
     try {
       onPhase('downloading', 0);
-      const download = LegacyFileSystem.createDownloadResumable(
-        spec.url,
-        archiveFile.uri,
-        { headers: spec.headers },
-        (p) => {
-          const total = p.totalBytesExpectedToWrite > 0 ? p.totalBytesExpectedToWrite : spec.bytes;
-          onPhase('downloading', Math.min(1, p.totalBytesWritten / total));
-        },
-      );
+      const url = 'url' in spec ? spec.url : await spec.resolveUrl();
+      const download = LegacyFileSystem.createDownloadResumable(url, archiveFile.uri, {}, (p) => {
+        const total = p.totalBytesExpectedToWrite > 0 ? p.totalBytesExpectedToWrite : spec.bytes;
+        onPhase('downloading', Math.min(1, p.totalBytesWritten / total));
+      });
       const result = await download.downloadAsync();
       if (!result || result.status !== 200) {
         throw new Error(`download failed (HTTP ${result?.status ?? '—'})`);
@@ -147,7 +145,8 @@ export async function downloadModelArchive(
           // best-effort cleanup before the next attempt
         }
       }
-      // Source + message only — never the spec (its headers carry the PAT).
+      // Source + message only — never the URL (signed content-repo URLs
+      // embed a short-lived token).
       console.warn(`[models] ${spec.source} download failed: ${lastError.message}`);
     }
   }
