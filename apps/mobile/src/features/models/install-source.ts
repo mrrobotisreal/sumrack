@@ -134,6 +134,9 @@ export async function downloadModelArchive(
       if (digest !== spec.sha256) {
         throw new Error('downloaded file failed integrity check');
       }
+      // Kept in release builds: model installs are rare, and which source
+      // served one is exactly what T23's fallback chain needs observable.
+      console.log(`[models] verified archive from ${spec.source}`);
       return { source: spec.source };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error('download failed');
