@@ -1,7 +1,12 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import * as LegacyFileSystem from 'expo-file-system/legacy';
 
 import SherpaSpeech from '../../../modules/sherpa-speech';
+import {
+  assertModelDownloadAllowed,
+  downloadModelArchive,
+  resolveModelDownloadSpecs,
+} from '@/features/models/install-source';
+import type { ModelSourceKind } from '@/features/models/resolver-core';
 import { track } from '@/services/analytics';
 
 import { ASR_MODEL } from './asr-catalog';
@@ -12,7 +17,9 @@ import { useAsrStore } from './asr-store';
  * requires, following T11's voice manager exactly: filesystem is the source
  * of truth for "installed", downloads verify the pinned sha256 BEFORE
  * extraction, failures leave no partial install behind, and the ~60 MB
- * archive never transits JS memory (native hash + extract).
+ * archive never transits JS memory (native hash + extract). T23: the
+ * archive source resolves through the same shared model resolver the TTS
+ * manager uses (content repo first, pinned k2-fsa URL as fallback).
  */
 
 const ASR_DIR = 'asr-models';
@@ -71,37 +78,33 @@ async function doInstall(): Promise<void> {
   const store = useAsrStore.getState();
   store.setDownloadError(null);
   store.setDownload({ phase: 'downloading', progress: 0 });
-  track('asr_model_download_started', { modelId: ASR_MODEL.id, bytes: ASR_MODEL.archiveBytes });
   const startedAt = Date.now();
 
   const root = asrRootDir();
   if (!root.exists) root.create({ intermediates: true });
   const archiveFile = new File(root, `${ASR_MODEL.dirName}.tar.bz2`);
+  let usedSource: ModelSourceKind | null = null;
 
   try {
-    const download = LegacyFileSystem.createDownloadResumable(
-      ASR_MODEL.archiveUrl,
-      archiveFile.uri,
-      {},
-      (p) => {
-        const total =
-          p.totalBytesExpectedToWrite > 0 ? p.totalBytesExpectedToWrite : ASR_MODEL.archiveBytes;
-        useAsrStore.getState().setDownload({
-          phase: 'downloading',
-          progress: Math.min(1, p.totalBytesWritten / total),
-        });
-      },
-    );
-    const result = await download.downloadAsync();
-    if (!result || result.status !== 200) {
-      throw new Error(`download failed (HTTP ${result?.status ?? '—'})`);
-    }
+    // T23: Wi-Fi-only gate + shared source resolution (content repo →
+    // pinned k2-fsa fallback), then download + sha256-verify before extract.
+    await assertModelDownloadAllowed();
+    const specs = await resolveModelDownloadSpecs({
+      id: ASR_MODEL.id,
+      fallbackUrl: ASR_MODEL.archiveUrl,
+      sha256: ASR_MODEL.archiveSha256,
+      bytes: ASR_MODEL.archiveBytes,
+    });
+    track('asr_model_download_started', {
+      modelId: ASR_MODEL.id,
+      bytes: ASR_MODEL.archiveBytes,
+      source: specs[0]!.source,
+    });
 
-    useAsrStore.getState().setDownload({ phase: 'verifying', progress: 1 });
-    const digest = await SherpaSpeech.sha256File(archiveFile.uri);
-    if (digest !== ASR_MODEL.archiveSha256) {
-      throw new Error('downloaded file failed integrity check');
-    }
+    const downloaded = await downloadModelArchive(specs, archiveFile, (phase, progress) => {
+      useAsrStore.getState().setDownload({ phase, progress });
+    });
+    usedSource = downloaded.source;
 
     useAsrStore.getState().setDownload({ phase: 'extracting', progress: 1 });
     const extracted = await SherpaSpeech.extractTarBz2(archiveFile.uri, root.uri);
@@ -114,6 +117,7 @@ async function doInstall(): Promise<void> {
       modelId: ASR_MODEL.id,
       ms: Date.now() - startedAt,
       bytes: ASR_MODEL.archiveBytes,
+      source: usedSource,
     });
   } catch (err) {
     const dir = asrModelDir();
@@ -126,7 +130,11 @@ async function doInstall(): Promise<void> {
     }
     const message = err instanceof Error ? err.message : 'download failed';
     useAsrStore.getState().setDownloadError(message);
-    track('asr_model_download_failed', { modelId: ASR_MODEL.id, message });
+    track('asr_model_download_failed', {
+      modelId: ASR_MODEL.id,
+      message,
+      source: usedSource ?? 'none',
+    });
     throw err instanceof Error ? err : new Error(message);
   } finally {
     if (archiveFile.exists) {

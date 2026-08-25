@@ -4,6 +4,9 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
+    // T23: the models pin test imports @sumrak/pipeline, whose sources use
+    // explicit .ts import specifiers (tsx-run CLI). Safe under noEmit.
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -153,6 +153,9 @@ importers:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(react@19.2.3)
     devDependencies:
+      '@sumrak/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0

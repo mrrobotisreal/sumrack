@@ -40,14 +40,24 @@ export {
   type ManifestEntry,
   type ManifestFile,
 } from './manifest';
+export {
+  ModelKindSchema,
+  ModelsManifestEntrySchema,
+  ModelsManifestSchema,
+  type ModelKind,
+  type ModelsManifest,
+  type ModelsManifestEntry,
+} from './models-manifest';
 export { BackupEnvelopeSchema, type BackupEnvelope } from './backup';
 export {
   SchemaValidationError,
   parseBackupEnvelope,
   parseManifest,
+  parseModelsManifest,
   parsePack,
   safeParseBackupEnvelope,
   safeParseManifest,
+  safeParseModelsManifest,
   safeParsePack,
   toSchemaIssues,
   type ParseResult,

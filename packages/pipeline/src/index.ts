@@ -27,6 +27,16 @@ export {
   type NarrationText,
   type TokenSpan,
 } from './narration.ts';
+export {
+  MIRROR_MODELS,
+  MODELS_MANIFEST_FILE,
+  mirrorFilePath,
+  runModelsMirror,
+  type MirrorModel,
+  type MirrorModelReport,
+  type MirrorOptions,
+  type MirrorSummary,
+} from './models.ts';
 export { encodeOpus, probeDurationMs, OPUS_BITRATE } from './opus.ts';
 export { packFileList, runPublish, type PublishOptions, type PublishSummary } from './publish.ts';
 export {

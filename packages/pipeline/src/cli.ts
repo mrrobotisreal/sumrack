@@ -4,6 +4,7 @@ import { runAudition, runFinalize } from './audio.ts';
 import type { StampResult } from './stamps.ts';
 import { ElevenLabsClient } from './elevenlabs.ts';
 import { resolveEnvVar } from './env.ts';
+import { runModelsMirror } from './models.ts';
 import { runPublish } from './publish.ts';
 import { runValidate } from './validate.ts';
 
@@ -50,6 +51,14 @@ Usage:
   pipeline publish <pack-dir> --content <sumrak-content-dir> [--push] [-m msg]
       Copy the pack into the content repo, recompute hashes, update
       manifest.json, and commit. Pushes only with --push.
+
+  pipeline models mirror --content <sumrak-content-dir> [--push] [-m msg]
+      Mirror the app's pinned speech-model archives (4 Piper TTS voices + the
+      ASR model, ~330 MB) from the k2-fsa release assets into the content
+      repo's models/{tts,asr}/, verifying each download against the pinned
+      sha256 BEFORE writing into the repo, then emit models-manifest.json and
+      commit. Idempotent: verified-present files are skipped, and model files
+      are never deleted or overwritten. Pushes only with --push.
 
 Run from the Sumrak repo root:  pnpm pipeline annotate <draft.md> -o <out.json>
 (paths resolve against the repo root — pnpm runs scripts at the package root)`;
@@ -262,6 +271,49 @@ function publishCommand(args: string[]): void {
   }
 }
 
+async function modelsCommand(args: string[]): Promise<void> {
+  const [sub, ...rest] = args;
+  if (sub !== 'mirror') {
+    fail(`models has one subcommand: mirror\n\n${USAGE}`, 2);
+  }
+  let content: string | undefined;
+  let push = false;
+  let message: string | undefined;
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i]!;
+    const next = (): string => {
+      const v = rest[++i];
+      if (v === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
+      return v;
+    };
+    if (arg === '--content') content = next();
+    else if (arg === '--push') push = true;
+    else if (arg === '-m' || arg === '--message') message = next();
+    else fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
+  }
+  if (content === undefined)
+    fail(`models mirror needs --content <sumrak-content-dir>\n\n${USAGE}`, 2);
+
+  try {
+    const summary = await runModelsMirror(content, { push, message });
+    const mb = summary.models.reduce((n, m) => n + m.bytes, 0) / (1024 * 1024);
+    console.log(
+      `\n${summary.models.length} models mirrored (${mb.toFixed(0)} MB total), ` +
+        `manifest ${summary.manifest}` +
+        (summary.outcome === 'committed'
+          ? ` — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`
+          : ' — nothing to commit (already up to date)'),
+    );
+    for (const m of summary.models) {
+      console.log(
+        `  ${m.action === 'downloaded' ? '✓' : '='} ${m.id} → ${m.file} (${m.bytes} bytes) ${m.sha256}`,
+      );
+    }
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e), 1);
+  }
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
@@ -276,6 +328,9 @@ async function main(): Promise<void> {
       break;
     case 'publish':
       publishCommand(rest);
+      break;
+    case 'models':
+      await modelsCommand(rest);
       break;
     case undefined:
     case 'help':

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BackupEnvelopeSchema, type BackupEnvelope } from './backup';
 import { ManifestSchema, type Manifest } from './manifest';
+import { ModelsManifestSchema, type ModelsManifest } from './models-manifest';
 import { PackSchema, type Pack } from './pack';
 
 /** One validation problem, with a dotted/indexed path to the exact bad field. */
@@ -59,6 +60,7 @@ function makeParsers<T>(schema: z.ZodType<T>, label: string) {
 
 const packParsers = makeParsers<Pack>(PackSchema, 'Pack');
 const manifestParsers = makeParsers<Manifest>(ManifestSchema, 'Manifest');
+const modelsManifestParsers = makeParsers<ModelsManifest>(ModelsManifestSchema, 'ModelsManifest');
 const backupParsers = makeParsers<BackupEnvelope>(BackupEnvelopeSchema, 'BackupEnvelope');
 
 /** Validate an unknown value as a Pack; never throws. */
@@ -69,6 +71,10 @@ export const parsePack = packParsers.orThrow;
 export const safeParseManifest = manifestParsers.safe;
 /** Validate an unknown value as the content-repo manifest; throws on failure. */
 export const parseManifest = manifestParsers.orThrow;
+/** Validate an unknown value as the models manifest (T23); never throws. */
+export const safeParseModelsManifest = modelsManifestParsers.safe;
+/** Validate an unknown value as the models manifest (T23); throws on failure. */
+export const parseModelsManifest = modelsManifestParsers.orThrow;
 /** Validate an unknown value as a backup envelope; never throws. */
 export const safeParseBackupEnvelope = backupParsers.safe;
 /** Validate an unknown value as a backup envelope; throws on failure. */

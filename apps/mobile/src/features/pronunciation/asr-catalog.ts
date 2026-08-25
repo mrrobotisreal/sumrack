@@ -2,10 +2,11 @@ import { z } from 'zod';
 
 /**
  * The Russian ASR model (T12, design §6: offline model ~40–60 MB). Same
- * sourcing decision as the T11 voice catalog: downloaded from the official
- * k2-fsa release assets with a sha256 pinned here and verified before
- * anything is used, rather than PAT-gating a public binary in the private
- * content repo.
+ * sourcing as the T11 voice catalog after T23: installs resolve
+ * manifest-first against the content repo's `models/asr/` mirror (shared
+ * resolver in `features/models/`), with the k2-fsa release-asset URL +
+ * sha256 pinned here as the documented last-resort fallback, verified
+ * before anything is used whichever source served it.
  *
  * Model choice: `sherpa-onnx-zipformer-ru-int8-2025-04-20` — offline
  * Zipformer transducer, int8-quantized, 60.2 MB archive (the only Russian

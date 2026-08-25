@@ -130,6 +130,24 @@ export class GithubContentClient {
   }
 
   /**
+   * URL + headers for handing one raw-content file to a NATIVE downloader
+   * (T23 model archives: ~67 MB must stream straight to disk, never through
+   * JS memory, so the legacy FileSystem download API does the transfer).
+   * SECURITY: the headers carry the PAT — pass them only into the download
+   * call itself; never log, persist, or attach them to errors/analytics.
+   */
+  rawDownloadDescriptor(path: string): { url: string; headers: Record<string, string> } {
+    return {
+      url: this.contentsUrl(path, true),
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        Accept: 'application/vnd.github.raw+json',
+        'X-GitHub-Api-Version': API_VERSION,
+      },
+    };
+  }
+
+  /**
    * List a directory (T20: `backups/`). A missing directory is an empty
    * list, not an error — the first backup ever creates it.
    */

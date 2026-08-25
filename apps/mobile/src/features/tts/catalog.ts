@@ -5,12 +5,13 @@ import { z } from 'zod';
  * Dmitri as available" — all four exist upstream as sherpa-onnx piper
  * archives; verified 2026-08-21).
  *
- * Voices download from the official k2-fsa release assets (public, stable,
- * versioned) rather than the private content repo's `models/` dir — the
- * ~268 MB of public model binaries would permanently bloat the content
- * repo's git history and gate public data behind the PAT. The sha256 of
- * every archive is pinned here and verified after download (same guarantee
- * as T07's manifest hashes), so the upstream host is not trusted blindly.
+ * Sourcing (T23, V2 §2 — reverses the T11 hosting deviation): voices
+ * install manifest-first from the content repo's `models/tts/` mirror
+ * (resolved via `features/models/`), with the k2-fsa release-asset URL +
+ * sha256 pinned below kept as the documented last-resort fallback — NOT
+ * dead code. The sha256 of every archive is verified before install
+ * whichever source served it; a pin test asserts both sources claim the
+ * same hash per model id.
  */
 
 const RELEASE_BASE = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models';
