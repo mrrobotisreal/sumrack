@@ -33,6 +33,14 @@ interface SentenceRowProps {
   onSeekToSentence?: ((sentenceId: string) => void) | null;
   /** T16 "explain this": shown as a sparkle beside the revealed translation. */
   onExplain?: (sentenceId: string) => void;
+  /** T24 sentence bookmark state — filled margin indicator + toggle. */
+  bookmarked?: boolean;
+  /**
+   * T24: toggles the sentence bookmark. The affordance lives in the revealed
+   * translation's action row (already-safe chrome beside the explain
+   * sparkle) — deliberately NOT a new gesture on the token layer (T05).
+   */
+  onToggleBookmark?: (sentenceId: string) => void;
 }
 
 /**
@@ -56,6 +64,8 @@ function SentenceRowInner({
   karaokeSentenceActive,
   onSeekToSentence,
   onExplain,
+  bookmarked,
+  onToggleBookmark,
 }: SentenceRowProps) {
   const { tokens } = useAppTheme();
   const handleWordPress = React.useCallback(
@@ -100,6 +110,24 @@ function SentenceRowInner({
             <RNText className="flex-1" style={[translationStyle, { color: tokens.textMuted }]}>
               {en}
             </RNText>
+            {onToggleBookmark && (
+              <Pressable
+                onPress={() => onToggleBookmark(sentenceId)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  bookmarked ? 'Remove sentence bookmark' : 'Bookmark this sentence'
+                }
+                accessibilityState={{ selected: !!bookmarked }}
+                className="pt-0.5 active:opacity-60"
+              >
+                <Ionicons
+                  name={bookmarked ? 'bookmark' : 'bookmark-outline'}
+                  size={14}
+                  color={bookmarked ? tokens.accent : tokens.textMuted}
+                />
+              </Pressable>
+            )}
             {onExplain && (
               <Pressable
                 onPress={() => onExplain(sentenceId)}
@@ -120,13 +148,16 @@ function SentenceRowInner({
         accessibilityRole="button"
         accessibilityLabel={revealed ? 'Hide translation' : 'Show translation'}
         accessibilityState={{ expanded: revealed }}
-        className="ml-2 w-9 items-center pt-1 active:opacity-60"
+        className="ml-2 w-9 items-center gap-1.5 pt-1 active:opacity-60"
       >
         <Ionicons
           name={revealed ? 'language' : 'language-outline'}
           size={16}
           color={revealed ? tokens.accent : tokens.border}
         />
+        {/* T24: passive bookmarked indicator — visible without revealing;
+            the toggle itself lives in the revealed action row. */}
+        {bookmarked && <Ionicons name="bookmark" size={11} color={tokens.accent} />}
       </Pressable>
     </View>
   );

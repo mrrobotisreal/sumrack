@@ -44,6 +44,21 @@ export interface ResolvedSentence {
   story: StoryRow | null;
 }
 
+/** One sentence with ≥1 matching token — a global-search result row (T24). */
+export interface SentenceSearchHit {
+  packId: string;
+  packTitleRu: string;
+  level: string;
+  storyId: string;
+  storyTitleRu: string;
+  sentenceId: string;
+  /** Scroll target for the reader deep link (T04 restore path). */
+  orderIdx: number;
+  ru: string;
+  /** Distinct matched token surfaces, for match highlighting in the snippet. */
+  matchedTexts: string[];
+}
+
 export interface TokenSearchHit {
   packId: string;
   sentenceId: string;
@@ -238,6 +253,56 @@ export function createContentRepo(db: SumrakDB) {
         translation: r.translation,
         pos: r.pos,
         level: r.level,
+      }));
+    },
+
+    /**
+     * Global content search (T24, V2 §7.1): FTS5 over the ё-folded token
+     * shadow columns, one row per matching SENTENCE (multiple matched tokens
+     * collapse), best-rank first, with the story/pack context and orderIdx
+     * the results screen needs for grouping and reader deep links. Matching
+     * never touches raw text columns (T03 rule).
+     */
+    async searchSentences(query: string, limit = 80): Promise<SentenceSearchHit[]> {
+      const match = toFtsQuery(query);
+      if (!match) return [];
+      const rows = await db.all<{
+        pack_id: string;
+        pack_title_ru: string;
+        level: string;
+        story_id: string;
+        story_title_ru: string;
+        sentence_id: string;
+        order_idx: number;
+        ru: string;
+        matched: string;
+        best_rank: number;
+      }>(sql`
+        SELECT t.pack_id, p.title_ru AS pack_title_ru, p.level,
+               t.story_id, st.title_ru AS story_title_ru,
+               t.sentence_id, s.order_idx, s.ru,
+               GROUP_CONCAT(DISTINCT t.text) AS matched,
+               MIN(rank) AS best_rank
+        FROM tokens_fts f
+        JOIN tokens t ON t.rowid = f.rowid
+        JOIN sentences s ON s.pack_id = t.pack_id AND s.id = t.sentence_id
+        JOIN stories st ON st.pack_id = t.pack_id AND st.id = t.story_id
+        JOIN packs p ON p.id = t.pack_id
+        WHERE tokens_fts MATCH ${match}
+        GROUP BY t.pack_id, t.sentence_id
+        ORDER BY best_rank
+        LIMIT ${limit}
+      `);
+      return rows.map((r) => ({
+        packId: r.pack_id,
+        packTitleRu: r.pack_title_ru,
+        level: r.level,
+        storyId: r.story_id,
+        storyTitleRu: r.story_title_ru,
+        sentenceId: r.sentence_id,
+        orderIdx: r.order_idx,
+        ru: r.ru,
+        matchedTexts: r.matched ? r.matched.split(',') : [],
       }));
     },
 

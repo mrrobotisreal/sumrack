@@ -8,6 +8,7 @@ import {
   analyticsEvents,
   assessments,
   bankItems,
+  bookmarks,
   cards,
   checkpointResults,
   dailyActivity,
@@ -209,6 +210,24 @@ async function seedSource(db: SumrakDB) {
   });
   await db.insert(frozenDays).values({ date: '2026-08-21', consumedAt: NOW - 3000 });
   await db.insert(achievements).values({ id: 'first-word', unlockedAt: NOW - 2000 });
+  await db.insert(bookmarks).values([
+    {
+      id: 'bm-story',
+      kind: 'story',
+      packId: 'pack-a',
+      storyId: 'story-1',
+      sentenceId: null,
+      createdAt: NOW - 1500,
+    },
+    {
+      id: 'bm-sentence',
+      kind: 'sentence',
+      packId: 'pack-a',
+      storyId: 'story-1',
+      sentenceId: 's1',
+      createdAt: NOW - 1000,
+    },
+  ]);
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -265,6 +284,7 @@ async function selectAllUserTables(db: SumrakDB) {
     dailyActivity: await db.select().from(dailyActivity),
     frozenDays: await db.select().from(frozenDays),
     achievements: await db.select().from(achievements),
+    bookmarks: await db.select().from(bookmarks),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -380,6 +400,22 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(entryHits.map((e) => e.id)).toContain('je-1');
     const noteHits = await journal.searchNotes('еще');
     expect(noteHits.map((n) => n.id)).toContain('note-1');
+  });
+
+  it('a pre-T24 payload without a bookmarks key still restores (additive default)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    // Old snapshots predate the table — simulate by dropping the key.
+    const legacy = JSON.parse(JSON.stringify(payload)) as { tables: Record<string, unknown> };
+    delete legacy.tables.bookmarks;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.bookmarks).toBe(0);
+    expect(await target.select().from(bookmarks)).toHaveLength(0);
+    // The rest of the payload landed normally.
+    expect(result.rowCounts.bankItems).toBe(2);
   });
 
   it('an invalid payload is refused with ZERO writes (live DB untouched)', async () => {

@@ -10,10 +10,13 @@ import {
   View,
 } from 'react-native';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { LevelChip } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
-import { usePacks, useStories, useStoryProgressList } from '@/db/hooks';
+import { repos } from '@/db';
+import { useBookmarkedStoryKeys, usePacks, useStories, useStoryProgressList } from '@/db/hooks';
 import type { PackRow, StoryListItem } from '@/db/repositories/content';
 import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
@@ -34,9 +37,23 @@ interface LibrarySection {
 export function LibraryScreen() {
   const router = useRouter();
   const { tokens } = useAppTheme();
+  const queryClient = useQueryClient();
   const packs = usePacks();
   const stories = useStories();
   const progressList = useStoryProgressList();
+  const bookmarkedKeys = useBookmarkedStoryKeys();
+
+  // T24: long-press a story row to toggle its story bookmark (recorded
+  // placement decision — the row press stays "open the reader").
+  const toggleBookmark = React.useCallback(
+    (packId: string, storyId: string) => {
+      void repos.bookmarks.toggleStory(packId, storyId).then(({ added }) => {
+        track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'story', from: 'library' });
+        void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      });
+    },
+    [queryClient],
+  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -131,7 +148,9 @@ export function LibraryScreen() {
         <StoryRow
           story={item}
           progress={progressByStory.get(`${item.packId}/${item.id}`)}
+          bookmarked={bookmarkedKeys.data?.has(`${item.packId}/${item.id}`) ?? false}
           onPress={() => router.push(`/reader/${item.packId}/${item.id}`)}
+          onLongPress={() => toggleBookmark(item.packId, item.id)}
         />
       )}
     />
@@ -165,18 +184,24 @@ function PackHeader({ pack }: { pack: PackRow }) {
 function StoryRow({
   story,
   progress,
+  bookmarked,
   onPress,
+  onLongPress,
 }: {
   story: StoryListItem;
   progress: StoryProgressRow | undefined;
+  bookmarked: boolean;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
+  const { tokens } = useAppTheme();
   const state = readStateOf(progress);
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`Read ${story.titleRu}`}
+      accessibilityLabel={`Read ${story.titleRu}. Long press to ${bookmarked ? 'remove the' : 'add a'} bookmark`}
       className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 active:bg-surface-2"
     >
       <View className="flex-1 gap-0.5">
@@ -190,6 +215,7 @@ function StoryRow({
           {story.titleEn} · {story.sentenceCount} sentences
         </Text>
       </View>
+      {bookmarked && <Ionicons name="bookmark" size={14} color={tokens.accent} />}
       <ReadStateBadge state={state} progress={progress} sentenceCount={story.sentenceCount} />
     </Pressable>
   );

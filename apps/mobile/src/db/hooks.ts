@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { repos } from './index';
 import type { BankFilter, EncounterRow } from './repositories/bank';
+import type { BookmarkRow } from './repositories/bookmarks';
 import type { ResolvedSentence } from './repositories/content';
 import { MIXED_SESSION_DIRECTIONS, UNIFIED_SESSION_DIRECTIONS } from './repositories/reviews';
 
@@ -33,6 +34,12 @@ export const queryKeys = {
   notes: ['notes'] as const,
   note: (id: string) => ['note', id] as const,
   journalSearch: (q: string) => ['journal-search', q] as const,
+  globalSearch: (q: string) => ['global-search', q] as const,
+  bankMasteryCounts: ['bank-items', 'mastery-counts'] as const,
+  bookmarks: ['bookmarks'] as const,
+  bookmarksForStory: (packId: string, storyId: string) =>
+    ['bookmarks', 'story', packId, storyId] as const,
+  bookmarkedStoryKeys: ['bookmarks', 'story-keys'] as const,
 };
 
 export function usePacks() {
@@ -187,6 +194,98 @@ export function useTokenSearch(query: string) {
     queryKey: queryKeys.tokenSearch(query),
     queryFn: () => repos.content.searchTokens(query),
     enabled: query.trim().length > 0,
+  });
+}
+
+// --- Global search & bookmarks (T24) ---------------------------------------
+
+/**
+ * Global content search (V2 §7.1): token FTS grouped by sentence, plus the
+ * existing journal/notes FTS — one query, three sections. Caller debounces
+ * (useDeferredValue); repos cap result counts so long-tail queries stay flat.
+ */
+export function useGlobalSearch(query: string) {
+  return useQuery({
+    queryKey: queryKeys.globalSearch(query),
+    queryFn: async () => {
+      const [sentences, entries, notes] = await Promise.all([
+        repos.content.searchSentences(query),
+        repos.journal.searchEntries(query, 20),
+        repos.journal.searchNotes(query, 20),
+      ]);
+      return { sentences, entries, notes };
+    },
+    enabled: query.trim().length > 0,
+  });
+}
+
+/** Per-band bank counts for the mastery chips (shares lib/mastery with the dashboard). */
+export function useBankMasteryCounts() {
+  return useQuery({
+    queryKey: queryKeys.bankMasteryCounts,
+    queryFn: () => repos.bank.getMasteryCounts(),
+  });
+}
+
+/** The reader's toggle states: this story's story-level + sentence bookmarks. */
+export function useBookmarksForStory(packId: string, storyId: string) {
+  return useQuery({
+    queryKey: queryKeys.bookmarksForStory(packId, storyId),
+    queryFn: () => repos.bookmarks.listForStory(packId, storyId),
+    enabled: !!packId && !!storyId,
+  });
+}
+
+export interface ResolvedBookmark extends BookmarkRow {
+  /** null = the pack was removed since bookmarking (degrade, never crash). */
+  storyTitleRu: string | null;
+  packTitleRu: string | null;
+  /** Resolved sentence text + scroll target; sentence bookmarks only. */
+  sentenceRu: string | null;
+  sentenceOrderIdx: number | null;
+}
+
+/**
+ * The «Закладки» list payload: every bookmark with its content context
+ * resolved — or nulls when the pack has been uninstalled (T05's null-safe
+ * encounters pattern; the row renders a clear "content removed" state).
+ */
+export function useResolvedBookmarks() {
+  return useQuery({
+    queryKey: queryKeys.bookmarks,
+    queryFn: async (): Promise<ResolvedBookmark[]> => {
+      const [rows, stories, packs] = await Promise.all([
+        repos.bookmarks.list(),
+        repos.content.listStories(),
+        repos.content.listPacks(),
+      ]);
+      const storyByKey = new Map(stories.map((s) => [`${s.packId}/${s.id}`, s]));
+      const packById = new Map(packs.map((p) => [p.id, p]));
+      return Promise.all(
+        rows.map(async (row) => {
+          const story = storyByKey.get(`${row.packId}/${row.storyId}`) ?? null;
+          const resolved =
+            row.kind === 'sentence' && row.sentenceId
+              ? await repos.content.resolveSentence(row.sentenceId)
+              : null;
+          return {
+            ...row,
+            storyTitleRu: story?.titleRu ?? null,
+            packTitleRu: packById.get(row.packId)?.titleRu ?? null,
+            sentenceRu: resolved?.sentence.ru ?? null,
+            sentenceOrderIdx: resolved?.sentence.orderIdx ?? null,
+          };
+        }),
+      );
+    },
+  });
+}
+
+/** `packId/storyId` keys with a story bookmark — the Library row indicator. */
+export function useBookmarkedStoryKeys() {
+  return useQuery({
+    queryKey: queryKeys.bookmarkedStoryKeys,
+    queryFn: () => repos.bookmarks.storyKeySet(),
   });
 }
 

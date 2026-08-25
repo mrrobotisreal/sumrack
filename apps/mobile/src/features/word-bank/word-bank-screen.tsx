@@ -6,18 +6,27 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, TextInput, View } f
 import { LevelChip, type CefrLevel } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
-import { useBankFilterOptions, useBankItems, useStories } from '@/db/hooks';
-import type { BankFilter, BankListItem } from '@/db/repositories/bank';
+import { useBankFilterOptions, useBankItems, useBankMasteryCounts, useStories } from '@/db/hooks';
+import type { BankFilter, BankListItem, MasteryFilter } from '@/db/repositories/bank';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 type KindFilter = 'all' | 'word' | 'phrase';
 
+/** Chip labels for the T18 bands (dashboard legend wording) + unreviewed. */
+const MASTERY_CHIPS: { value: MasteryFilter; label: string }[] = [
+  { value: 'learning', label: 'Shaky' },
+  { value: 'young', label: 'Young' },
+  { value: 'mature', label: 'Mature' },
+  { value: 'collected', label: 'Unreviewed' },
+];
+
 /**
  * Словарь (design §7.2): the word bank as a reference tool — dense list,
  * search-first, filters as chips (UI_DESIGN §4). Search is ё/е-tolerant via
  * the bank repo's normalized matching (T03 convention, first UI-visible
- * here). Mastery filter is a placeholder slot until T06 brings FSRS bands.
+ * here). Mastery chips (T24) share lib/mastery's T18 band definition with
+ * the dashboard, so the two surfaces always reconcile.
  */
 export function WordBankScreen() {
   const router = useRouter();
@@ -29,6 +38,7 @@ export function WordBankScreen() {
   const [pos, setPos] = React.useState<string | null>(null);
   const [sourceStoryId, setSourceStoryId] = React.useState<string | null>(null);
   const [needsInfo, setNeedsInfo] = React.useState(false);
+  const [mastery, setMastery] = React.useState<MasteryFilter | null>(null);
 
   const deferredSearch = React.useDeferredValue(search);
 
@@ -50,12 +60,14 @@ export function WordBankScreen() {
       pos: pos ?? undefined,
       sourceStoryId: sourceStoryId ?? undefined,
       needsEnrichment: needsInfo ? true : undefined,
+      mastery: mastery ?? undefined,
     }),
-    [deferredSearch, kind, level, pos, sourceStoryId, needsInfo],
+    [deferredSearch, kind, level, pos, sourceStoryId, needsInfo, mastery],
   );
 
   const items = useBankItems(filter);
   const options = useBankFilterOptions();
+  const masteryCounts = useBankMasteryCounts();
   const stories = useStories();
   /** Flagged-for-enrichment count drives the T16 call-to-action banner. */
   const enrichable = useBankItems({ needsEnrichment: true, limit: 200 });
@@ -67,7 +79,12 @@ export function WordBankScreen() {
   }, [stories.data]);
 
   const anyFilterActive =
-    kind !== 'all' || level != null || pos != null || sourceStoryId != null || needsInfo;
+    kind !== 'all' ||
+    level != null ||
+    pos != null ||
+    sourceStoryId != null ||
+    needsInfo ||
+    mastery != null;
 
   return (
     <View className="flex-1 bg-bg">
@@ -152,6 +169,22 @@ export function WordBankScreen() {
             }}
           />
         ))}
+        {MASTERY_CHIPS.map(({ value, label }) => {
+          const count = masteryCounts.data?.[value];
+          return (
+            <FilterChip
+              key={value}
+              label={count != null ? `${label} · ${count}` : label}
+              icon={value === 'mature' ? 'flame-outline' : undefined}
+              active={mastery === value}
+              onPress={() => {
+                const next = mastery === value ? null : value;
+                setMastery(next);
+                if (next) track('bank_mastery_filter_used', { band: next });
+              }}
+            />
+          );
+        })}
         <FilterChip
           label="Needs info"
           icon="help-circle-outline"
@@ -161,8 +194,6 @@ export function WordBankScreen() {
             track('bank_filter_changed', { filter: 'needsInfo', value: !needsInfo });
           }}
         />
-        {/* Mastery bands arrive with FSRS in T06 — slot reserved, inert. */}
-        <FilterChip label="Mastery · T06" icon="hourglass-outline" active={false} disabled />
       </ScrollView>
 
       {/* enrichment call-to-action (T16): visible whenever items are flagged */}

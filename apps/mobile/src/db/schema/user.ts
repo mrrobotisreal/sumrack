@@ -282,6 +282,36 @@ export const achievements = sqliteTable('achievements', {
   unlockedAt: integer('unlocked_at').notNull(),
 });
 
+export type BookmarkKind = 'story' | 'sentence';
+
+/**
+ * Story/sentence bookmarks (T24, V2 §7.1). Content refs are stable-id
+ * strings, unenforced like every user-table ref — a bookmark survives pack
+ * reimport and degrades gracefully (never crashes) when its pack is removed.
+ * `sentenceId` is set exactly for kind='sentence'; sentence ids are unique
+ * pack-wide (design §4.2), so (packId, sentenceId) identifies the row.
+ */
+export const bookmarks = sqliteTable(
+  'bookmarks',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').$type<BookmarkKind>().notNull(),
+    packId: text('pack_id').notNull(),
+    storyId: text('story_id').notNull(),
+    sentenceId: text('sentence_id'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('bookmarks_story_uq')
+      .on(t.packId, t.storyId)
+      .where(sql`kind = 'story'`),
+    uniqueIndex('bookmarks_sentence_uq')
+      .on(t.packId, t.sentenceId)
+      .where(sql`kind = 'sentence'`),
+    index('bookmarks_created_idx').on(t.createdAt),
+  ],
+);
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

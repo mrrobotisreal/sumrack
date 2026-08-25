@@ -158,6 +158,8 @@ export default function RootLayout() {
                   options={{ headerShown: false, animation: 'fade' }}
                 />
                 <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
+                <Stack.Screen name="search" options={{ title: 'Search' }} />
+                <Stack.Screen name="bookmarks" options={{ title: 'Закладки' }} />
                 <Stack.Screen
                   name="notes/[id]"
                   options={{ headerShown: false, animation: 'fade' }}

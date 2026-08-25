@@ -1,5 +1,7 @@
 import { and, desc, eq, inArray, like, ne, not, or, sql } from 'drizzle-orm';
 
+import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN, type MasteryBand } from '@/lib/mastery';
+
 import { newId } from '../ids';
 import { normalizePhrase, normalizeRu } from '../normalize';
 import { bankItems, encounters } from '../schema';
@@ -42,16 +44,31 @@ export interface AddResult {
   encounter: EncounterRow;
 }
 
+/** Mastery chip value: a T18 band, or 'collected' = no reviewed core card yet. */
+export type MasteryFilter = MasteryBand | 'collected';
+
 export interface BankFilter {
   kind?: 'word' | 'phrase';
   level?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
   pos?: string;
   sourceStoryId?: string;
   needsEnrichment?: boolean;
+  /**
+   * T24 mastery chips — band of the item's weakest reviewed ru-en/en-ru card
+   * (lib/mastery, the same definition the dashboard reconciles against).
+   */
+  mastery?: MasteryFilter;
   /** Substring match on surface/lemma/translation (ё/е-tolerant on Russian). */
   search?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface MasteryCounts {
+  learning: number;
+  young: number;
+  mature: number;
+  collected: number;
 }
 
 export interface BankListItem extends BankItemRow {
@@ -73,6 +90,31 @@ export interface BankRepoHooks {
    * gets cards without knowing about the reviews repo.
    */
   afterAdd?: (item: BankItemRow, created: boolean) => Promise<void>;
+}
+
+/**
+ * Weakest-link core stability per bank item (T18 definition via lib/mastery):
+ * MIN stability over the item's reviewed ru-en/en-ru cards, NULL when none.
+ * Literal SQL with explicit qualification (the listPacks pitfall — see
+ * content.ts): the correlated `bank_items.id` must stay qualified.
+ */
+const MIN_CORE_STABILITY = sql`(SELECT MIN(c.stability) FROM cards c
+  WHERE c.bank_item_id = bank_items.id
+    AND c.direction IN ('ru-en', 'en-ru') AND c.reps > 0)`;
+
+/** WHERE fragment for one mastery chip. NULL comparisons are false in SQLite,
+ * so band conditions implicitly exclude never-reviewed items. */
+function masteryCondition(mastery: MasteryFilter) {
+  switch (mastery) {
+    case 'collected':
+      return sql`${MIN_CORE_STABILITY} IS NULL`;
+    case 'learning':
+      return sql`${MIN_CORE_STABILITY} < ${STABILITY_YOUNG_MIN}`;
+    case 'young':
+      return sql`${MIN_CORE_STABILITY} >= ${STABILITY_YOUNG_MIN} AND ${MIN_CORE_STABILITY} < ${STABILITY_MATURE_MIN}`;
+    case 'mature':
+      return sql`${MIN_CORE_STABILITY} >= ${STABILITY_MATURE_MIN}`;
+  }
 }
 
 /**
@@ -277,6 +319,7 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
       if (filter.sourceStoryId) conds.push(eq(bankItems.sourceStoryId, filter.sourceStoryId));
       if (filter.needsEnrichment !== undefined)
         conds.push(eq(bankItems.needsEnrichment, filter.needsEnrichment));
+      if (filter.mastery) conds.push(masteryCondition(filter.mastery));
       if (filter.search) {
         const q = `%${normalizePhrase(filter.search)}%`;
         conds.push(
@@ -299,6 +342,31 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
         .limit(filter.limit ?? 200)
         .offset(filter.offset ?? 0);
       return rows.map((r) => ({ ...r.item, encounterCount: r.encounterCount }));
+    },
+
+    /**
+     * Per-band item counts for the mastery chips (T24). Same weakest-link
+     * definition as the dashboard (lib/mastery): with kind='word' applied
+     * UI-side, band counts reconcile with getVocabByLevel's summed bands
+     * (word lemmas are unique per item by the dedup invariant).
+     */
+    async getMasteryCounts(): Promise<MasteryCounts> {
+      const rows = await db.all<{ band: string; n: number }>(sql`
+        SELECT CASE
+                 WHEN ms IS NULL THEN 'collected'
+                 WHEN ms < ${STABILITY_YOUNG_MIN} THEN 'learning'
+                 WHEN ms < ${STABILITY_MATURE_MIN} THEN 'young'
+                 ELSE 'mature'
+               END AS band,
+               COUNT(*) AS n
+        FROM (SELECT ${MIN_CORE_STABILITY} AS ms FROM bank_items)
+        GROUP BY band
+      `);
+      const counts: MasteryCounts = { learning: 0, young: 0, mature: 0, collected: 0 };
+      for (const r of rows) {
+        if (r.band in counts) counts[r.band as keyof MasteryCounts] = r.n;
+      }
+      return counts;
     },
 
     /** Distinct filter values actually present, so chips never dead-end. */

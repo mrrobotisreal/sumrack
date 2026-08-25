@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 
+import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN } from '@/lib/mastery';
 import { computeStreak } from '@/lib/streak';
 
 import type { SumrakDB } from '../types';
@@ -30,9 +31,9 @@ import type { SumrakDB } from '../types';
 export type Cefr = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 export const CEFR_ORDER: Cefr[] = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
-/** T18 stability-band thresholds, in FSRS stability days. */
-export const STABILITY_YOUNG_MIN = 7;
-export const STABILITY_MATURE_MIN = 30;
+/** T18 stability-band thresholds — extracted to lib/mastery in T24 (shared
+ * with the word-bank filter); re-exported so this stays the repo-layer home. */
+export { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN } from '@/lib/mastery';
 
 const LEVEL_TO_ORD = `CASE level WHEN 'A1' THEN 1 WHEN 'A2' THEN 2 WHEN 'B1' THEN 3 WHEN 'B2' THEN 4 WHEN 'C1' THEN 5 END`;
 const ORD_TO_LEVEL: Record<number, Cefr> = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1' };

@@ -10,7 +10,9 @@ import { z } from 'zod';
  *
  * Strict everywhere: a payload with unknown keys or out-of-domain enum
  * values is refused whole (disaster-recovery code never "best-efforts" a
- * partial import). Future user-table changes bump PAYLOAD_VERSION.
+ * partial import). New user tables are added as defaulted fields so older
+ * snapshots keep restoring (T24 precedent); PAYLOAD_VERSION bumps only for
+ * changes an old restore path could misread.
  */
 
 export const PAYLOAD_VERSION = 1;
@@ -160,6 +162,15 @@ const achievementRow = z.strictObject({
   unlockedAt: int,
 });
 
+const bookmarkRow = z.strictObject({
+  id: z.string(),
+  kind: z.enum(['story', 'sentence']),
+  packId: z.string(),
+  storyId: z.string(),
+  sentenceId: z.string().nullable(),
+  createdAt: int,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -204,6 +215,10 @@ export const BackupPayloadSchema = z.strictObject({
     dailyActivity: z.array(dailyActivityRow),
     frozenDays: z.array(frozenDayRow),
     achievements: z.array(achievementRow),
+    // T24: additive with a default — pre-T24 snapshots (no bookmarks key)
+    // must keep restoring, so the version literal stays at 1. New exports
+    // always include the table.
+    bookmarks: z.array(bookmarkRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -230,6 +245,7 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   dailyActivity: 'daily_activity',
   frozenDays: 'frozen_days',
   achievements: 'achievements',
+  bookmarks: 'bookmarks',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

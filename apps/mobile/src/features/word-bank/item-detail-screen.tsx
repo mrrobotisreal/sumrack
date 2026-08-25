@@ -31,8 +31,8 @@ const HISTORY_LIMIT = 12;
 
 /**
  * Bank item detail (design §7.2): leads with encounters-in-context ("the
- * sentence is the memory hook", UI_DESIGN §4), FSRS state per direction as
- * an honest placeholder until T06, edit and delete.
+ * sentence is the memory hook", UI_DESIGN §4), real per-direction FSRS state
+ * + review history (T06), edit and delete.
  */
 export function ItemDetailScreen({ id }: { id: string }) {
   const router = useRouter();

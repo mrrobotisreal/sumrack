@@ -91,6 +91,14 @@ export default function TabsLayout() {
           headerRight: () => (
             <>
               <Pressable
+                onPress={() => router.push('/search')}
+                hitSlop={8}
+                accessibilityLabel="Search all content"
+                className="mr-4"
+              >
+                <Ionicons name="search-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
                 onPress={() => router.push('/packs')}
                 hitSlop={8}
                 accessibilityLabel="Content packs"
@@ -117,6 +125,14 @@ export default function TabsLayout() {
           tabBarIcon: tabIcon('bookmarks-outline'),
           headerRight: () => (
             <>
+              <Pressable
+                onPress={() => router.push('/bookmarks')}
+                hitSlop={8}
+                accessibilityLabel="Bookmarks"
+                className="mr-4"
+              >
+                <Ionicons name="bookmark-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
               <Pressable
                 onPress={() => router.push('/games')}
                 hitSlop={8}

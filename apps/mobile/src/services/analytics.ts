@@ -229,7 +229,15 @@ export type AnalyticsEvent =
   | 'app_error'
   | 'error_log_viewed'
   | 'error_log_cleared'
-  | 'error_test_triggered';
+  | 'error_test_triggered'
+  // T24 affordance sweep. Search props carry query LENGTH + result counts
+  // only — never the query text (privacy-by-shape, same rule as bank_searched).
+  | 'global_search_performed'
+  | 'global_search_result_opened'
+  | 'bookmark_added'
+  | 'bookmark_removed'
+  | 'bookmark_opened'
+  | 'bank_mastery_filter_used';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

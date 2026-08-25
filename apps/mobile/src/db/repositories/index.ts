@@ -2,6 +2,7 @@ import { emitMotivationEvent } from '@/services/motivation-bus';
 
 import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
+import { createBookmarksRepo } from './bookmarks';
 import { createContentRepo } from './content';
 import { createDashboardRepo } from './dashboard';
 import { createJournalRepo } from './journal';
@@ -34,6 +35,7 @@ export function createRepositories(db: SumrakDB) {
       },
     }),
     reviews,
+    bookmarks: createBookmarksRepo(db),
     dashboard: createDashboardRepo(db),
     journal: createJournalRepo(db),
     path: createPathRepo(db),
@@ -47,6 +49,7 @@ export function createRepositories(db: SumrakDB) {
 export type Repositories = ReturnType<typeof createRepositories>;
 
 export * from './bank';
+export * from './bookmarks';
 export * from './content';
 export * from './dashboard';
 export * from './journal';

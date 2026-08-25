@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import { useStoryDetail, useStoryProgress } from '@/db/hooks';
+import { useBookmarksForStory, useStoryDetail, useStoryProgress } from '@/db/hooks';
 import type { SentenceWithTokens, TokenRow } from '@/db/repositories/content';
 import { track } from '@/services/analytics';
 import { useReaderPrefs } from '@/store/reader-prefs';
@@ -45,8 +45,14 @@ const AUDIO_BAR_HEIGHT = 104;
 interface ReaderScreenProps {
   packId: string;
   storyId: string;
-  /** Entry point ('library' | 'path' | 'today') — T17 path-vs-library analytics. */
+  /** Entry point ('library' | 'path' | 'today' | 'search' | 'bookmarks'). */
   from?: string;
+  /**
+   * T24 deep link: open scrolled to this sentence orderIdx (search results,
+   * sentence bookmarks). Takes precedence over the saved reading position
+   * for the initial scroll only — position saving behaves as always after.
+   */
+  initialSentenceIdx?: number;
 }
 
 /**
@@ -55,7 +61,7 @@ interface ReaderScreenProps {
  * translation reveal; position auto-saved (debounced) and restored across
  * full app restarts; reaching the last sentence records completion.
  */
-export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
+export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: ReaderScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { tokens } = useAppTheme();
@@ -64,6 +70,7 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
 
   const detail = useStoryDetail(packId, storyId);
   const progress = useStoryProgress(packId, storyId);
+  const bookmarks = useBookmarksForStory(packId, storyId);
 
   const [revealed, setRevealed] = React.useState<ReadonlySet<string>>(new Set());
   const [typeSheetOpen, setTypeSheetOpen] = React.useState(false);
@@ -202,10 +209,15 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
     [packId, storyId, invalidateProgress],
   );
 
-  // Restore the saved position once both the story and the progress row are in.
+  // Restore the saved position once both the story and the progress row are
+  // in — unless a T24 deep link (search/bookmark) asked for a specific
+  // sentence, which wins for the initial scroll.
   React.useEffect(() => {
     if (restoredRef.current || detail.isPending || progress.isPending) return;
-    const idx = progress.data?.currentSentenceIdx ?? 0;
+    const idx =
+      initialSentenceIdx != null && initialSentenceIdx >= 0
+        ? initialSentenceIdx
+        : (progress.data?.currentSentenceIdx ?? 0);
     if (idx > 0 && idx < sentences.length) {
       // Defer one frame so the list has laid out its first batch.
       requestAnimationFrame(() => {
@@ -227,6 +239,7 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
     packId,
     storyId,
     schedulePositionSave,
+    initialSentenceIdx,
   ]);
 
   // Clear the pending dwell timer on unmount.
@@ -263,6 +276,39 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
       }) => viewabilityHandlerRef.current(viewableItems),
     },
   ]);
+
+  // ---- bookmarks (T24) ---------------------------------------------------
+  const storyBookmarked = React.useMemo(
+    () => (bookmarks.data ?? []).some((b) => b.kind === 'story'),
+    [bookmarks.data],
+  );
+  const bookmarkedSentenceIds = React.useMemo(
+    () =>
+      new Set(
+        (bookmarks.data ?? [])
+          .filter((b) => b.kind === 'sentence' && b.sentenceId)
+          .map((b) => b.sentenceId!),
+      ),
+    [bookmarks.data],
+  );
+  const invalidateBookmarks = React.useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+  }, [queryClient]);
+  const toggleStoryBookmark = React.useCallback(() => {
+    void repos.bookmarks.toggleStory(packId, storyId).then(({ added }) => {
+      track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'story', from: 'reader' });
+      invalidateBookmarks();
+    });
+  }, [packId, storyId, invalidateBookmarks]);
+  const toggleSentenceBookmark = React.useCallback(
+    (sentenceId: string) => {
+      void repos.bookmarks.toggleSentence(packId, storyId, sentenceId).then(({ added }) => {
+        track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'sentence', from: 'reader' });
+        invalidateBookmarks();
+      });
+    },
+    [packId, storyId, invalidateBookmarks],
+  );
 
   const handleWordPress = React.useCallback(
     (token: TokenRow, sentenceId: string) => {
@@ -360,6 +406,8 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
               narration.playing &&
               narration.activeSentenceId === item.id
             }
+            bookmarked={bookmarkedSentenceIds.has(item.id)}
+            onToggleBookmark={toggleSentenceBookmark}
             onSeekToSentence={trackLoaded ? handleSeekToSentence : null}
             onExplain={() =>
               setExplainTarget({
@@ -419,6 +467,12 @@ export function ReaderScreen({ packId, storyId, from }: ReaderScreenProps) {
           tint={tokens.text}
         />
         <View className="flex-row gap-2">
+          <ChromeButton
+            icon={storyBookmarked ? 'bookmark' : 'bookmark-outline'}
+            label={storyBookmarked ? 'Remove story bookmark' : 'Bookmark this story'}
+            onPress={toggleStoryBookmark}
+            tint={storyBookmarked ? tokens.accent : tokens.text}
+          />
           <ChromeButton
             icon={allRevealed ? 'eye' : 'eye-outline'}
             label={allRevealed ? 'Hide all translations' : 'Reveal all translations'}

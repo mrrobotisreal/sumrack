@@ -28,9 +28,10 @@ const MODES: { mode: ThemeMode; label: string; hint: string }[] = [
 ];
 
 /**
- * Placeholder settings screen (T01). Real settings sections are assembled
- * incrementally: voices/models (T11), sync (T07), AI (T16), backup (T20)…
- * The theme selector below is the one real control this ticket ships.
+ * Settings — assembled incrementally across tickets: theme (T01), reading
+ * (T05), games (T13), voices/models (T11/T12/T23), content sync (T07),
+ * AI (T16), guided path (T17), notifications (T19), backup + home server
+ * (T20/T21), diagnostics (T22).
  */
 export default function SettingsScreen() {
   const { mode, setMode } = useThemeStore();

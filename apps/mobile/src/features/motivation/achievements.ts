@@ -1,5 +1,7 @@
 import type { Ionicons } from '@expo/vector-icons';
 
+import { STABILITY_MATURE_MIN } from '@/lib/mastery';
+
 /**
  * The achievement set (T19, §7.7 named minimum + a few natural milestones
  * already implied by shipped features). Ids are stable strings persisted in
@@ -110,7 +112,7 @@ export const LEVEL_ACHIEVEMENTS: { id: string; level: number }[] = [
   { id: 'level-10', level: 10 },
 ];
 
-/** T18's "mature" band boundary — the mastery bar for mastered-100. */
-export const MASTERED_STABILITY_DAYS = 30;
+/** T18's "mature" band boundary — the mastery bar for mastered-100 (T24: shared const). */
+export const MASTERED_STABILITY_DAYS = STABILITY_MATURE_MIN;
 export const MASTERED_TARGET = 100;
 export const BANK_TARGET = 100;

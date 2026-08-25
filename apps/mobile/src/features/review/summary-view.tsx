@@ -3,6 +3,7 @@ import { Pressable, Text as RNText, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { Rating } from '@/db/repositories/reviews';
+import { xpForRating } from '@/features/motivation/xp';
 
 import { ratingName } from './format';
 import type { SessionResult } from './session-screen';
@@ -12,7 +13,7 @@ interface SummaryViewProps {
   onDone: () => void;
   /**
    * Wall-clock session length (T14 daily session) — rendered as a stat row
-   * with the XP placeholder when provided; older single-mode screens omit it.
+   * with the session's review XP when provided; single-mode screens omit it.
    */
   durationMs?: number;
 }
@@ -26,15 +27,16 @@ function formatElapsed(ms: number): string {
 }
 
 /**
- * End-of-session summary (basic per ticket — richer stats/XP are T18/T19):
- * accuracy, counts, rating breakdown, elapsed time + XP slot (T14; the XP
- * value is a reserved placeholder — real XP rules land in T19). Ember flash
- * restraint: numbers, no confetti (UI_DESIGN §4).
+ * End-of-session summary: accuracy, counts, rating breakdown, elapsed time +
+ * review XP (T24 filled the T14-reserved slot: Σ per-rating XP from the T19
+ * table — exactly what the session's grades added to daily_activity.xp).
+ * Ember flash restraint: numbers, no confetti (UI_DESIGN §4).
  */
 export function SummaryView({ results, onDone, durationMs }: SummaryViewProps) {
   const total = results.length;
   const correct = results.filter((r) => r.correct).length;
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const xp = results.reduce((sum, r) => sum + xpForRating(r.rating), 0);
 
   const ratingCounts = [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy].map((rating) => ({
     rating,
@@ -67,8 +69,7 @@ export function SummaryView({ results, onDone, durationMs }: SummaryViewProps) {
             <Text variant="caption">Time</Text>
           </View>
           <View className="items-center">
-            {/* Reserved XP slot — T19 fills in the real number. */}
-            <Text className="font-ui-bold text-xl text-text-muted">—</Text>
+            <Text className="font-ui-bold text-xl text-accent">+{xp}</Text>
             <Text variant="caption">XP</Text>
           </View>
         </View>
