@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`branch map > renders the fixture dialogue deterministically (snapshot) 1`] = `
+"Branch map — «Ужин у мамы» (dinner-mini, A2)
+  11 nodes · 2 choice points · 3 endings (3 reachable)
+
+din-n01 mama: «Проходи, дорогой!»
+└─ din-n02 mama: «Ты голодный?»
+   ├─ [din-n02-c1] «Да, я очень голодный.»
+   │  └─ din-n03 mama: «Отлично, я сделала борщ!»
+   │     └─ din-n05 babushka: «Наш борщ — самый вкусный.»
+   │        └─ din-n06 mama: «Хочешь ещё борща?»
+   │           ├─ [din-n06-c1] «Да, можно ещё немного.»
+   │           │  └─ din-n07 mama: «Кушай, кушай!»
+   │           │     └─ din-n06 ↩ (shown above)
+   │           ├─ [din-n06-c2] «Спасибо, я сыт, всё было очень вкусно.»
+   │           │  └─ din-n08 babushka: «Молодец, приходи к нам ещё.»  ⇒ end-good
+   │           └─ [din-n06-c3] «Нет.»
+   │              └─ din-n10 mama: «Ну ладно.»  ⇒ end-awkward
+   ├─ [din-n02-c2] «Нет, спасибо, я не голодный.»
+   │  └─ din-n04 mama: «Ничего, борщ уже на столе.»
+   │     └─ din-n05 ↩ (shown above)
+   └─ [din-n02-c3] «А что это на стене?»
+      └─ din-n09 mama: «Там ничего нет.»
+         └─ din-n11 babushka: «Она тоже это видит.»  ⇒ end-strange
+
+paths: shortest 4 nodes · longest 6 nodes (cycles not counted)
+endings: end-good (good) ✓ · end-awkward (bad) ✓ · end-strange (strange) ✓
+
+warnings (1):
+  ! graph contains a cycle (allowed — every cycle here keeps an exit)"
+`;

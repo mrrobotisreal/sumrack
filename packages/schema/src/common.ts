@@ -8,14 +8,21 @@ export const CefrLevelSchema = z.enum(['A1', 'A2', 'B1', 'B2', 'C1']);
 export type CefrLevel = z.infer<typeof CefrLevelSchema>;
 
 /**
- * The four pack types (design §4.1):
- * - `stories` — a set of stories/articles/dialogues (the common case)
+ * The pack types (design §4.1 + V2 §3.1):
+ * - `stories` — a set of stories/articles (the common case)
  * - `course-unit` — a guided-path unit: references stories, includes a grammar
  *   mini-lesson, exercise config, and prompts
  * - `checkpoint` — a level checkpoint test (e.g., "A1 → A2 Checkpoint")
  * - `prompts` — journal prompt collections
+ * - `dialogue` — branching speak-your-choice dialogues (T25, V2 §3)
  */
-export const PackTypeSchema = z.enum(['stories', 'course-unit', 'checkpoint', 'prompts']);
+export const PackTypeSchema = z.enum([
+  'stories',
+  'course-unit',
+  'checkpoint',
+  'prompts',
+  'dialogue',
+]);
 export type PackType = z.infer<typeof PackTypeSchema>;
 
 /**

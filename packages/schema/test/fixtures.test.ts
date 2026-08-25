@@ -52,6 +52,38 @@ describe('sample pack fixtures', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('a2-dialogue-001 («Ужин у мамы») validates as a dialogue pack', () => {
+    const pack = loadPack('a2-dialogue-001');
+    expect(pack.type).toBe('dialogue');
+    expect(pack.stories).toHaveLength(0);
+    const dialogue = pack.dialogues![0]!;
+    // The T25 acceptance shape: 8–12 nodes, ≥2 choice points, 2–3 endings
+    // incl. a strange one, a trap-adjacent cycle, asrAlternates + hint used.
+    expect(dialogue.nodes.length).toBeGreaterThanOrEqual(8);
+    expect(dialogue.nodes.length).toBeLessThanOrEqual(12);
+    const choiceNodes = dialogue.nodes.filter((n) => n.choices !== undefined);
+    expect(choiceNodes.length).toBeGreaterThanOrEqual(2);
+    expect(dialogue.endings.map((e) => e.tone).sort()).toEqual(['bad', 'good', 'strange']);
+    expect(dialogue.nodes.some((n) => n.choices?.some((c) => c.asrAlternates))).toBe(true);
+    expect(dialogue.nodes.some((n) => n.choices?.some((c) => c.hint))).toBe(true);
+    // the «Ещё борща?» loop: din-n07 cycles back to the choice point din-n06
+    expect(dialogue.nodes.find((n) => n.id === 'din-n07')!.next).toBe('din-n06');
+    // every dialogue word token is fully annotated, story-style
+    for (const node of dialogue.nodes) {
+      const sentences = [node.sentence, ...(node.choices?.map((c) => c.sentence) ?? [])];
+      for (const sentence of sentences) {
+        for (const token of sentence.tokens) {
+          if (token.isPunct) continue;
+          const where = `${sentence.id}/"${token.text}"`;
+          expect(token.lemma, `${where} lemma`).toBeDefined();
+          expect(token.translation, `${where} translation`).toBeDefined();
+          expect(token.pos, `${where} pos`).toBeDefined();
+          expect(token.level, `${where} level`).toBeDefined();
+        }
+      }
+    }
+  });
+
   it('ё is preserved in content (never normalized to е)', () => {
     const raw = readFileSync(join(packDir('a1-creepypasta-002'), 'pack.json'), 'utf8');
     expect(raw).toContain('чёрные');

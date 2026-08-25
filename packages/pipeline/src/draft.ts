@@ -1,6 +1,7 @@
 import YAML from 'yaml';
 import { DraftError, type DraftIssue } from './errors.ts';
 import { FrontmatterSchema, type Frontmatter } from './frontmatter.ts';
+import { SentenceBlockCollector, type DraftSentence } from './sentence-block.ts';
 
 /**
  * Draft parser: one authored markdown draft file → an intermediate
@@ -9,35 +10,14 @@ import { FrontmatterSchema, type Frontmatter } from './frontmatter.ts';
  * implementation. Parsing is deliberately strict — an unrecognized line is an
  * error, never silently skipped — because drafts are written by Claude
  * sessions and silent tolerance would hide authoring mistakes.
+ *
+ * The sentence-block grammar itself (RU/EN/GRAMMAR + token table) lives in
+ * `sentence-block.ts`, shared verbatim with the dialogue draft parser (T25).
  */
 
-/** One row of a sentence's token annotation table, as authored. */
-export interface DraftTokenRow {
-  /** 1-based line number of this row in the draft file. */
-  line: number;
-  /** Surface form (NFC-normalized, ё preserved). */
-  text: string;
-  lemma?: string;
-  translation?: string;
-  pos?: string;
-  grammar?: string;
-  /** CEFR level cell, unvalidated here (checked during assembly). */
-  level?: string;
-  note?: string;
-}
-
-/** One `## sentence-id` block of a draft. */
-export interface DraftSentence {
-  /** 1-based line number of the `##` heading. */
-  line: number;
-  id: string;
-  ru: string;
-  /** Line the RU: text sits on (alignment errors point here). */
-  ruLine: number;
-  en: string;
-  grammarTopics?: string[];
-  rows: DraftTokenRow[];
-}
+// Re-exported so existing imports (tests, index) keep working after the T25 split.
+export type { DraftSentence, DraftTokenRow } from './sentence-block.ts';
+export { TABLE_COLUMNS } from './sentence-block.ts';
 
 /** A fully parsed draft file (frontmatter + sentence blocks). */
 export interface ParsedDraft {
@@ -46,17 +26,6 @@ export interface ParsedDraft {
   frontmatter: Frontmatter;
   sentences: DraftSentence[];
 }
-
-/** The token table's required header, in order. */
-export const TABLE_COLUMNS = [
-  'text',
-  'lemma',
-  'translation',
-  'pos',
-  'grammar',
-  'level',
-  'note',
-] as const;
 
 /** NFC-normalize every string in a parsed YAML value (ё is preserved: NFC never folds ё→е). */
 export function normalizeDeep(value: unknown): unknown {
@@ -70,37 +39,16 @@ export function normalizeDeep(value: unknown): unknown {
   return value;
 }
 
-/** Split a `| a | b |` table line into trimmed cells, honoring `\|` escapes. */
-function splitTableRow(line: string): string[] | null {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) return null;
-  const ESC = '\u0000'; // sentinel: never appears in draft text
-  const inner = trimmed.slice(1, -1).replaceAll('\\|', ESC);
-  return inner.split('|').map((cell) => cell.replaceAll(ESC, '|').trim());
-}
-
-/** True for the `| --- | --- |` separator row under a table header. */
-function isSeparatorRow(cells: string[]): boolean {
-  return cells.every((c) => /^:?-+:?$/.test(c));
-}
-
-const KEY_LINE = /^(RU|EN|GRAMMAR):\s*(.*)$/;
-
-interface OpenSentence {
-  sentence: DraftSentence;
-  sawHeader: boolean;
-  sawSeparator: boolean;
-}
-
 /**
- * Parse one draft file's text. Collects every issue it can find; throws
- * {@link DraftError} if any were found.
+ * Split a draft file into its frontmatter text and body lines, reporting
+ * fence problems as thrown DraftErrors. Shared by the story and dialogue
+ * draft parsers (and mirroring extras.ts).
  */
-export function parseDraft(file: string, source: string): ParsedDraft {
-  const issues: DraftIssue[] = [];
+export function splitFrontmatter(
+  file: string,
+  source: string,
+): { fmText: string; lines: string[]; fmEnd: number } {
   const lines = source.split(/\r?\n/);
-
-  // --- frontmatter ------------------------------------------------------
   if (lines[0]?.trim() !== '---') {
     throw new DraftError([
       { file, line: 1, message: 'draft must start with a "---" YAML frontmatter fence' },
@@ -112,19 +60,33 @@ export function parseDraft(file: string, source: string): ParsedDraft {
       { file, line: 1, message: 'frontmatter is never closed (no second "---" fence)' },
     ]);
   }
-  const fmText = lines.slice(1, fmEnd).join('\n');
-  let frontmatter: Frontmatter | undefined;
+  return { fmText: lines.slice(1, fmEnd).join('\n'), lines, fmEnd };
+}
+
+/**
+ * Parse + Zod-validate a draft's frontmatter YAML, pushing issues in the
+ * shared `frontmatter <path>: <message>` format. Returns undefined when
+ * anything failed (issues were pushed).
+ */
+export function parseFrontmatterWith<T>(
+  file: string,
+  fmText: string,
+  schema: {
+    safeParse: (
+      v: unknown,
+    ) =>
+      | { success: true; data: T }
+      | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
+  },
+  issues: DraftIssue[],
+): T | undefined {
   try {
     const raw = normalizeDeep(YAML.parse(fmText));
-    const result = FrontmatterSchema.safeParse(raw);
-    if (result.success) {
-      frontmatter = result.data;
-    } else {
-      for (const issue of result.error.issues) {
-        const path =
-          issue.path.length === 0 ? 'frontmatter' : `frontmatter ${issue.path.join('.')}`;
-        issues.push({ file, line: 2, message: `${path}: ${issue.message}` });
-      }
+    const result = schema.safeParse(raw);
+    if (result.success) return result.data;
+    for (const issue of result.error.issues) {
+      const path = issue.path.length === 0 ? 'frontmatter' : `frontmatter ${issue.path.join('.')}`;
+      issues.push({ file, line: 2, message: `${path}: ${issue.message}` });
     }
   } catch (e) {
     issues.push({
@@ -133,36 +95,25 @@ export function parseDraft(file: string, source: string): ParsedDraft {
       message: `frontmatter is not valid YAML: ${e instanceof Error ? e.message : String(e)}`,
     });
   }
+  return undefined;
+}
+
+/**
+ * Parse one story draft file's text. Collects every issue it can find; throws
+ * {@link DraftError} if any were found.
+ */
+export function parseDraft(file: string, source: string): ParsedDraft {
+  const issues: DraftIssue[] = [];
+  const { fmText, lines, fmEnd } = splitFrontmatter(file, source);
+  const frontmatter = parseFrontmatterWith(file, fmText, FrontmatterSchema, issues);
 
   // --- body: sentence blocks -------------------------------------------
   const sentences: DraftSentence[] = [];
-  let open: OpenSentence | null = null;
+  let open: SentenceBlockCollector | null = null;
 
   const closeSentence = () => {
     if (!open) return;
-    const { sentence, sawHeader } = open;
-    if (sentence.ru === '') {
-      issues.push({
-        file,
-        line: sentence.line,
-        message: `sentence "${sentence.id}" has no RU: line`,
-      });
-    }
-    if (sentence.en === '') {
-      issues.push({
-        file,
-        line: sentence.line,
-        message: `sentence "${sentence.id}" has no EN: line`,
-      });
-    }
-    if (!sawHeader || sentence.rows.length === 0) {
-      issues.push({
-        file,
-        line: sentence.line,
-        message: `sentence "${sentence.id}" has no token table (header row + at least one token row required)`,
-      });
-    }
-    sentences.push(sentence);
+    sentences.push(open.finish());
     open = null;
   };
 
@@ -187,11 +138,7 @@ export function parseDraft(file: string, source: string): ParsedDraft {
       }
       closeSentence();
       const id = heading[1]!.trim().normalize('NFC');
-      open = {
-        sentence: { line: lineNo, id, ru: '', ruLine: lineNo, en: '', rows: [] },
-        sawHeader: false,
-        sawSeparator: false,
-      };
+      open = new SentenceBlockCollector(file, issues, lineNo, id, `sentence "${id}"`);
       continue;
     }
 
@@ -203,98 +150,8 @@ export function parseDraft(file: string, source: string): ParsedDraft {
       });
       continue;
     }
-    const cur: OpenSentence = open;
 
-    const key = KEY_LINE.exec(line);
-    if (key) {
-      const value = key[2]!.trim().normalize('NFC');
-      if (cur.sawHeader) {
-        issues.push({
-          file,
-          line: lineNo,
-          message: `${key[1]}: line must come before the token table`,
-        });
-        continue;
-      }
-      if (key[1] === 'RU') {
-        if (cur.sentence.ru !== '')
-          issues.push({ file, line: lineNo, message: 'duplicate RU: line' });
-        if (value === '') issues.push({ file, line: lineNo, message: 'RU: line is empty' });
-        cur.sentence.ru = value;
-        cur.sentence.ruLine = lineNo;
-      } else if (key[1] === 'EN') {
-        if (cur.sentence.en !== '')
-          issues.push({ file, line: lineNo, message: 'duplicate EN: line' });
-        if (value === '') issues.push({ file, line: lineNo, message: 'EN: line is empty' });
-        cur.sentence.en = value;
-      } else {
-        const topics = value
-          .split(',')
-          .map((t) => t.trim())
-          .filter((t) => t !== '');
-        if (topics.length === 0) {
-          issues.push({ file, line: lineNo, message: 'GRAMMAR: line has no topics' });
-        }
-        cur.sentence.grammarTopics = topics;
-      }
-      continue;
-    }
-
-    const cells = splitTableRow(raw);
-    if (cells) {
-      if (!cur.sawHeader) {
-        const expected = TABLE_COLUMNS.join(', ');
-        const got = cells.map((c) => c.toLowerCase());
-        if (got.length !== TABLE_COLUMNS.length || got.some((c, k) => c !== TABLE_COLUMNS[k])) {
-          issues.push({
-            file,
-            line: lineNo,
-            message: `token table header must be exactly: ${expected} (got: ${cells.join(', ')})`,
-          });
-        }
-        cur.sawHeader = true;
-        continue;
-      }
-      if (!cur.sawSeparator) {
-        if (!isSeparatorRow(cells)) {
-          issues.push({
-            file,
-            line: lineNo,
-            message: 'expected the "| --- |" separator row under the table header',
-          });
-        }
-        cur.sawSeparator = true;
-        continue;
-      }
-      if (cells.length !== TABLE_COLUMNS.length) {
-        issues.push({
-          file,
-          line: lineNo,
-          message: `token row has ${cells.length} cells, expected ${TABLE_COLUMNS.length} (text, lemma, translation, pos, grammar, level, note)`,
-        });
-        continue;
-      }
-      const norm = (c: string | undefined): string | undefined => {
-        const v = (c ?? '').normalize('NFC');
-        return v === '' ? undefined : v;
-      };
-      const text = norm(cells[0]);
-      if (text === undefined) {
-        issues.push({ file, line: lineNo, message: 'token row has an empty "text" cell' });
-        continue;
-      }
-      cur.sentence.rows.push({
-        line: lineNo,
-        text,
-        lemma: norm(cells[1]),
-        translation: norm(cells[2]),
-        pos: norm(cells[3]),
-        grammar: norm(cells[4]),
-        level: norm(cells[5]),
-        note: norm(cells[6]),
-      });
-      continue;
-    }
+    if (open.tryLine(raw, line, lineNo)) continue;
 
     issues.push({
       file,

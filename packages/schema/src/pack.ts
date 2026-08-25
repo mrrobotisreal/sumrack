@@ -6,142 +6,11 @@ import {
   RelativePathSchema,
   StableIdSchema,
 } from './common';
+import { DialogueSchema } from './dialogue';
+import { SentenceSchema, WordStampSchema, type Sentence } from './sentence';
 
-/**
- * One surface word (or punctuation mark) of a sentence (design §4.2 `Token`).
- *
- * Punctuation-flag decision (T02): punctuation is its own token with
- * `isPunct: true`, and punctuation tokens must not carry linguistic
- * annotations (lemma/translation/pos/grammar/level). Word tokens leave
- * `isPunct` unset. This keeps `tokens` a faithful, ordered decomposition of
- * the sentence — `reconstructSentenceRu(tokens)` must reproduce
- * `Sentence.ru` exactly, which the Sentence schema enforces.
- */
-export const TokenSchema = z
-  .strictObject({
-    /** Surface form exactly as it appears in the sentence (NFC, ё preserved). */
-    text: z.string().min(1),
-    /**
-     * Punctuation flag: `true` marks this token as punctuation («, », —, ., …).
-     * Punctuation tokens carry no linguistic annotations. Absent = word token.
-     */
-    isPunct: z.boolean().optional(),
-    /**
-     * Whether a single space precedes this token when reconstructing the
-     * sentence. Defaults: `false` for the first token and for punctuation,
-     * `true` for word tokens. Override for cases like an opening « (space
-     * before it: `true`) and the word right after it (`false`).
-     */
-    spaceBefore: z.boolean().optional(),
-    /** Dictionary form (absent for punctuation and some proper names). */
-    lemma: z.string().min(1).optional(),
-    /** Context-appropriate English gloss of this occurrence. */
-    translation: z.string().min(1).optional(),
-    /** Part of speech: noun/verb/adj/adv/pron/prep/conj/part/num/name/... */
-    pos: z.string().min(1).optional(),
-    /** Compact grammar notes: "gen.pl.", "pf. of говорить", "1sg. pres.", ... */
-    grammar: z.string().min(1).optional(),
-    /** CEFR tag of the LEMMA (not the surface form) — drives the progress model. */
-    level: CefrLevelSchema.optional(),
-    /** Idiom or culture note, shown in the word popup when present. */
-    note: z.string().min(1).optional(),
-  })
-  .superRefine((tok, ctx) => {
-    if (tok.text !== tok.text.normalize('NFC')) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['text'],
-        message: 'token text must be UTF-8 NFC-normalized',
-      });
-    }
-    if (tok.isPunct) {
-      for (const field of ['lemma', 'translation', 'pos', 'grammar', 'level'] as const) {
-        if (tok[field] !== undefined) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [field],
-            message: `punctuation token "${tok.text}" must not carry "${field}"`,
-          });
-        }
-      }
-    }
-  });
-export type Token = z.infer<typeof TokenSchema>;
-
-/**
- * Rebuild the Russian sentence text from its tokens using the `spaceBefore`
- * defaults documented on {@link TokenSchema}. The Sentence schema requires
- * this to equal `Sentence.ru` exactly, so token annotations can never drift
- * from the sentence they annotate.
- */
-export function reconstructSentenceRu(tokens: readonly Token[]): string {
-  let out = '';
-  tokens.forEach((tok, i) => {
-    const space = tok.spaceBefore ?? (i > 0 && !tok.isPunct);
-    out += (space ? ' ' : '') + tok.text;
-  });
-  return out;
-}
-
-/**
- * One sentence of a story (design §4.2 `Sentence`): the Russian text, its
- * natural English translation (for the reader's reveal), and its tokens.
- */
-export const SentenceSchema = z
-  .strictObject({
-    /** Stable id, unique across the whole pack (user data references it). */
-    id: StableIdSchema,
-    /** Full sentence text, Russian, NFC, ё preserved. */
-    ru: z.string().min(1),
-    /** Natural English translation (for the sentence-reveal toggle). */
-    en: z.string().min(1),
-    /** Ordered decomposition of `ru` — words and punctuation. */
-    tokens: z.array(TokenSchema).min(1),
-    /** Grammar topics exercised: "past-tense", "genitive-plural", ... Feeds grammar coverage. */
-    grammarTopics: z.array(z.string().min(1)).optional(),
-  })
-  .superRefine((sentence, ctx) => {
-    if (sentence.ru !== sentence.ru.normalize('NFC')) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['ru'],
-        message: 'sentence text must be UTF-8 NFC-normalized',
-      });
-    }
-    const rebuilt = reconstructSentenceRu(sentence.tokens);
-    if (rebuilt !== sentence.ru) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['tokens'],
-        message: `tokens do not reconstruct the sentence: expected "${sentence.ru}", got "${rebuilt}"`,
-      });
-    }
-  });
-export type Sentence = z.infer<typeof SentenceSchema>;
-
-/**
- * A word-level timestamp on an audio track (design §4.2 `WordStamp`), driving
- * karaoke highlighting: token `tokenIndex` of sentence `sentenceId` is being
- * spoken during [startMs, endMs). Kept deliberately tolerant — no cross-stamp
- * monotonicity is enforced by schema (alignment quality is a pipeline
- * concern, and karaoke degrades gracefully on imperfect stamps).
- */
-export const WordStampSchema = z
-  .strictObject({
-    /** Id of the sentence this stamp points into (must exist in the story). */
-    sentenceId: StableIdSchema,
-    /** Index into that sentence's `tokens` array (0-based). */
-    tokenIndex: z.number().int().nonnegative(),
-    /** Start of the word in the audio, milliseconds. */
-    startMs: z.number().int().nonnegative(),
-    /** End of the word in the audio, milliseconds; must be > startMs. */
-    endMs: z.number().int().nonnegative(),
-  })
-  .refine((s) => s.endMs > s.startMs, {
-    message: 'endMs must be greater than startMs',
-    path: ['endMs'],
-  });
-export type WordStamp = z.infer<typeof WordStampSchema>;
+// Token/Sentence/WordStamp live in ./sentence since T25 (shared with the
+// dialogue schemas); re-exported unchanged via index.ts.
 
 /**
  * One narration rendition of a story in a specific voice and emotional style
@@ -314,11 +183,14 @@ export type JournalPrompt = z.infer<typeof JournalPromptSchema>;
  * versioning. Everything the app knows about Russian arrives in a pack.
  *
  * Cross-cutting invariants enforced here:
- * - story ids unique within the pack; sentence ids unique across the pack
- *   (user data references sentence ids pack-wide);
+ * - story ids and dialogue ids unique within the pack; sentence ids unique
+ *   across the pack — spanning stories AND dialogues (nodes + choices), since
+ *   user data references sentence ids pack-wide;
  * - every WordStamp resolves to a real sentence + token index in its story,
- *   and ends within the track duration;
- * - pack `type` implies required sections (stories / lesson / exercises / prompts).
+ *   and ends within the track duration (dialogue node audio is checked on the
+ *   node itself — see DialogueNodeSchema);
+ * - pack `type` implies required sections (stories / lesson / exercises /
+ *   prompts / dialogues).
  */
 export const PackSchema = z
   .strictObject({
@@ -336,6 +208,8 @@ export const PackSchema = z
     tags: z.array(z.string().min(1)),
     /** The pack's stories. May be empty only for non-`stories` pack types. */
     stories: z.array(StorySchema),
+    /** Branching dialogues (T25). Required ≥1 for `dialogue` packs. */
+    dialogues: z.array(DialogueSchema).optional(),
     /** Markdown grammar mini-lesson (course-unit packs). */
     lesson: LessonSchema.optional(),
     /** Authored exercise overrides (checkpoints mainly). */
@@ -382,6 +256,13 @@ export const PackSchema = z
         message: 'a "prompts" pack must contain at least one journal prompt',
       });
     }
+    if (pack.type === 'dialogue' && (pack.dialogues?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dialogues'],
+        message: 'a "dialogue" pack must contain at least one dialogue',
+      });
+    }
 
     // id uniqueness
     const storyIds = new Set<string>();
@@ -395,17 +276,51 @@ export const PackSchema = z
       }
       storyIds.add(story.id);
     });
+    const dialogueIds = new Set<string>();
+    (pack.dialogues ?? []).forEach((dialogue, di) => {
+      if (dialogueIds.has(dialogue.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dialogues', di, 'id'],
+          message: `duplicate dialogue id "${dialogue.id}"`,
+        });
+      }
+      dialogueIds.add(dialogue.id);
+    });
+
+    // Sentence ids are unique pack-wide, across stories AND dialogues
+    // (dialogue node lines and choice lines are sentences too).
     const sentenceIds = new Map<string, Sentence>();
+    const claimSentenceId = (sentence: Sentence, path: (string | number)[]) => {
+      if (sentenceIds.has(sentence.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path,
+          message: `duplicate sentence id "${sentence.id}" (sentence ids are unique pack-wide)`,
+        });
+      }
+      sentenceIds.set(sentence.id, sentence);
+    };
     pack.stories.forEach((story, si) => {
       story.sentences.forEach((sentence, qi) => {
-        if (sentenceIds.has(sentence.id)) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['stories', si, 'sentences', qi, 'id'],
-            message: `duplicate sentence id "${sentence.id}" (sentence ids are unique pack-wide)`,
-          });
-        }
-        sentenceIds.set(sentence.id, sentence);
+        claimSentenceId(sentence, ['stories', si, 'sentences', qi, 'id']);
+      });
+    });
+    (pack.dialogues ?? []).forEach((dialogue, di) => {
+      dialogue.nodes.forEach((node, ni) => {
+        claimSentenceId(node.sentence, ['dialogues', di, 'nodes', ni, 'sentence', 'id']);
+        node.choices?.forEach((choice, ci) => {
+          claimSentenceId(choice.sentence, [
+            'dialogues',
+            di,
+            'nodes',
+            ni,
+            'choices',
+            ci,
+            'sentence',
+            'id',
+          ]);
+        });
       });
     });
 

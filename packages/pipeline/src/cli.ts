@@ -1,5 +1,6 @@
 import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
+import { renderBranchMap } from './branch-map.ts';
 import { runAudition, runFinalize } from './audio.ts';
 import type { StampResult } from './stamps.ts';
 import { ElevenLabsClient } from './elevenlabs.ts';
@@ -98,6 +99,9 @@ function annotateCommand(args: string[]): void {
   try {
     const summary = runAnnotate(drafts, out, extras);
     const extraBits = [
+      summary.dialogues > 0
+        ? `${summary.dialogues} dialogue${summary.dialogues === 1 ? '' : 's'}`
+        : null,
       summary.pack.lesson ? 'lesson' : null,
       summary.pack.prompts ? `${summary.pack.prompts.length} prompts` : null,
       summary.pack.exercises ? `${summary.pack.exercises.length} exercises` : null,
@@ -108,6 +112,9 @@ function annotateCommand(args: string[]): void {
         `${summary.sentences} sentences, ${summary.tokens} tokens` +
         `${extraBits.length > 0 ? ` + ${extraBits.join(', ')}` : ''} — schema-valid`,
     );
+    for (const dialogue of summary.pack.dialogues ?? []) {
+      console.log(`\n${renderBranchMap(dialogue)}`);
+    }
   } catch (e) {
     if (e instanceof DraftError) {
       fail(e.issues.map(formatIssue).join('\n'), 1);
@@ -125,6 +132,9 @@ function validateCommand(args: string[]): void {
     const result = runValidate(file);
     if (result.ok) {
       console.log(`✓ ${file}: valid pack "${result.pack.id}" v${result.pack.version}`);
+      for (const dialogue of result.pack.dialogues ?? []) {
+        console.log(`\n${renderBranchMap(dialogue)}`);
+      }
     } else {
       failed = true;
       console.error(`✗ ${file}: invalid pack`);

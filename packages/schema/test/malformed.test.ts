@@ -26,6 +26,21 @@ const cases: Array<{ fixture: string; path: string; message: string }> = [
     path: 'stories[0].audio[0].timestamps[0].sentenceId',
     message: 'unknown sentence "ghost-s99"',
   },
+  {
+    fixture: 'dialogue-dangling-next',
+    path: 'dialogues[0].nodes[0].next',
+    message: 'next "dlg-ghost" does not resolve to a node',
+  },
+  {
+    fixture: 'dialogue-trap-cycle',
+    path: 'dialogues[0].nodes[2]',
+    message: 'dead trap',
+  },
+  {
+    fixture: 'dialogue-unreachable-node',
+    path: 'dialogues[0].nodes[4]',
+    message: 'node "dlg-n5" is unreachable from startNodeId "dlg-n1"',
+  },
 ];
 
 describe('malformed pack fixtures produce specific, readable errors', () => {

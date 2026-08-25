@@ -15,7 +15,11 @@ export const packs = sqliteTable('packs', {
   /** Stable pack id, e.g. "a1-creepypasta-001". */
   id: text('id').primaryKey(),
   version: integer('version').notNull(),
-  type: text('type').$type<'stories' | 'course-unit' | 'checkpoint' | 'prompts'>().notNull(),
+  // 'dialogue' joined the pack types in T25 (type-level only — dialogue
+  // content tables + importer support land in T26).
+  type: text('type')
+    .$type<'stories' | 'course-unit' | 'checkpoint' | 'prompts' | 'dialogue'>()
+    .notNull(),
   titleRu: text('title_ru').notNull(),
   titleEn: text('title_en').notNull(),
   level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),

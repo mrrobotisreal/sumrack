@@ -1,6 +1,14 @@
 import {
   CefrLevelSchema,
+  MAX_CHOICES_PER_NODE,
+  MAX_DIALOGUE_NODES,
+  MIN_CHOICES_PER_NODE,
+  PLAYER_CHARACTER_ID,
+  analyzeDialogueGraph,
   safeParsePack,
+  type Choice,
+  type Dialogue,
+  type DialogueNode,
   type Pack,
   type Sentence,
   type Story,
@@ -9,6 +17,7 @@ import {
 import { alignSentence } from './align.ts';
 import { DraftError, type DraftIssue } from './errors.ts';
 import type { DraftSentence, DraftTokenRow, ParsedDraft } from './draft.ts';
+import type { DraftDialogueNode, ParsedDialogueDraft } from './dialogue-draft.ts';
 import type { PackExtras } from './extras.ts';
 
 /**
@@ -113,17 +122,191 @@ function assembleSentence(file: string, draft: DraftSentence, issues: DraftIssue
 }
 
 /**
- * Assemble parsed drafts (plus optional pack extras — lesson / prompts /
- * exercises, T17) into a Pack. Story order = argument order. A pack with no
- * story drafts at all (checkpoint / prompts types) assembles from extras
- * alone, which must then carry the `pack:` meta. Throws {@link DraftError}
- * with every issue found if the inputs cannot produce a valid pack.
+ * Assemble one parsed dialogue draft into a Dialogue (T25). Characters and
+ * endings come from the frontmatter (already Zod-validated shapes); nodes and
+ * choices get their sentences through the same alignment/annotation path as
+ * story sentences. Every check that can carry a draft line number happens
+ * here — speaker resolution, target resolution, bounds, duplicate ids, the
+ * graph properties — so authors get `file:line:` errors; the shared schema's
+ * path-precise refinements remain the backstop.
  */
-export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras): Pack {
-  if (drafts.length === 0 && !extras) {
+function assembleDialogue(draft: ParsedDialogueDraft, issues: DraftIssue[]): Dialogue {
+  const { file, frontmatter } = draft;
+  const characterIds = new Set(frontmatter.characters.map((c) => c.id));
+  const endingIds = new Set(frontmatter.endings.map((e) => e.id));
+  const nodeIds = new Set(draft.nodes.map((n) => n.id));
+  const before = issues.length;
+
+  if (draft.nodes.length > MAX_DIALOGUE_NODES) {
+    issues.push({
+      file,
+      line: draft.nodes[MAX_DIALOGUE_NODES]!.line,
+      message: `dialogue "${frontmatter.dialogue.id}" has ${draft.nodes.length} nodes — the maximum is ${MAX_DIALOGUE_NODES}`,
+    });
+  }
+
+  const seenNodeIds = new Map<string, DraftDialogueNode>();
+  const nodes: DialogueNode[] = draft.nodes.map((draftNode) => {
+    const seen = seenNodeIds.get(draftNode.id);
+    if (seen !== undefined) {
+      issues.push({
+        file,
+        line: draftNode.line,
+        message: `duplicate node id "${draftNode.id}" (already used at ${file}:${seen.line})`,
+      });
+    }
+    seenNodeIds.set(draftNode.id, draftNode);
+
+    if (draftNode.speakerId !== undefined && !characterIds.has(draftNode.speakerId)) {
+      issues.push({
+        file,
+        line: draftNode.speakerLine ?? draftNode.line,
+        message: `node "${draftNode.id}" SPEAKER "${draftNode.speakerId}" is not in the characters list (${[...characterIds].join(', ')})`,
+      });
+    }
+
+    const node: DialogueNode = {
+      id: draftNode.id,
+      // '' only when SPEAKER: was missing — the parser already errored, so
+      // assembly never survives to the schema backstop in that case.
+      speakerId: draftNode.speakerId ?? '',
+      sentence: assembleSentence(file, draftNode.sentence, issues),
+    };
+
+    const term = draftNode.terminator;
+    if (term?.kind === 'next') {
+      if (!nodeIds.has(term.target)) {
+        issues.push({
+          file,
+          line: term.line,
+          message: `node "${draftNode.id}" NEXT target "${term.target}" is not a node in this draft`,
+        });
+      }
+      node.next = term.target;
+    } else if (term?.kind === 'ending') {
+      if (!endingIds.has(term.target)) {
+        issues.push({
+          file,
+          line: term.line,
+          message: `node "${draftNode.id}" ENDING "${term.target}" is not defined in the endings frontmatter (${[...endingIds].join(', ')})`,
+        });
+      }
+      node.endingId = term.target;
+    } else if (term?.kind === 'choices') {
+      if (draftNode.speakerId === PLAYER_CHARACTER_ID) {
+        issues.push({
+          file,
+          line: draftNode.line,
+          message: `node "${draftNode.id}" speaks as "player" but has CHOICES — choices already speak as the player; put them on the line being answered (an NPC node)`,
+        });
+      }
+      if (
+        term.choices.length < MIN_CHOICES_PER_NODE ||
+        term.choices.length > MAX_CHOICES_PER_NODE
+      ) {
+        issues.push({
+          file,
+          line: term.line,
+          message: `node "${draftNode.id}" has ${term.choices.length} choice${term.choices.length === 1 ? '' : 's'} — a choice point needs ${MIN_CHOICES_PER_NODE}–${MAX_CHOICES_PER_NODE}`,
+        });
+      }
+      const seenChoiceIds = new Set<string>();
+      node.choices = term.choices.map((draftChoice) => {
+        if (seenChoiceIds.has(draftChoice.id)) {
+          issues.push({
+            file,
+            line: draftChoice.line,
+            message: `duplicate choice id "${draftChoice.id}" in node "${draftNode.id}"`,
+          });
+        }
+        seenChoiceIds.add(draftChoice.id);
+        if (!nodeIds.has(draftChoice.targetId)) {
+          issues.push({
+            file,
+            line: draftChoice.line,
+            message: `choice "${draftChoice.id}" target "${draftChoice.targetId}" is not a node in this draft`,
+          });
+        }
+        const choice: Choice = {
+          id: draftChoice.id,
+          sentence: assembleSentence(file, draftChoice.sentence, issues),
+          next: draftChoice.targetId,
+        };
+        if (draftChoice.alts.length > 0) choice.asrAlternates = draftChoice.alts.map((a) => a.text);
+        if (draftChoice.hint) choice.hint = { ru: draftChoice.hint.ru, en: draftChoice.hint.en };
+        return choice;
+      });
+    }
+    return node;
+  });
+
+  const startNodeId = frontmatter.dialogue.startNodeId ?? draft.nodes[0]!.id;
+  if (!nodeIds.has(startNodeId)) {
+    issues.push({
+      file,
+      line: 2,
+      message: `frontmatter dialogue.startNodeId "${startNodeId}" is not a node in this draft`,
+    });
+  }
+
+  const dialogue: Dialogue = {
+    id: frontmatter.dialogue.id,
+    title: frontmatter.dialogue.title,
+    level: frontmatter.dialogue.level,
+    characters: frontmatter.characters,
+    nodes,
+    startNodeId,
+    endings: frontmatter.endings,
+  };
+
+  // Graph properties — only when every reference resolved (otherwise the
+  // reachability fallout would bury the precise errors above).
+  if (issues.length === before) {
+    const analysis = analyzeDialogueGraph(dialogue);
+    const lineOf = new Map(draft.nodes.map((n) => [n.id, n.line]));
+    for (const id of analysis.unreachable) {
+      issues.push({
+        file,
+        line: lineOf.get(id),
+        message: `node "${id}" is unreachable from the start node "${startNodeId}" — dead branch`,
+      });
+    }
+    for (const id of analysis.deadTraps) {
+      issues.push({
+        file,
+        line: lineOf.get(id),
+        message: `node "${id}" can never reach an ending (dead trap — every cycle needs an exit path to an ending)`,
+      });
+    }
+    for (const id of analysis.unreferencedEndings) {
+      issues.push({
+        file,
+        line: 2,
+        message: `ending "${id}" is never referenced by any node — point a node's ENDING: at it or delete it`,
+      });
+    }
+  }
+
+  return dialogue;
+}
+
+/**
+ * Assemble parsed drafts (story drafts + dialogue drafts, plus optional pack
+ * extras — lesson / prompts / exercises, T17) into a Pack. Story/dialogue
+ * order = argument order. A pack with no drafts at all (checkpoint / prompts
+ * types) assembles from extras alone, which must then carry the `pack:` meta.
+ * Throws {@link DraftError} with every issue found if the inputs cannot
+ * produce a valid pack.
+ */
+export function assemblePack(
+  drafts: readonly ParsedDraft[],
+  extras?: PackExtras,
+  dialogueDrafts: readonly ParsedDialogueDraft[] = [],
+): Pack {
+  if (drafts.length === 0 && dialogueDrafts.length === 0 && !extras) {
     throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
   }
-  if (drafts.length === 0 && extras && !extras.pack) {
+  if (drafts.length === 0 && dialogueDrafts.length === 0 && extras && !extras.pack) {
     throw new DraftError([
       {
         file: extras.file,
@@ -135,13 +318,17 @@ export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras
   }
   const issues: DraftIssue[] = [];
 
-  // Pack meta must be identical across all drafts of a multi-story pack.
-  const first = drafts[0];
-  const packMetaJson = JSON.stringify(first ? first.frontmatter.pack : extras!.pack);
-  for (const d of drafts.slice(1)) {
-    if (JSON.stringify(d.frontmatter.pack) !== packMetaJson) {
+  // Pack meta must be identical across all drafts of a multi-draft pack.
+  const metas: { file: string; pack: ParsedDraft['frontmatter']['pack'] }[] = [
+    ...drafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
+    ...dialogueDrafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
+  ];
+  const first = metas[0];
+  const packMetaJson = JSON.stringify(first ? first.pack : extras!.pack);
+  for (const m of metas.slice(1)) {
+    if (JSON.stringify(m.pack) !== packMetaJson) {
       issues.push({
-        file: d.file,
+        file: m.file,
         line: 2,
         message: `frontmatter "pack" section differs from ${first!.file} — all drafts of one pack must carry identical pack meta`,
       });
@@ -156,9 +343,21 @@ export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras
     });
   }
 
-  // Unique story ids per pack, unique sentence ids pack-wide.
+  // Unique story/dialogue ids per pack, unique sentence ids pack-wide
+  // (dialogue node and choice ids double as their sentence ids).
   const storyIds = new Map<string, string>();
   const sentenceIds = new Map<string, { file: string; line: number }>();
+  const claimSentenceId = (file: string, id: string, line: number) => {
+    const seen = sentenceIds.get(id);
+    if (seen !== undefined) {
+      issues.push({
+        file,
+        line,
+        message: `duplicate sentence id "${id}" (already used at ${seen.file}:${seen.line}) — sentence ids are unique pack-wide`,
+      });
+    }
+    sentenceIds.set(id, { file, line });
+  };
   for (const d of drafts) {
     const sid = d.frontmatter.story.id;
     const seenIn = storyIds.get(sid);
@@ -170,16 +369,25 @@ export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras
       });
     }
     storyIds.set(sid, d.file);
-    for (const s of d.sentences) {
-      const seen = sentenceIds.get(s.id);
-      if (seen !== undefined) {
-        issues.push({
-          file: d.file,
-          line: s.line,
-          message: `duplicate sentence id "${s.id}" (already used at ${seen.file}:${seen.line}) — sentence ids are unique pack-wide`,
-        });
+    for (const s of d.sentences) claimSentenceId(d.file, s.id, s.line);
+  }
+  const dialogueIds = new Map<string, string>();
+  for (const d of dialogueDrafts) {
+    const did = d.frontmatter.dialogue.id;
+    const seenIn = dialogueIds.get(did);
+    if (seenIn !== undefined) {
+      issues.push({
+        file: d.file,
+        line: 2,
+        message: `duplicate dialogue id "${did}" (already used in ${seenIn})`,
+      });
+    }
+    dialogueIds.set(did, d.file);
+    for (const n of d.nodes) {
+      claimSentenceId(d.file, n.sentence.id, n.line);
+      if (n.terminator?.kind === 'choices') {
+        for (const c of n.terminator.choices) claimSentenceId(d.file, c.sentence.id, c.line);
       }
-      sentenceIds.set(s.id, { file: d.file, line: s.line });
     }
   }
 
@@ -190,8 +398,9 @@ export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras
     sentences: d.sentences.map((s) => assembleSentence(d.file, s, issues)),
     audio: [], // audio tracks are attached by T09's `pipeline audio`
   }));
+  const dialogues: Dialogue[] = dialogueDrafts.map((d) => assembleDialogue(d, issues));
 
-  const meta = first ? first.frontmatter.pack : extras!.pack!;
+  const meta = first ? first.pack : extras!.pack!;
   const pack: Pack = {
     id: meta.id,
     version: meta.version,
@@ -201,6 +410,7 @@ export function assemblePack(drafts: readonly ParsedDraft[], extras?: PackExtras
     tags: meta.tags,
     stories,
   };
+  if (dialogues.length > 0) pack.dialogues = dialogues;
   if (extras?.lesson) pack.lesson = extras.lesson;
   if (extras?.prompts) pack.prompts = extras.prompts;
   if (extras?.exercises) pack.exercises = extras.exercises;

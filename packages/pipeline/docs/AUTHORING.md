@@ -8,6 +8,8 @@ A **draft** is one markdown file containing **one story**: its metadata, its sen
 
 A **pack** is the unit the app installs. A pack with several stories = several draft files (one per story) that share identical `pack:` frontmatter, passed to the CLI together in reading order.
 
+Since T25 there is a second draft kind: **dialogue drafts** (one file = one branching dialogue) — see the [Dialogue drafts](#dialogue-drafts-dialoguemd--t25) section below. Everything in the story sections (sentence blocks, alignment, lemma conventions, gotchas) applies to dialogue lines unchanged.
+
 ## Running the pipeline
 
 From the `Sumrak` repo root:
@@ -36,7 +38,7 @@ pnpm pipeline audio s1.draft.md s2.draft.md -o packs/my-pack \
 pnpm pipeline publish packs/my-pack --content ../sumrak-content --push
 ```
 
-**Voice ids must resolve to a voice on the ElevenLabs account** — the resolver matches the alias before " - tagline" in the account's voice list. Copy the id from a recently published draft (e.g. `elevenlabs:Ivan` for creepy-whisper in pack 003 v2) rather than inventing one; a wrong id fails at the first render call. (T22: the worked example previously said `elevenlabs:Anton`, a fixture-era id.)
+**Voice ids must resolve to a voice on the ElevenLabs account** — the resolver matches the alias before " - tagline" in the account's voice list. Copy the id from a recently published draft rather than inventing one; a wrong id fails at the first render call (annotate only shape-checks it). Known-resolving ids at T25 time: `elevenlabs:Ivan` (creepy-whisper, pack 003 v2); `elevenlabs:Mariia` and `elevenlabs:Kate` are the design §6.2 picks for warm/gentle family voices — confirm against the account before an audio session. (T22: the worked example previously said `elevenlabs:Anton`, a fixture-era id.)
 
 Audio notes: the `voice:` frontmatter drives rendering — `stylePrompt` is fed
 to ElevenLabs as `previous_text` (write it in Russian, in the story's mood, as
@@ -99,7 +101,7 @@ A draft has two parts: **YAML frontmatter** between `---` fences, then **sentenc
 pack:
   id: a1-creepypasta-002 # stable kebab-case id, never renumbered
   version: 1 # integer ≥ 1; bump to update a published pack
-  type: stories # stories | course-unit | checkpoint | prompts
+  type: stories # stories | course-unit | checkpoint | prompts | dialogue
   title: { ru: 'Фотография', en: 'The Photograph' }
   level: A1 # A1 | A2 | B1 | B2 | C1  (no C2)
   tags: ['creepypasta', 'horror', 'grammar:genitive']
@@ -158,15 +160,15 @@ Also allowed in the body: blank lines, single-line HTML comments (`<!-- … -->`
 
 ### Token table columns
 
-| Column        | Word tokens                                                                                                             | Punctuation tokens          |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `text`        | **Required.** The surface form exactly as it appears in the sentence, capitalization included.                          | The punctuation mark itself |
-| `lemma`       | **Required.** Dictionary form: nominative singular for nouns/adjectives, imperfective infinitive for verbs (see below). | Must be empty               |
-| `translation` | **Required.** Context-appropriate English gloss of _this occurrence_ («дома» in "окно дома" → "of the house").          | Must be empty               |
-| `pos`         | Recommended. `noun`, `verb`, `adj`, `adv`, `pron`, `prep`, `conj`, `part`, `pred`, `num`, `name`, `interj`.             | Must be empty               |
-| `grammar`     | Recommended. Compact notes: `f.sg. nom.`, `1sg. pres. (impf.)`, `+ gen.`, `pf. of говорить`.                            | Must be empty               |
-| `level`       | Recommended. CEFR level **of the lemma** (`A1`–`C1`), not of the surface form or the sentence.                          | Must be empty               |
-| `note`        | Optional. Idiom/culture note shown in the word popup.                                                                   | Optional                    |
+| Column        | Word tokens                                                                                                                                                                                                                                                                                                         | Punctuation tokens          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `text`        | **Required.** The surface form exactly as it appears in the sentence, capitalization included.                                                                                                                                                                                                                      | The punctuation mark itself |
+| `lemma`       | **Required.** Dictionary form: nominative singular for nouns/adjectives, imperfective infinitive for verbs (see below).                                                                                                                                                                                             | Must be empty               |
+| `translation` | **Required.** Context-appropriate English gloss of _this occurrence_ («дома» in "окно дома" → "of the house").                                                                                                                                                                                                      | Must be empty               |
+| `pos`         | Recommended. `noun`, `verb`, `adj`, `adv`, `pron`, `prep`, `conj`, `part`, `pred`, `num`, `name`, `interj`. `pred` covers impersonal predicatives («есть», «нет», «можно», «страшно» in «мне страшно»); a short-form adjective with an explicit subject stays `adj` with "short form" noted in `grammar` («я сыт»). | Must be empty               |
+| `grammar`     | Recommended. Compact notes: `f.sg. nom.`, `1sg. pres. (impf.)`, `+ gen.`, `pf. of говорить`.                                                                                                                                                                                                                        | Must be empty               |
+| `level`       | Recommended. CEFR level **of the lemma** (`A1`–`C1`), not of the surface form or the sentence.                                                                                                                                                                                                                      | Must be empty               |
+| `note`        | Optional. Idiom/culture note shown in the word popup.                                                                                                                                                                                                                                                               | Optional                    |
 
 - **A token is punctuation automatically** when its `text` contains no letters or digits (`.`, `,`, `:`, `«`, `»`, `—`, `…`, `!`, `?`). You never mark it; you only leave its annotation cells empty. Hyphenated words like «кто-то» contain letters, so they are word tokens (keep them as **one** token).
 - Missing `lemma` or `translation` on a word token is a **hard error with a line number** — by design the pipeline never auto-fills. `pos`/`grammar`/`level` may be omitted where they genuinely add nothing (e.g. particles), but fill them in as a rule; the app's progress model runs on `level`.
@@ -185,7 +187,7 @@ Practical workflow: write the `RU:` sentence first, then split it into tokens me
 1. **ё is sacred.** Always write ё where Russian orthography has it («чёрный», «моём», «всё») — in `RU:`, in `text`, and in `lemma`. The pipeline preserves it exactly (it NFC-normalizes Unicode but never folds ё→е); the app handles ё/е-tolerant _matching_ on its own. Writing «черный» in a draft bakes the wrong form into content forever.
 2. **Punctuation is its own row.** «Стук в стене.» is four tokens: `Стук`, `в`, `стене`, `.` — forgetting the final period row is the most common alignment error.
 3. **Capitalization in `text`, lowercase in `lemma`.** Surface «У» keeps its capital; its lemma is «у». (Proper names keep their capital in the lemma too.)
-4. **Lemma conventions**: verbs → imperfective infinitive as a rule, with the aspect noted in `grammar` (`1sg. pres. (impf.)`; for perfective forms use the perfective infinitive as lemma and note `pf. of <impf.>` in grammar). Nouns/adjectives → nominative singular (masculine for adjectives). Personal pronoun forms («меня», «ней», «его» _him_) → their nominative («я», «она», «он»); possessive «его/её/их» (_his/her/their_) → itself; declining possessives «мой/твой/наш/ваш» → masculine nominative singular («моём» → «мой»), tagged `pron`. Pronoun-adjectives («этот», «каждый», «весь», «такой») → masculine nominative singular, tagged `pron`, with adjective-style grammar notes (`m.sg. acc. (time expression)`). Numerals, cardinal and ordinal («девять», «десятом») → tagged `num`, lemma = nominative («девять», «десятый»); note case government on the governed noun's row (`m.pl. gen. (after 5+)`). Comparative «как» (_like_) → `conj`.
+4. **Lemma conventions**: verbs → imperfective infinitive as a rule, with the aspect noted in `grammar` (`1sg. pres. (impf.)`; for perfective forms use the perfective infinitive as lemma and note `pf. of <impf.>` in grammar). Nouns/adjectives → nominative singular (masculine for adjectives). Personal pronoun forms («меня», «ней», «его» _him_) → their nominative («я», «она», «он»); possessive «его/её/их» (_his/her/their_) → itself; declining possessives «мой/твой/наш/ваш» → masculine nominative singular («моём» → «мой»), tagged `pron`. Pronoun-adjectives («этот», «каждый», «весь», «такой») → masculine nominative singular, tagged `pron`, with adjective-style grammar notes (`m.sg. acc. (time expression)`). Numerals, cardinal and ordinal («девять», «десятом») → tagged `num`, lemma = nominative («девять», «десятый»); note case government on the governed noun's row (`m.pl. gen. (after 5+)`). Comparative «как» (_like_) → `conj`. Adverbs → the adverb itself, even when historically a frozen noun form («дома» _at home_ → «дома», not «дом»; «утром» _in the morning_ as an adverb → «утром»).
 5. **Glosses are contextual.** `translation` is what the word means _here_, so «стоит» in «В окне стоит человек» is "stands", not "costs". Add the general sense to `note` if it helps.
 6. **Sentence ids are pack-wide unique and permanent.** Prefix them with a story slug (`photo-s01`, `knock-s01`) so two stories in one pack can never collide.
 7. **Single spaces only** in `RU:` — a double space is an alignment error. Use « » for quotes (not " "), — for dashes, … for ellipsis; they're all just punctuation tokens.
@@ -259,11 +261,151 @@ pnpm pipeline annotate the-door.draft.md -o pack.json
 #   1 story, 2 sentences, 14 tokens — schema-valid
 ```
 
+## Dialogue drafts (`*.dialogue.md` — T25)
+
+A **dialogue draft** is one markdown file containing **one branching dialogue**: NPCs speak to the learner, the learner answers out loud, and on-device ASR picks the branch (the speak-your-choice simulator, design V2 §3). One dialogue = one draft file; a multi-dialogue pack is several files with identical `pack:` frontmatter. Story drafts and dialogue drafts can even share a pack — the pipeline tells them apart by the frontmatter (`dialogue:` section present), never by filename.
+
+Everything you know from story drafts carries over unchanged: the sentence block (RU/EN/GRAMMAR + 7-column token table), the alignment rule, all the lemma conventions and gotchas above, NFC, ё. **Every line of a dialogue — NPC and player alike — is a fully annotated sentence**, tap-word explorable in the app like story text.
+
+### Frontmatter
+
+```yaml
+---
+pack:
+  id: a2-dialogue-001
+  version: 1
+  type: dialogue # the pack type for dialogue packs
+  title: { ru: 'Ужин у мамы', en: "Dinner at Mama's" }
+  level: A2
+  tags: ['dialogue', 'family']
+dialogue:
+  id: dinner-mini # unique within the pack
+  title: { ru: 'Ужин у мамы', en: "Dinner at Mama's" }
+  level: A2 # may differ from the pack level, like story.level
+  startNodeId: din-n01 # OPTIONAL — defaults to the first scene block
+characters:
+  - id: mama # who can speak; ids are referenced by SPEAKER:
+    name: { ru: 'Мама', en: 'Mama' }
+    voice: elevenlabs:Mariia # provider-prefixed, like story voice ids
+    style: warm
+  - id: player # RESERVED id: the learner. Its voice/style name the
+    name: { ru: 'Ты', en: 'You' } # neutral "coach" voice used for optional
+    voice: elevenlabs:Ivan # model audio of player lines (T26)
+    style: neutral
+endings:
+  - id: end-good # referenced by nodes' ENDING: lines
+    title: { ru: 'Отличное впечатление', en: 'A great impression' }
+    recap: { ru: 'Ты поел, и все довольны.', en: 'You ate, and everyone is pleased.' }
+    tone: good # good | bad | strange
+---
+```
+
+### Scene blocks
+
+The body is a sequence of **scene blocks** — one per node of the graph. A linear node ends with `NEXT:`, a terminal node with `ENDING:` — each on its own line directly after the token table (blank lines around it are fine):
+
+```markdown
+## din-n01
+
+SPEAKER: mama
+
+RU: Проходи, дорогой!
+EN: Come in, dear!
+
+| text    | lemma     | translation | pos  | grammar                    | level | note |
+| ------- | --------- | ----------- | ---- | -------------------------- | ----- | ---- |
+| Проходи | проходить | come in     | verb | 2sg. imper. (impf.)        | A2    |      |
+| ,       |           |             |      |                            |       |      |
+| дорогой | дорогой   | dear        | adj  | m.sg. nom. (as an address) | A2    |      |
+| !       |           |             |      |                            |       |      |
+
+NEXT: din-n02
+```
+
+A terminal node is identical but closes with `ENDING: <ending-id>` instead (e.g. `ENDING: end-good`). A choice point closes with `CHOICES:` and its choice blocks:
+
+```markdown
+## din-n02
+
+SPEAKER: mama
+
+RU: Ты голодный?
+EN: Are you hungry?
+
+| text     | lemma    | translation | pos  | grammar         | level | note |
+| -------- | -------- | ----------- | ---- | --------------- | ----- | ---- |
+| Ты       | ты       | you         | pron | nom. (informal) | A1    |      |
+| голодный | голодный | hungry      | adj  | m.sg. nom.      | A2    |      |
+| ?        |          |             |      |                 |       |      |
+
+CHOICES:
+
+### din-n02-c1 -> din-n03
+
+RU: Да, я очень голодный.
+EN: Yes, I'm very hungry.
+
+| text     | lemma    | translation | pos  | grammar    | level | note |
+| -------- | -------- | ----------- | ---- | ---------- | ----- | ---- |
+| Да       | да       | yes         | part |            | A1    |      |
+| ,        |          |             |      |            |       |      |
+| я        | я        | I           | pron | nom.       | A1    |      |
+| очень    | очень    | very        | adv  |            | A1    |      |
+| голодный | голодный | hungry      | adj  | m.sg. nom. | A2    |      |
+| .        |          |             |      |            |       |      |
+
+ALT: Да, очень.
+HINT: Скажи, что ты голодный. | Say that you're hungry.
+```
+
+Block by block:
+
+- `## <node-id>` — starts a node. One node = **one spoken sentence**. Node ids are kebab-case, unique, and **double as the sentence id**, so they share the pack-wide sentence-id namespace with story sentences and choice ids — prefix them with a dialogue slug (`din-n01`, `din-n02`, …).
+- `SPEAKER: <characterId>` — who says this line; must be a `characters:` id. `SPEAKER: player` is allowed for a scripted (non-branching) player line.
+- Then the standard sentence block: `RU:` / `EN:` / optional `GRAMMAR:` + the token table, exactly as in story drafts.
+- Then **exactly one** of:
+  - `NEXT: <node-id>` — linear continuation;
+  - `ENDING: <ending-id>` — the dialogue finishes here with that ending;
+  - `CHOICES:` — this is a **choice point**: the player answers this line out loud.
+
+### Choices
+
+Choices live **on the node being answered** (an NPC line, usually a question) — there are no separate player nodes; each choice IS the player's spoken line. After `CHOICES:`, write 2–4 choice blocks:
+
+- `### <choice-id> -> <node-id>` — the choice id (convention: `<node-id>-c1`, `-c2`, …; it doubles as the choice's sentence id) and the node the story branches to.
+- The player's line as a standard sentence block (RU/EN + token table — annotate it fully; choice cards are tap-word explorable too).
+- `ALT: <alternate phrasing>` — optional, repeatable. Natural rephrasings the ASR matcher should also accept for this choice («Да, очень.» for «Да, я очень голодный.»). Write them as a speaker would actually say them; matching is case/punctuation/ё-tolerant on the app side.
+- `HINT: <ru nudge> | <en nudge>` — optional, one line, both halves required (escape a literal `|` as `\|`). Shown on long-press when the learner is stuck.
+
+No `SPEAKER:` in choices — choices always speak as `player`. A node with `CHOICES:` must **not** have `SPEAKER: player` (the player can't await their own answer).
+
+### Graph rules (the pipeline enforces all of these)
+
+- `startNodeId` and every `NEXT:` / `-> target` / `ENDING:` must resolve.
+- Every node must be **reachable** from the start — an unreachable node is a dead branch and an error.
+- Every ending must be referenced by at least one node, and at least one ending must be reachable.
+- **Cycles are allowed** («Ещё борща?» can loop) — but every node on a cycle must still have a path to an ending. A cycle with no exit is a dead trap and an error.
+- Bounds: ≤ 60 nodes per dialogue, 2–4 choices per choice point.
+
+### The branch map
+
+`annotate` and `validate` print a **branch map** for every dialogue — a tree of the graph with each line's RU preview, choice fan-out, `⇒ ending` markers, `↩` back-references for already-shown nodes, path-length stats, per-ending reachability, and warnings. Read it after every annotate run: it is the fastest way to see a dangling branch, a lopsided path, or an ending you forgot to wire. It is an authoring aid only — nothing parses it.
+
+### Dialogue gotchas
+
+1. **One sentence per node.** A node is one spoken line. If a character says two sentences, that's two nodes chained with `NEXT:` (each gets its own audio in T26).
+2. **Ids are a single namespace.** Node ids and choice ids are sentence ids; they must be unique across the entire pack (stories included). Slug-prefix everything.
+3. **Wire every ending.** Defining an ending in frontmatter is not enough — some node must `ENDING:` it, and it must be reachable.
+4. **Give loops an exit.** If choices can circle back (great for pushy-mama dinner loops), make sure at least one choice leads onward.
+5. **ALT lines are for natural variation**, not for wrong answers — every ALT should mean the same thing as the choice's RU. Branch-changing answers are separate choices.
+6. Content guidance: keep choices clearly distinct from each other in _wording_ (the ASR matcher scores against each), and keep player lines speakable — short, natural, rhythmic.
+
 ## Reference files
 
-- `packages/pipeline/fixtures/the-photograph.draft.md` — the canonical full-length example: the T02 sample pack «Фотография» in draft form; `annotate` reproduces that pack exactly.
-- `packages/pipeline/fixtures/broken/` — deliberately broken drafts showing the two big failure classes (missing lemma, misaligned table) and their error messages.
-- `packages/schema/src/pack.ts` — the Zod schema every emitted pack must satisfy (the pipeline runs it for you).
+- `packages/pipeline/fixtures/the-photograph.draft.md` — the canonical full-length story example: the T02 sample pack «Фотография» in draft form; `annotate` reproduces that pack exactly.
+- `packages/pipeline/fixtures/the-dinner.dialogue.md` — the canonical dialogue example: the T25 fixture pack «Ужин у мамы» (11 nodes, 2 choice points, 3 endings, a legal loop) in draft form; `annotate` reproduces `packages/schema/fixtures/packs/a2-dialogue-001` exactly.
+- `packages/pipeline/fixtures/broken/` — deliberately broken drafts showing the big failure classes (missing lemma, misaligned table, dead branch, trap cycle, dangling references) and their error messages.
+- `packages/schema/src/pack.ts` + `packages/schema/src/dialogue.ts` — the Zod schemas every emitted pack must satisfy (the pipeline runs them for you).
 
 ## Content guidance for Sumrak stories
 
