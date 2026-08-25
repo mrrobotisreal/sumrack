@@ -16,10 +16,12 @@ characters:
     name: { ru: 'Мама', en: 'Mama' }
     voice: elevenlabs:Mariia
     style: warm
+    audioTag: '[warm]'
   - id: babushka
     name: { ru: 'Бабушка', en: 'Grandmother' }
     voice: elevenlabs:Kate
     style: gentle
+    audioTag: '[gentle]'
   - id: player
     name: { ru: 'Ты', en: 'You' }
     voice: elevenlabs:Ivan

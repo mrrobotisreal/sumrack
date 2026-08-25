@@ -55,6 +55,15 @@ export function packFileList(pack: Pack): string[] {
   for (const story of pack.stories) {
     for (const track of story.audio) files.push(track.file);
   }
+  // Dialogue node + choice coach audio (T26).
+  for (const dialogue of pack.dialogues ?? []) {
+    for (const node of dialogue.nodes) {
+      if (node.audio) files.push(node.audio.file);
+      for (const choice of node.choices ?? []) {
+        if (choice.audio) files.push(choice.audio.file);
+      }
+    }
+  }
   return files;
 }
 

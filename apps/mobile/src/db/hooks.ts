@@ -40,6 +40,10 @@ export const queryKeys = {
   bookmarksForStory: (packId: string, storyId: string) =>
     ['bookmarks', 'story', packId, storyId] as const,
   bookmarkedStoryKeys: ['bookmarks', 'story-keys'] as const,
+  dialogues: ['dialogues'] as const,
+  dialogueGraph: (packId: string, dialogueId: string) =>
+    ['dialogue-graph', packId, dialogueId] as const,
+  dialogueRuns: (dialogueId?: string) => ['dialogue-runs', dialogueId ?? 'all'] as const,
 };
 
 export function usePacks() {
@@ -330,5 +334,30 @@ export function useJournalSearch(query: string) {
       return { entries, notes };
     },
     enabled: query.trim().length > 0,
+  });
+}
+
+/** Installed dialogues with endings-collected counts (T26; T27's entry points). */
+export function useDialogues() {
+  return useQuery({
+    queryKey: queryKeys.dialogues,
+    queryFn: () => repos.dialogues.listDialogues(),
+  });
+}
+
+/** The full node graph T27's player walks (sentences, audio, choices, endings). */
+export function useDialogueGraph(packId: string | undefined, dialogueId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.dialogueGraph(packId ?? '', dialogueId ?? ''),
+    queryFn: () => repos.dialogues.getDialogueGraph(packId!, dialogueId!),
+    enabled: !!packId && !!dialogueId,
+  });
+}
+
+/** Past runs of one dialogue (or all), newest first (T26). */
+export function useDialogueRuns(dialogueId?: string) {
+  return useQuery({
+    queryKey: queryKeys.dialogueRuns(dialogueId),
+    queryFn: () => repos.dialogues.listRuns(dialogueId),
   });
 }

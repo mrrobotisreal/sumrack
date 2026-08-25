@@ -57,6 +57,16 @@ export const CharacterSchema = z.strictObject({
     .regex(/^[a-z0-9-]+:.+$/, 'voice is provider-prefixed, e.g. "elevenlabs:<voice-name>"'),
   /** Emotional/delivery style: "warm", "gentle", "creepy-whisper", ... */
   style: z.string().min(1),
+  /**
+   * Optional Eleven v3 audio tag(s) prepended to this character's node
+   * renders, e.g. "[warm]" — steers delivery without being spoken (T26;
+   * mirrors VoiceDirection.audioTag from the story-draft frontmatter).
+   * v3-family models only; ignored for other models.
+   */
+  audioTag: z
+    .string()
+    .regex(/^\[[^\]]+\](\s*\[[^\]]+\])*$/, 'audioTag is one or more [bracketed] v3 audio tags')
+    .optional(),
 });
 export type Character = z.infer<typeof CharacterSchema>;
 
@@ -117,6 +127,12 @@ export const ChoiceSchema = z
     asrAlternates: z.array(z.string().min(1)).min(1).optional(),
     /** Bilingual nudge shown on long-press (EN side is the primary hint). */
     hint: LocalizedTextSchema.optional(),
+    /**
+     * Optional coach model audio for this choice («hear how to say it»),
+     * rendered by T26's `--player-audio` with the `player` character's
+     * voice/style. Timestamps reference this choice's OWN sentence.
+     */
+    audio: NodeAudioSchema.optional(),
   })
   .superRefine((choice, ctx) => {
     choice.asrAlternates?.forEach((alt, i) => {
@@ -125,6 +141,33 @@ export const ChoiceSchema = z
           code: 'custom',
           path: ['asrAlternates', i],
           message: 'asrAlternates text must be UTF-8 NFC-normalized',
+        });
+      }
+    });
+    // Choice audio stamps must reference this choice's own sentence (the
+    // same rule nodes enforce for their audio).
+    choice.audio?.timestamps?.forEach((stamp, wi) => {
+      const path = ['audio', 'timestamps', wi];
+      if (stamp.sentenceId !== choice.sentence.id) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [...path, 'sentenceId'],
+          message: `choice audio stamp references sentence "${stamp.sentenceId}", but choice "${choice.id}" speaks sentence "${choice.sentence.id}"`,
+        });
+        return;
+      }
+      if (stamp.tokenIndex >= choice.sentence.tokens.length) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [...path, 'tokenIndex'],
+          message: `tokenIndex ${stamp.tokenIndex} is out of range for sentence "${stamp.sentenceId}" (${choice.sentence.tokens.length} tokens)`,
+        });
+      }
+      if (choice.audio && stamp.endMs > choice.audio.durationMs) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [...path, 'endMs'],
+          message: `choice audio stamp ends at ${stamp.endMs}ms, past the audio duration ${choice.audio.durationMs}ms`,
         });
       }
     });

@@ -171,6 +171,24 @@ const bookmarkRow = z.strictObject({
   createdAt: int,
 });
 
+const dialogueRunRow = z.strictObject({
+  id: z.string(),
+  dialogueId: z.string(),
+  startedAt: int,
+  finishedAt: int.nullable(),
+  endingId: z.string().nullable(),
+  /** Shape owned by the dialogues repo's DialogueRunPathSchema — opaque here
+   * like gameSessions.detail (restore must not reject future path versions). */
+  pathJson: jsonRecord,
+  spokenScoreAvg: z.number().nullable(),
+});
+
+const dialogueEndingSeenRow = z.strictObject({
+  dialogueId: z.string(),
+  endingId: z.string(),
+  firstSeenAt: int,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -219,6 +237,9 @@ export const BackupPayloadSchema = z.strictObject({
     // must keep restoring, so the version literal stays at 1. New exports
     // always include the table.
     bookmarks: z.array(bookmarkRow).default([]),
+    // T26: same additive-with-default pattern — pre-T26 snapshots restore.
+    dialogueRuns: z.array(dialogueRunRow).default([]),
+    dialogueEndingsSeen: z.array(dialogueEndingSeenRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -246,6 +267,8 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   frozenDays: 'frozen_days',
   achievements: 'achievements',
   bookmarks: 'bookmarks',
+  dialogueRuns: 'dialogue_runs',
+  dialogueEndingsSeen: 'dialogue_endings_seen',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

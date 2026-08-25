@@ -285,24 +285,34 @@ function stageAudioFile(packId: string, relPath: string, bytes: Uint8Array): str
 
 /**
  * For an installed, up-to-date pack: download any manifest audio file whose
- * audio_track has no localUri yet (deferred on cellular earlier), verify,
- * stage, and record the uri.
+ * audio_track (or dialogue_node_audio row, T26) has no localUri yet
+ * (deferred on cellular earlier), verify, stage, and record the uri.
  */
 async function backfillMissingAudio(client: GithubContentClient, entry: ManifestEntry) {
-  const tracks = await repos.content.listAudioTracksForPack(entry.id);
-  const missing = tracks.filter((t) => !t.localUri || !new File(t.localUri).exists);
+  const [tracks, dialogueAudio] = await Promise.all([
+    repos.content.listAudioTracksForPack(entry.id),
+    repos.dialogues.listAudioForPack(entry.id),
+  ]);
+  const missing = [...tracks, ...dialogueAudio].filter(
+    (t) => !t.localUri || !new File(t.localUri).exists,
+  );
   if (missing.length === 0) return;
 
   const manifestByPath = new Map(
     entry.files.filter((f) => isAudioFile(f.path)).map((f) => [f.path, f]),
   );
-  for (const trackRow of missing) {
-    const file = manifestByPath.get(trackRow.file);
-    if (!file) continue; // manifest no longer ships this track's audio
+  const isDialogueFile = new Set(dialogueAudio.map((a) => a.file));
+  for (const audioRow of missing) {
+    const file = manifestByPath.get(audioRow.file);
+    if (!file) continue; // manifest no longer ships this file
     const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
     await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
     const uri = stageAudioFile(entry.id, file.path, bytes);
-    await repos.content.setAudioLocalUri(entry.id, trackRow.file, uri);
+    if (isDialogueFile.has(audioRow.file)) {
+      await repos.dialogues.setAudioLocalUri(entry.id, audioRow.file, uri);
+    } else {
+      await repos.content.setAudioLocalUri(entry.id, audioRow.file, uri);
+    }
     track('audio_backfilled', { packId: entry.id, file: file.path });
   }
 }

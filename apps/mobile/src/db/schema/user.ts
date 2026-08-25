@@ -312,6 +312,41 @@ export const bookmarks = sqliteTable(
   ],
 );
 
+/**
+ * Dialogue runs (T26, design V2 §3.3) — one row per playthrough of a
+ * dialogue. `dialogueId`/`endingId` are unenforced content refs (T05
+ * null-safe pattern: old runs still resolve after pack removal/update).
+ * `pathJson`'s shape is owned by the dialogues repository's Zod schema
+ * (`DialogueRunPathSchema`): `{ v: 1, steps: [{ nodeId, choiceId?, score? }] }`
+ * — ordered visited nodes, the chosen choice at choice points, and the
+ * per-choice ASR score when the answer was spoken.
+ */
+export const dialogueRuns = sqliteTable(
+  'dialogue_runs',
+  {
+    id: text('id').primaryKey(),
+    dialogueId: text('dialogue_id').notNull(),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at'),
+    endingId: text('ending_id'),
+    pathJson: text('path_json', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    /** Mean ASR score across the run's spoken choices (null: none spoken). */
+    spokenScoreAvg: real('spoken_score_avg'),
+  },
+  (t) => [index('dialogue_runs_dialogue_idx').on(t.dialogueId, t.startedAt)],
+);
+
+/** Endings collected per dialogue (T26) — mini-achievement state for T27. */
+export const dialogueEndingsSeen = sqliteTable(
+  'dialogue_endings_seen',
+  {
+    dialogueId: text('dialogue_id').notNull(),
+    endingId: text('ending_id').notNull(),
+    firstSeenAt: integer('first_seen_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.dialogueId, t.endingId] })],
+);
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

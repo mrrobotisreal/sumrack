@@ -1,8 +1,22 @@
 import { randomInt } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { safeParsePack, type AudioTrack, type Pack, type Story } from '@sumrak/schema';
+import {
+  safeParsePack,
+  type AudioTrack,
+  type NodeAudio,
+  type Pack,
+  type Story,
+} from '@sumrak/schema';
 import { annotateDrafts } from './annotate.ts';
+import {
+  planDialogueItems,
+  runDialogueAudition,
+  runDialogueFinalize,
+  type DialogueAuditionTake,
+  type DialogueTrackReport,
+} from './dialogue-audio.ts';
+import { sniffDraftKind } from './dialogue-draft.ts';
 import { DEFAULT_MODEL_ID, ElevenLabsClient, isV3Model } from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras } from './extras.ts';
@@ -30,6 +44,10 @@ export interface AudioFilters {
   stories?: string[];
   /** Only render these track ids (all when absent). */
   tracks?: string[];
+  /** Only render these dialogue ids (all when absent) — T26. */
+  dialogues?: string[];
+  /** Render coach audio for choices + scripted player lines — T26. */
+  playerAudio?: boolean;
 }
 
 export interface AuditionOptions extends AudioFilters {
@@ -96,7 +114,11 @@ function parseAll(
   extrasPath?: string,
 ): { drafts: ParsedDraft[]; pack: Pack } {
   const files = draftPaths.map((path) => ({ path, source: readFileSync(path, 'utf8') }));
-  const drafts = files.map((f) => parseDraft(f.path, f.source));
+  // Voice directions live on STORY drafts only; dialogue drafts (T26) carry
+  // their voices on characters and are handled by planDialogueItems.
+  const drafts = files
+    .filter((f) => sniffDraftKind(f.path, f.source) === 'story')
+    .map((f) => parseDraft(f.path, f.source));
   const pack = annotateDrafts(files, extrasPath === undefined ? undefined : loadExtras(extrasPath));
   return { drafts, pack };
 }
@@ -166,16 +188,24 @@ function newSeed(): number {
   return randomInt(0, 2 ** 31);
 }
 
+export interface AuditionResult {
+  story: AuditionTake[];
+  dialogue: DialogueAuditionTake[];
+}
+
 /** Render candidate takes for review. Writes MP3s, never touches pack.json. */
 export async function runAudition(
   draftPaths: readonly string[],
   outDir: string,
   client: ElevenLabsClient,
   opts: AuditionOptions,
-): Promise<AuditionTake[]> {
+): Promise<AuditionResult> {
   const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
-  if (plans.length === 0) throw new Error('no stories with voice directions matched the filters');
+  const dialogueItems = planDialogueItems(pack, opts);
+  if (plans.length === 0 && dialogueItems.length === 0) {
+    throw new Error('no stories with voice directions (and no dialogues) matched the filters');
+  }
 
   const auditionDir = join(outDir, 'audition');
   mkdirSync(auditionDir, { recursive: true });
@@ -195,13 +225,65 @@ export async function runAudition(
       }
     }
   }
-  return takes;
+
+  const dialogueTakes =
+    dialogueItems.length > 0
+      ? await runDialogueAudition(client, dialogueItems, outDir, {
+          takes: opts.takes,
+          modelId: opts.modelId,
+          newSeed,
+        })
+      : [];
+  return { story: takes, dialogue: dialogueTakes };
 }
 
 export interface AudioSummary {
   pack: Pack;
   outFile: string;
   reports: TrackReport[];
+  dialogueReports: DialogueTrackReport[];
+}
+
+/**
+ * Previously rendered dialogue audio to carry over (node-by-node workflow —
+ * the T09 merge pattern at node granularity): sentenceId → NodeAudio, only
+ * for files that still exist in the out dir.
+ */
+function carriedDialogueAudio(prev: Pack, outDir: string): Map<string, NodeAudio> {
+  const carried = new Map<string, NodeAudio>();
+  const keep = (sentenceId: string, audio: NodeAudio | undefined) => {
+    if (audio && existsSync(join(outDir, audio.file))) carried.set(sentenceId, audio);
+  };
+  for (const dialogue of prev.dialogues ?? []) {
+    for (const node of dialogue.nodes) {
+      keep(node.sentence.id, node.audio);
+      for (const choice of node.choices ?? []) keep(choice.sentence.id, choice.audio);
+    }
+  }
+  return carried;
+}
+
+/** Attach carried NodeAudio onto a freshly annotated pack's dialogues. */
+function applyCarriedDialogueAudio(pack: Pack, carried: Map<string, NodeAudio>): Pack {
+  if (carried.size === 0 || !pack.dialogues) return pack;
+  return {
+    ...pack,
+    dialogues: pack.dialogues.map((dialogue) => ({
+      ...dialogue,
+      nodes: dialogue.nodes.map((node) => {
+        const next = { ...node };
+        const nodeAudio = carried.get(node.sentence.id);
+        if (nodeAudio) next.audio = nodeAudio;
+        if (node.choices) {
+          next.choices = node.choices.map((choice) => {
+            const choiceAudio = carried.get(choice.sentence.id);
+            return choiceAudio ? { ...choice, audio: choiceAudio } : choice;
+          });
+        }
+        return next;
+      }),
+    })),
+  };
 }
 
 /** Render final takes, encode Opus, map stamps, and write pack.json. */
@@ -213,15 +295,20 @@ export async function runFinalize(
 ): Promise<AudioSummary> {
   const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
-  if (plans.length === 0) throw new Error('no stories with voice directions matched the filters');
+  const dialogueItems = planDialogueItems(pack, opts);
+  if (plans.length === 0 && dialogueItems.length === 0) {
+    throw new Error('no stories with voice directions (and no dialogues) matched the filters');
+  }
 
   // Carry over previously rendered tracks (story-by-story workflow).
   const packFile = join(outDir, 'pack.json');
   const existingAudio = new Map<string, AudioTrack[]>();
+  let carriedNodeAudio = new Map<string, NodeAudio>();
   if (existsSync(packFile)) {
     const prev = safeParsePack(JSON.parse(readFileSync(packFile, 'utf8')));
     if (prev.success) {
       for (const story of prev.data.stories) existingAudio.set(story.id, story.audio);
+      carriedNodeAudio = carriedDialogueAudio(prev.data, outDir);
     }
   }
 
@@ -271,7 +358,7 @@ export async function runFinalize(
 
   // Assemble final audio per story: freshly rendered tracks replace same-id
   // carryovers; other existing tracks survive if their files are still there.
-  const withAudio: Pack = {
+  const withStoryAudio: Pack = {
     ...pack,
     stories: pack.stories.map((story) => {
       const fresh = renderedByStory.get(story.id) ?? [];
@@ -283,6 +370,20 @@ export async function runFinalize(
     }),
   };
 
+  // Dialogues: carried node/choice audio first, fresh renders on top (T26).
+  let withAudio = applyCarriedDialogueAudio(withStoryAudio, carriedNodeAudio);
+  let dialogueReports: DialogueTrackReport[] = [];
+  if (dialogueItems.length > 0) {
+    const result = await runDialogueFinalize(client, withAudio, dialogueItems, outDir, {
+      seeds: opts.seeds,
+      defaultSeed: opts.defaultSeed,
+      modelId: opts.modelId,
+      newSeed,
+    });
+    withAudio = result.pack;
+    dialogueReports = result.reports;
+  }
+
   const validated = safeParsePack(withAudio);
   if (!validated.success) {
     const details = validated.issues.map((i) => `  ${i.path}: ${i.message}`).join('\n');
@@ -290,5 +391,67 @@ export async function runFinalize(
   }
   mkdirSync(outDir, { recursive: true });
   writeFileSync(packFile, `${JSON.stringify(validated.data, null, 2)}\n`, 'utf8');
-  return { pack: validated.data, outFile: packFile, reports };
+  return { pack: validated.data, outFile: packFile, reports, dialogueReports };
+}
+
+export interface AudioRunPlan {
+  /** Story × voice-direction tracks that would render. */
+  storyTracks: number;
+  /** Dialogue node lines that would render (incl. coach player lines). */
+  dialogueNodes: number;
+  /** Choice coach renders that would render (only with --player-audio). */
+  dialogueChoices: number;
+  /** ElevenLabs requests the run would fire. */
+  requests: number;
+  /** Total characters of narration text across those requests. */
+  chars: number;
+}
+
+/**
+ * Cost-control dry run (T26): what would `pipeline audio` send to ElevenLabs?
+ * Fires no network calls — the CLI prints this and requires confirmation (or
+ * `--yes`) before any render, so an accidental 60-node dialogue render never
+ * fires silently.
+ */
+export function planAudioRun(
+  draftPaths: readonly string[],
+  opts: AudioFilters & { extrasPath?: string; audition?: boolean; takes?: number },
+): AudioRunPlan {
+  const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
+  const plans = planStories(pack, drafts, opts);
+  const dialogueItems = planDialogueItems(pack, opts);
+
+  let storyRequests = 0;
+  let storyChars = 0;
+  for (const { story, directions } of plans) {
+    const chars = buildNarration(story).text.length;
+    storyRequests += directions.length;
+    storyChars += chars * directions.length;
+  }
+
+  let dialogueRequests: number;
+  let dialogueChars: number;
+  if (opts.audition) {
+    // Audition renders one representative (longest) line per (dialogue,
+    // character) group — mirror runDialogueAudition's grouping.
+    const longestPerGroup = new Map<string, number>();
+    for (const item of dialogueItems) {
+      const cur = longestPerGroup.get(item.group) ?? -1;
+      if (item.sentence.ru.length > cur) longestPerGroup.set(item.group, item.sentence.ru.length);
+    }
+    dialogueRequests = longestPerGroup.size;
+    dialogueChars = [...longestPerGroup.values()].reduce((n, c) => n + c, 0);
+  } else {
+    dialogueRequests = dialogueItems.length;
+    dialogueChars = dialogueItems.reduce((n, i) => n + i.sentence.ru.length, 0);
+  }
+
+  const takes = opts.audition ? (opts.takes ?? 3) : 1;
+  return {
+    storyTracks: storyRequests,
+    dialogueNodes: dialogueItems.filter((i) => i.kind === 'node').length,
+    dialogueChoices: dialogueItems.filter((i) => i.kind === 'choice').length,
+    requests: (storyRequests + dialogueRequests) * takes,
+    chars: (storyChars + dialogueChars) * takes,
+  };
 }

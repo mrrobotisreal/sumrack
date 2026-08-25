@@ -1,9 +1,15 @@
-import { parsePack, type Pack, type Token } from '@sumrak/schema';
+import { parsePack, type NodeAudio, type Pack, type Sentence, type Token } from '@sumrak/schema';
 import { eq, sql } from 'drizzle-orm';
 
 import { normalizeRu } from './normalize';
 import {
   audioTracks,
+  dialogueChoices,
+  dialogueEndings,
+  dialogueNodeAudio,
+  dialogueNodeStamps,
+  dialogueNodes,
+  dialogues,
   exerciseSpecs,
   journalPrompts,
   lessons,
@@ -23,7 +29,8 @@ export interface ImportResult {
   packId: string;
   version: number;
   action: ImportAction;
-  counts: { stories: number; sentences: number; tokens: number };
+  /** Sentence/token counts include dialogue node + choice lines (T26). */
+  counts: { stories: number; dialogues: number; sentences: number; tokens: number };
 }
 
 export interface ImportOptions {
@@ -115,6 +122,14 @@ export async function removePack(db: SumrakDB, packId: string): Promise<void> {
   await syncStateRepo.removeInstalled(packId);
 }
 
+/** Every sentence of a dialogue: node lines then their choices, declaration order. */
+function dialogueSentences(dialogue: NonNullable<Pack['dialogues']>[number]): Sentence[] {
+  return dialogue.nodes.flatMap((node) => [
+    node.sentence,
+    ...(node.choices?.map((c) => c.sentence) ?? []),
+  ]);
+}
+
 function countContent(pack: Pack) {
   let sentenceCount = 0;
   let tokenCount = 0;
@@ -122,7 +137,18 @@ function countContent(pack: Pack) {
     sentenceCount += story.sentences.length;
     for (const s of story.sentences) tokenCount += s.tokens.length;
   }
-  return { stories: pack.stories.length, sentences: sentenceCount, tokens: tokenCount };
+  for (const dialogue of pack.dialogues ?? []) {
+    for (const s of dialogueSentences(dialogue)) {
+      sentenceCount += 1;
+      tokenCount += s.tokens.length;
+    }
+  }
+  return {
+    stories: pack.stories.length,
+    dialogues: pack.dialogues?.length ?? 0,
+    sentences: sentenceCount,
+    tokens: tokenCount,
+  };
 }
 
 async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Promise<void> {
@@ -149,38 +175,7 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     });
 
     for (const [sentenceIdx, sentence] of story.sentences.entries()) {
-      await db.insert(sentences).values({
-        packId: pack.id,
-        id: sentence.id,
-        storyId: story.id,
-        orderIdx: sentenceIdx,
-        ru: sentence.ru,
-        en: sentence.en,
-        grammarTopics: sentence.grammarTopics ?? null,
-      });
-
-      // Chunked multi-row inserts keep import fast without hitting SQLite's
-      // bound-parameter limit (999): 13 columns × 64 rows = 832 params.
-      const tokenRows = sentence.tokens.map((tok, tokenIndex) => ({
-        packId: pack.id,
-        sentenceId: sentence.id,
-        tokenIndex,
-        storyId: story.id,
-        text: tok.text,
-        textNorm: normalizeRu(tok.text),
-        isPunct: tok.isPunct ?? false,
-        spaceBefore: effectiveSpaceBefore(tok, tokenIndex),
-        lemma: tok.lemma ?? null,
-        lemmaNorm: tok.lemma ? normalizeRu(tok.lemma) : null,
-        translation: tok.translation ?? null,
-        pos: tok.pos ?? null,
-        grammar: tok.grammar ?? null,
-        level: tok.level ?? null,
-        note: tok.note ?? null,
-      }));
-      for (let i = 0; i < tokenRows.length; i += 64) {
-        await db.insert(tokens).values(tokenRows.slice(i, i + 64));
-      }
+      await insertSentenceRows(db, pack.id, story.id, sentence, sentenceIdx);
     }
 
     for (const track of story.audio) {
@@ -208,6 +203,98 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       for (let i = 0; i < stampRows.length; i += 100) {
         await db.insert(wordStamps).values(stampRows.slice(i, i + 100));
       }
+    }
+  }
+
+  for (const [dialogueIdx, dialogue] of (pack.dialogues ?? []).entries()) {
+    await db.insert(dialogues).values({
+      packId: pack.id,
+      id: dialogue.id,
+      orderIdx: dialogueIdx,
+      titleRu: dialogue.title.ru,
+      titleEn: dialogue.title.en,
+      level: dialogue.level,
+      startNodeId: dialogue.startNodeId,
+      characters: dialogue.characters,
+    });
+
+    // Node/choice sentences share the sentences/tokens tables with
+    // storyId = dialogueId (T26 decision) — tap-word, FTS triggers, and
+    // lemma stats all work on them exactly like story sentences.
+    let sentenceIdx = 0;
+    const stageAudio = async (
+      audio: NodeAudio,
+      nodeId: string,
+      choiceId: string | null,
+      sentenceId: string,
+    ) => {
+      await db.insert(dialogueNodeAudio).values({
+        packId: pack.id,
+        dialogueId: dialogue.id,
+        nodeId,
+        choiceId,
+        sentenceId,
+        file: audio.file,
+        localUri: opts.audioFiles?.[audio.file] ?? null,
+        durationMs: audio.durationMs,
+      });
+      const stampRows = (audio.timestamps ?? []).map((stamp, stampIndex) => ({
+        packId: pack.id,
+        sentenceId,
+        stampIndex,
+        tokenIndex: stamp.tokenIndex,
+        startMs: stamp.startMs,
+        endMs: stamp.endMs,
+      }));
+      for (let i = 0; i < stampRows.length; i += 100) {
+        await db.insert(dialogueNodeStamps).values(stampRows.slice(i, i + 100));
+      }
+    };
+
+    for (const [nodeIdx, node] of dialogue.nodes.entries()) {
+      await insertSentenceRows(db, pack.id, dialogue.id, node.sentence, sentenceIdx++);
+      await db.insert(dialogueNodes).values({
+        packId: pack.id,
+        dialogueId: dialogue.id,
+        id: node.id,
+        orderIdx: nodeIdx,
+        speakerId: node.speakerId,
+        sentenceId: node.sentence.id,
+        kind: node.choices ? 'choices' : node.next !== undefined ? 'next' : 'ending',
+        nextNodeId: node.next ?? null,
+        endingId: node.endingId ?? null,
+      });
+      if (node.audio) await stageAudio(node.audio, node.id, null, node.sentence.id);
+
+      for (const [choiceIdx, choice] of (node.choices ?? []).entries()) {
+        await insertSentenceRows(db, pack.id, dialogue.id, choice.sentence, sentenceIdx++);
+        await db.insert(dialogueChoices).values({
+          packId: pack.id,
+          dialogueId: dialogue.id,
+          nodeId: node.id,
+          id: choice.id,
+          orderIdx: choiceIdx,
+          sentenceId: choice.sentence.id,
+          nextNodeId: choice.next,
+          asrAlternates: choice.asrAlternates ?? null,
+          hintRu: choice.hint?.ru ?? null,
+          hintEn: choice.hint?.en ?? null,
+        });
+        if (choice.audio) await stageAudio(choice.audio, node.id, choice.id, choice.sentence.id);
+      }
+    }
+
+    for (const ending of dialogue.endings) {
+      await db.insert(dialogueEndings).values({
+        packId: pack.id,
+        dialogueId: dialogue.id,
+        id: ending.id,
+        titleRu: ending.title.ru,
+        titleEn: ending.title.en,
+        recapRu: ending.recap.ru,
+        recapEn: ending.recap.en,
+        tone: ending.tone,
+      });
     }
   }
 
@@ -241,5 +328,48 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       orderIdx,
       spec: spec as unknown as Record<string, unknown>,
     });
+  }
+}
+
+/** Shared sentence + token insertion — story sentences and dialogue lines
+ * are identical rows (dialogue lines carry the dialogue id as storyId). */
+async function insertSentenceRows(
+  db: SumrakDB,
+  packId: string,
+  storyId: string,
+  sentence: Sentence,
+  orderIdx: number,
+): Promise<void> {
+  await db.insert(sentences).values({
+    packId,
+    id: sentence.id,
+    storyId,
+    orderIdx,
+    ru: sentence.ru,
+    en: sentence.en,
+    grammarTopics: sentence.grammarTopics ?? null,
+  });
+
+  // Chunked multi-row inserts keep import fast without hitting SQLite's
+  // bound-parameter limit (999): 13 columns × 64 rows = 832 params.
+  const tokenRows = sentence.tokens.map((tok, tokenIndex) => ({
+    packId,
+    sentenceId: sentence.id,
+    tokenIndex,
+    storyId,
+    text: tok.text,
+    textNorm: normalizeRu(tok.text),
+    isPunct: tok.isPunct ?? false,
+    spaceBefore: effectiveSpaceBefore(tok, tokenIndex),
+    lemma: tok.lemma ?? null,
+    lemmaNorm: tok.lemma ? normalizeRu(tok.lemma) : null,
+    translation: tok.translation ?? null,
+    pos: tok.pos ?? null,
+    grammar: tok.grammar ?? null,
+    level: tok.level ?? null,
+    note: tok.note ?? null,
+  }));
+  for (let i = 0; i < tokenRows.length; i += 64) {
+    await db.insert(tokens).values(tokenRows.slice(i, i + 64));
   }
 }

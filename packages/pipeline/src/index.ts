@@ -4,14 +4,26 @@
 export { alignSentence, type AlignResult } from './align.ts';
 export { annotateDrafts, runAnnotate, type AnnotateSummary } from './annotate.ts';
 export {
+  planAudioRun,
   runAudition,
   runFinalize,
+  type AudioRunPlan,
   type AudioSummary,
   type AuditionOptions,
+  type AuditionResult,
   type AuditionTake,
   type FinalizeOptions,
   type TrackReport,
 } from './audio.ts';
+export {
+  planDialogueItems,
+  runDialogueAudition,
+  runDialogueFinalize,
+  type DialogueAuditionTake,
+  type DialoguePlanOptions,
+  type DialogueRenderItem,
+  type DialogueTrackReport,
+} from './dialogue-audio.ts';
 export {
   DEFAULT_MODEL_ID,
   ElevenLabsClient,

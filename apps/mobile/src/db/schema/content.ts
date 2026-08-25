@@ -179,6 +179,170 @@ export const journalPrompts = sqliteTable(
   (t) => [primaryKey({ columns: [t.packId, t.id] })],
 );
 
+/**
+ * A dialogue's cast, stored as JSON on the `dialogues` row (T26): small,
+ * loaded whole with the graph, never queried per-character. Mirrors the
+ * schema's Character shape.
+ */
+export interface DialogueCharacter {
+  id: string;
+  name: { ru: string; en: string };
+  voice: string;
+  style: string;
+  audioTag?: string;
+}
+
+/**
+ * Dialogue content tables (T26, design V2 §3.3). Denormalized from
+ * `Pack.dialogues`; node/choice SENTENCES live in the shared
+ * `sentences`/`tokens` tables with `storyId` = the dialogue id (they ARE
+ * sentences — pack-wide unique ids make this safe, and story-scoped queries
+ * all join `stories`/`story_progress`, which naturally excludes them).
+ * User data (`dialogue_runs`, see ./user.ts) references dialogue/ending ids
+ * as plain strings and survives reimport/removal.
+ */
+export const dialogues = sqliteTable(
+  'dialogues',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    /** Stable dialogue id, unique within its pack. */
+    id: text('id').notNull(),
+    orderIdx: integer('order_idx').notNull(),
+    titleRu: text('title_ru').notNull(),
+    titleEn: text('title_en').notNull(),
+    level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
+    startNodeId: text('start_node_id').notNull(),
+    characters: text('characters', { mode: 'json' }).$type<DialogueCharacter[]>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.id] }), index('dialogues_id_idx').on(t.id)],
+);
+
+export const dialogueNodes = sqliteTable(
+  'dialogue_nodes',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    dialogueId: text('dialogue_id').notNull(),
+    /** Stable node id, unique within its dialogue. */
+    id: text('id').notNull(),
+    /** Declaration order (branch-map/authoring order, not walk order). */
+    orderIdx: integer('order_idx').notNull(),
+    speakerId: text('speaker_id').notNull(),
+    /** The node's line — resolves in `sentences` (storyId = dialogueId). */
+    sentenceId: text('sentence_id').notNull(),
+    /**
+     * The T25 exactly-one-of discriminant: how the story continues here.
+     * 'choices' → rows in dialogue_choices; 'next' → nextNodeId; 'ending' →
+     * endingId.
+     */
+    kind: text('kind').$type<'choices' | 'next' | 'ending'>().notNull(),
+    nextNodeId: text('next_node_id'),
+    endingId: text('ending_id'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.dialogueId, t.id] }),
+    index('dialogue_nodes_dialogue_idx').on(t.packId, t.dialogueId, t.orderIdx),
+  ],
+);
+
+export const dialogueChoices = sqliteTable(
+  'dialogue_choices',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    dialogueId: text('dialogue_id').notNull(),
+    /** The node this choice answers. */
+    nodeId: text('node_id').notNull(),
+    /** Stable choice id, unique within its node. */
+    id: text('id').notNull(),
+    /** Position among the node's choices (render order). */
+    orderIdx: integer('order_idx').notNull(),
+    /** The player's utterance — resolves in `sentences` (storyId = dialogueId). */
+    sentenceId: text('sentence_id').notNull(),
+    /** Node the story branches to when this choice is taken. */
+    nextNodeId: text('next_node_id').notNull(),
+    /** Alternate phrasings the ASR matcher also accepts. */
+    asrAlternates: text('asr_alternates', { mode: 'json' }).$type<string[]>(),
+    hintRu: text('hint_ru'),
+    hintEn: text('hint_en'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.dialogueId, t.nodeId, t.id] }),
+    index('dialogue_choices_node_idx').on(t.packId, t.dialogueId, t.nodeId, t.orderIdx),
+  ],
+);
+
+export const dialogueEndings = sqliteTable(
+  'dialogue_endings',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    dialogueId: text('dialogue_id').notNull(),
+    /** Stable ending id, unique within its dialogue. */
+    id: text('id').notNull(),
+    titleRu: text('title_ru').notNull(),
+    titleEn: text('title_en').notNull(),
+    recapRu: text('recap_ru').notNull(),
+    recapEn: text('recap_en').notNull(),
+    tone: text('tone').$type<'good' | 'bad' | 'strange'>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.dialogueId, t.id] })],
+);
+
+/**
+ * Per-node (and per-choice coach) dialogue audio — the T26 node-audio table
+ * decision: a table PARALLEL to `audio_tracks`, keyed by SENTENCE id (every
+ * audio file maps 1:1 to a node or choice sentence, and sentence ids are
+ * unique pack-wide). Reusing `audio_tracks` would force fake storyId/trackId
+ * keys and voice/style duplication (characters own those), and would leak
+ * dialogue rows into story-audio queries. T27's per-line karaoke query is:
+ * node → sentenceId → one audio row here + its stamps below.
+ */
+export const dialogueNodeAudio = sqliteTable(
+  'dialogue_node_audio',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    dialogueId: text('dialogue_id').notNull(),
+    nodeId: text('node_id').notNull(),
+    /** Null = the node's own line; set = coach audio for that choice. */
+    choiceId: text('choice_id'),
+    sentenceId: text('sentence_id').notNull(),
+    /** Pack-relative path, e.g. "audio/dinner-mini/din-n01.opus". */
+    file: text('file').notNull(),
+    /** Absolute local URI once staged in app storage (null until then). */
+    localUri: text('local_uri'),
+    durationMs: integer('duration_ms').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.sentenceId] }),
+    index('dialogue_node_audio_dialogue_idx').on(t.packId, t.dialogueId),
+  ],
+);
+
+/** Word stamps for dialogue audio; sentenceId keys straight into the audio row. */
+export const dialogueNodeStamps = sqliteTable(
+  'dialogue_node_stamps',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    sentenceId: text('sentence_id').notNull(),
+    /** Position in the audio's timestamps array. */
+    stampIndex: integer('stamp_index').notNull(),
+    tokenIndex: integer('token_index').notNull(),
+    startMs: integer('start_ms').notNull(),
+    endMs: integer('end_ms').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.sentenceId, t.stampIndex] })],
+);
+
 export const exerciseSpecs = sqliteTable(
   'exercise_specs',
   {

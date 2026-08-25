@@ -12,6 +12,8 @@ import {
   cards,
   checkpointResults,
   dailyActivity,
+  dialogueEndingsSeen,
+  dialogueRuns,
   encounters,
   frozenDays,
   gameSessions,
@@ -228,6 +230,23 @@ async function seedSource(db: SumrakDB) {
       createdAt: NOW - 1000,
     },
   ]);
+  await db.insert(dialogueRuns).values({
+    id: 'run-1',
+    dialogueId: 'dinner-mini',
+    startedAt: NOW - 900,
+    finishedAt: NOW - 800,
+    endingId: 'end-good',
+    pathJson: {
+      v: 1,
+      steps: [{ nodeId: 'din-n01' }, { nodeId: 'din-n02', choiceId: 'din-n02-c1', score: 92 }],
+    },
+    spokenScoreAvg: 92,
+  });
+  await db.insert(dialogueEndingsSeen).values({
+    dialogueId: 'dinner-mini',
+    endingId: 'end-good',
+    firstSeenAt: NOW - 800,
+  });
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -285,6 +304,8 @@ async function selectAllUserTables(db: SumrakDB) {
     frozenDays: await db.select().from(frozenDays),
     achievements: await db.select().from(achievements),
     bookmarks: await db.select().from(bookmarks),
+    dialogueRuns: await db.select().from(dialogueRuns),
+    dialogueEndingsSeen: await db.select().from(dialogueEndingsSeen),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -486,6 +507,13 @@ describe('user-table drift guard', () => {
       'lessons',
       'journal_prompts',
       'exercise_specs',
+      // T26 dialogue content group (rebuilt from packs, never backed up).
+      'dialogues',
+      'dialogue_nodes',
+      'dialogue_choices',
+      'dialogue_endings',
+      'dialogue_node_audio',
+      'dialogue_node_stamps',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');

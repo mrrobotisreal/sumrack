@@ -373,8 +373,10 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
     const client = new ElevenLabsClient('test-key', { fetchImpl: fakeElevenLabsFetch(mp3) });
 
     const outDir = join(work, 'pack');
-    const takes = await runAudition([draftFile], outDir, client, { takes: 2 });
+    const result = await runAudition([draftFile], outDir, client, { takes: 2 });
+    const takes = result.story;
     expect(takes).toHaveLength(2);
+    expect(result.dialogue).toHaveLength(0);
     expect(new Set(takes.map((t) => t.seed)).size).toBe(2);
     for (const take of takes) expect(existsSync(take.file)).toBe(true);
     expect(existsSync(join(outDir, 'pack.json'))).toBe(false);

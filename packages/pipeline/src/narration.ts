@@ -1,4 +1,4 @@
-import type { Story } from '@sumrak/schema';
+import type { Sentence, Story } from '@sumrak/schema';
 
 /**
  * Narration text construction (T09). The text sent to ElevenLabs is built
@@ -37,10 +37,18 @@ export const SENTENCE_SEPARATOR = '\n\n';
 
 /** Build the narration text and per-token character spans for one story. */
 export function buildNarration(story: Story): NarrationText {
+  return buildNarrationFromSentences(story.sentences);
+}
+
+/**
+ * Sentence-list variant (T26): dialogue nodes/choices render one sentence per
+ * request, but the spacing/span rules are identical to story narration.
+ */
+export function buildNarrationFromSentences(sentenceList: readonly Sentence[]): NarrationText {
   let text = '';
   const spans: TokenSpan[] = [];
 
-  story.sentences.forEach((sentence, si) => {
+  sentenceList.forEach((sentence, si) => {
     if (si > 0) text += SENTENCE_SEPARATOR;
     sentence.tokens.forEach((token, ti) => {
       // Mirror of reconstructSentenceRu's spacing defaults — the schema

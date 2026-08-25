@@ -28,7 +28,8 @@
             "en": "Mama"
           },
           "voice": "elevenlabs:Mariia",
-          "style": "warm"
+          "style": "warm",
+          "audioTag": "[warm]"
         },
         {
           "id": "babushka",
@@ -37,7 +38,8 @@
             "en": "Grandmother"
           },
           "voice": "elevenlabs:Kate",
-          "style": "gentle"
+          "style": "gentle",
+          "audioTag": "[gentle]"
         },
         {
           "id": "player",

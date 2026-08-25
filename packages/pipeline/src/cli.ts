@@ -1,7 +1,7 @@
 import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
 import { renderBranchMap } from './branch-map.ts';
-import { runAudition, runFinalize } from './audio.ts';
+import { planAudioRun, runAudition, runFinalize, type AudioRunPlan } from './audio.ts';
 import type { StampResult } from './stamps.ts';
 import { ElevenLabsClient } from './elevenlabs.ts';
 import { resolveEnvVar } from './env.ts';
@@ -35,19 +35,30 @@ Usage:
   pipeline audio <draft.md> [more-drafts.md ...] -o <pack-dir> [options]
       Render narration via ElevenLabs (needs ELEVENLABS_API_KEY in the env or
       a gitignored .env at the repo root; the value is never printed).
+      Every run first prints a pre-render summary (tracks, dialogue nodes,
+      request + character counts) and asks for confirmation — pass --yes to
+      skip the prompt (required for non-interactive runs).
       --audition [N]        render N candidate takes per track (default 3) as
                             MP3s into <pack-dir>/audition/ — review before
-                            finalizing; pack.json is not touched
+                            finalizing; pack.json is not touched. Dialogues
+                            audition ONE representative (longest) line per
+                            dialogue/character group
       --seed <track>=<n>    finalize this track with the audition take's seed
-                            (repeatable); bare --seed <n> applies to all
+                            (repeatable); bare --seed <n> applies to all.
+                            Dialogue groups are keyed <dialogueId>/<characterId>
       --stories <id,id>     only these story ids
       --tracks <id,id>      only these track ids
-      --model <id>          ElevenLabs model (default eleven_multilingual_v2)
+      --dialogues <id,id>   only these dialogue ids (T26)
+      --player-audio        also render coach audio (the "player" character's
+                            voice) for every choice + scripted player line
+      --model <id>          ElevenLabs model (default eleven_v3)
       --extras <file>       pack extras file (course-unit packs) — merged into
                             the written pack.json, same as annotate
-      Without --audition, renders final takes: Opus into <pack-dir>/audio/,
+      --yes                 confirm the pre-render summary without prompting
+      Without --audition, renders final takes: Opus into <pack-dir>/audio/
+      (dialogues: audio/<dialogue-id>/<sentence-id>.opus per node/choice),
       word stamps mapped + checked, pack.json written (merges with a previous
-      run, so tracks can be finalized story by story).
+      run, so tracks/nodes can be finalized in batches).
 
   pipeline publish <pack-dir> --content <sumrak-content-dir> [--push] [-m msg]
       Copy the pack into the content repo, recompute hashes, update
@@ -162,6 +173,33 @@ function makeClient(): ElevenLabsClient {
   return new ElevenLabsClient(apiKey);
 }
 
+/**
+ * T26 cost gate: print what the run would send to ElevenLabs and require an
+ * explicit go-ahead. `--yes` skips the prompt; a non-interactive run without
+ * it fails before ANY provider call.
+ */
+async function confirmAudioRun(plan: AudioRunPlan, yes: boolean): Promise<void> {
+  const parts = [
+    plan.storyTracks > 0 ? `${plan.storyTracks} story track(s)` : null,
+    plan.dialogueNodes > 0 ? `${plan.dialogueNodes} dialogue node(s)` : null,
+    plan.dialogueChoices > 0 ? `${plan.dialogueChoices} choice coach render(s)` : null,
+  ].filter((p): p is string => p !== null);
+  console.log(
+    `Pre-render summary: ${parts.join(', ') || 'nothing'} — ` +
+      `${plan.requests} ElevenLabs request(s), ~${plan.chars} characters.`,
+  );
+  if (plan.requests === 0) fail('nothing to render — check the filters', 2);
+  if (yes) return;
+  if (!process.stdin.isTTY) {
+    fail('refusing to render without confirmation — re-run with --yes (non-interactive)', 2);
+  }
+  const readline = await import('node:readline/promises');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const answer = (await rl.question('Proceed? [y/N] ')).trim().toLowerCase();
+  rl.close();
+  if (answer !== 'y' && answer !== 'yes') fail('aborted — no requests were made', 2);
+}
+
 async function audioCommand(args: string[]): Promise<void> {
   const drafts: string[] = [];
   let out: string | undefined;
@@ -170,6 +208,9 @@ async function audioCommand(args: string[]): Promise<void> {
   let model: string | undefined;
   let stories: string[] | undefined;
   let tracks: string[] | undefined;
+  let dialogues: string[] | undefined;
+  let playerAudio = false;
+  let yes = false;
   let extras: string | undefined;
   const seeds: Record<string, number> = {};
   let defaultSeed: number | undefined;
@@ -188,12 +229,20 @@ async function audioCommand(args: string[]): Promise<void> {
       if (peek !== undefined && /^\d+$/.test(peek)) takes = Number.parseInt(args[++i]!, 10);
     } else if (arg === '--seed') {
       const v = next();
-      const kv = /^([a-z0-9-]+)=(\d+)$/.exec(v);
+      // Track ids ("photo-anton") or dialogue groups ("dinner-mini/mama").
+      const kv = /^([a-z0-9-]+(?:\/[a-z0-9-]+)?)=(\d+)$/.exec(v);
       if (kv) seeds[kv[1]!] = Number.parseInt(kv[2]!, 10);
       else if (/^\d+$/.test(v)) defaultSeed = Number.parseInt(v, 10);
-      else fail(`--seed expects <n> or <track-id>=<n>, got "${v}"`, 2);
+      else
+        fail(
+          `--seed expects <n>, <track-id>=<n>, or <dialogueId>/<characterId>=<n>, got "${v}"`,
+          2,
+        );
     } else if (arg === '--stories') stories = next().split(',').filter(Boolean);
     else if (arg === '--tracks') tracks = next().split(',').filter(Boolean);
+    else if (arg === '--dialogues') dialogues = next().split(',').filter(Boolean);
+    else if (arg === '--player-audio') playerAudio = true;
+    else if (arg === '--yes' || arg === '-y') yes = true;
     else if (arg === '--model') model = next();
     else if (arg === '--extras') extras = next();
     else if (arg.startsWith('-')) fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
@@ -202,28 +251,46 @@ async function audioCommand(args: string[]): Promise<void> {
   if (drafts.length === 0) fail(`audio needs at least one draft file\n\n${USAGE}`, 2);
   if (out === undefined) fail(`audio needs -o <pack-dir>\n\n${USAGE}`, 2);
 
+  const filters = { stories, tracks, dialogues, playerAudio };
+  try {
+    // Cost gate BEFORE the client exists — an unconfirmed run fires nothing.
+    const plan = planAudioRun(drafts, { ...filters, extrasPath: extras, audition, takes });
+    await confirmAudioRun(plan, yes);
+  } catch (e) {
+    if (e instanceof DraftError) fail(e.issues.map(formatIssue).join('\n'), 1);
+    throw e;
+  }
+
   const client = makeClient();
   try {
     if (audition) {
       const result = await runAudition(drafts, out, client, {
         takes,
-        stories,
-        tracks,
+        ...filters,
         modelId: model,
         extrasPath: extras,
       });
-      console.log(`Rendered ${result.length} audition take(s) into ${out}/audition/:`);
-      for (const t of result) {
+      const total = result.story.length + result.dialogue.length;
+      console.log(`Rendered ${total} audition take(s) into ${out}/audition/:`);
+      for (const t of result.story) {
         console.log(`  ${t.trackId} take ${t.take} (seed ${t.seed}) → ${t.file}`);
         console.log(`      alignment: ${describeStamps(t.stampResult)}`);
       }
-      console.log('\nListen, pick a take per track, then finalize with --seed <track-id>=<seed>.');
+      for (const t of result.dialogue) {
+        console.log(
+          `  ${t.dialogueId}/${t.characterId} take ${t.take} (node ${t.nodeId}, seed ${t.seed}) → ${t.file}`,
+        );
+        console.log(`      alignment: ${describeStamps(t.stampResult)}`);
+      }
+      console.log(
+        '\nListen, pick a take per track/character, then finalize with ' +
+          '--seed <track-id>=<seed> / --seed <dialogueId>/<characterId>=<seed>.',
+      );
     } else {
       const summary = await runFinalize(drafts, out, client, {
         seeds,
         defaultSeed,
-        stories,
-        tracks,
+        ...filters,
         modelId: model,
         extrasPath: extras,
       });
@@ -232,6 +299,14 @@ async function audioCommand(args: string[]): Promise<void> {
         const kb = (r.opusBytes / 1024).toFixed(0);
         console.log(
           `  ${r.trackId} (${r.voice}, ${r.style}, seed ${r.seed}): ` +
+            `${(r.durationMs / 1000).toFixed(1)}s, ${kb} KiB opus`,
+        );
+        console.log(`      stamps: ${describeStamps(r.stampResult)}`);
+      }
+      for (const r of summary.dialogueReports) {
+        const kb = (r.opusBytes / 1024).toFixed(0);
+        console.log(
+          `  ${r.dialogueId}/${r.label} (${r.characterId}: ${r.voice}, seed ${r.seed}): ` +
             `${(r.durationMs / 1000).toFixed(1)}s, ${kb} KiB opus`,
         );
         console.log(`      stamps: ${describeStamps(r.stampResult)}`);
