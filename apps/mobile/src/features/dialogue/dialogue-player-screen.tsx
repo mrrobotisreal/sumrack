@@ -287,6 +287,9 @@ export function DialoguePlayerScreen() {
         className="flex-1"
         contentContainerClassName="gap-3 px-4 pb-6 pt-3"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        // The choice panel appearing shrinks this viewport without a content
+        // change — re-pin to the newest line then too.
+        onLayout={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
         {engine.entries.map((entry) => {
           if (entry.kind === 'choice') {
