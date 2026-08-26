@@ -10,7 +10,8 @@ import { toAiError } from './errors';
  * its feature tag, so the queue is debuggable from analytics_events alone.
  * Props carry codes and counts only — never text, never the key.
  */
-export type AiFeature = 'journal-feedback' | 'enrichment' | 'explain' | 'key-test' | 'assessment';
+export type AiFeature =
+  'journal-feedback' | 'enrichment' | 'explain' | 'key-test' | 'assessment' | 'import-annotate';
 
 export async function runChat(feature: AiFeature, req: ChatRequest): Promise<ChatResult> {
   track('ai_request_sent', { feature });

@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { buildAssessmentMessages } from '../src/features/ai/prompts/assessment';
 import { buildEnrichmentMessages } from '../src/features/ai/prompts/enrichment';
 import { buildExplainMessages } from '../src/features/ai/prompts/explain';
+import { buildImportAnnotateMessages } from '../src/features/ai/prompts/import-annotate';
 import { buildJournalFeedbackMessages } from '../src/features/ai/prompts/journal-feedback';
 
 const MODEL = 'anthropic/claude-sonnet-5';
@@ -85,6 +86,21 @@ const ASSESSMENT_BUNDLE = {
   ],
 };
 
+/**
+ * T29 import-annotation batch: conversational + literary + the recorded
+ * edge cases (name, latin brand, digits, emoji, «» quotes) in one batch so
+ * the fixture exercises the whole token contract.
+ */
+const IMPORT_SENTENCES = [
+  { id: 'c1', ru: 'Привет, любимый!' },
+  {
+    id: 'c2',
+    ru: 'Мы с мамой купили продукты в магазине «Пятёрочка» и заказали пиццу через Yandex.',
+  },
+  { id: 'c3', ru: 'Приходи к нам в 19:30, будет вкусный борщ 🙂' },
+  { id: 'c4', ru: 'Анна Ахматова писала: «Я научилась просто, мудро жить».' },
+];
+
 async function chat(messages: unknown, maxTokens: number): Promise<unknown> {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -147,6 +163,15 @@ async function main() {
     writeFileSync(
       join(OUT_DIR, 'assessment.json'),
       JSON.stringify({ bundle: ASSESSMENT_BUNDLE, ...assessment }, null, 2),
+    );
+  }
+
+  if (wants('import-annotate')) {
+    console.log('capturing import annotation…');
+    const annotate = slim(await chat(buildImportAnnotateMessages(IMPORT_SENTENCES), 8192));
+    writeFileSync(
+      join(OUT_DIR, 'import-annotate.json'),
+      JSON.stringify({ sentences: IMPORT_SENTENCES, ...annotate }, null, 2),
     );
   }
 

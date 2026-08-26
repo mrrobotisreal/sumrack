@@ -1,11 +1,12 @@
-import type { Token } from '@sumrak/schema';
 import { z } from 'zod';
 
 /**
  * Pure Share-to-Сумрак intake logic (T28, design V2 §4.1/§4.3): text
- * normalization, sentence splitting, the length-cap split plan, imported-
- * pack id generation, and the dev-only stub pack builder. No I/O — the
- * wired flows live in import-service.ts; unit tests exercise this directly.
+ * normalization, sentence splitting, the length-cap split plan, and
+ * imported-pack id generation. No I/O — the wired flows live in
+ * import-service.ts; unit tests exercise this directly. (The T28 dev-only
+ * stub annotator was removed in T29 — the real annotation service lives in
+ * `features/ai/import-annotate*.ts`.)
  */
 
 /** V2 §4.1: ~4000 chars per import; longer input splits at sentence boundaries. */
@@ -58,21 +59,84 @@ export function suggestTitle(text: string): string {
 }
 
 /**
- * Rule-based sentence split: paragraphs by newline, sentences by terminal
- * punctuation (. ! ? …) with trailing closers (» " )) kept attached.
- * Whitespace runs collapse to single spaces — pack sentences must
- * reconstruct from single-space-joined tokens, so the collapse happens
- * here, at the boundary. Deliberately simple (dev-stub + split-plan use;
- * T29's review screen lets boundaries be edited).
+ * Abbreviations whose trailing dot essentially never ends a sentence —
+ * they lead into what they abbreviate («ул. Ленина», «т. д.», initials
+ * like «А. С. Пушкин» via the single-uppercase-letter rule).
+ */
+const ABBREV_ALWAYS = new Set(['т', 'ул', 'им', 'напр', 'см', 'гл', 'стр', 'рис', 'табл']);
+
+/**
+ * Abbreviations that CAN end a sentence («Это было в 1999 г.») — treated
+ * as sentence-internal only when the next fragment starts with a
+ * lowercase letter or digit (a real sentence start is capitalized).
+ */
+const ABBREV_IF_LOWER = new Set([
+  'г',
+  'гг',
+  'в',
+  'вв',
+  'д',
+  'е',
+  'п',
+  'кв',
+  'с',
+  'ок',
+  'руб',
+  'коп',
+  'тыс',
+  'млн',
+  'млрд',
+]);
+
+/** Does this fragment end in an abbreviation dot (vs. a true sentence end)? */
+function endsWithAbbreviation(fragment: string, next: string): boolean {
+  // Only a bare '.' can be an abbreviation dot — !?… and closers end sentences.
+  const m = /(\S+)\.$/u.exec(fragment.trim());
+  if (!m) return false;
+  const base = m[1]!.replace(/^[^\p{L}\p{N}]+/u, '').replace(/\.$/u, '');
+  const last = (base.split('.').pop() ?? '').normalize('NFC');
+  if (/^\p{Lu}$/u.test(last)) return true; // single-letter initial
+  const lower = last.toLowerCase();
+  if (ABBREV_ALWAYS.has(lower)) return true;
+  return ABBREV_IF_LOWER.has(lower) && /^[\p{Ll}\p{N}]/u.test(next.trim());
+}
+
+/**
+ * Rule-based sentence split (T28, made abbreviation-aware in T29):
+ * paragraphs by newline, sentences by terminal punctuation (. ! ? …) with
+ * trailing closers (» " )) kept attached; a '.' after a known abbreviation
+ * or a single-letter initial does not split (heuristic — T29's review
+ * screen lets boundaries be merged/split by hand). Whitespace runs
+ * collapse to single spaces — pack sentences must reconstruct from
+ * single-space-joined tokens, so the collapse happens here, at the
+ * boundary.
  */
 export function splitSentences(text: string): string[] {
   const out: string[] = [];
   for (const para of text.split(/\n+/)) {
     const collapsed = para.replace(/\s+/g, ' ').trim();
     if (!collapsed) continue;
-    for (const m of collapsed.match(/[^.!?…]+(?:[.!?…]+[»")\]]*)?/gu) ?? []) {
-      const s = m.trim();
+    const spans: { start: number; end: number }[] = [];
+    const re = /[^.!?…]+(?:[.!?…]+[»")\]]*)?/gu;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(collapsed)) !== null) {
+      if (m[0].trim()) spans.push({ start: m.index, end: m.index + m[0].length });
+    }
+    let i = 0;
+    while (i < spans.length) {
+      let j = i;
+      while (
+        j < spans.length - 1 &&
+        endsWithAbbreviation(
+          collapsed.slice(spans[i]!.start, spans[j]!.end),
+          collapsed.slice(spans[j + 1]!.start, spans[j + 1]!.end),
+        )
+      ) {
+        j += 1;
+      }
+      const s = collapsed.slice(spans[i]!.start, spans[j]!.end).trim();
       if (s) out.push(s);
+      i = j + 1;
     }
   }
   return out;
@@ -190,67 +254,4 @@ export function buildImportedPackId(title: string, existing: Iterable<string>, n
     const candidate = `${base}-${n}`;
     if (!taken.has(candidate)) return candidate;
   }
-}
-
-const WORD_CHAR = /[\p{L}\p{N}́]/u;
-
-/**
- * Stub tokenizer (dev-only path, replaced by T29's AI annotation):
- * whitespace chunks; leading/trailing punctuation split into `isPunct`
- * tokens; the word core keeps interior punctuation (кто-то stays one
- * token) and gets lemma = surface (T15's provisional-lemma convention —
- * enrichment/annotation corrects it later). `spaceBefore` overrides are
- * emitted only where they differ from the schema defaults, and the result
- * reconstructs the sentence exactly by construction (single-space joins).
- */
-export function tokenizeSentence(ru: string): Token[] {
-  const tokens: Token[] = [];
-  for (const chunk of ru.split(' ').filter(Boolean)) {
-    const chars = [...chunk];
-    let start = 0;
-    let end = chars.length;
-    while (start < end && !WORD_CHAR.test(chars[start]!)) start += 1;
-    while (end > start && !WORD_CHAR.test(chars[end - 1]!)) end -= 1;
-    const parts: Token[] = [];
-    const leading = chars.slice(0, start).join('');
-    const core = chars.slice(start, end).join('');
-    const trailing = chars.slice(end).join('');
-    if (leading) parts.push({ text: leading, isPunct: true });
-    if (core) parts.push({ text: core, lemma: core });
-    if (trailing) parts.push({ text: trailing, isPunct: true });
-    parts.forEach((tok, i) => {
-      const index = tokens.length;
-      const desired = i === 0 && index > 0; // space only before each chunk's first token
-      const schemaDefault = index > 0 && !tok.isPunct;
-      tokens.push(desired === schemaDefault ? tok : { ...tok, spaceBefore: desired });
-    });
-  }
-  return tokens;
-}
-
-/**
- * DEV-ONLY stub annotator (T28 scope item 6): a minimal schema-valid
- * `type:'stories'` pack from an intake — rule-based sentence split, stub
- * tokens, NO translations (sentence `en` is a placeholder dash: the schema
- * requires non-empty, real translations are T29's job). Level 'A1' by
- * convention until T29 estimates one. Returned untyped: the caller MUST
- * gate it through `parsePack` (the commit gate) like any other pack.
- */
-export function buildStubPack(input: { packId: string; title: string; text: string }): unknown {
-  const title = { ru: input.title.normalize('NFC'), en: input.title };
-  const sentences = splitSentences(input.text).map((ru, i) => ({
-    id: `s1-${String(i + 1).padStart(3, '0')}`,
-    ru,
-    en: '—',
-    tokens: tokenizeSentence(ru),
-  }));
-  return {
-    id: input.packId,
-    version: 1,
-    type: 'stories',
-    title,
-    level: 'A1',
-    tags: ['imported'],
-    stories: [{ id: 's1', title, level: 'A1', sentences, audio: [] }],
-  };
 }

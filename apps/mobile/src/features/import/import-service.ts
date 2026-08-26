@@ -3,13 +3,13 @@ import { parsePack } from '@sumrak/schema';
 import { db, importPack, removePack, repos } from '@/db';
 import { queryKeys } from '@/db/hooks';
 import type { ImportRequestRow } from '@/db/repositories/imports';
+import { buildPackFromEnvelope, parseEnvelope } from '@/features/ai/import-annotate-core';
 import { syncQueryKeys } from '@/features/sync/hooks';
 import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
 
 import {
   buildImportedPackId,
-  buildStubPack,
   ImportIntakeSchema,
   normalizeIntakeText,
   planImportSplit,
@@ -135,14 +135,19 @@ export async function commitRequestAsPack(
 }
 
 /**
- * DEV-ONLY stub annotation (T28 scope item 6, replaced by T29): turns a
- * queued request into a minimal valid pack via the rule-based stub builder
- * and commits it through the standard gate. Reached only from the
- * Developer settings screen.
+ * The real T29 commit: assemble the pack from the request's annotation
+ * envelope (only reconstruction-verified 'ok' sentences — flagged/pending
+ * ones are excluded, which the review screen confirms explicitly with the
+ * user first) and run it through the standard commit gate. Replaces T28's
+ * dev-only stub path (removed this ticket).
  */
-export async function stubAnnotateAndCommit(requestId: string): Promise<{ packId: string }> {
+export async function commitAnnotatedRequest(
+  requestId: string,
+): Promise<{ packId: string; included: number; excluded: number }> {
   const request = await repos.imports.getRequest(requestId);
   if (!request) throw new Error(`import request not found: ${requestId}`);
+  const env = parseEnvelope(request.annotationJson);
+  if (!env) throw new Error('this request has no annotation yet');
 
   const [installed, importedRows] = await Promise.all([
     repos.content.listPacks(),
@@ -150,8 +155,15 @@ export async function stubAnnotateAndCommit(requestId: string): Promise<{ packId
   ]);
   const existing = [...installed.map((p) => p.id), ...importedRows.map((r) => r.id)];
   const packId = buildImportedPackId(request.title, existing, new Date());
-  const raw = buildStubPack({ packId, title: request.title, text: request.text });
-  return commitRequestAsPack(request.id, raw);
+  const { pack, included, excluded } = buildPackFromEnvelope({
+    packId,
+    title: request.title,
+    env,
+  });
+  if (included === 0) throw new Error('no verified sentences to commit');
+  const { packId: committedId } = await commitRequestAsPack(request.id, pack);
+  if (excluded > 0) track('import_commit_flagged_excluded', { excluded, included });
+  return { packId: committedId, included, excluded };
 }
 
 /**

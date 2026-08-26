@@ -156,6 +156,44 @@ export function parseStoredAssessment(payload: unknown): StoredAssessment | null
   return parsed.success ? parsed.data : null;
 }
 
+// --- Import annotation (T29) ------------------------------------------------
+
+/**
+ * One token row the model returns for import annotation — the draft-table
+ * contract (AUTHORING.md token-table columns) as JSON. Punctuation rows
+ * carry `text` only; the app derives `isPunct` (no letters/digits — the
+ * pipeline's rule) and spacing itself, so the model never authors either.
+ * `uncertain` is the model-reported confidence signal (ticket item 6).
+ */
+export const AnnotateTokenSchema = z.object({
+  text: z.string().min(1).max(100),
+  lemma: z.string().min(1).max(100).optional(),
+  translation: z.string().min(1).max(300).optional(),
+  pos: z.string().min(1).max(40).optional(),
+  grammar: z.string().min(1).max(300).optional(),
+  level: LevelSchema.optional(),
+  note: z.string().min(1).max(500).optional(),
+  uncertain: z.boolean().optional(),
+});
+export type AnnotateToken = z.infer<typeof AnnotateTokenSchema>;
+
+/** One annotated sentence: echoed uid + EN translation + the token rows. */
+export const AnnotateSentenceSchema = z.object({
+  /** Echoed sentence uid — results with unknown uids are dropped. */
+  id: z.string().min(1).max(40),
+  en: z.string().min(1).max(2000),
+  tokens: z.array(AnnotateTokenSchema).min(1).max(300),
+});
+export type AnnotateSentence = z.infer<typeof AnnotateSentenceSchema>;
+
+/** What the model must return for one import-annotation batch. */
+export const ImportAnnotateResponseSchema = z.object({
+  /** Overall CEFR difficulty estimate for this batch's sentences. */
+  level: LevelSchema.optional(),
+  sentences: z.array(AnnotateSentenceSchema).min(1).max(20),
+});
+export type ImportAnnotateResponse = z.infer<typeof ImportAnnotateResponseSchema>;
+
 // --- Explain this -----------------------------------------------------------
 
 /** Explain-this returns prose (markdown), not JSON — just bound it. */

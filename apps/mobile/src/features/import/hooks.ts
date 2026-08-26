@@ -13,6 +13,14 @@ export function useImportRequests() {
   });
 }
 
+/** One import request by id (T29 review screen). */
+export function useImportRequest(id: string) {
+  return useQuery({
+    queryKey: [...importQueryKeys.requests, id],
+    queryFn: () => repos.imports.getRequest(id),
+  });
+}
+
 /** Imported-pack meta by pack id (source label + imported date for the shelf). */
 export function useImportedPackMeta() {
   return useQuery({

@@ -102,6 +102,17 @@ export type AnalyticsEvent =
   | 'import_committed'
   | 'import_pack_removed'
   | 'import_packs_reimported'
+  // T29 import AI annotation + review (sentence/flag/retry counts + error
+  // codes ONLY — never text content; same policy as T16/T28)
+  | 'import_annotate_retry'
+  | 'import_annotate_completed'
+  | 'import_annotate_failed'
+  | 'import_annotate_rerun'
+  | 'import_review_opened'
+  | 'import_review_merged'
+  | 'import_review_split'
+  | 'import_review_sentence_deleted'
+  | 'import_commit_flagged_excluded'
   // T27 dialogue player (scores/attempt counts/modes only — never transcripts)
   | 'dialogue_tap_mode_toggled'
   | 'dialogues_list_opened'

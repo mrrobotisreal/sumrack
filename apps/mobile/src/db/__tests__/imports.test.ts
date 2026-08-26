@@ -2,8 +2,6 @@ import { parsePack } from '@sumrak/schema';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { buildStubPack } from '@/features/import/import-core';
-
 import { importPack, reimportLocalPacks, removePack } from '../importer';
 import { createImportsRepo, gunzipPackJson, gzipPackJson } from '../repositories/imports';
 import { createSyncStateRepo } from '../repositories/sync-state';
@@ -18,6 +16,48 @@ const STUB_INPUT = {
   title: 'Тёмный вечер',
   text: 'Это тёмный вечер. Кто-то стучит в дверь!',
 };
+
+/**
+ * Minimal valid local pack for these lifecycle tests (T28's dev-only
+ * `buildStubPack` was removed in T29 — the real path assembles packs from
+ * annotation envelopes; this fixture only needs to satisfy `parsePack`).
+ */
+function buildStubPack(input: { packId: string; title: string; text: string }): unknown {
+  const title = { ru: input.title, en: input.title };
+  const sentence = (id: string, ru: string) => ({
+    id,
+    ru,
+    en: '—',
+    tokens: ru.split(' ').flatMap((chunk) => {
+      const m = /^(.*?)([.!?…]*)$/u.exec(chunk)!;
+      const word = m[1]!;
+      const punct = m[2]!;
+      return [
+        ...(word ? [{ text: word, lemma: word }] : []),
+        ...(punct ? [{ text: punct, isPunct: true }] : []),
+      ];
+    }),
+  });
+  return {
+    id: input.packId,
+    version: 1,
+    type: 'stories',
+    title,
+    level: 'A1',
+    tags: ['imported'],
+    stories: [
+      {
+        id: 's1',
+        title,
+        level: 'A1',
+        sentences: input.text
+          .split(/(?<=[.!?…])\s+/u)
+          .map((ru, i) => sentence(`s1-${String(i + 1).padStart(3, '0')}`, ru)),
+        audio: [],
+      },
+    ],
+  };
+}
 
 describe('imports repo', () => {
   it('request rows are durable with the T29 status walk fields in place', async () => {

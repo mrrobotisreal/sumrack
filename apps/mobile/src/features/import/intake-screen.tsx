@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +14,8 @@ import {
 
 import { Text } from '@/components/ui/text';
 import type { ImportRequestRow } from '@/db/repositories/imports';
+import { envelopeProgress, parseEnvelope } from '@/features/ai/import-annotate-core';
+import { pumpImportAnnotateQueue, useImportAnnotateQueue } from '@/features/ai/import-annotate';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -192,6 +194,8 @@ const STATUS_LABELS: Record<ImportRequestRow['status'], string> = {
 
 function RequestsList({ requests }: { requests: ImportRequestRow[] }) {
   const { tokens } = useAppTheme();
+  const router = useRouter();
+  const phases = useImportAnnotateQueue((s) => s.byRequest);
   if (requests.length === 0) return null;
 
   const confirmRemove = (row: ImportRequestRow) => {
@@ -211,32 +215,77 @@ function RequestsList({ requests }: { requests: ImportRequestRow[] }) {
         Запросы
       </Text>
       <View className="overflow-hidden rounded-xl border border-border bg-surface">
-        {requests.map((row, i) => (
-          <View
-            key={row.id}
-            className={`flex-row items-center gap-3 px-4 py-3 ${i === 0 ? '' : 'border-t border-border'}`}
-          >
-            <View className="flex-1 gap-0.5">
-              <Text className="font-ui-medium" numberOfLines={1}>
-                {row.title}
-              </Text>
-              <Text variant="caption" numberOfLines={1}>
-                {STATUS_LABELS[row.status]} · {row.text.length} chars ·{' '}
-                {new Date(row.createdAt).toLocaleDateString()}
-                {row.error ? ` · ${row.error}` : ''}
-              </Text>
-            </View>
-            {row.status !== 'committed' && (
-              <Pressable
-                onPress={() => confirmRemove(row)}
-                hitSlop={8}
-                accessibilityLabel={`Remove import request ${row.title}`}
-              >
-                <Ionicons name="trash-outline" size={18} color={tokens.textMuted} />
-              </Pressable>
-            )}
-          </View>
-        ))}
+        {requests.map((row, i) => {
+          const phase = phases[row.id];
+          const env = parseEnvelope(row.annotationJson);
+          const progress = env ? envelopeProgress(env) : null;
+          const reviewable = row.status === 'annotated';
+          // Sending: live N/M line. Queued w/ partial progress: resume info.
+          const statusLine =
+            phase?.phase === 'sending'
+              ? `Аннотация… ${phase.done ?? 0}/${phase.total ?? progress?.total ?? '?'}`
+              : phase?.phase === 'error'
+                ? (phase.message ?? 'Error')
+                : row.status === 'queued' && progress && progress.done > 0
+                  ? `${STATUS_LABELS[row.status]} · ${progress.done}/${progress.total}`
+                  : reviewable && progress
+                    ? `${STATUS_LABELS[row.status]} · ${progress.total} предл.${progress.flagged > 0 ? ` · ${progress.flagged} ⚑` : ''}`
+                    : STATUS_LABELS[row.status];
+          return (
+            <Pressable
+              key={row.id}
+              disabled={!reviewable && row.status !== 'committed'}
+              onPress={() => router.push(`/import-review/${row.id}`)}
+              accessibilityRole={reviewable ? 'button' : undefined}
+              className={`flex-row items-center gap-3 px-4 py-3 ${i === 0 ? '' : 'border-t border-border'} ${
+                reviewable ? 'active:bg-surface-2' : ''
+              }`}
+            >
+              {phase?.phase === 'sending' && (
+                <ActivityIndicator size="small" color={tokens.accent} />
+              )}
+              <View className="flex-1 gap-0.5">
+                <Text className="font-ui-medium" numberOfLines={1}>
+                  {row.title}
+                </Text>
+                <Text
+                  variant="caption"
+                  numberOfLines={1}
+                  className={phase?.phase === 'error' ? 'text-danger' : ''}
+                >
+                  {statusLine} · {row.text.length} chars ·{' '}
+                  {new Date(row.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
+              {reviewable && (
+                <View className="flex-row items-center gap-1">
+                  <Text variant="caption" className="text-accent">
+                    Проверить
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={tokens.accent} />
+                </View>
+              )}
+              {phase?.phase === 'error' && (
+                <Pressable
+                  onPress={() => void pumpImportAnnotateQueue()}
+                  hitSlop={8}
+                  accessibilityLabel={`Retry annotation for ${row.title}`}
+                >
+                  <Ionicons name="refresh-outline" size={18} color={tokens.accent} />
+                </Pressable>
+              )}
+              {row.status !== 'committed' && phase?.phase !== 'sending' && (
+                <Pressable
+                  onPress={() => confirmRemove(row)}
+                  hitSlop={8}
+                  accessibilityLabel={`Remove import request ${row.title}`}
+                >
+                  <Ionicons name="trash-outline" size={18} color={tokens.textMuted} />
+                </Pressable>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

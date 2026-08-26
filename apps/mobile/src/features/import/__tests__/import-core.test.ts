@@ -1,16 +1,13 @@
-import { parsePack, reconstructSentenceRu, type Pack } from '@sumrak/schema';
 import { describe, expect, it } from 'vitest';
 
 import {
   buildImportedPackId,
-  buildStubPack,
   IMPORT_CHAR_CAP,
   normalizeIntakeText,
   planImportSplit,
   slugify,
   splitSentences,
   suggestTitle,
-  tokenizeSentence,
 } from '../import-core';
 
 describe('normalizeIntakeText', () => {
@@ -42,6 +39,42 @@ describe('splitSentences', () => {
     expect(splitSentences('Первая строка без точки\nВторая  строка')).toEqual([
       'Первая строка без точки',
       'Вторая строка',
+    ]);
+  });
+
+  // T29: abbreviation awareness (heuristic — review's merge/split is the escape hatch)
+  it('does not split after leading abbreviations or single-letter initials', () => {
+    expect(splitSentences('Мы живём на ул. Ленина. Там тихо.')).toEqual([
+      'Мы живём на ул. Ленина.',
+      'Там тихо.',
+    ]);
+    expect(splitSentences('А. С. Пушкин родился в Москве. Потом он уехал.')).toEqual([
+      'А. С. Пушкин родился в Москве.',
+      'Потом он уехал.',
+    ]);
+    expect(splitSentences('См. страницу пять. Дальше интереснее.')).toEqual([
+      'См. страницу пять.',
+      'Дальше интереснее.',
+    ]);
+  });
+
+  it('keeps «т. д.»-style compounds whole but lets them end sentences', () => {
+    expect(splitSentences('Мы купили хлеб, молоко и т. д. Потом пошли домой.')).toEqual([
+      'Мы купили хлеб, молоко и т. д.',
+      'Потом пошли домой.',
+    ]);
+    expect(splitSentences('Сыр, т. е. очень хороший сыр, кончился.')).toEqual([
+      'Сыр, т. е. очень хороший сыр, кончился.',
+    ]);
+  });
+
+  it('splits after can-end-a-sentence abbreviations only before a capitalized start', () => {
+    expect(splitSentences('Это было в 1999 г. в старом доме.')).toEqual([
+      'Это было в 1999 г. в старом доме.',
+    ]);
+    expect(splitSentences('Это было в 1999 г. Мы переехали.')).toEqual([
+      'Это было в 1999 г.',
+      'Мы переехали.',
     ]);
   });
 });
@@ -97,48 +130,5 @@ describe('planImportSplit', () => {
     const parts = planImportSplit(text);
     expect(parts.length).toBeGreaterThan(1);
     for (const part of parts) expect(part.length).toBeLessThanOrEqual(IMPORT_CHAR_CAP);
-  });
-});
-
-describe('tokenizeSentence', () => {
-  it('splits words and punctuation so reconstruction is exact', () => {
-    const ru = '«Привет, — сказал он. — Кто-то ждёт?»';
-    const tokens = tokenizeSentence(ru);
-    expect(reconstructSentenceRu(tokens)).toBe(ru);
-    // hyphenated word stays one token; quotes/dashes are punct
-    expect(tokens.find((t) => t.text === 'Кто-то')?.isPunct).toBeUndefined();
-    expect(tokens.find((t) => t.text === '«')?.isPunct).toBe(true);
-    expect(tokens.filter((t) => !t.isPunct).every((t) => t.lemma === t.text)).toBe(true);
-  });
-
-  it('handles standalone punctuation chunks', () => {
-    const ru = 'Ночь — это время.';
-    expect(reconstructSentenceRu(tokenizeSentence(ru))).toBe(ru);
-  });
-});
-
-describe('buildStubPack', () => {
-  it('builds a pack that passes the real schema commit gate', () => {
-    const raw = buildStubPack({
-      packId: 'imported-20260825-test',
-      title: 'Тёмный вечер',
-      text: 'Это тёмный вечер. Кто-то стучит в дверь!\n«Открой», — говорит голос…',
-    });
-    const pack: Pack = parsePack(raw); // throws on any schema violation
-    expect(pack.id).toBe('imported-20260825-test');
-    expect(pack.type).toBe('stories');
-    expect(pack.tags).toContain('imported');
-    expect(pack.stories[0]!.sentences).toHaveLength(3);
-    expect(pack.stories[0]!.audio).toEqual([]);
-    // ё preserved through the whole path
-    expect(pack.stories[0]!.sentences[0]!.ru).toContain('тёмный');
-    // sentence ids story-namespaced + unique
-    expect(pack.stories[0]!.sentences.map((s) => s.id)).toEqual(['s1-001', 's1-002', 's1-003']);
-  });
-
-  it('survives messy decomposed multi-paragraph input end-to-end', () => {
-    const text = normalizeIntakeText('Ещё оди́н ве́чер̈.\n\n  Двойные   пробелы?  Да.');
-    const raw = buildStubPack({ packId: 'imported-20260825-messy', title: 'Тест', text });
-    expect(() => parsePack(raw)).not.toThrow();
   });
 });

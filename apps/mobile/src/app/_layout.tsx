@@ -167,6 +167,7 @@ export default function RootLayout() {
                 <Stack.Screen name="search" options={{ title: 'Search' }} />
                 <Stack.Screen name="bookmarks" options={{ title: 'Закладки' }} />
                 <Stack.Screen name="import" options={{ title: 'Импорт' }} />
+                <Stack.Screen name="import-review/[id]" options={{ title: 'Проверка импорта' }} />
                 <Stack.Screen
                   name="notes/[id]"
                   options={{ headerShown: false, animation: 'fade' }}
@@ -174,7 +175,6 @@ export default function RootLayout() {
                 <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
                 <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
                 <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
-                <Stack.Screen name="dev-import" options={{ title: 'Import requests' }} />
               </Stack>
               <AutoSync />
               <AutoBackup />
