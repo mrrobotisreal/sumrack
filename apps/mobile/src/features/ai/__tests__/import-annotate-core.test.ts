@@ -200,6 +200,16 @@ describe('confidence rule', () => {
     expect(flag({ ...full, grammar: undefined })).toBe(true);
     expect(flag({ ...full, level: undefined })).toBe(true);
     expect(flag({ ...full, pos: undefined })).toBe(true);
+    // adverbs are uninflected: no grammar note is fine, but level still required
+    const adv = {
+      text: 'очень',
+      lemma: 'очень',
+      translation: 'very',
+      pos: 'adv',
+      level: 'A1' as const,
+    };
+    expect(flag(adv)).toBe(false);
+    expect(flag({ ...adv, level: undefined })).toBe(true);
     // names/foreign/num deliberately omit level — exempt from the heuristic
     expect(flag({ text: 'Анна', lemma: 'Анна', translation: 'Anna', pos: 'name' })).toBe(false);
     expect(flag({ text: '.' })).toBe(false);

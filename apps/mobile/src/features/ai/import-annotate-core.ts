@@ -184,22 +184,27 @@ function excerpt(ru: string, at: number): string {
   return `${from > 0 ? '…' : ''}${ru.slice(from, at)}⟨here⟩${ru.slice(at, to)}${to < ru.length ? '…' : ''}`;
 }
 
-/** Content POS whose words should always carry grammar+level (confidence heuristic). */
+/** Content POS whose words should always carry a CEFR level (confidence heuristic). */
 const CONTENT_POS = new Set(['noun', 'verb', 'adj', 'adv']);
+
+/** Inflecting content POS that should also carry a grammar note. */
+const INFLECTING_POS = new Set(['noun', 'verb', 'adj']);
 
 /**
  * Low-confidence rule (recorded T29 decision): a token is flagged when the
  * model marked it `uncertain`, OR it is a word token with a content POS
- * (noun/verb/adj/adv) missing `grammar` or `level`, OR a word token with
- * no `pos` at all. Names/foreign/num/other are exempt from the level
- * heuristic — the edge rules deliberately omit `level` for them.
+ * (noun/verb/adj/adv) missing `level` — plus missing `grammar` for the
+ * inflecting ones (adverbs are uninflected; a grammar note genuinely adds
+ * nothing, per AUTHORING.md) — OR a word token with no `pos` at all.
+ * Names/foreign/num/other are exempt from the level heuristic — the edge
+ * rules deliberately omit `level` for them.
  */
 export function tokenIsLowConfidence(raw: AnnotateToken, built: Token): boolean {
   if (raw.uncertain) return true;
   if (built.isPunct) return false;
   if (!built.pos) return true;
-  if (CONTENT_POS.has(built.pos)) return !built.grammar || !built.level;
-  return false;
+  if (CONTENT_POS.has(built.pos) && !built.level) return true;
+  return INFLECTING_POS.has(built.pos) && !built.grammar;
 }
 
 export interface BuiltSentence {

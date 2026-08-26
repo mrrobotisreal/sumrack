@@ -79,6 +79,10 @@ export function ImportIntakeScreen() {
         setTitle('');
         setTitleTouched(false);
         setSourceLabel('');
+        // Kick the worker so an online save annotates immediately (the
+        // T15/T16 requestFeedback pattern); offline it quietly no-ops and
+        // the connectivity listener picks the rows up later.
+        void pumpImportAnnotateQueue();
         Alert.alert(
           rows.length > 1 ? `Сохранено: ${rows.length} части` : 'Сохранено',
           rows.length > 1
@@ -231,14 +235,17 @@ function RequestsList({ requests }: { requests: ImportRequestRow[] }) {
                   : reviewable && progress
                     ? `${STATUS_LABELS[row.status]} · ${progress.total} предл.${progress.flagged > 0 ? ` · ${progress.flagged} ⚑` : ''}`
                     : STATUS_LABELS[row.status];
+          const openable = reviewable || row.status === 'committed';
           return (
             <Pressable
               key={row.id}
-              disabled={!reviewable && row.status !== 'committed'}
-              onPress={() => router.push(`/import-review/${row.id}`)}
+              // No `disabled` here: a disabled parent Pressable swallows the
+              // nested retry/trash taps on Android (device-found). No-op press
+              // instead for rows that aren't openable.
+              onPress={openable ? () => router.push(`/import-review/${row.id}`) : undefined}
               accessibilityRole={reviewable ? 'button' : undefined}
               className={`flex-row items-center gap-3 px-4 py-3 ${i === 0 ? '' : 'border-t border-border'} ${
-                reviewable ? 'active:bg-surface-2' : ''
+                openable ? 'active:bg-surface-2' : ''
               }`}
             >
               {phase?.phase === 'sending' && (
