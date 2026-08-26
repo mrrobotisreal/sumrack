@@ -52,12 +52,14 @@ async function fetchPathState(): Promise<PathState> {
   // (1) First-completion stamps.
   let stamped = false;
   for (const level of state.levels) {
-    for (const node of level.nodes) {
-      if (node.kind === 'unit' && node.complete && !node.completedAtRecorded) {
-        const first = await repos.path.markUnitCompleted(node.pack.id);
-        if (first) {
-          stamped = true;
-          track('unit_completed', { packId: node.pack.id, level: node.pack.level });
+    for (const trackGroup of level.tracks) {
+      for (const node of trackGroup.nodes) {
+        if (node.kind === 'unit' && node.complete && !node.completedAtRecorded) {
+          const first = await repos.path.markUnitCompleted(node.pack.id);
+          if (first) {
+            stamped = true;
+            track('unit_completed', { packId: node.pack.id, level: node.pack.level });
+          }
         }
       }
     }

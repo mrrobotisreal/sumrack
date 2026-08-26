@@ -38,6 +38,25 @@ describe('sample pack fixtures', () => {
     }
   });
 
+  it('T30 path fixtures validate, carrying theme/track exactly as authored', () => {
+    const hallway = loadPack('a1-course-unit-090');
+    expect(hallway.type).toBe('course-unit');
+    expect(hallway.theme).toEqual({ scene: 'hallway' });
+    expect(hallway.track).toBeUndefined(); // absent = main at the APP layer
+
+    const kitchen = loadPack('a1-course-unit-091');
+    expect(kitchen.theme).toEqual({ scene: 'kitchen', accent: '#8A4B2F' });
+
+    expect(loadPack('a1-course-unit-092').theme?.scene).toBe('cellar');
+    // unknown scene passes the schema untouched (forward compatibility)
+    expect(loadPack('a1-course-unit-093').theme?.scene).toBe('greenhouse');
+
+    const family = loadPack('a2-family-090');
+    expect(family.track).toBe('family');
+    expect(family.theme).toBeUndefined();
+    expect(family.prompts).toHaveLength(1);
+  });
+
   it('a1-prompts-001 («Первые страницы») validates as a prompts pack', () => {
     const pack = loadPack('a1-prompts-001');
     expect(pack.type).toBe('prompts');

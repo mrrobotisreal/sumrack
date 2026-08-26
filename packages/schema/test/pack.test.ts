@@ -119,6 +119,53 @@ describe('PackSchema', () => {
     pack.stories[0].sentences[0].tokens[0].translaton = 'oops';
     expectIssue(pack, 'tokens[0]', 'translaton');
   });
+
+  // T30: optional theme/track (V2 §5.2, §6.1). Absent track = main at the
+  // APP layer — the schema records only what was authored.
+  describe('theme & track (T30)', () => {
+    it('accepts theme with a known scene and accent, and a track', () => {
+      const pack = makeValidPack() as any;
+      pack.theme = { scene: 'hallway', accent: '#C08A4A' };
+      pack.track = 'family';
+      const result = PackSchema.safeParse(pack);
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.theme?.scene).toBe('hallway');
+      expect(result.success && result.data.track).toBe('family');
+    });
+
+    it('passes an UNKNOWN scene through untouched (forward compatibility)', () => {
+      const pack = makeValidPack() as any;
+      pack.theme = { scene: 'attic-observatory' };
+      const result = PackSchema.safeParse(pack);
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.theme?.scene).toBe('attic-observatory');
+    });
+
+    it('leaves theme and track absent (not defaulted) when unauthored', () => {
+      const result = PackSchema.safeParse(makeValidPack());
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.theme).toBeUndefined();
+        expect(result.data.track).toBeUndefined();
+      }
+    });
+
+    it('rejects a malformed accent color and a non-kebab track', () => {
+      const badAccent = makeValidPack() as any;
+      badAccent.theme = { scene: 'cellar', accent: 'reddish' };
+      expectIssue(badAccent, 'accent', 'hex color');
+
+      const badTrack = makeValidPack() as any;
+      badTrack.track = 'Семья';
+      expectIssue(badTrack, 'track', 'kebab-case');
+    });
+
+    it('rejects unknown keys inside theme (strict object)', () => {
+      const pack = makeValidPack() as any;
+      pack.theme = { scene: 'kitchen', mood: 'ominous' };
+      expectIssue(pack, 'theme', 'mood');
+    });
+  });
 });
 
 describe('reconstructSentenceRu', () => {

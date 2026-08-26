@@ -179,6 +179,24 @@ export const JournalPromptSchema = z.strictObject({
 export type JournalPrompt = z.infer<typeof JournalPromptSchema>;
 
 /**
+ * Ambient theme of a course-unit pack (T30, design V2 §5.2). `scene` is
+ * deliberately a plain string: the APP holds the known scene set (hallway /
+ * living-room / kitchen / pantry / nursery / cellar) and falls back to the
+ * default presentation for anything it doesn't know — future scenes must
+ * never require a schema bump. Packs carry data, never code.
+ */
+export const PackThemeSchema = z.strictObject({
+  /** Scene identifier, e.g. "hallway". Unknown values are forward-compatible. */
+  scene: z.string().min(1),
+  /** Optional accent color for the scene, "#RRGGBB". */
+  accent: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'accent is a hex color like "#B3402F"')
+    .optional(),
+});
+export type PackTheme = z.infer<typeof PackThemeSchema>;
+
+/**
  * The content pack (design §4.2 `Pack`) — the unit of authoring, sync, and
  * versioning. Everything the app knows about Russian arrives in a pack.
  *
@@ -216,6 +234,18 @@ export const PackSchema = z
     exercises: z.array(ExerciseSpecSchema).optional(),
     /** Journal prompts (prompts packs, or riding along in course units). */
     prompts: z.array(JournalPromptSchema).optional(),
+    /**
+     * Ambient room theme (T30, V2 §5.2) — read by the app for course-unit
+     * packs (house map now, T31 scenes next). Optional and additive on every
+     * pack type so future content shapes never need a schema bump.
+     */
+    theme: PackThemeSchema.optional(),
+    /**
+     * Path track (T30, V2 §6.1), e.g. "family". ABSENT means the main track —
+     * the default lives in the app layer (`main`), never baked in here, so
+     * pack JSON stays an honest record of what was authored.
+     */
+    track: StableIdSchema.optional(),
   })
   .superRefine((pack, ctx) => {
     // type → required sections

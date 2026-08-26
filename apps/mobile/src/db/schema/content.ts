@@ -34,6 +34,21 @@ export const packs = sqliteTable('packs', {
    * service) and are listed on the Library's «Импортировано» shelf.
    */
   origin: text('origin').$type<'remote' | 'local'>().notNull().default('remote'),
+  /**
+   * Ambient room theme (T30, V2 §5.2): scene id from `pack.theme.scene`
+   * (plain string — the APP holds the known house set; unknown scenes fall
+   * back to the default path presentation) + optional '#RRGGBB' accent.
+   * NULL = unthemed. Read for course-unit packs by the house map (T30) and
+   * the ambient scenes (T31).
+   */
+  themeScene: text('theme_scene'),
+  themeAccent: text('theme_accent'),
+  /**
+   * Path track (T30, V2 §6.1), e.g. 'family'. NULL = authored without a
+   * track = the main track — the 'main' default lives at the app layer
+   * (path-model), keeping the row an honest mirror of the pack JSON.
+   */
+  track: text('track'),
 });
 
 export const stories = sqliteTable(

@@ -5,9 +5,12 @@ import {
   ExerciseSpecSchema,
   JournalPromptSchema,
   LessonSchema,
+  PackThemeSchema,
+  StableIdSchema,
   type ExerciseSpec,
   type JournalPrompt,
   type Lesson,
+  type PackTheme,
 } from '@sumrak/schema';
 import { normalizeDeep } from './draft.ts';
 import { DraftError, type DraftIssue } from './errors.ts';
@@ -26,6 +29,10 @@ import { PackMetaSchema, type PackMeta } from './frontmatter.ts';
  *   id: unit-1-lesson
  *   title: { ru: 'Урок', en: 'Lesson' }
  *   grammarTopics: [prepositional-location]
+ * theme:           # T30: ambient room theme (course units; V2 §5.2)
+ *   scene: hallway # app-known set; unknown scenes are forward-compatible
+ *   accent: '#C08A4A'
+ * track: family    # T30: path track (V2 §6.1); absent = the main track
  * prompts:
  *   - { id: p1, level: A1, prompt: { ru: '…', en: '…' } }
  * exercises:
@@ -48,6 +55,10 @@ export const ExtrasFrontmatterSchema = z.strictObject({
   lesson: LessonMetaSchema.optional(),
   prompts: z.array(JournalPromptSchema).min(1).optional(),
   exercises: z.array(ExerciseSpecSchema).min(1).optional(),
+  /** T30: ambient room theme — flows into `pack.theme` verbatim. */
+  theme: PackThemeSchema.optional(),
+  /** T30: path track — flows into `pack.track`; omit for the main track. */
+  track: StableIdSchema.optional(),
 });
 
 export interface PackExtras {
@@ -57,6 +68,8 @@ export interface PackExtras {
   lesson?: Lesson;
   prompts?: JournalPrompt[];
   exercises?: ExerciseSpec[];
+  theme?: PackTheme;
+  track?: string;
 }
 
 /**
@@ -124,7 +137,14 @@ export function parseExtras(file: string, source: string): PackExtras {
           'extras have a markdown body but no "lesson:" section — the body is the lesson body, so declare its meta (or delete the body)',
       });
     }
-    if (!parsedFm.pack && !parsedFm.lesson && !parsedFm.prompts && !parsedFm.exercises) {
+    if (
+      !parsedFm.pack &&
+      !parsedFm.lesson &&
+      !parsedFm.prompts &&
+      !parsedFm.exercises &&
+      !parsedFm.theme &&
+      !parsedFm.track
+    ) {
       issues.push({ file, line: 2, message: 'extras file declares nothing' });
     }
   }
@@ -136,6 +156,8 @@ export function parseExtras(file: string, source: string): PackExtras {
   if (parsedFm.lesson) extras.lesson = { ...parsedFm.lesson, body };
   if (parsedFm.prompts) extras.prompts = parsedFm.prompts;
   if (parsedFm.exercises) extras.exercises = parsedFm.exercises;
+  if (parsedFm.theme) extras.theme = parsedFm.theme;
+  if (parsedFm.track) extras.track = parsedFm.track;
   return extras;
 }
 

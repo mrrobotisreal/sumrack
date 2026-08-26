@@ -414,6 +414,8 @@ export function assemblePack(
   if (extras?.lesson) pack.lesson = extras.lesson;
   if (extras?.prompts) pack.prompts = extras.prompts;
   if (extras?.exercises) pack.exercises = extras.exercises;
+  if (extras?.theme) pack.theme = extras.theme;
+  if (extras?.track) pack.track = extras.track;
 
   // Extras id hygiene: prompt/exercise ids unique within their section.
   for (const [section, ids] of [

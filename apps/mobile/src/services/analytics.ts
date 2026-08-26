@@ -213,6 +213,9 @@ export type AnalyticsEvent =
   | 'path_continue_tapped'
   | 'checkpoint_threshold_changed'
   | 'path_position_advanced'
+  // T30 path tracks + house map. Props are track/level/scene/pack ids only.
+  | 'path_track_section_viewed'
+  | 'house_map_room_tapped'
   // T18 progress dashboard + AI CEFR assessment. Assessment props carry
   // trigger/model/error codes only — never journal text.
   | 'dashboard_opened'

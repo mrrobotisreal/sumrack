@@ -9,7 +9,16 @@ import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import type { CheckpointState, PathNode, UnitState } from './path-model';
+import { HouseMap } from './house-map/house-map';
+import { isHouseUnit, orderHouseUnits } from './house-map/rooms';
+import {
+  MAIN_TRACK,
+  trackTitle,
+  type CheckpointState,
+  type PathNode,
+  type PathTrackGroup,
+  type UnitState,
+} from './path-model';
 import { useInvalidatePath, usePathState } from './use-path';
 
 /**
@@ -18,6 +27,12 @@ import { useInvalidatePath, usePathState } from './use-path';
  * tappable and every step inside is navigable regardless of state —
  * locked-looking UI is a design bug here (UI_DESIGN §4 "No locks, ever").
  * Completed units dim to embers.
+ *
+ * T30: units group by TRACK within a level — `main` first, then named
+ * sections («Семья» warm identity via track-warm tokens, same layout).
+ * House-themed units (theme.scene in the house set) render as the vertical
+ * house cross-section map instead of a card stack; tapping a room selects
+ * that unit and its normal card (steps and all) appears under the map.
  */
 export function PathScreen() {
   const { tokens } = useAppTheme();
@@ -70,6 +85,12 @@ export function PathScreen() {
   }
 
   const currentId = state.current?.pack.id ?? null;
+  const selectedId = expandedId ?? currentId;
+  const toggleNode = (node: PathNode) => {
+    const next = selectedId === node.pack.id ? '' : node.pack.id;
+    setExpandedId(next);
+    if (next) track('unit_expanded', { packId: node.pack.id, kind: node.kind });
+  };
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="px-4 pb-16 pt-4">
@@ -79,17 +100,14 @@ export function PathScreen() {
             <LevelChip level={group.level as CefrLevel} />
             <View className="h-px flex-1 bg-border" />
           </View>
-          {group.nodes.map((node) => (
-            <PathNodeCard
-              key={node.pack.id}
-              node={node}
-              isCurrent={node.pack.id === currentId}
-              expanded={(expandedId ?? currentId) === node.pack.id}
-              onToggle={() => {
-                const next = (expandedId ?? currentId) === node.pack.id ? '' : node.pack.id;
-                setExpandedId(next);
-                if (next) track('unit_expanded', { packId: node.pack.id, kind: node.kind });
-              }}
+          {group.tracks.map((trackGroup) => (
+            <TrackSection
+              key={trackGroup.track}
+              level={group.level}
+              group={trackGroup}
+              currentId={currentId}
+              selectedId={selectedId}
+              onToggle={toggleNode}
             />
           ))}
         </View>
@@ -98,23 +116,114 @@ export function PathScreen() {
   );
 }
 
+/**
+ * One track's nodes within a level. `main` renders headerless (it IS the
+ * path); other tracks get a named warm-identity header. House-themed units
+ * render as the house map + the selected unit's card below it.
+ */
+function TrackSection({
+  level,
+  group,
+  currentId,
+  selectedId,
+  onToggle,
+}: {
+  level: string;
+  group: PathTrackGroup;
+  currentId: string | null;
+  selectedId: string | null;
+  onToggle: (node: PathNode) => void;
+}) {
+  const { tokens } = useAppTheme();
+  const warm = group.track !== MAIN_TRACK;
+
+  React.useEffect(() => {
+    track('path_track_section_viewed', { track: group.track, level, units: group.nodes.length });
+    // Once per mounted section — a section's identity is (track, level).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group.track, level]);
+
+  const houseUnits = orderHouseUnits(
+    group.nodes.filter((n): n is UnitState => n.kind === 'unit' && isHouseUnit(n.pack)),
+  );
+  const listNodes = group.nodes.filter(
+    (n) => !(n.kind === 'unit' && isHouseUnit(n.pack)),
+  );
+  const selectedHouseUnit = houseUnits.find((u) => u.pack.id === selectedId) ?? null;
+
+  return (
+    <View>
+      {warm && (
+        <View className="mb-3 mt-1 flex-row items-center gap-2">
+          <Ionicons name="heart-outline" size={14} color={tokens.trackWarm} />
+          <RNText className="font-reading text-lg text-track-warm">
+            {trackTitle(group.track).ru}
+          </RNText>
+          <View className="h-px flex-1 bg-track-warm/30" />
+        </View>
+      )}
+      {houseUnits.length > 0 && (
+        <HouseMap
+          units={houseUnits}
+          currentId={currentId}
+          onPressRoom={(unit) => {
+            track('house_map_room_tapped', {
+              scene: unit.pack.themeScene ?? 'unknown',
+              packId: unit.pack.id,
+            });
+            onToggle(unit);
+          }}
+        />
+      )}
+      {selectedHouseUnit && (
+        <PathNodeCard
+          node={selectedHouseUnit}
+          isCurrent={selectedHouseUnit.pack.id === currentId}
+          expanded
+          warm={warm}
+          onToggle={() => onToggle(selectedHouseUnit)}
+        />
+      )}
+      {listNodes.map((node) => (
+        <PathNodeCard
+          key={node.pack.id}
+          node={node}
+          isCurrent={node.pack.id === currentId}
+          expanded={selectedId === node.pack.id}
+          warm={warm}
+          onToggle={() => onToggle(node)}
+        />
+      ))}
+    </View>
+  );
+}
+
 function PathNodeCard({
   node,
   isCurrent,
   expanded,
+  warm = false,
   onToggle,
 }: {
   node: PathNode;
   isCurrent: boolean;
   expanded: boolean;
+  /** T30: non-main track sections use the warm («Семья») accent identity. */
+  warm?: boolean;
   onToggle: () => void;
 }) {
   return (
     <View className="mb-3 flex-row gap-3">
-      <JourneyRail node={node} isCurrent={isCurrent} />
+      <JourneyRail node={node} isCurrent={isCurrent} warm={warm} />
       <View className="flex-1">
         {node.kind === 'unit' ? (
-          <UnitNode unit={node} isCurrent={isCurrent} expanded={expanded} onToggle={onToggle} />
+          <UnitNode
+            unit={node}
+            isCurrent={isCurrent}
+            expanded={expanded}
+            warm={warm}
+            onToggle={onToggle}
+          />
         ) : (
           <CheckpointNode checkpoint={node} expanded={expanded} onToggle={onToggle} />
         )}
@@ -124,10 +233,19 @@ function PathNodeCard({
 }
 
 /** The vertical journey line: a node dot + connector (dims to embers when done). */
-function JourneyRail({ node, isCurrent }: { node: PathNode; isCurrent: boolean }) {
+function JourneyRail({
+  node,
+  isCurrent,
+  warm,
+}: {
+  node: PathNode;
+  isCurrent: boolean;
+  warm: boolean;
+}) {
   const { tokens } = useAppTheme();
   const done = node.kind === 'unit' ? node.complete : node.passed;
-  const color = done ? tokens.accent : isCurrent ? tokens.text : tokens.textMuted;
+  const accent = warm ? tokens.trackWarm : tokens.accent;
+  const color = done ? accent : isCurrent ? tokens.text : tokens.textMuted;
   const icon =
     node.kind === 'checkpoint'
       ? 'flag'
@@ -150,20 +268,23 @@ function UnitNode({
   unit,
   isCurrent,
   expanded,
+  warm,
   onToggle,
 }: {
   unit: UnitState;
   isCurrent: boolean;
   expanded: boolean;
+  warm: boolean;
   onToggle: () => void;
 }) {
   const { tokens } = useAppTheme();
   const dim = unit.complete && !expanded;
+  const accent = warm ? tokens.trackWarm : tokens.accent;
 
   return (
     <View
       className={`rounded-xl border bg-surface ${
-        isCurrent ? 'border-accent/50' : 'border-border'
+        isCurrent ? (warm ? 'border-track-warm/50' : 'border-accent/50') : 'border-border'
       } ${dim ? 'opacity-60' : ''}`}
     >
       <Pressable
@@ -178,7 +299,7 @@ function UnitNode({
             {unit.pack.titleEn} · {unit.stepsDone}/{unit.stepsTotal} steps
           </Text>
         </View>
-        {unit.complete && <Ionicons name="checkmark-circle" size={20} color={tokens.accent} />}
+        {unit.complete && <Ionicons name="checkmark-circle" size={20} color={accent} />}
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={18}

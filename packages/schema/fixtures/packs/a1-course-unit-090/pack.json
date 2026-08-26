@@ -1,0 +1,151 @@
+{
+  "id": "a1-course-unit-090",
+  "version": 1,
+  "type": "course-unit",
+  "title": {
+    "ru": "Прихожая",
+    "en": "The Entryway"
+  },
+  "level": "A1",
+  "tags": [
+    "course",
+    "house",
+    "fixture"
+  ],
+  "stories": [
+    {
+      "id": "hallway-coats",
+      "title": {
+        "ru": "Чужие куртки",
+        "en": "The Coats That Belong to No One"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "hall-s01",
+          "ru": "Это наша прихожая.",
+          "en": "This is our entryway.",
+          "grammarTopics": [
+            "nominative-subject"
+          ],
+          "tokens": [
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "this is",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "наша",
+              "lemma": "наш",
+              "translation": "our",
+              "pos": "pron",
+              "level": "A1",
+              "grammar": "f.sg. nom."
+            },
+            {
+              "text": "прихожая",
+              "lemma": "прихожая",
+              "translation": "entryway",
+              "pos": "noun",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "hall-s02",
+          "ru": "Здесь висит куртка.",
+          "en": "A jacket hangs here.",
+          "tokens": [
+            {
+              "text": "Здесь",
+              "lemma": "здесь",
+              "translation": "here",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "висит",
+              "lemma": "висеть",
+              "translation": "hangs",
+              "pos": "verb",
+              "level": "A2",
+              "grammar": "3sg. pres. (impf.)"
+            },
+            {
+              "text": "куртка",
+              "lemma": "куртка",
+              "translation": "jacket",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "hall-s03",
+          "ru": "Это не моя куртка.",
+          "en": "It is not my jacket.",
+          "tokens": [
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "it is",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "моя",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "level": "A1",
+              "grammar": "f.sg. nom."
+            },
+            {
+              "text": "куртка",
+              "lemma": "куртка",
+              "translation": "jacket",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "lesson": {
+    "id": "u090-lesson",
+    "title": {
+      "ru": "Что здесь?",
+      "en": "What is here?"
+    },
+    "body": "## Что здесь?\n\nNaming what you see in the dark: «Это куртка.» — the nominative case names things.\n",
+    "grammarTopics": [
+      "nominative-subject"
+    ]
+  },
+  "theme": {
+    "scene": "hallway"
+  }
+}

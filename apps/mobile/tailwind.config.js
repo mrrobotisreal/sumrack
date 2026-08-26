@@ -21,6 +21,10 @@ module.exports = {
         danger: 'rgb(var(--danger) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
         scrim: 'rgb(var(--scrim) / <alpha-value>)',
+        // Warm non-horror track identity («Семья», T30) — border/icon/caption
+        // accents on track sections; soft = selection/highlight wash
+        'track-warm': 'rgb(var(--track-warm) / <alpha-value>)',
+        'track-warm-soft': 'rgb(var(--track-warm) / 0.15)',
         // CEFR chip hue ramp (A1 coolest → C1 ember) — used via LevelChip only
         'level-a1': 'rgb(var(--level-a1) / <alpha-value>)',
         'level-a2': 'rgb(var(--level-a2) / <alpha-value>)',

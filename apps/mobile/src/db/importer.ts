@@ -204,6 +204,10 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     tags: pack.tags,
     importedAt: now,
     origin: opts.origin ?? 'remote',
+    // T30: theme/track flow through verbatim; NULL = unthemed / main track.
+    themeScene: pack.theme?.scene ?? null,
+    themeAccent: pack.theme?.accent ?? null,
+    track: pack.track ?? null,
   });
 
   for (const [storyIdx, story] of pack.stories.entries()) {

@@ -16,6 +16,8 @@ export interface ColorTokens {
   success: string;
   danger: string;
   border: string;
+  /** Warm «Семья»-track identity (T30) — icons/SVG the class system can't reach. */
+  trackWarm: string;
 }
 
 export const colors: Record<ThemeScheme, ColorTokens> = {
@@ -29,6 +31,7 @@ export const colors: Record<ThemeScheme, ColorTokens> = {
     success: '#708C5A',
     danger: '#CE6A60',
     border: '#26262E',
+    trackWarm: '#C08A4A',
   },
   light: {
     bg: '#F7F5F2',
@@ -40,5 +43,6 @@ export const colors: Record<ThemeScheme, ColorTokens> = {
     success: '#5A7548',
     danger: '#96322B',
     border: '#E2DED8',
+    trackWarm: '#8F6534',
   },
 };

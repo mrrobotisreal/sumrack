@@ -148,3 +148,53 @@ describe('assemblePack with extras', () => {
     expect(issues.some((i) => /duplicate exercises id "ex-mc-1"/.test(i.message))).toBe(true);
   });
 });
+
+describe('theme & track extras (T30)', () => {
+  const themedExtras = unitExtras.replace(
+    '---\n## Где стоит?',
+    `theme:
+  scene: hallway
+  accent: '#C08A4A'
+track: family
+---
+## Где стоит?`,
+  );
+
+  it('round-trips theme + track from extras frontmatter into the pack JSON', () => {
+    const source = referenceDraft
+      .replace('type: stories', 'type: course-unit')
+      .replace('id: a1-creepypasta-002', 'id: a1-unit-test');
+    const extras = parseExtras('unit.extras.md', themedExtras);
+    expect(extras.theme).toEqual({ scene: 'hallway', accent: '#C08A4A' });
+    expect(extras.track).toBe('family');
+    const pack = annotateDrafts([{ path: 'draft.md', source }], extras);
+    expect(pack.theme).toEqual({ scene: 'hallway', accent: '#C08A4A' });
+    expect(pack.track).toBe('family');
+  });
+
+  it('passes an unknown scene through (forward compatibility, app-side known set)', () => {
+    const source = referenceDraft
+      .replace('type: stories', 'type: course-unit')
+      .replace('id: a1-creepypasta-002', 'id: a1-unit-test');
+    const extras = parseExtras('unit.extras.md', themedExtras.replace('hallway', 'greenhouse'));
+    const pack = annotateDrafts([{ path: 'draft.md', source }], extras);
+    expect(pack.theme?.scene).toBe('greenhouse');
+  });
+
+  it('omits theme/track from the pack when unauthored (absent = main at the app layer)', () => {
+    const source = referenceDraft
+      .replace('type: stories', 'type: course-unit')
+      .replace('id: a1-creepypasta-002', 'id: a1-unit-test');
+    const pack = annotateDrafts(
+      [{ path: 'draft.md', source }],
+      parseExtras('unit.extras.md', unitExtras),
+    );
+    expect(pack.theme).toBeUndefined();
+    expect(pack.track).toBeUndefined();
+  });
+
+  it('rejects a malformed theme accent with a frontmatter path', () => {
+    const bad = themedExtras.replace(`'#C08A4A'`, `'ember-red'`);
+    expect(issuesOf(() => parseExtras('x.md', bad))[0]!.message).toMatch(/accent/);
+  });
+});

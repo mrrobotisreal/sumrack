@@ -1,0 +1,175 @@
+{
+  "id": "a1-course-unit-091",
+  "version": 1,
+  "type": "course-unit",
+  "title": {
+    "ru": "Кухня",
+    "en": "The Kitchen"
+  },
+  "level": "A1",
+  "tags": [
+    "course",
+    "house",
+    "fixture"
+  ],
+  "stories": [
+    {
+      "id": "kitchen-knives",
+      "title": {
+        "ru": "Ножи на кухне",
+        "en": "The Knives in the Kitchen"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "kitch-s01",
+          "ru": "Утром я иду на кухню.",
+          "en": "In the morning I go to the kitchen.",
+          "tokens": [
+            {
+              "text": "Утром",
+              "lemma": "утро",
+              "translation": "in the morning",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "instr., used as adverb"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "иду",
+              "lemma": "идти",
+              "translation": "go",
+              "pos": "verb",
+              "level": "A1",
+              "grammar": "1sg. pres. (impf.)"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "to",
+              "pos": "prep",
+              "level": "A1",
+              "grammar": "+acc."
+            },
+            {
+              "text": "кухню",
+              "lemma": "кухня",
+              "translation": "kitchen",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "acc.sg."
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "kitch-s02",
+          "ru": "Ножи лежат не так.",
+          "en": "The knives are not lying the same way.",
+          "tokens": [
+            {
+              "text": "Ножи",
+              "lemma": "нож",
+              "translation": "knives",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "nom.pl."
+            },
+            {
+              "text": "лежат",
+              "lemma": "лежать",
+              "translation": "lie",
+              "pos": "verb",
+              "level": "A2",
+              "grammar": "3pl. pres. (impf.)"
+            },
+            {
+              "text": "не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "так",
+              "lemma": "так",
+              "translation": "that way",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "kitch-s03",
+          "ru": "Кто был здесь ночью?",
+          "en": "Who was here at night?",
+          "tokens": [
+            {
+              "text": "Кто",
+              "lemma": "кто",
+              "translation": "who",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "был",
+              "lemma": "быть",
+              "translation": "was",
+              "pos": "verb",
+              "level": "A1",
+              "grammar": "m.sg. past"
+            },
+            {
+              "text": "здесь",
+              "lemma": "здесь",
+              "translation": "here",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "ночью",
+              "lemma": "ночь",
+              "translation": "at night",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "instr., used as adverb"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "lesson": {
+    "id": "u091-lesson",
+    "title": {
+      "ru": "Что ты видишь?",
+      "en": "What do you see?"
+    },
+    "body": "## Что ты видишь?\n\nWhat you see, take, put — the accusative case marks the direct object.\n",
+    "grammarTopics": [
+      "accusative-direct-object"
+    ]
+  },
+  "theme": {
+    "scene": "kitchen",
+    "accent": "#8A4B2F"
+  }
+}

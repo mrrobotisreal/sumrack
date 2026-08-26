@@ -1,0 +1,170 @@
+{
+  "id": "a2-family-090",
+  "version": 1,
+  "type": "course-unit",
+  "title": {
+    "ru": "Знакомство",
+    "en": "Meeting the Family"
+  },
+  "level": "A2",
+  "tags": [
+    "course",
+    "family",
+    "fixture"
+  ],
+  "stories": [
+    {
+      "id": "family-arrival",
+      "title": {
+        "ru": "Приезд",
+        "en": "The Arrival"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "fam-s01",
+          "ru": "Очень приятно познакомиться.",
+          "en": "Very nice to meet you.",
+          "tokens": [
+            {
+              "text": "Очень",
+              "lemma": "очень",
+              "translation": "very",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "приятно",
+              "lemma": "приятно",
+              "translation": "nice",
+              "pos": "adv",
+              "level": "A2"
+            },
+            {
+              "text": "познакомиться",
+              "lemma": "познакомиться",
+              "translation": "to meet",
+              "pos": "verb",
+              "level": "A2",
+              "grammar": "inf. (pf.)"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fam-s02",
+          "ru": "Мама Алины готовит ужин.",
+          "en": "Alina's mom is cooking dinner.",
+          "tokens": [
+            {
+              "text": "Мама",
+              "lemma": "мама",
+              "translation": "mom",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": "Алины",
+              "lemma": "Алина",
+              "translation": "of Alina",
+              "pos": "name",
+              "level": "A1",
+              "grammar": "gen.sg."
+            },
+            {
+              "text": "готовит",
+              "lemma": "готовить",
+              "translation": "is cooking",
+              "pos": "verb",
+              "level": "A1",
+              "grammar": "3sg. pres. (impf.)"
+            },
+            {
+              "text": "ужин",
+              "lemma": "ужин",
+              "translation": "dinner",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "acc.sg."
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fam-s03",
+          "ru": "Мы говорим о семье.",
+          "en": "We talk about family.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "говорим",
+              "lemma": "говорить",
+              "translation": "talk",
+              "pos": "verb",
+              "level": "A1",
+              "grammar": "1pl. pres. (impf.)"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "level": "A1",
+              "grammar": "+prep."
+            },
+            {
+              "text": "семье",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "prep.sg."
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "lesson": {
+    "id": "fam090-lesson",
+    "title": {
+      "ru": "Вы и ты",
+      "en": "Formal and informal you"
+    },
+    "body": "## Вы и ты\n\nPoliteness formulas: «вы» for the parents until they offer «ты».\n",
+    "grammarTopics": [
+      "politeness-vy-ty"
+    ]
+  },
+  "prompts": [
+    {
+      "id": "fam090-p1",
+      "level": "A2",
+      "prompt": {
+        "ru": "Напишите тост для семьи.",
+        "en": "Write a toast for the family."
+      },
+      "tags": [
+        "family"
+      ]
+    }
+  ],
+  "track": "family"
+}

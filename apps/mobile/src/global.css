@@ -26,6 +26,7 @@
     --danger: 150 50 43; /* #96322B dried blood */
     --border: 226 222 216; /* #E2DED8 */
     --scrim: 0 0 0; /* modal/sheet backdrop wash (used with alpha) */
+    --track-warm: 143 101 52; /* #8F6534 warm honey — «Семья» track identity (T30), 5.1:1 on surface */
     /* CEFR chip ramp — one hue journey, A1 coolest → C1 ember (UI_DESIGN §1) */
     --level-a1: 78 101 127; /* #4E657F cool slate */
     --level-a2: 79 112 96; /* #4F7060 sage */
@@ -46,6 +47,7 @@
     --danger: 206 106 96; /* #CE6A60 dried blood, lightened for AA text contrast on all dark surfaces (T22 a11y; was #8E3B35 @ 2.65:1) */
     --border: 38 38 46; /* #26262E */
     --scrim: 0 0 0; /* modal/sheet backdrop wash (used with alpha) */
+    --track-warm: 192 138 74; /* #C08A4A warm candle amber — «Семья» track identity (T30), 6.2:1 on surface */
     /* CEFR chip ramp — one hue journey, A1 coolest → C1 ember (UI_DESIGN §1) */
     --level-a1: 107 127 153; /* #6B7F99 cool slate */
     --level-a2: 110 139 121; /* #6E8B79 sage */

@@ -49,12 +49,14 @@ export {
   JournalPromptSchema,
   LessonSchema,
   PackSchema,
+  PackThemeSchema,
   StorySchema,
   type AudioTrack,
   type ExerciseSpec,
   type JournalPrompt,
   type Lesson,
   type Pack,
+  type PackTheme,
   type Story,
 } from './pack';
 export {

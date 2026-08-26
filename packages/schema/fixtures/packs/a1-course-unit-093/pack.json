@@ -1,0 +1,125 @@
+{
+  "id": "a1-course-unit-093",
+  "version": 1,
+  "type": "course-unit",
+  "title": {
+    "ru": "Оранжерея",
+    "en": "The Greenhouse"
+  },
+  "level": "A1",
+  "tags": [
+    "course",
+    "fixture"
+  ],
+  "stories": [
+    {
+      "id": "greenhouse-flowers",
+      "title": {
+        "ru": "Ночные цветы",
+        "en": "The Night Flowers"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "green-s01",
+          "ru": "За домом стоит оранжерея.",
+          "en": "A greenhouse stands behind the house.",
+          "tokens": [
+            {
+              "text": "За",
+              "lemma": "за",
+              "translation": "behind",
+              "pos": "prep",
+              "level": "A1",
+              "grammar": "+instr."
+            },
+            {
+              "text": "домом",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "instr.sg."
+            },
+            {
+              "text": "стоит",
+              "lemma": "стоять",
+              "translation": "stands",
+              "pos": "verb",
+              "level": "A1",
+              "grammar": "3sg. pres. (impf.)"
+            },
+            {
+              "text": "оранжерея",
+              "lemma": "оранжерея",
+              "translation": "greenhouse",
+              "pos": "noun",
+              "level": "B1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "green-s02",
+          "ru": "Цветы там растут ночью.",
+          "en": "The flowers there grow at night.",
+          "tokens": [
+            {
+              "text": "Цветы",
+              "lemma": "цветок",
+              "translation": "flowers",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "nom.pl."
+            },
+            {
+              "text": "там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "растут",
+              "lemma": "расти",
+              "translation": "grow",
+              "pos": "verb",
+              "level": "A2",
+              "grammar": "3pl. pres. (impf.)"
+            },
+            {
+              "text": "ночью",
+              "lemma": "ночь",
+              "translation": "at night",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "instr., used as adverb"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "lesson": {
+    "id": "u093-lesson",
+    "title": {
+      "ru": "За домом",
+      "en": "Behind the house"
+    },
+    "body": "## За домом\n\nA scene the app does not know yet — the unit must render like any other.\n",
+    "grammarTopics": [
+      "instrumental-with-s"
+    ]
+  },
+  "theme": {
+    "scene": "greenhouse"
+  }
+}

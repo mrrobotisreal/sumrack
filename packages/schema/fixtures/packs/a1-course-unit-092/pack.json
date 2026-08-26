@@ -1,0 +1,155 @@
+{
+  "id": "a1-course-unit-092",
+  "version": 1,
+  "type": "course-unit",
+  "title": {
+    "ru": "Подвал",
+    "en": "The Cellar"
+  },
+  "level": "A1",
+  "tags": [
+    "course",
+    "house",
+    "fixture"
+  ],
+  "stories": [
+    {
+      "id": "cellar-wait",
+      "title": {
+        "ru": "В подвале",
+        "en": "In the Cellar"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "cell-s01",
+          "ru": "В доме есть подвал.",
+          "en": "The house has a cellar.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "level": "A1",
+              "grammar": "+prep."
+            },
+            {
+              "text": "доме",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "prep.sg."
+            },
+            {
+              "text": "есть",
+              "lemma": "есть",
+              "translation": "there is",
+              "pos": "verb",
+              "level": "A1"
+            },
+            {
+              "text": "подвал",
+              "lemma": "подвал",
+              "translation": "cellar",
+              "pos": "noun",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "cell-s02",
+          "ru": "Там всегда темно.",
+          "en": "It is always dark there.",
+          "tokens": [
+            {
+              "text": "Там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "всегда",
+              "lemma": "всегда",
+              "translation": "always",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "темно",
+              "lemma": "темно",
+              "translation": "dark",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "cell-s03",
+          "ru": "Я там не один.",
+          "en": "I am not alone there.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "один",
+              "lemma": "один",
+              "translation": "alone",
+              "pos": "num",
+              "level": "A1",
+              "grammar": "m.sg. nom., used as \"alone\""
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "lesson": {
+    "id": "u092-lesson",
+    "title": {
+      "ru": "С кем ты?",
+      "en": "With whom are you?"
+    },
+    "body": "## С кем ты?\n\nWith what — and with whom: the instrumental case walks down the stairs with you.\n",
+    "grammarTopics": [
+      "instrumental-with-s"
+    ]
+  },
+  "theme": {
+    "scene": "cellar"
+  }
+}
