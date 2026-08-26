@@ -198,35 +198,42 @@ async function doRunBackup({ trigger }: RunBackupOptions): Promise<BackupRunSumm
       }
     };
 
-    await runTarget('github', githubReady, async () => {
-      const client = new GithubContentClient(github!.config!, github!.pat!);
-      await client.putFile(
-        `${BACKUPS_DIR}/${sealed.name}`,
-        bytesToBase64(utf8Bytes(sealed.json)),
-        `Backup ${sealed.name}`,
-      );
-      // Retention prune — a failure here never fails the backup itself.
-      useBackupStatus.getState().setPhase('pruning');
-      try {
-        return await pruneGithubBackups(client);
-      } catch (err) {
-        console.warn(`[backup] prune failed: ${toBackupError(err).code}`);
-        return 0;
-      }
-    });
+    // Only ENABLED targets run: enabled-but-unconfigured is that target's own
+    // failure (runTarget's !ready branch), but a disabled target must not be
+    // attempted or counted at all. (Device-found during T28: with syncd
+    // toggled off, every run reported target-failed despite GitHub
+    // succeeding — a T21 gap, fixed here.)
+    if (github)
+      await runTarget('github', githubReady, async () => {
+        const client = new GithubContentClient(github!.config!, github!.pat!);
+        await client.putFile(
+          `${BACKUPS_DIR}/${sealed.name}`,
+          bytesToBase64(utf8Bytes(sealed.json)),
+          `Backup ${sealed.name}`,
+        );
+        // Retention prune — a failure here never fails the backup itself.
+        useBackupStatus.getState().setPhase('pruning');
+        try {
+          return await pruneGithubBackups(client);
+        } catch (err) {
+          console.warn(`[backup] prune failed: ${toBackupError(err).code}`);
+          return 0;
+        }
+      });
 
-    await runTarget('syncd', syncdReady, async () => {
-      const client = new SyncdClient(syncd!.config!.host, syncd!.token!);
-      try {
-        // syncd applies retention server-side on every upload.
-        const result = await client.putBackup(sealed.name, sealed.json);
-        reportSyncdReachability(true);
-        return result.pruned;
-      } catch (err) {
-        reportSyncdReachability(toBackupError(err).code !== 'syncd-unreachable');
-        throw err;
-      }
-    });
+    if (syncd)
+      await runTarget('syncd', syncdReady, async () => {
+        const client = new SyncdClient(syncd!.config!.host, syncd!.token!);
+        try {
+          // syncd applies retention server-side on every upload.
+          const result = await client.putBackup(sealed.name, sealed.json);
+          reportSyncdReachability(true);
+          return result.pruned;
+        } catch (err) {
+          reportSyncdReachability(toBackupError(err).code !== 'syncd-unreachable');
+          throw err;
+        }
+      });
 
     const attempted = Object.values(targets).filter((t) => !t.skippedFresh);
     const failures = attempted.filter((t) => !t.ok);

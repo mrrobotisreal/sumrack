@@ -12,48 +12,49 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * reads `Intent.EXTRA_TEXT` (RN's Linking layer only surfaces URL intents).
  *
  * Delivery paths:
+ * - **Cold start**: `ShareIntentLifecycleListener.onCreate` (see
+ *   ShareIntentPackage.kt) stashes the text into [ShareIntentStore] the
+ *   moment MainActivity is created — BEFORE expo-dev-launcher (dev builds)
+ *   can bounce the activity and replace its intent. The intake gate calls
+ *   `consumePendingShare()` once JS is up.
  * - **Warm start** (activity alive, `singleTask` relaunch): `OnNewIntent`
- *   fires — the text is stashed AND emitted as an event, so a mounted JS
- *   listener navigates immediately.
- * - **Cold start** (activity created by the share): no event fires before
- *   JS is up; the intake gate calls `consumePendingShare()` on mount, which
- *   falls back to reading the launch activity's intent exactly once.
+ *   fires — emitted as an event so the mounted JS gate navigates
+ *   immediately; the store is not involved (nothing stale survives).
  *
  * Consumption is one-shot by design: rotations/re-renders re-running the
  * gate must not re-deliver the same share.
  */
-class ShareIntentModule : Module() {
-  private var pending: String? = null
-  private var initialIntentConsumed = false
 
+internal object ShareIntentStore {
+  @Volatile var pendingText: String? = null
+}
+
+/** The share text of a SEND intent, or null for anything else. Relaunches
+ * from recents redeliver the original intent — the history flag filters
+ * those out so an old share never resurfaces. */
+internal fun sharedTextFrom(intent: Intent?): String? {
+  if (intent == null) return null
+  if (intent.action != Intent.ACTION_SEND) return null
+  if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
+  if (intent.type?.startsWith("text/") != true) return null
+  return intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }
+}
+
+class ShareIntentModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("ShareIntent")
     Events("onShareReceived")
 
     OnNewIntent { intent ->
       sharedTextFrom(intent)?.let { text ->
-        pending = text
         sendEvent("onShareReceived", mapOf("text" to text))
       }
     }
 
     Function("consumePendingShare") {
-      val stashed = pending
-      if (stashed != null) {
-        pending = null
-        return@Function stashed
-      }
-      if (!initialIntentConsumed) {
-        initialIntentConsumed = true
-        return@Function appContext.currentActivity?.intent?.let { sharedTextFrom(it) }
-      }
-      return@Function null
+      val stashed = ShareIntentStore.pendingText
+      ShareIntentStore.pendingText = null
+      return@Function stashed
     }
-  }
-
-  private fun sharedTextFrom(intent: Intent): String? {
-    if (intent.action != Intent.ACTION_SEND) return null
-    if (intent.type?.startsWith("text/") != true) return null
-    return intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }
   }
 }
