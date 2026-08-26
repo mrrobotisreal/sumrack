@@ -7,6 +7,7 @@ import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import {
+  useDialogues,
   useDueCardCount,
   useProductionDueCount,
   useStories,
@@ -35,6 +36,7 @@ export function TodayScreen() {
   const progressList = useStoryProgressList();
   const stories = useStories();
   const path = usePathState();
+  const dialogues = useDialogues();
 
   // Counts change while this tab is unfocused (sessions, reading) — refresh on return.
   useFocusEffect(
@@ -45,6 +47,7 @@ export function TodayScreen() {
       void queryClient.invalidateQueries({ queryKey: ['motivation'] });
       void queryClient.invalidateQueries({ queryKey: ['story-progress'] });
       void queryClient.invalidateQueries({ queryKey: ['path'] });
+      void queryClient.invalidateQueries({ queryKey: ['dialogues'] });
     }, [queryClient]),
   );
 
@@ -62,7 +65,14 @@ export function TodayScreen() {
     return story ? { progress: inProgress, story } : null;
   }, [progressList.data, stories.data]);
 
-  const coreQueries = [due, productionDue, progressList, stories, path];
+  // T27: «Диалог» card — first installed dialogue not yet finished once;
+  // disappears after any finished run (V2 §3.3).
+  const dialogueTarget = React.useMemo(
+    () => (dialogues.data ?? []).find((d) => d.finishedRunCount === 0) ?? null,
+    [dialogues.data],
+  );
+
+  const coreQueries = [due, productionDue, progressList, stories, path, dialogues];
   const loading = coreQueries.some((q) => q.isPending);
   const anyError = coreQueries.some((q) => q.isError);
 
@@ -138,6 +148,40 @@ export function TodayScreen() {
             </View>
             <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
               <Ionicons name="mic-outline" size={18} color={tokens.accent} />
+            </View>
+          </View>
+        </Pressable>
+      )}
+
+      {/* speak-your-choice dialogue (T27) — until its first finished run */}
+      {dialogueTarget && (
+        <Pressable
+          onPress={() => {
+            track('dialogue_opened', {
+              packId: dialogueTarget.packId,
+              dialogueId: dialogueTarget.id,
+              from: 'today',
+            });
+            router.push(`/dialogue/${dialogueTarget.packId}/${dialogueTarget.id}`);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Play the dialogue ${dialogueTarget.titleRu}`}
+          className="rounded-xl border border-border bg-surface p-4 active:bg-surface-2"
+        >
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text variant="caption" className="uppercase tracking-wider">
+                Диалог
+              </Text>
+              <RNText className="font-reading text-xl text-text" numberOfLines={1}>
+                {dialogueTarget.titleRu}
+              </RNText>
+              <Text variant="caption" numberOfLines={1}>
+                Answer out loud — the story follows your voice
+              </Text>
+            </View>
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+              <Ionicons name="chatbubbles-outline" size={18} color={tokens.accent} />
             </View>
           </View>
         </Pressable>

@@ -44,6 +44,8 @@ export const queryKeys = {
   dialogueGraph: (packId: string, dialogueId: string) =>
     ['dialogue-graph', packId, dialogueId] as const,
   dialogueRuns: (dialogueId?: string) => ['dialogue-runs', dialogueId ?? 'all'] as const,
+  dialogueStamps: (packId: string, sentenceId: string) =>
+    ['dialogue-stamps', packId, sentenceId] as const,
 };
 
 export function usePacks() {
@@ -359,5 +361,14 @@ export function useDialogueRuns(dialogueId?: string) {
   return useQuery({
     queryKey: queryKeys.dialogueRuns(dialogueId),
     queryFn: () => repos.dialogues.listRuns(dialogueId),
+  });
+}
+
+/** Karaoke word stamps for one dialogue line (T27 per-line index). */
+export function useDialogueStamps(packId: string | undefined, sentenceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.dialogueStamps(packId ?? '', sentenceId ?? ''),
+    queryFn: () => repos.dialogues.getStampsForSentence(packId!, sentenceId!),
+    enabled: !!packId && !!sentenceId,
   });
 }

@@ -79,6 +79,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: 'trail-sign-outline',
   },
   {
+    id: 'first-dialogue-finished',
+    title: 'Первый разговор',
+    description: 'Finish your first spoken dialogue',
+    icon: 'chatbubbles-outline',
+  },
+  {
+    id: 'all-endings-one-dialogue',
+    title: 'Все концовки',
+    description: 'Collect every ending of one dialogue',
+    icon: 'git-branch-outline',
+  },
+  {
     id: 'pron-perfect',
     title: 'Чистое произношение',
     description: 'Score a perfect 100 in pronunciation practice',

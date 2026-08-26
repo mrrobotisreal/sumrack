@@ -37,7 +37,12 @@ export default function SettingsScreen() {
   const { mode, setMode } = useThemeStore();
   const { tokens } = useAppTheme();
   const { encounterOnLookup, setEncounterOnLookup } = useLookupPrefs();
-  const { clozeUnseenStoriesAllowed, setClozeUnseenStoriesAllowed } = useGamePrefs();
+  const {
+    clozeUnseenStoriesAllowed,
+    setClozeUnseenStoriesAllowed,
+    dialogueTapMode,
+    setDialogueTapMode,
+  } = useGamePrefs();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -117,6 +122,22 @@ export default function SettingsScreen() {
             trackColor={{ false: tokens.surface2, true: tokens.accent }}
             thumbColor={tokens.text}
             accessibilityLabel="Allow unread stories in games"
+          />
+        </View>
+        <View className="flex-row items-center justify-between border-t border-border px-4 py-3.5">
+          <View className="flex-1 gap-0.5 pr-3">
+            <Text className="font-ui-medium">Dialogues: tap to answer</Text>
+            <Text variant="caption">
+              Choose dialogue answers by tap instead of voice-first — for quiet places. The mic
+              stays available.
+            </Text>
+          </View>
+          <Switch
+            value={dialogueTapMode}
+            onValueChange={setDialogueTapMode}
+            trackColor={{ false: tokens.surface2, true: tokens.accent }}
+            thumbColor={tokens.text}
+            accessibilityLabel="Dialogues answer by tap"
           />
         </View>
       </View>

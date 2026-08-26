@@ -27,6 +27,10 @@ export const XP_TABLE = {
   unitQuizPassed: 25,
   /** First pass of a level checkpoint. */
   checkpointPassed: 50,
+  /** Finishing a dialogue run (T27, V2 §3.3). */
+  dialogueFinished: 20,
+  /** First time a dialogue ending is collected (T27). */
+  dialogueNewEnding: 10,
   /** Bonus for unlocking any achievement. */
   achievementUnlocked: 20,
 } as const;

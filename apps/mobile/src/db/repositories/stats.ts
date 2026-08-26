@@ -134,7 +134,12 @@ export function createStatsRepo(db: SumrakDB) {
         .orderBy(desc(dailyActivity.date));
     },
 
-    async startGameSession(mode: string): Promise<GameSessionRow> {
+    async startGameSession(
+      mode: string,
+      // T27: dialogue runs survive force-close and must find their open row
+      // again on resume — an identifying detail (e.g. { runId }) enables that.
+      detail?: Record<string, unknown>,
+    ): Promise<GameSessionRow> {
       const row: typeof gameSessions.$inferInsert = {
         id: newId(),
         mode,
@@ -142,7 +147,7 @@ export function createStatsRepo(db: SumrakDB) {
         endedAt: null,
         itemCount: 0,
         correctCount: 0,
-        detail: null,
+        detail: detail ?? null,
       };
       await db.insert(gameSessions).values(row);
       return row as GameSessionRow;

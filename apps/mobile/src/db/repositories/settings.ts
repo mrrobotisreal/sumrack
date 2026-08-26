@@ -57,6 +57,11 @@ export const SETTING_KEYS = {
    */
   clozeUnseenStoriesAllowed: 'games.clozeUnseenStoriesAllowed',
   /**
+   * boolean (T27, default false): dialogue choices default to tap-to-choose
+   * instead of voice-first (silent environments; mic stays available).
+   */
+  dialogueTapMode: 'games.dialogueTapMode',
+  /**
    * Daily-session composition (T14): { length, weights: { flashcard, mc,
    * cloze, sentenceBuilder, listening } } — Zod-validated on read
    * (store/daily-prefs.ts), corrupt values fall back to defaults.

@@ -106,16 +106,22 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   if (stateChanged) void replanReminders();
 }
 
-/** Count-based achievement sweep (bank size, mastery, XP level). */
+/** Count-based achievement sweep (bank size, mastery, XP level, dialogues). */
 export async function sweepAchievements(): Promise<void> {
-  const [bankCount, mastered, totalXp] = await Promise.all([
+  const [bankCount, mastered, totalXp, dialogueStats] = await Promise.all([
     repos.bank.countItems(),
     repos.reviews.countMasteredLemmas(MASTERED_STABILITY_DAYS),
     repos.stats.getTotalXp(),
+    repos.dialogues.getAchievementStats(),
   ]);
   if (bankCount >= 1) await unlock('first-word');
   if (bankCount >= BANK_TARGET) await unlock('bank-100');
   if (mastered >= MASTERED_TARGET) await unlock('mastered-100');
+  // T27 dialogue unlocks live in the sweep, so they backfill for free — a
+  // run finished before this code shipped still counts (T19 backfill spirit
+  // without touching the one-time flag).
+  if (dialogueStats.finishedRunCount >= 1) await unlock('first-dialogue-finished');
+  if (dialogueStats.anyDialogueAllEndingsSeen) await unlock('all-endings-one-dialogue');
   const { level } = levelForXp(totalXp);
   for (const { id, level: threshold } of LEVEL_ACHIEVEMENTS) {
     if (level >= threshold) await unlock(id);
@@ -211,6 +217,20 @@ export async function recordUnitCompleted(): Promise<void> {
 /** Pronunciation attempt's best score for an item (0–100). */
 export async function recordPronunciationScore(score: number): Promise<void> {
   if (score >= 100) await unlock('pron-perfect');
+}
+
+/**
+ * A dialogue run reached an ending (T27): 20 XP per finished run, +10 the
+ * first time that ending is collected, plus the two dialogue achievements
+ * (all-endings re-checked from content vs endings-seen counts).
+ */
+export async function recordDialogueFinished(newEnding: boolean): Promise<void> {
+  const xp = XP_TABLE.dialogueFinished + (newEnding ? XP_TABLE.dialogueNewEnding : 0);
+  await repos.stats.bumpDailyActivity({ xp });
+  await unlock('first-dialogue-finished');
+  const stats = await repos.dialogues.getAchievementStats();
+  if (stats.anyDialogueAllEndingsSeen) await unlock('all-endings-one-dialogue');
+  await evaluateMotivation();
 }
 
 /** Session summary reached — count sweeps + a due-count-fresh replan. */

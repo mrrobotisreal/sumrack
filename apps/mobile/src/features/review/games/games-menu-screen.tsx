@@ -70,6 +70,12 @@ export function GamesMenuScreen() {
         route="/review/listening"
       />
       <GameRow
+        icon="chatbubbles-outline"
+        title="Dialogue"
+        subtitle="Speak your side of a branching scene — Диалог"
+        route="/dialogues"
+      />
+      <GameRow
         icon="mic-outline"
         title="Pronunciation"
         subtitle={

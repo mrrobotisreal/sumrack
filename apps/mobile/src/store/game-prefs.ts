@@ -19,6 +19,13 @@ interface GamePrefsState {
    */
   clozeUnseenStoriesAllowed: boolean;
   setClozeUnseenStoriesAllowed: (value: boolean) => void;
+  /**
+   * false (default): dialogue choices are voice-first (mic leads, tap
+   * unlocks after failed attempts). true: tap-to-choose from the start —
+   * for silent environments; the mic stays available either way (T27).
+   */
+  dialogueTapMode: boolean;
+  setDialogueTapMode: (value: boolean) => void;
 }
 
 export const useGamePrefs = create<GamePrefsState>((set) => ({
@@ -28,13 +35,26 @@ export const useGamePrefs = create<GamePrefsState>((set) => ({
     track('games_unseen_stories_toggled', { enabled: value });
     void repos.settings.set(SETTING_KEYS.clozeUnseenStoriesAllowed, value);
   },
+  dialogueTapMode: false,
+  setDialogueTapMode: (value) => {
+    set({ dialogueTapMode: value });
+    track('dialogue_tap_mode_toggled', { enabled: value });
+    void repos.settings.set(SETTING_KEYS.dialogueTapMode, value);
+  },
 }));
 
 /** Load persisted prefs after the DB is ready (called by DbProvider). */
 export async function hydrateGamePrefsFromDb(): Promise<void> {
-  const stored = await repos.settings.get<unknown>(SETTING_KEYS.clozeUnseenStoriesAllowed);
-  const parsed = z.boolean().safeParse(stored);
-  if (parsed.success) {
-    useGamePrefs.setState({ clozeUnseenStoriesAllowed: parsed.data });
+  const [unseen, tapMode] = await Promise.all([
+    repos.settings.get<unknown>(SETTING_KEYS.clozeUnseenStoriesAllowed),
+    repos.settings.get<unknown>(SETTING_KEYS.dialogueTapMode),
+  ]);
+  const parsedUnseen = z.boolean().safeParse(unseen);
+  if (parsedUnseen.success) {
+    useGamePrefs.setState({ clozeUnseenStoriesAllowed: parsedUnseen.data });
+  }
+  const parsedTap = z.boolean().safeParse(tapMode);
+  if (parsedTap.success) {
+    useGamePrefs.setState({ dialogueTapMode: parsedTap.data });
   }
 }

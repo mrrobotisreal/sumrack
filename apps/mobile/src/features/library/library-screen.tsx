@@ -16,17 +16,29 @@ import { LevelChip } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import { useBookmarkedStoryKeys, usePacks, useStories, useStoryProgressList } from '@/db/hooks';
+import {
+  useBookmarkedStoryKeys,
+  useDialogues,
+  usePacks,
+  useStories,
+  useStoryProgressList,
+} from '@/db/hooks';
 import type { PackRow, StoryListItem } from '@/db/repositories/content';
+import type { DialogueListItem } from '@/db/repositories/dialogues';
 import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
+import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+/** T27: dialogue packs shelve beside stories — one row union per pack. */
+type LibraryRow =
+  { kind: 'story'; story: StoryListItem } | { kind: 'dialogue'; dialogue: DialogueListItem };
+
 interface LibrarySection {
   pack: PackRow;
-  data: StoryListItem[];
+  data: LibraryRow[];
 }
 
 /**
@@ -40,6 +52,7 @@ export function LibraryScreen() {
   const queryClient = useQueryClient();
   const packs = usePacks();
   const stories = useStories();
+  const dialogues = useDialogues();
   const progressList = useStoryProgressList();
   const bookmarkedKeys = useBookmarkedStoryKeys();
 
@@ -83,10 +96,17 @@ export function LibraryScreen() {
     return packs.data
       .map((pack) => ({
         pack,
-        data: stories.data.filter((s) => s.packId === pack.id),
+        data: [
+          ...stories.data
+            .filter((s) => s.packId === pack.id)
+            .map((story): LibraryRow => ({ kind: 'story', story })),
+          ...(dialogues.data ?? [])
+            .filter((d) => d.packId === pack.id)
+            .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
+        ],
       }))
       .filter((section) => section.data.length > 0);
-  }, [packs.data, stories.data]);
+  }, [packs.data, stories.data, dialogues.data]);
 
   const progressByStory = React.useMemo(() => {
     const map = new Map<string, StoryProgressRow>();
@@ -138,21 +158,41 @@ export function LibraryScreen() {
     <SectionList
       className="flex-1 bg-bg"
       sections={sections}
-      keyExtractor={(item) => `${item.packId}/${item.id}`}
+      keyExtractor={(item) =>
+        item.kind === 'story'
+          ? `story/${item.story.packId}/${item.story.id}`
+          : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
+      }
       stickySectionHeadersEnabled={false}
       contentContainerClassName="px-4 pb-12 pt-2"
       refreshControl={refreshControl}
       ListHeaderComponent={<SyncStatusLine />}
       renderSectionHeader={({ section }) => <PackHeader pack={section.pack} />}
-      renderItem={({ item }) => (
-        <StoryRow
-          story={item}
-          progress={progressByStory.get(`${item.packId}/${item.id}`)}
-          bookmarked={bookmarkedKeys.data?.has(`${item.packId}/${item.id}`) ?? false}
-          onPress={() => router.push(`/reader/${item.packId}/${item.id}`)}
-          onLongPress={() => toggleBookmark(item.packId, item.id)}
-        />
-      )}
+      renderItem={({ item }) =>
+        item.kind === 'story' ? (
+          <StoryRow
+            story={item.story}
+            progress={progressByStory.get(`${item.story.packId}/${item.story.id}`)}
+            bookmarked={bookmarkedKeys.data?.has(`${item.story.packId}/${item.story.id}`) ?? false}
+            onPress={() => router.push(`/reader/${item.story.packId}/${item.story.id}`)}
+            onLongPress={() => toggleBookmark(item.story.packId, item.story.id)}
+          />
+        ) : (
+          <View className="mb-2">
+            <DialogueRow
+              item={item.dialogue}
+              onPress={() => {
+                track('dialogue_opened', {
+                  packId: item.dialogue.packId,
+                  dialogueId: item.dialogue.id,
+                  from: 'library',
+                });
+                router.push(`/dialogue/${item.dialogue.packId}/${item.dialogue.id}`);
+              }}
+            />
+          </View>
+        )
+      }
     />
   );
 }

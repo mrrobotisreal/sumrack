@@ -33,15 +33,28 @@ interface TokenTextProps {
   /** Tap on a word chunk (or a drag that ended on a single word). */
   onWordPress: (token: TokenRow) => void;
   /** Long-press-drag finished across ≥2 word chunks. */
-  onPhraseSelected: (selection: PhraseSelection) => void;
+  onPhraseSelected?: (selection: PhraseSelection) => void;
   /** Fires when a drag selection starts/ends — reader locks list scroll. */
-  onSelectingChange: (selecting: boolean) => void;
+  onSelectingChange?: (selecting: boolean) => void;
   /**
    * Karaoke (T10): tokenIndex of the word to highlight as currently spoken
    * (null/undefined = none). The chunk containing that token gets the
    * `karaoke` treatment: accent-soft wash, full text color (UI_DESIGN §1).
    */
   karaokeTokenIndex?: number | null;
+  /**
+   * T27: default true. False = no long-press-drag phrase selection (no pan
+   * gesture at all) — dialogue lines/choice cards, where long-press has a
+   * different job and drags must never fight the transcript scroll.
+   */
+  selectionEnabled?: boolean;
+  /**
+   * T27 choice cards: chunk-level long-press (hint reveal). Only meaningful
+   * with `selectionEnabled: false` — the pan owns long-press otherwise.
+   * RN Text cancels its own onPress when onLongPress fires, so word taps
+   * can't double-fire (the T05 press-cancellation pattern, natively).
+   */
+  onChunkLongPress?: () => void;
 }
 
 interface ChunkFrame {
@@ -81,6 +94,8 @@ export function TokenText({
   onPhraseSelected,
   onSelectingChange,
   karaokeTokenIndex,
+  selectionEnabled = true,
+  onChunkLongPress,
 }: TokenTextProps) {
   const { tokens: theme } = useAppTheme();
   const chunks = React.useMemo(() => buildChunks(tokens), [tokens]);
@@ -135,7 +150,7 @@ export function TokenText({
       const final = rangeRef.current;
       anchorRef.current = null;
       setRange(null);
-      onSelectingChange(false);
+      onSelectingChange?.(false);
       if (!final) return;
       const snapped = snapRangeToWords(chunks, final);
       if (!snapped) return;
@@ -145,7 +160,7 @@ export function TokenText({
         if (word) onWordPress(word);
         return;
       }
-      onPhraseSelected({ chunks, range: snapped });
+      onPhraseSelected?.({ chunks, range: snapped });
     };
     handlersRef.current = {
       onStart: (x, y) => {
@@ -153,7 +168,7 @@ export function TokenText({
         if (hit == null) return;
         anchorRef.current = hit;
         setRange({ start: hit, end: hit });
-        onSelectingChange(true);
+        onSelectingChange?.(true);
         Vibration.vibrate(8);
       },
       onUpdate: (x, y) => {
@@ -168,7 +183,7 @@ export function TokenText({
       onEnd: finishSelection,
       onCancel: () => {
         if (anchorRef.current != null) finishSelection();
-        else onSelectingChange(false);
+        else onSelectingChange?.(false);
       },
     };
   });
@@ -188,36 +203,37 @@ export function TokenText({
       }),
   );
 
-  return (
-    <GestureDetector gesture={pan}>
-      <View
-        className="flex-row flex-wrap"
-        style={{ columnGap: spaceWidth }}
-        accessible
-        accessibilityLabel={chunks.map((c) => c.text).join(' ')}
-      >
-        {chunks.map((chunk) => {
-          const selected = range != null && chunk.index >= range.start && chunk.index <= range.end;
-          // Karaoke lights the whole visual chunk its token lives in, so
-          // attached punctuation glows with its word instead of splitting it.
-          const karaoke =
-            karaokeTokenIndex != null &&
-            chunk.tokens.some((t) => t.tokenIndex === karaokeTokenIndex);
-          const tappable = chunk.wordToken != null;
-          return (
-            <RNText
-              key={chunk.index}
-              onLayout={(e) => onChunkLayout(chunk.index, e)}
-              onPress={tappable ? () => onWordPress(chunk.wordToken!) : undefined}
-              suppressHighlighting
-              className={selected || karaoke ? 'rounded-[3px] bg-accent-soft' : undefined}
-              style={[readingStyle, { color: theme.text }]}
-            >
-              {chunk.text}
-            </RNText>
-          );
-        })}
-      </View>
-    </GestureDetector>
+  const content = (
+    <View
+      className="flex-row flex-wrap"
+      style={{ columnGap: spaceWidth }}
+      accessible
+      accessibilityLabel={chunks.map((c) => c.text).join(' ')}
+    >
+      {chunks.map((chunk) => {
+        const selected = range != null && chunk.index >= range.start && chunk.index <= range.end;
+        // Karaoke lights the whole visual chunk its token lives in, so
+        // attached punctuation glows with its word instead of splitting it.
+        const karaoke =
+          karaokeTokenIndex != null && chunk.tokens.some((t) => t.tokenIndex === karaokeTokenIndex);
+        const tappable = chunk.wordToken != null;
+        return (
+          <RNText
+            key={chunk.index}
+            onLayout={(e) => onChunkLayout(chunk.index, e)}
+            onPress={tappable ? () => onWordPress(chunk.wordToken!) : undefined}
+            onLongPress={!selectionEnabled ? onChunkLongPress : undefined}
+            suppressHighlighting
+            className={selected || karaoke ? 'rounded-[3px] bg-accent-soft' : undefined}
+            style={[readingStyle, { color: theme.text }]}
+          >
+            {chunk.text}
+          </RNText>
+        );
+      })}
+    </View>
   );
+
+  if (!selectionEnabled) return content;
+  return <GestureDetector gesture={pan}>{content}</GestureDetector>;
 }
