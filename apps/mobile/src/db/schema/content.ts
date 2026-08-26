@@ -25,6 +25,15 @@ export const packs = sqliteTable('packs', {
   level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
   tags: text('tags', { mode: 'json' }).$type<string[]>().notNull(),
   importedAt: integer('imported_at').notNull(),
+  /**
+   * Where the pack came from (T28, design V2 §4.3): 'remote' = manifest-
+   * managed (github sync AND bundled fixtures — both version-diff against
+   * the manifest), 'local' = assembled on-device from a Share-to-Сумрак
+   * import. Local packs are invisible to sync (immunity keyed on the
+   * sync_state 'local-import' source, set alongside this by the imports
+   * service) and are listed on the Library's «Импортировано» shelf.
+   */
+  origin: text('origin').$type<'remote' | 'local'>().notNull().default('remote'),
 });
 
 export const stories = sqliteTable(

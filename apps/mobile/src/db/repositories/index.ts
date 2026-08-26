@@ -6,6 +6,7 @@ import { createBookmarksRepo } from './bookmarks';
 import { createContentRepo } from './content';
 import { createDashboardRepo } from './dashboard';
 import { createDialoguesRepo } from './dialogues';
+import { createImportsRepo } from './imports';
 import { createJournalRepo } from './journal';
 import { createPathRepo } from './path';
 import { createReadingRepo } from './reading';
@@ -39,6 +40,7 @@ export function createRepositories(db: SumrakDB) {
     bookmarks: createBookmarksRepo(db),
     dashboard: createDashboardRepo(db),
     dialogues: createDialoguesRepo(db),
+    imports: createImportsRepo(db),
     journal: createJournalRepo(db),
     path: createPathRepo(db),
     reading: createReadingRepo(db),
@@ -55,6 +57,7 @@ export * from './bookmarks';
 export * from './content';
 export * from './dashboard';
 export * from './dialogues';
+export * from './imports';
 export * from './journal';
 export * from './path';
 export * from './reading';

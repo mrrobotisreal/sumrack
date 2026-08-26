@@ -91,6 +91,14 @@ export default function TabsLayout() {
           headerRight: () => (
             <>
               <Pressable
+                onPress={() => router.push('/import')}
+                hitSlop={8}
+                accessibilityLabel="Import Russian text"
+                className="mr-4"
+              >
+                <Ionicons name="download-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
                 onPress={() => router.push('/search')}
                 hitSlop={8}
                 accessibilityLabel="Search all content"

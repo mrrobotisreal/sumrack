@@ -9,6 +9,8 @@ import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { removeImportedPack } from '@/features/import/import-service';
+
 import { useInstalledPacks, syncQueryKeys, type InstalledPack } from './hooks';
 import { useSyncStatus } from './store';
 import { formatBytes } from './sync-core';
@@ -25,6 +27,11 @@ export function PacksScreen() {
   const queryClient = useQueryClient();
   const installed = useInstalledPacks();
   const phase = useSyncStatus((s) => s.phase);
+
+  // T28: local (imported) packs list under their own section — no update
+  // affordances (sync never touches them), remove = full delete.
+  const remote = (installed.data ?? []).filter((i) => i.state.source !== 'local-import');
+  const imported = (installed.data ?? []).filter((i) => i.state.source === 'local-import');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -62,6 +69,29 @@ export function PacksScreen() {
     [refresh],
   );
 
+  // T28: removing an imported pack is a FULL delete (recorded decision) —
+  // content, its backed-up pack JSON, and its import request all go; nothing
+  // reinstalls it. Distinct confirm copy so that's never a surprise.
+  const confirmRemoveImported = React.useCallback(
+    (item: InstalledPack) => {
+      const title = item.pack?.titleRu ?? item.state.packId;
+      Alert.alert(
+        'Удалить импорт?',
+        `«${title}» will be deleted completely — including its backup copy. It will NOT come back ` +
+          'on sync or restore. Word-bank items highlighted from it stay in your bank.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => void removeImportedPack(item.state.packId).then(refresh),
+          },
+        ],
+      );
+    },
+    [refresh],
+  );
+
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="px-4 pb-12 pt-4">
       <SyncStatusLine />
@@ -89,7 +119,7 @@ export function PacksScreen() {
       </Text>
       {installed.isPending ? (
         <ActivityIndicator color={tokens.accent} className="mt-8" />
-      ) : (installed.data?.length ?? 0) === 0 ? (
+      ) : remote.length === 0 ? (
         <View className="items-center gap-2 rounded-xl border border-border bg-surface px-6 py-10">
           <Ionicons name="cloud-download-outline" size={32} color={tokens.textMuted} />
           <Text variant="muted" className="text-center">
@@ -98,7 +128,7 @@ export function PacksScreen() {
         </View>
       ) : (
         <View className="overflow-hidden rounded-xl border border-border bg-surface">
-          {installed.data!.map((item, i) => (
+          {remote.map((item, i) => (
             <PackRowView
               key={item.state.packId}
               item={item}
@@ -107,6 +137,28 @@ export function PacksScreen() {
             />
           ))}
         </View>
+      )}
+
+      {imported.length > 0 && (
+        <>
+          <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
+            Импортировано
+          </Text>
+          <Text variant="caption" className="mb-2">
+            Created on this device from shared text — never updated or removed by sync. Removing one
+            deletes it completely, including from backups.
+          </Text>
+          <View className="overflow-hidden rounded-xl border border-border bg-surface">
+            {imported.map((item, i) => (
+              <PackRowView
+                key={item.state.packId}
+                item={item}
+                first={i === 0}
+                onRemove={() => confirmRemoveImported(item)}
+              />
+            ))}
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -157,6 +209,8 @@ function sourceLabel(source: string): string {
       return 'synced';
     case 'local-file':
       return 'local';
+    case 'local-import':
+      return 'imported';
     default:
       return source;
   }

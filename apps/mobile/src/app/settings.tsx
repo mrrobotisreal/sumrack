@@ -203,6 +203,17 @@ export default function SettingsScreen() {
                 <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
               </Pressable>
             </Link>
+            <Link href="/dev-import" asChild>
+              <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Import requests</Text>
+                  <Text variant="caption">
+                    Stub-annotate queued imports (T28 temp; T29 replaces)
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
           </View>
         </>
       )}

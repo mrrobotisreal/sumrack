@@ -64,6 +64,48 @@ describe('diffManifest', () => {
   });
 });
 
+describe('diffManifest — T28 local-pack immunity (design V2 §4.3)', () => {
+  const local = (id: string, version = 1) => installedRow(id, version, 'local-import');
+
+  it('runs the normal remote flow with local packs present, touching none of them', () => {
+    const diff = diffManifest(manifest(entry('remote-a', 2), entry('remote-b', 1)), [
+      installedRow('remote-a', 1),
+      local('imported-20260825-privet'),
+      local('imported-20260825-pismo', 3),
+    ]);
+    // Remote packs diff exactly as without local packs present…
+    expect(diff.toUpdate.map((p) => p.id)).toEqual(['remote-a']);
+    expect(diff.toInstall.map((p) => p.id)).toEqual(['remote-b']);
+    // …and NO bucket references a local pack: zero diff actions touch them.
+    const referenced = [
+      ...diff.toInstall.map((e) => e.id),
+      ...diff.toUpdate.map((e) => e.id),
+      ...diff.upToDate.map((e) => e.id),
+      ...diff.removedRemotely.map((r) => r.packId),
+      ...diff.localCollisions.map((e) => e.id),
+    ];
+    expect(referenced.filter((id) => id.startsWith('imported-'))).toEqual([]);
+  });
+
+  it('never marks a local pack removed-remotely despite its absence from the manifest', () => {
+    const diff = diffManifest(manifest(entry('kept', 1)), [
+      installedRow('kept', 1),
+      local('imported-20260825-privet'),
+    ]);
+    expect(diff.removedRemotely).toEqual([]);
+  });
+
+  it('skips a manifest entry colliding with a local pack id — surfaced, never installed or version-compared', () => {
+    const diff = diffManifest(manifest(entry('imported-20260825-privet', 99)), [
+      local('imported-20260825-privet', 1),
+    ]);
+    expect(diff.toInstall).toEqual([]);
+    expect(diff.toUpdate).toEqual([]);
+    expect(diff.upToDate).toEqual([]);
+    expect(diff.localCollisions.map((e) => e.id)).toEqual(['imported-20260825-privet']);
+  });
+});
+
 describe('planPackFiles', () => {
   const packWithAudio = entry('pack-a', 1, [
     { path: 'pack.json', sha256: 'a'.repeat(64) },

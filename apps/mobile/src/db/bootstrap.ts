@@ -8,7 +8,7 @@ import pack3 from '@sumrak/schema/fixtures/packs/a1-prompts-001/pack.json';
 
 import { initAnalyticsSink, track } from '@/services/analytics';
 
-import { importPack } from './importer';
+import { importPack, reimportLocalPacks } from './importer';
 import type { Repositories } from './repositories';
 import { SETTING_KEYS } from './repositories/settings';
 import type { SumrakDB } from './types';
@@ -72,6 +72,19 @@ export async function runBootstrap(db: SumrakDB, repos: Repositories): Promise<v
       // A broken bundled pack must never brick app start; surface loudly in dev.
       console.error(`[bootstrap] failed to import bundled pack ${packId}`, err);
     }
+  }
+
+  // T28: if a restore or interrupted commit left `imported_packs` rows
+  // without their content (local packs live only by value in that user
+  // table), re-import them now — idempotent, no-op when healthy.
+  try {
+    const { reimported } = await reimportLocalPacks(db);
+    if (reimported.length > 0) {
+      console.log(`[bootstrap] re-imported ${reimported.length} local pack(s)`);
+      track('import_packs_reimported', { count: reimported.length, trigger: 'bootstrap' });
+    }
+  } catch (err) {
+    console.error('[bootstrap] local-pack re-import failed (non-fatal)', err);
   }
 
   await repos.settings.set(SETTING_KEYS.bootstrapDone, true);

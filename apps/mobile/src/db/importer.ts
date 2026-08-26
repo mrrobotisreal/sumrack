@@ -19,6 +19,7 @@ import {
   tokens,
   wordStamps,
 } from './schema';
+import { createImportsRepo, gunzipPackJson } from './repositories/imports';
 import type { PackSource } from './repositories/sync-state';
 import { createSyncStateRepo } from './repositories/sync-state';
 import type { SumrakDB } from './types';
@@ -35,6 +36,13 @@ export interface ImportResult {
 
 export interface ImportOptions {
   source?: PackSource;
+  /**
+   * Pack provenance written to `packs.origin` (T28): 'remote' (default) for
+   * manifest-managed content, 'local' for on-device Share-to-Сумрак packs.
+   * The imports service always pairs origin:'local' with source:'local-import'
+   * so the sync-immunity key and the UI key can't drift.
+   */
+  origin?: 'remote' | 'local';
   /**
    * Local audio file URIs keyed by the pack-relative path from
    * `AudioTrack.file` (e.g. "audio/story1.opus" → "file:///..."). Files are
@@ -122,6 +130,39 @@ export async function removePack(db: SumrakDB, packId: string): Promise<void> {
   await syncStateRepo.removeInstalled(packId);
 }
 
+/**
+ * T28: ensure every backed-up local pack is actually installed — gunzip each
+ * `imported_packs` row whose pack id is missing from `packs` and run it
+ * through the standard import path with local provenance. Idempotent,
+ * per-pack contained. Called from bootstrap (self-heal) and right after a
+ * restore lands user tables (design V2 §4.3: restored imports come back
+ * readable automatically).
+ */
+export async function reimportLocalPacks(
+  db: SumrakDB,
+): Promise<{ reimported: string[]; failed: string[] }> {
+  const importsRepo = createImportsRepo(db);
+  const rows = await importsRepo.listImportedPacks();
+  const reimported: string[] = [];
+  const failed: string[] = [];
+  if (rows.length === 0) return { reimported, failed };
+
+  const installed = new Set((await db.select({ id: packs.id }).from(packs)).map((r) => r.id));
+  for (const row of rows) {
+    if (installed.has(row.id)) continue;
+    try {
+      const raw = JSON.parse(gunzipPackJson(row.packJsonGz)) as unknown;
+      await importPack(db, raw, { source: 'local-import', origin: 'local' });
+      reimported.push(row.id);
+    } catch (err) {
+      // One corrupt row must never block the others (or app start).
+      console.error(`[import] failed to re-import local pack ${row.id}`, err);
+      failed.push(row.id);
+    }
+  }
+  return { reimported, failed };
+}
+
 /** Every sentence of a dialogue: node lines then their choices, declaration order. */
 function dialogueSentences(dialogue: NonNullable<Pack['dialogues']>[number]): Sentence[] {
   return dialogue.nodes.flatMap((node) => [
@@ -162,6 +203,7 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     level: pack.level,
     tags: pack.tags,
     importedAt: now,
+    origin: opts.origin ?? 'remote',
   });
 
   for (const [storyIdx, story] of pack.stories.entries()) {

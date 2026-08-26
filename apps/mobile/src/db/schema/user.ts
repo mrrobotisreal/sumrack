@@ -347,6 +347,59 @@ export const dialogueEndingsSeen = sqliteTable(
   (t) => [primaryKey({ columns: [t.dialogueId, t.endingId] })],
 );
 
+export type ImportRequestStatus = 'draft' | 'queued' | 'annotated' | 'committed' | 'failed';
+
+/**
+ * Share-to-Сумрак import requests (T28, design V2 §4.1) — the durable
+ * intake record, T15/T16's `feedbackStatus` pattern as its own table: a
+ * `'queued'` row IS a pending annotation request that survives restarts
+ * (annotation is online-only in T29; intake must not be). Status walk:
+ * `draft` (reserved for T29's edit-in-review) → `queued` (intake saved,
+ * awaiting annotation) → `annotated` (T29: `annotationJson` holds the
+ * pack-shaped proposal awaiting review) → `committed` (`packId` set, the
+ * pack is live). `failed` + `error` record an annotation failure; retry
+ * re-queues. T28 ships intake + the dev-only stub path (queued → committed
+ * directly); T29 owns the middle without re-migrating.
+ */
+export const importRequests = sqliteTable(
+  'import_requests',
+  {
+    id: text('id').primaryKey(),
+    /** The shared/pasted text, NFC-normalized at intake (untrusted input). */
+    text: text('text').notNull(),
+    title: text('title').notNull(),
+    sourceLabel: text('source_label'),
+    status: text('status').$type<ImportRequestStatus>().notNull(),
+    /** T29: the annotated pack proposal (JSON string) awaiting review. */
+    annotationJson: text('annotation_json'),
+    /** T29: last annotation failure message (cleared on retry). */
+    error: text('error'),
+    /** Set on commit: the local pack this request became. */
+    packId: text('pack_id'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [index('import_requests_status_idx').on(t.status, t.createdAt)],
+);
+
+/**
+ * Committed local packs, by value (T28, design V2 §4.3): the schema-valid
+ * pack JSON gzipped+base64 in a USER table, because content tables are
+ * never backed up — this row is what makes an imported pack survive
+ * backup/restore (restore re-imports every row automatically). `id` IS the
+ * pack id (`imported-<yyyymmdd>-<slug>`). Deleting an imported pack deletes
+ * this row too (remove = full delete, recorded T28 decision).
+ */
+export const importedPacks = sqliteTable('imported_packs', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  sourceLabel: text('source_label'),
+  /** Gzipped (fflate), base64-encoded pack JSON — text not blob so the row
+   * round-trips the JSON backup payload without a binary side-channel. */
+  packJsonGz: text('pack_json_gz').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

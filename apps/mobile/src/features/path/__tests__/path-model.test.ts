@@ -16,6 +16,7 @@ function pack(id: string, type: PackRow['type'], level: PackRow['level'] = 'A1')
     level,
     tags: [],
     importedAt: 0,
+    origin: 'remote',
   };
 }
 

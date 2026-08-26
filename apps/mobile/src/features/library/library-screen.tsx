@@ -27,6 +27,7 @@ import type { PackRow, StoryListItem } from '@/db/repositories/content';
 import type { DialogueListItem } from '@/db/repositories/dialogues';
 import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
+import { useImportedPackMeta } from '@/features/import/hooks';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
@@ -39,6 +40,10 @@ type LibraryRow =
 interface LibrarySection {
   pack: PackRow;
   data: LibraryRow[];
+  /** T28: set on the first local-origin section — renders the «Импортировано» shelf divider. */
+  shelfHeader?: string;
+  /** T28: source label + imported date for local packs (from `imported_packs`). */
+  importedMeta?: { sourceLabel: string | null; createdAt: number };
 }
 
 /**
@@ -55,6 +60,7 @@ export function LibraryScreen() {
   const dialogues = useDialogues();
   const progressList = useStoryProgressList();
   const bookmarkedKeys = useBookmarkedStoryKeys();
+  const importedMeta = useImportedPackMeta();
 
   // T24: long-press a story row to toggle its story bookmark (recorded
   // placement decision — the row press stays "open the reader").
@@ -93,20 +99,39 @@ export function LibraryScreen() {
 
   const sections = React.useMemo<LibrarySection[]>(() => {
     if (!packs.data || !stories.data) return [];
-    return packs.data
-      .map((pack) => ({
-        pack,
-        data: [
-          ...stories.data
-            .filter((s) => s.packId === pack.id)
-            .map((story): LibraryRow => ({ kind: 'story', story })),
-          ...(dialogues.data ?? [])
-            .filter((d) => d.packId === pack.id)
-            .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
-        ],
-      }))
+    const build = (pack: PackRow): LibrarySection => ({
+      pack,
+      data: [
+        ...stories.data
+          .filter((s) => s.packId === pack.id)
+          .map((story): LibraryRow => ({ kind: 'story', story })),
+        ...(dialogues.data ?? [])
+          .filter((d) => d.packId === pack.id)
+          .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
+      ],
+    });
+    // T28: local (imported) packs shelve together under «Импортировано»,
+    // after the remote content (design V2 §4.3).
+    const remote = packs.data
+      .filter((p) => p.origin !== 'local')
+      .map(build)
       .filter((section) => section.data.length > 0);
-  }, [packs.data, stories.data, dialogues.data]);
+    const local = packs.data
+      .filter((p) => p.origin === 'local')
+      .map(build)
+      .filter((section) => section.data.length > 0)
+      .map((section) => ({
+        ...section,
+        importedMeta: importedMeta.data?.get(section.pack.id)
+          ? {
+              sourceLabel: importedMeta.data.get(section.pack.id)!.sourceLabel,
+              createdAt: importedMeta.data.get(section.pack.id)!.createdAt,
+            }
+          : undefined,
+      }));
+    if (local[0]) local[0] = { ...local[0], shelfHeader: 'Импортировано' };
+    return [...remote, ...local];
+  }, [packs.data, stories.data, dialogues.data, importedMeta.data]);
 
   const progressByStory = React.useMemo(() => {
     const map = new Map<string, StoryProgressRow>();
@@ -167,7 +192,19 @@ export function LibraryScreen() {
       contentContainerClassName="px-4 pb-12 pt-2"
       refreshControl={refreshControl}
       ListHeaderComponent={<SyncStatusLine />}
-      renderSectionHeader={({ section }) => <PackHeader pack={section.pack} />}
+      renderSectionHeader={({ section }) => (
+        <View>
+          {section.shelfHeader && (
+            <View className="mt-8 flex-row items-center gap-2 border-b border-border pb-2">
+              <Ionicons name="download-outline" size={16} color={tokens.textMuted} />
+              <Text variant="caption" className="uppercase tracking-wider">
+                {section.shelfHeader}
+              </Text>
+            </View>
+          )}
+          <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
+        </View>
+      )}
       renderItem={({ item }) =>
         item.kind === 'story' ? (
           <StoryRow
@@ -197,7 +234,13 @@ export function LibraryScreen() {
   );
 }
 
-function PackHeader({ pack }: { pack: PackRow }) {
+function PackHeader({
+  pack,
+  importedMeta,
+}: {
+  pack: PackRow;
+  importedMeta?: { sourceLabel: string | null; createdAt: number };
+}) {
   return (
     <View className="mb-2 mt-6 gap-1.5">
       <View className="flex-row items-center gap-2">
@@ -206,6 +249,12 @@ function PackHeader({ pack }: { pack: PackRow }) {
           {pack.titleRu}
         </Text>
       </View>
+      {importedMeta && (
+        <Text variant="caption" numberOfLines={1}>
+          {importedMeta.sourceLabel ? `${importedMeta.sourceLabel} · ` : ''}
+          {new Date(importedMeta.createdAt).toLocaleDateString()}
+        </Text>
+      )}
       {pack.tags.length > 0 && (
         <View className="flex-row flex-wrap gap-1.5">
           {pack.tags.map((tag) => (

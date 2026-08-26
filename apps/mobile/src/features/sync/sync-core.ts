@@ -23,18 +23,46 @@ export interface ManifestDiff {
    * the UI can say so.
    */
   removedRemotely: SyncStateRow[];
+  /**
+   * Manifest entries whose id collides with an installed LOCAL pack (T28
+   * `'local-import'` source). Local packs are invisible to sync — never
+   * installed over, never version-compared, never removed — so a colliding
+   * remote entry is skipped entirely and surfaced here for logging only.
+   * (`imported-*` ids make this near-impossible; the guard is cheap.)
+   */
+  localCollisions: ManifestEntry[];
 }
 
 /**
  * Diff the remote manifest against `sync_state` (design §9: "diff versions").
  * The importer itself refuses downgrades, so a manifest entry older than the
  * installed version lands in `upToDate` (nothing to download).
+ *
+ * T28 local-pack immunity (design V2 §4.3, "the critical piece"): rows with
+ * source `'local-import'` are removed from the diff universe up front —
+ * no bucket except `localCollisions` can ever reference a local pack, by
+ * construction. (`removedRemotely` was already github-only; the collision
+ * guard closes the toInstall/toUpdate path too.)
  */
 export function diffManifest(manifest: Manifest, installed: SyncStateRow[]): ManifestDiff {
-  const installedById = new Map(installed.map((row) => [row.packId, row]));
-  const diff: ManifestDiff = { toInstall: [], toUpdate: [], upToDate: [], removedRemotely: [] };
+  const localIds = new Set(
+    installed.filter((row) => row.source === 'local-import').map((row) => row.packId),
+  );
+  const remoteInstalled = installed.filter((row) => row.source !== 'local-import');
+  const installedById = new Map(remoteInstalled.map((row) => [row.packId, row]));
+  const diff: ManifestDiff = {
+    toInstall: [],
+    toUpdate: [],
+    upToDate: [],
+    removedRemotely: [],
+    localCollisions: [],
+  };
 
   for (const entry of manifest.packs) {
+    if (localIds.has(entry.id)) {
+      diff.localCollisions.push(entry);
+      continue;
+    }
     const row = installedById.get(entry.id);
     if (!row) diff.toInstall.push(entry);
     else if (entry.version > row.version) diff.toUpdate.push(entry);
@@ -42,7 +70,7 @@ export function diffManifest(manifest: Manifest, installed: SyncStateRow[]): Man
   }
 
   const remoteIds = new Set(manifest.packs.map((p) => p.id));
-  diff.removedRemotely = installed.filter(
+  diff.removedRemotely = remoteInstalled.filter(
     (row) => row.source === 'github' && !remoteIds.has(row.packId),
   );
   return diff;

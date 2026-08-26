@@ -35,6 +35,8 @@ describe('migrations from empty DB', () => {
       'game_sessions',
       'daily_activity',
       'achievements',
+      'import_requests',
+      'imported_packs',
       'settings',
       'sync_state',
       'analytics_events',

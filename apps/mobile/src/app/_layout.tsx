@@ -29,6 +29,7 @@ import { AiQueue } from '@/components/ai-queue';
 import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
+import { ShareIntentGate } from '@/features/import/share-gate';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
 import { NotificationRouter } from '@/features/motivation/notification-router';
 import { ReminderReplanner } from '@/features/motivation/reminder-replanner';
@@ -165,6 +166,7 @@ export default function RootLayout() {
                 <Stack.Screen name="journal/search" options={{ title: 'Search' }} />
                 <Stack.Screen name="search" options={{ title: 'Search' }} />
                 <Stack.Screen name="bookmarks" options={{ title: 'Закладки' }} />
+                <Stack.Screen name="import" options={{ title: 'Импорт' }} />
                 <Stack.Screen
                   name="notes/[id]"
                   options={{ headerShown: false, animation: 'fade' }}
@@ -172,10 +174,12 @@ export default function RootLayout() {
                 <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
                 <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
                 <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
+                <Stack.Screen name="dev-import" options={{ title: 'Import requests' }} />
               </Stack>
               <AutoSync />
               <AutoBackup />
               <AiQueue />
+              <ShareIntentGate />
               <NotificationRouter />
               <ReminderReplanner />
               <AchievementToastHost />

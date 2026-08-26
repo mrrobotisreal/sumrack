@@ -1,4 +1,5 @@
 import { db } from '@/db';
+import { reimportLocalPacks } from '@/db/importer';
 import { hydrateTtsFromDb } from '@/features/tts/service';
 import { DEFAULT_REPO, getPat, getRepoConfig } from '@/features/sync/config';
 import { GithubContentClient } from '@/features/sync/github-client';
@@ -172,6 +173,18 @@ export async function restoreFromEnvelopeText(
 
     onPhase?.('importing');
     const result = await restoreUserData(db, payloadRaw);
+
+    // T28: local packs live only by value in the restored `imported_packs`
+    // rows — re-materialize their content now, BEFORE caches clear, so
+    // imported stories are back readable the moment restore finishes
+    // (design V2 §4.3). Per-pack contained; bootstrap self-heals leftovers.
+    const reimport = await reimportLocalPacks(db);
+    if (reimport.reimported.length > 0) {
+      track('import_packs_reimported', {
+        count: reimport.reimported.length,
+        trigger: 'restore',
+      });
+    }
 
     // The typed passphrase provably decrypts this snapshot — cache the key
     // (with the envelope's KDF params) so future backups on this device

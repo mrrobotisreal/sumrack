@@ -132,6 +132,13 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
 
   const installed = await repos.syncState.listInstalled();
   const diff = diffManifest(manifest, installed);
+  if (diff.localCollisions.length > 0) {
+    // T28: a manifest id colliding with an installed local (imported) pack is
+    // skipped wholesale — local packs are sync-invisible. Log-only: near-
+    // impossible with `imported-*` ids, but never silent if it happens.
+    const ids = diff.localCollisions.map((e) => e.id).join(', ');
+    console.warn(`[sync] skipping manifest entries colliding with local packs: ${ids}`);
+  }
   const wifiOnlyAudio = await getWifiOnlyAudio();
   const changed = [...diff.toInstall, ...diff.toUpdate];
 

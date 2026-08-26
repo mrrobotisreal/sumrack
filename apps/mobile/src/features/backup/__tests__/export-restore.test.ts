@@ -17,6 +17,8 @@ import {
   encounters,
   frozenDays,
   gameSessions,
+  importedPacks,
+  importRequests,
   journalEntries,
   notes,
   packs,
@@ -247,6 +249,26 @@ async function seedSource(db: SumrakDB) {
     endingId: 'end-good',
     firstSeenAt: NOW - 800,
   });
+  // T28: import request + imported pack ride the payload like every user table.
+  await db.insert(importRequests).values({
+    id: 'imp-1',
+    text: 'Тёмный вечер. Кто-то стучит.',
+    title: 'Тёмный вечер',
+    sourceLabel: 'Telegram',
+    status: 'committed',
+    annotationJson: null,
+    error: null,
+    packId: 'imported-20260825-temnyi-vecher',
+    createdAt: NOW - 700,
+    updatedAt: NOW - 600,
+  });
+  await db.insert(importedPacks).values({
+    id: 'imported-20260825-temnyi-vecher',
+    title: 'Тёмный вечер',
+    sourceLabel: 'Telegram',
+    packJsonGz: 'H4sIAAAAAAAAA6tWKkktLlGyUlAqSy0qzszPU9JRUEreBQBhpN6RFgAAAA==',
+    createdAt: NOW - 650,
+  });
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -306,6 +328,8 @@ async function selectAllUserTables(db: SumrakDB) {
     bookmarks: await db.select().from(bookmarks),
     dialogueRuns: await db.select().from(dialogueRuns),
     dialogueEndingsSeen: await db.select().from(dialogueEndingsSeen),
+    importRequests: await db.select().from(importRequests),
+    importedPacks: await db.select().from(importedPacks),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),

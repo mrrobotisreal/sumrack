@@ -92,6 +92,16 @@ export type AnalyticsEvent =
   | 'games_menu_opened'
   | 'game_launched_from_menu'
   | 'games_unseen_stories_toggled'
+  // T28 Share-to-Сумрак intake (counts + char counts ONLY — never text
+  // content, titles, or title-derived pack ids)
+  | 'import_share_received'
+  | 'import_intake_opened'
+  | 'import_request_created'
+  | 'import_request_split'
+  | 'import_request_removed'
+  | 'import_committed'
+  | 'import_pack_removed'
+  | 'import_packs_reimported'
   // T27 dialogue player (scores/attempt counts/modes only — never transcripts)
   | 'dialogue_tap_mode_toggled'
   | 'dialogues_list_opened'

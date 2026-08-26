@@ -189,6 +189,28 @@ const dialogueEndingSeenRow = z.strictObject({
   firstSeenAt: int,
 });
 
+const importRequestRow = z.strictObject({
+  id: z.string(),
+  text: z.string(),
+  title: z.string(),
+  sourceLabel: z.string().nullable(),
+  status: z.enum(['draft', 'queued', 'annotated', 'committed', 'failed']),
+  annotationJson: z.string().nullable(),
+  error: z.string().nullable(),
+  packId: z.string().nullable(),
+  createdAt: int,
+  updatedAt: int,
+});
+
+const importedPackRow = z.strictObject({
+  id: z.string(),
+  title: z.string(),
+  sourceLabel: z.string().nullable(),
+  /** Gzipped+base64 pack JSON — the value restore re-imports from (T28). */
+  packJsonGz: z.string(),
+  createdAt: int,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -198,7 +220,7 @@ const settingRow = z.strictObject({
 const syncStateRow = z.strictObject({
   packId: z.string(),
   version: int,
-  source: z.enum(['bundled', 'github', 'local-file']),
+  source: z.enum(['bundled', 'github', 'local-file', 'local-import']),
   installedAt: int,
   updatedAt: int,
   bytes: int.nullable(),
@@ -240,6 +262,9 @@ export const BackupPayloadSchema = z.strictObject({
     // T26: same additive-with-default pattern — pre-T26 snapshots restore.
     dialogueRuns: z.array(dialogueRunRow).default([]),
     dialogueEndingsSeen: z.array(dialogueEndingSeenRow).default([]),
+    // T28: additive-with-default again — the version literal stays at 1.
+    importRequests: z.array(importRequestRow).default([]),
+    importedPacks: z.array(importedPackRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -269,6 +294,8 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   bookmarks: 'bookmarks',
   dialogueRuns: 'dialogue_runs',
   dialogueEndingsSeen: 'dialogue_endings_seen',
+  importRequests: 'import_requests',
+  importedPacks: 'imported_packs',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

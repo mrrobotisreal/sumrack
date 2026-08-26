@@ -16,6 +16,13 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "text/plain" }]
+        }
+      ],
       "versionCode": 3
     },
     "plugins": [

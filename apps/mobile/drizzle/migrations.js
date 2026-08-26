@@ -10,6 +10,7 @@ import m0005 from './0005_motivation.sql';
 import m0006 from './0006_perf-indexes.sql';
 import m0007 from './0007_bookmarks.sql';
 import m0008 from './0008_dialogues.sql';
+import m0009 from './0009_imports.sql';
 
 export default {
   journal,
@@ -23,5 +24,6 @@ export default {
     m0006,
     m0007,
     m0008,
+    m0009,
   },
 };
