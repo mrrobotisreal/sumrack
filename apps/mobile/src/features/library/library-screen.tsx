@@ -12,7 +12,7 @@ import {
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { LevelChip } from '@/components/level-chip';
+import { LevelChip, type CefrLevel } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
@@ -28,6 +28,13 @@ import type { DialogueListItem } from '@/db/repositories/dialogues';
 import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
 import { useImportedPackMeta } from '@/features/import/hooks';
+import {
+  defaultRungLevel,
+  groupByFamily,
+  sharedShelfTags,
+  type RungState,
+} from '@/features/library/family-groups';
+import { FamilyShelfHeader } from '@/features/library/family-shelf';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
@@ -44,6 +51,18 @@ interface LibrarySection {
   shelfHeader?: string;
   /** T28: source label + imported date for local packs (from `imported_packs`). */
   importedMeta?: { sourceLabel: string | null; createdAt: number };
+  /**
+   * T30.1: set on a story-family shelf (≥2 installed packs sharing a
+   * `family:<slug>` tag). `pack`/`data` above are the SELECTED rung's; the
+   * header renders the level selector instead of the plain pack header.
+   */
+  family?: {
+    slug: string;
+    titleRu: string;
+    tags: string[];
+    rungs: RungState[];
+    selectedLevel: CefrLevel;
+  };
 }
 
 /**
@@ -97,6 +116,19 @@ export function LibraryScreen() {
     />
   );
 
+  const progressByStory = React.useMemo(() => {
+    const map = new Map<string, StoryProgressRow>();
+    for (const row of progressList.data ?? []) {
+      map.set(`${row.packId}/${row.storyId}`, row);
+    }
+    return map;
+  }, [progressList.data]);
+
+  // T30.1: which rung each family shelf shows. Ephemeral per visit — on a
+  // fresh mount the recorded default-rung rule picks (most-recently-read →
+  // lowest unfinished → lowest). Switching writes zero progress.
+  const [rungChoice, setRungChoice] = React.useState<Record<string, CefrLevel>>({});
+
   const sections = React.useMemo<LibrarySection[]>(() => {
     if (!packs.data || !stories.data) return [];
     const build = (pack: PackRow): LibrarySection => ({
@@ -110,12 +142,58 @@ export function LibraryScreen() {
           .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
       ],
     });
+    const rungStateOf = (section: LibrarySection): RungState => {
+      const storyRows = section.data.filter((row) => row.kind === 'story');
+      let finishedCount = 0;
+      let lastReadAt: number | null = null;
+      for (const row of storyRows) {
+        if (row.kind !== 'story') continue;
+        const progress = progressByStory.get(`${row.story.packId}/${row.story.id}`);
+        if (!progress) continue;
+        if (progress.finishedAt != null) finishedCount += 1;
+        if (lastReadAt === null || progress.updatedAt > lastReadAt) {
+          lastReadAt = progress.updatedAt;
+        }
+      }
+      return { level: section.pack.level, storyCount: storyRows.length, finishedCount, lastReadAt };
+    };
+    // T30.1: remote sections sharing a `family:<slug>` tag collapse into one
+    // shelf at the lowest installed rung's list position (the CT002b fix —
+    // a newly synced higher rung joins the shelf instead of appending at the
+    // bottom). Single-member families and untagged packs pass through as-is.
+    const remote = groupByFamily(
+      packs.data
+        .filter((p) => p.origin !== 'local')
+        .map(build)
+        .filter((section) => section.data.length > 0),
+      (section) => ({
+        packId: section.pack.id,
+        level: section.pack.level,
+        tags: section.pack.tags,
+      }),
+    ).map((group): LibrarySection => {
+      if (group.kind === 'single') return group.item;
+      // groupByFamily only emits families with ≥2 members — [0] is safe.
+      const lowest = group.members[0]!;
+      const rungs = group.members.map(rungStateOf);
+      const chosen = rungChoice[group.slug];
+      const selectedLevel =
+        chosen && rungs.some((r) => r.level === chosen) ? chosen : defaultRungLevel(rungs);
+      const selected = group.members.find((m) => m.pack.level === selectedLevel) ?? lowest;
+      return {
+        pack: selected.pack,
+        data: selected.data,
+        family: {
+          slug: group.slug,
+          titleRu: lowest.pack.titleRu,
+          tags: sharedShelfTags(group.members.map((m) => m.pack.tags)),
+          rungs,
+          selectedLevel,
+        },
+      };
+    });
     // T28: local (imported) packs shelve together under «Импортировано»,
     // after the remote content (design V2 §4.3).
-    const remote = packs.data
-      .filter((p) => p.origin !== 'local')
-      .map(build)
-      .filter((section) => section.data.length > 0);
     const local = packs.data
       .filter((p) => p.origin === 'local')
       .map(build)
@@ -131,15 +209,44 @@ export function LibraryScreen() {
       }));
     if (local[0]) local[0] = { ...local[0], shelfHeader: 'Импортировано' };
     return [...remote, ...local];
-  }, [packs.data, stories.data, dialogues.data, importedMeta.data]);
+  }, [packs.data, stories.data, dialogues.data, importedMeta.data, progressByStory, rungChoice]);
 
-  const progressByStory = React.useMemo(() => {
-    const map = new Map<string, StoryProgressRow>();
-    for (const row of progressList.data ?? []) {
-      map.set(`${row.packId}/${row.storyId}`, row);
-    }
-    return map;
-  }, [progressList.data]);
+  const onSelectRung = React.useCallback(
+    (slug: string, from: CefrLevel, to: CefrLevel, via: 'chip' | 'next-rung') => {
+      setRungChoice((prev) => ({ ...prev, [slug]: to }));
+      track(via === 'next-rung' ? 'family_next_rung_tapped' : 'family_rung_switched', {
+        family: slug,
+        from,
+        to,
+      });
+    },
+    [],
+  );
+
+  // One family_shelf_viewed per shelf per Library visit. The signature only
+  // carries per-shelf identity (slug/rungs/levels), so rung switching does
+  // not re-fire; data arriving after mount fires exactly once.
+  const familySignature = React.useMemo(
+    () =>
+      sections
+        .filter((s) => s.family)
+        .map((s) => `${s.family!.slug}:${s.family!.rungs.map((r) => r.level).join(',')}`)
+        .join('|'),
+    [sections],
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!familySignature) return;
+      for (const entry of familySignature.split('|')) {
+        const [slug = '', levels = ''] = entry.split(':');
+        track('family_shelf_viewed', {
+          family: slug,
+          rungs: levels.split(',').length,
+          levels,
+        });
+      }
+    }, [familySignature]),
+  );
 
   if (packs.isPending || stories.isPending) {
     return (
@@ -202,7 +309,20 @@ export function LibraryScreen() {
               </Text>
             </View>
           )}
-          <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
+          {section.family ? (
+            <FamilyShelfHeader
+              slug={section.family.slug}
+              titleRu={section.family.titleRu}
+              tags={section.family.tags}
+              rungs={section.family.rungs}
+              selectedLevel={section.family.selectedLevel}
+              onSelectRung={(to, via) =>
+                onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
+              }
+            />
+          ) : (
+            <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
+          )}
         </View>
       )}
       renderItem={({ item }) =>

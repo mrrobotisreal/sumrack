@@ -276,7 +276,13 @@ export type AnalyticsEvent =
   | 'bookmark_added'
   | 'bookmark_removed'
   | 'bookmark_opened'
-  | 'bank_mastery_filter_used';
+  | 'bank_mastery_filter_used'
+  // T30.1 story-family shelf. Props carry the family slug + CEFR levels
+  // (counts/ids only, per convention).
+  | 'family_shelf_viewed'
+  | 'family_rung_switched'
+  | 'family_next_rung_shown'
+  | 'family_next_rung_tapped';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
