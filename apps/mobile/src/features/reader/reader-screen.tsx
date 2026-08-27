@@ -24,6 +24,7 @@ import { StoryHeader } from './story-header';
 import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
+import { resolveRestoreTarget, type RestoreTarget } from './restore';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
@@ -39,6 +40,26 @@ const MIN_FINISH_DWELL_MS = 5000;
 const MIN_READING_SESSION_MS = 3000;
 /** After the user scrolls by hand, karaoke auto-follow pauses this long. */
 const FOLLOW_SUSPEND_MS = 5000;
+/**
+ * T30.2: the restore scroll is confirmed by viewability (target on screen)
+ * before position saves arm. If it never confirms, arm anyway after this —
+ * the never-regress save rule makes a missed restore harmless, not lossy.
+ */
+const RESTORE_SETTLE_TIMEOUT_MS = 3500;
+const RESTORE_MAX_SCROLL_ATTEMPTS = 30;
+/**
+ * A far target isn't rendered yet, and scrollToIndex to an unrendered row
+ * stalls (its offset-estimate fallback stops moving the viewport). Stepping
+ * a few rows past the rendered edge always succeeds and always fires a new
+ * viewability event, so the ladder provably reaches any index.
+ */
+const RESTORE_STEP_ROWS = 8;
+/**
+ * CT003b: an explicit narration seek auto-scrolls the list; viewability is
+ * ignored this long after one so the jump itself never writes the reading
+ * position (sustained listening at the sought point still counts).
+ */
+const SEEK_SAVE_SUPPRESS_MS = 2500;
 /** Reserved space above the safe area for the narration bar (list padding). */
 const AUDIO_BAR_HEIGHT = 104;
 
@@ -81,7 +102,14 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   const [selecting, setSelecting] = React.useState(false);
 
   const listRef = React.useRef<FlatList<SentenceWithTokens>>(null);
-  const restoredRef = React.useRef(false);
+  // T30.2 restore flow: saves (and karaoke follow) stay disarmed until the
+  // restore scroll settles; the list stays invisible until then (no flash).
+  const savesArmedRef = React.useRef(false);
+  const restoreStartedRef = React.useRef(false);
+  const restoreTargetRef = React.useRef<RestoreTarget | null>(null);
+  const restoreAttemptsRef = React.useRef(0);
+  const restoreTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [listReady, setListReady] = React.useState(false);
   const finishRequestedRef = React.useRef(false);
   const mountedAtRef = React.useRef(Date.now());
   const endVisibleRef = React.useRef(false);
@@ -115,7 +143,7 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   React.useEffect(() => {
     if (activeSentenceIdx == null || !playing) return;
     if (Date.now() < followSuspendedUntilRef.current) return;
-    if (!restoredRef.current) return;
+    if (!savesArmedRef.current) return;
     listRef.current?.scrollToIndex({
       index: activeSentenceIdx,
       animated: true,
@@ -209,43 +237,88 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     [packId, storyId, invalidateProgress],
   );
 
-  // Restore the saved position once both the story and the progress row are
-  // in — unless a T24 deep link (search/bookmark) asked for a specific
-  // sentence, which wins for the initial scroll.
+  // Arm saves + karaoke follow, reveal the list, and log the restore if one
+  // actually happened. Idempotent — first caller wins (confirm vs timeout).
+  const settleRestore = React.useCallback(
+    (restored: RestoreTarget | null) => {
+      if (savesArmedRef.current) return;
+      savesArmedRef.current = true;
+      restoreTargetRef.current = null;
+      if (restoreTimeoutRef.current) {
+        clearTimeout(restoreTimeoutRef.current);
+        restoreTimeoutRef.current = null;
+      }
+      setListReady(true);
+      if (restored?.source === 'saved' && restored.targetIdx != null) {
+        track('reading_position_restored', {
+          packId,
+          storyId,
+          sentenceIdx: restored.targetIdx,
+          from: from ?? 'library',
+        });
+      }
+    },
+    [packId, storyId, from],
+  );
+
+  const attemptRestoreScroll = React.useCallback(() => {
+    const target = restoreTargetRef.current;
+    if (target?.targetIdx == null || savesArmedRef.current) return;
+    restoreAttemptsRef.current += 1;
+    listRef.current?.scrollToIndex({ index: target.targetIdx, animated: false, viewPosition: 0.1 });
+  }, []);
+
+  // T30.2 restore-on-open. The target comes from a FRESH progress read —
+  // after an earlier visit the react-query row can be stale (the CT002b
+  // open-at-top failure), so the cache is never trusted for the restore.
+  // Library card, Today continue card, and deep links all resolve through
+  // resolveRestoreTarget; the scroll is confirmed via viewability (or the
+  // timeout) before anything is allowed to save.
   React.useEffect(() => {
-    if (restoredRef.current || detail.isPending || progress.isPending) return;
-    const idx =
-      initialSentenceIdx != null && initialSentenceIdx >= 0
-        ? initialSentenceIdx
-        : (progress.data?.currentSentenceIdx ?? 0);
-    if (idx > 0 && idx < sentences.length) {
-      // Defer one frame so the list has laid out its first batch.
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0.1 });
-        restoredRef.current = true;
-        track('reading_position_restored', { packId, storyId, sentenceIdx: idx });
-      });
-    } else {
-      restoredRef.current = true;
-      // First open: create the progress row now so the Library shows
-      // in-progress even before the first scroll.
-      if (sentences.length > 0) schedulePositionSave(idx);
+    if (restoreStartedRef.current || detail.isPending) return;
+    restoreStartedRef.current = true;
+    if (sentences.length === 0) {
+      settleRestore(null);
+      return;
     }
+    void repos.reading.getProgress(packId, storyId).then((row) => {
+      const target = resolveRestoreTarget({
+        initialSentenceIdx,
+        savedIdx: row?.currentSentenceIdx ?? null,
+        finished: row?.finishedAt != null,
+        sentenceCount: sentences.length,
+      });
+      if (target.targetIdx == null) {
+        settleRestore(target);
+      } else {
+        restoreTargetRef.current = target;
+        // Defer one frame so the list has laid out its first batch.
+        requestAnimationFrame(attemptRestoreScroll);
+        restoreTimeoutRef.current = setTimeout(
+          () => settleRestore(null),
+          RESTORE_SETTLE_TIMEOUT_MS,
+        );
+      }
+      // First-ever open: create the progress row now so the Library shows
+      // in-progress even before the first scroll.
+      if (row == null) schedulePositionSave(0);
+    });
   }, [
     detail.isPending,
-    progress.isPending,
-    progress.data,
     sentences.length,
     packId,
     storyId,
-    schedulePositionSave,
     initialSentenceIdx,
+    settleRestore,
+    attemptRestoreScroll,
+    schedulePositionSave,
   ]);
 
-  // Clear the pending dwell timer on unmount.
+  // Clear the pending dwell + restore timers on unmount.
   React.useEffect(
     () => () => {
       if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
+      if (restoreTimeoutRef.current) clearTimeout(restoreTimeoutRef.current);
     },
     [],
   );
@@ -256,16 +329,41 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   const viewabilityHandlerRef = React.useRef<(items: ViewToken<SentenceWithTokens>[]) => void>(
     () => {},
   );
+  const { lastUserSeekAtRef } = narration;
   React.useEffect(() => {
     viewabilityHandlerRef.current = (viewableItems) => {
-      if (!restoredRef.current || viewableItems.length === 0) return;
+      if (viewableItems.length === 0) return;
       const indices = viewableItems.map((v) => v.index).filter((i): i is number => i != null);
       if (indices.length === 0) return;
-      schedulePositionSave(Math.min(...indices));
-      endVisibleRef.current = Math.max(...indices) === sentences.length - 1;
+      const minIdx = Math.min(...indices);
+      const maxIdx = Math.max(...indices);
+      // Pre-settle: confirm (or keep nudging) the restore scroll; no saves.
+      if (!savesArmedRef.current) {
+        const target = restoreTargetRef.current;
+        if (target?.targetIdx == null) return;
+        if (minIdx <= target.targetIdx && target.targetIdx <= maxIdx) {
+          settleRestore(target);
+        } else if (restoreAttemptsRef.current < RESTORE_MAX_SCROLL_ATTEMPTS) {
+          restoreAttemptsRef.current += 1;
+          // Step toward the target via the rendered edge (see RESTORE_STEP_ROWS).
+          const stepIdx =
+            target.targetIdx > maxIdx
+              ? Math.min(maxIdx + RESTORE_STEP_ROWS, target.targetIdx)
+              : Math.max(minIdx - RESTORE_STEP_ROWS, target.targetIdx);
+          listRef.current?.scrollToIndex({ index: stepIdx, animated: false, viewPosition: 0.1 });
+        } else {
+          // Never confirmed — arm anyway; never-regress keeps this harmless.
+          settleRestore(null);
+        }
+        return;
+      }
+      // The auto-follow jump right after an explicit seek is not reading.
+      if (Date.now() - lastUserSeekAtRef.current < SEEK_SAVE_SUPPRESS_MS) return;
+      schedulePositionSave(minIdx);
+      endVisibleRef.current = maxIdx === sentences.length - 1;
       if (endVisibleRef.current) finishStory();
     };
-  }, [schedulePositionSave, finishStory, sentences.length]);
+  }, [schedulePositionSave, finishStory, sentences.length, settleRestore, lastUserSeekAtRef]);
   const [viewabilityConfigCallbackPairs] = React.useState(() => [
     {
       viewabilityConfig: { itemVisiblePercentThreshold: 25 },
@@ -383,6 +481,9 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
         ref={listRef}
         data={sentences}
         keyExtractor={(s) => s.id}
+        // Invisible (but laying out) until the restore scroll settles, so a
+        // restored open never flashes the top of the story first (T30.2).
+        style={{ opacity: listReady ? 1 : 0 }}
         scrollEnabled={!selecting}
         renderItem={({ item }) => (
           <SentenceRow
@@ -439,6 +540,7 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
         onScrollToIndexFailed={(info) => {
           // Variable row heights: jump near the target, then settle exactly.
+          // (Restore settling is confirmed via viewability, not from here.)
           listRef.current?.scrollToOffset({
             offset: info.averageItemLength * info.index,
             animated: false,
@@ -449,7 +551,6 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
               animated: false,
               viewPosition: 0.1,
             });
-            restoredRef.current = true;
           }, 120);
         }}
         showsVerticalScrollIndicator={false}

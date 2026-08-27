@@ -79,6 +79,13 @@ export interface Narration {
   activeSentenceIdx: number | null;
   activeSentenceId: string | null;
   toggle(): void;
+  /**
+   * Epoch ms of the last user-initiated seek (scrub or sentence tap;
+   * 'auto' seeks excluded). The reader uses this to keep the auto-follow
+   * jump after an explicit seek from writing the reading position (T30.2 /
+   * CT003b: a stray seek must not count as reading progress).
+   */
+  lastUserSeekAtRef: Readonly<React.MutableRefObject<number>>;
   seekToMs(ms: number, method: SeekMethod): void;
   seekToSentence(sentenceId: string): void;
   cycleRate(): void;
@@ -123,6 +130,8 @@ export function useNarration({
     id: string;
     idx: number;
   } | null>(null);
+  // See Narration.lastUserSeekAtRef — 0 = no user seek yet this mount.
+  const lastUserSeekAtRef = React.useRef(0);
 
   // Selection state only records explicit user switches; before the first
   // switch the first playable track is the derived default.
@@ -361,6 +370,7 @@ export function useNarration({
       const clamped = Math.min(Math.max(0, ms), currentTrack.durationMs);
       void player.seekTo(clamped / 1000).then(() => syncFromPosition(clamped, true));
       if (method !== 'auto') {
+        lastUserSeekAtRef.current = Date.now();
         trackEvent('narration_seek', { packId, storyId, method, toMs: clamped });
       }
     },
@@ -479,6 +489,7 @@ export function useNarration({
     activeSentenceIdx: activeSentence?.idx ?? null,
     activeSentenceId: activeSentence?.id ?? null,
     toggle,
+    lastUserSeekAtRef,
     seekToMs,
     seekToSentence,
     cycleRate,

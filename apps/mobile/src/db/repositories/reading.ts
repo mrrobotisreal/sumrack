@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { storyProgress } from '../schema';
 import type { SumrakDB } from '../types';
@@ -34,7 +34,16 @@ export function createReadingRepo(db: SumrakDB) {
       return db.select().from(storyProgress);
     },
 
-    /** Upsert the reading position; never touches finishedAt. */
+    /**
+     * Upsert the reading position; never touches finishedAt.
+     *
+     * T30.2 never-regress rule: the saved index only ever moves forward —
+     * `max(saved, incoming)`, applied atomically in SQL. A short revisit
+     * (open → leave) can no longer wipe a saved position (CT002b's 5→0).
+     * Deliberately unconditional (finished rows too): the index is
+     * display/eligibility-only once finished, and a "start over" reset is
+     * a separate future affordance, not a lower save.
+     */
     async savePosition(packId: string, storyId: string, sentenceIdx: number): Promise<void> {
       const now = Date.now();
       await db
@@ -48,7 +57,10 @@ export function createReadingRepo(db: SumrakDB) {
         })
         .onConflictDoUpdate({
           target: [storyProgress.packId, storyProgress.storyId],
-          set: { currentSentenceIdx: sentenceIdx, updatedAt: now },
+          set: {
+            currentSentenceIdx: sql`max(${storyProgress.currentSentenceIdx}, ${sentenceIdx})`,
+            updatedAt: now,
+          },
         });
     },
 

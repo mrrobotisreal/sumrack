@@ -195,7 +195,7 @@ export function TodayScreen() {
         <Pressable
           onPress={() =>
             router.push(
-              `/reader/${continueTarget.progress.packId}/${continueTarget.progress.storyId}`,
+              `/reader/${continueTarget.progress.packId}/${continueTarget.progress.storyId}?from=today`,
             )
           }
           accessibilityRole="button"
