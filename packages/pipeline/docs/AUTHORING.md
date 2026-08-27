@@ -101,7 +101,7 @@ theme: # ambient room theme (V2 §5.2) — drives the house map (T30)
 track: family # path track (V2 §6.1); OMIT for the main track
 ```
 
-- **Known scenes** (the app's house set, §5.1 room order, top floor → cellar): `hallway`, `living-room`, `kitchen`, `pantry`, `nursery`, `cellar`. Units carrying one of these render as rooms of the house cross-section on the Путь tab. Any *other* string is valid and forward-compatible — the unit simply renders with the default path presentation until an app update knows the scene.
+- **Known scenes** (the app's house set, §5.1 room order, top floor → cellar): `hallway`, `living-room`, `kitchen`, `pantry`, `nursery`, `cellar`. Units carrying one of these render as rooms of the house cross-section on the Путь tab. Any _other_ string is valid and forward-compatible — the unit simply renders with the default path presentation until an app update knows the scene.
 - **Track naming**: kebab-case ids like story/pack ids. Omitted = the main track (`main` is applied app-side — never author `track: main`). The Alina arc uses `track: family`, which the app titles «Семья»; new tracks render with their raw id until the app learns a display name.
 - Both keys are course-unit concerns today; the schema allows them on any pack type so future content shapes need no schema bump.
 

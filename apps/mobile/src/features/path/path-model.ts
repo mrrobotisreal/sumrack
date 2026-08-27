@@ -131,7 +131,12 @@ export interface BuildPathInput {
   storyProgress: Pick<StoryProgressRow, 'packId' | 'storyId' | 'finishedAt' | 'updatedAt'>[];
   unitProgress: Pick<
     UnitProgressRow,
-    'packId' | 'lessonReadAt' | 'quizPassedAt' | 'quizBestScorePercent' | 'completedAt' | 'updatedAt'
+    | 'packId'
+    | 'lessonReadAt'
+    | 'quizPassedAt'
+    | 'quizBestScorePercent'
+    | 'completedAt'
+    | 'updatedAt'
   >[];
   lemmaStats: Record<string, UnitLemmaStats>;
   checkpointResults: CheckpointResultLike[];

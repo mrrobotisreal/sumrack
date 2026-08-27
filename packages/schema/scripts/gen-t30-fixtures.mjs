@@ -268,5 +268,7 @@ for (const pack of packs) {
   const dir = join(packsDir, pack.id);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'pack.json'), JSON.stringify(pack, null, 2) + '\n');
-  console.log(`wrote ${pack.id} (${pack.theme ? `scene=${pack.theme.scene}` : 'no theme'}, track=${pack.track ?? '(main)'})`);
+  console.log(
+    `wrote ${pack.id} (${pack.theme ? `scene=${pack.theme.scene}` : 'no theme'}, track=${pack.track ?? '(main)'})`,
+  );
 }

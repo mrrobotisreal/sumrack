@@ -146,9 +146,7 @@ function TrackSection({
   const houseUnits = orderHouseUnits(
     group.nodes.filter((n): n is UnitState => n.kind === 'unit' && isHouseUnit(n.pack)),
   );
-  const listNodes = group.nodes.filter(
-    (n) => !(n.kind === 'unit' && isHouseUnit(n.pack)),
-  );
+  const listNodes = group.nodes.filter((n) => !(n.kind === 'unit' && isHouseUnit(n.pack)));
   const selectedHouseUnit = houseUnits.find((u) => u.pack.id === selectedId) ?? null;
 
   return (

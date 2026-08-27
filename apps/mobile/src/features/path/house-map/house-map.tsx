@@ -115,7 +115,11 @@ export function HouseMap({ units, currentId, onPressRoom }: HouseMapProps) {
               onPress={() => onPressRoom(unit)}
               accessibilityRole="button"
               accessibilityLabel={`Room ${unit.pack.titleRu}, ${
-                state === 'completed' ? 'completed' : state === 'current' ? 'current' : 'not started'
+                state === 'completed'
+                  ? 'completed'
+                  : state === 'current'
+                    ? 'current'
+                    : 'not started'
               }`}
               className="flex-row items-center gap-3 px-3 active:opacity-70"
               style={{ height: FLOOR_H }}
