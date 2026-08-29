@@ -10,6 +10,7 @@ import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
 import { hydrateGoalPrefsFromDb } from '@/store/goal-prefs';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
+import { hydrateMotionPrefsFromDb } from '@/store/motion-prefs';
 import { hydrateNotificationPrefsFromDb } from '@/store/notification-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
 import { hydrateThemeFromDb } from '@/store/theme';
@@ -42,6 +43,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateReaderPrefsFromDb();
         await hydrateLookupPrefsFromDb();
         await hydrateGamePrefsFromDb();
+        await hydrateMotionPrefsFromDb();
         await hydrateDailyPrefsFromDb();
         await hydrateGoalPrefsFromDb();
         await hydrateNotificationPrefsFromDb();

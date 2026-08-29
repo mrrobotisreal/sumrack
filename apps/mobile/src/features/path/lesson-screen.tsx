@@ -12,6 +12,10 @@ import { recordLessonCompleted } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { isHouseScene } from './house-map/rooms';
+import { RoomScene } from './scenes/room-scene';
+import { signalRoomExit, ThresholdOverlay } from './scenes/threshold-transition';
+import { usePackTheme } from './scenes/use-pack-theme';
 import { useInvalidatePath } from './use-path';
 
 /**
@@ -29,6 +33,24 @@ export function LessonScreen({ packId }: { packId: string }) {
     queryKey: ['lesson', packId],
     queryFn: () => repos.content.getLesson(packId),
   });
+
+  // T31: themed units render their room's ambient scene behind the lesson.
+  const theme = usePackTheme(packId);
+  const scened = isHouseScene(theme.scene);
+  const [entering, setEntering] = React.useState(true);
+  const themeRef = React.useRef(theme);
+  React.useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
+  React.useEffect(
+    () => () => {
+      // Leaving the room back to the path — the path screen plays the brief
+      // reverse threshold if it refocuses promptly (T31).
+      const { scene, accent } = themeRef.current;
+      if (isHouseScene(scene)) signalRoomExit(scene, accent);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     track('lesson_opened', { packId });
@@ -76,10 +98,11 @@ export function LessonScreen({ packId }: { packId: string }) {
   }
 
   return (
-    <>
+    <View className="flex-1 bg-bg">
       <Stack.Screen options={{ title: row.titleRu }} />
+      {scened && <RoomScene scene={theme.scene} accent={theme.accent} />}
       <ScrollView
-        className="flex-1 bg-bg"
+        className="flex-1"
         contentContainerClassName="px-5 pb-16 pt-5"
         onScroll={({ nativeEvent }) => {
           const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
@@ -87,22 +110,32 @@ export function LessonScreen({ packId }: { packId: string }) {
         }}
         scrollEventThrottle={250}
       >
-        <RNText className="font-reading text-3xl text-text">{row.titleRu}</RNText>
-        <Text variant="muted" className="mb-5 mt-1">
-          {row.titleEn}
-        </Text>
-        <MarkdownView source={row.body} />
-        <Pressable
-          onPress={() => {
-            markRead();
-            router.back();
-          }}
-          accessibilityRole="button"
-          className="mt-8 items-center rounded-xl bg-accent py-3.5 active:opacity-80"
-        >
-          <Text className="font-ui-medium text-bg">Понятно — done reading</Text>
-        </Pressable>
+        {/* Over a scene, content floats on a translucent surface card (T31). */}
+        <View className={scened ? 'rounded-2xl bg-surface-veil p-4' : ''}>
+          <RNText className="font-reading text-3xl text-text">{row.titleRu}</RNText>
+          <Text variant="muted" className="mb-5 mt-1">
+            {row.titleEn}
+          </Text>
+          <MarkdownView source={row.body} />
+          <Pressable
+            onPress={() => {
+              markRead();
+              router.back();
+            }}
+            accessibilityRole="button"
+            className="mt-8 items-center rounded-xl bg-accent py-3.5 active:opacity-80"
+          >
+            <Text className="font-ui-medium text-bg">Понятно — done reading</Text>
+          </Pressable>
+        </View>
       </ScrollView>
-    </>
+      {scened && entering && (
+        <ThresholdOverlay
+          direction="enter"
+          accent={theme.accent}
+          onDone={() => setEntering(false)}
+        />
+      )}
+    </View>
   );
 }

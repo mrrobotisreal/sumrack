@@ -11,6 +11,11 @@ interface SessionShellProps {
   total: number;
   onQuit: () => void;
   children: React.ReactNode;
+  /**
+   * T31: the unit quiz hosts an ambient room scene BEHIND the shell — the
+   * host owns the bg then. Every other caller keeps the opaque default.
+   */
+  transparentBg?: boolean;
 }
 
 /**
@@ -18,13 +23,22 @@ interface SessionShellProps {
  * item counter, quit — so every game mode feels like a variation of one
  * flow, not a different app. T13/T14 games render inside this too.
  */
-export function SessionShell({ current, total, onQuit, children }: SessionShellProps) {
+export function SessionShell({
+  current,
+  total,
+  onQuit,
+  children,
+  transparentBg = false,
+}: SessionShellProps) {
   const insets = useSafeAreaInsets();
   const { tokens } = useAppTheme();
   const progress = total > 0 ? Math.min(1, current / total) : 0;
 
   return (
-    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 8 }}>
+    <View
+      className={`flex-1 ${transparentBg ? '' : 'bg-bg'}`}
+      style={{ paddingTop: insets.top + 8 }}
+    >
       <View className="flex-row items-center gap-3 px-4">
         <Pressable
           onPress={onQuit}

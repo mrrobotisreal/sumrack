@@ -11,6 +11,8 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { HouseMap } from './house-map/house-map';
 import { isHouseUnit, orderHouseUnits } from './house-map/rooms';
+import { RoomScene } from './scenes/room-scene';
+import { consumeRoomExit, ThresholdOverlay } from './scenes/threshold-transition';
 import {
   MAIN_TRACK,
   trackTitle,
@@ -39,10 +41,14 @@ export function PathScreen() {
   const path = usePathState();
   const invalidate = useInvalidatePath();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  // T31: coming back out of a themed room plays the brief reverse threshold.
+  const [exitFx, setExitFx] = React.useState<{ accent: string | null } | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
       track('path_viewed');
+      const exit = consumeRoomExit();
+      if (exit) setExitFx({ accent: exit.accent });
       // Credit earned elsewhere (reading, reviews) since the last visit.
       invalidate();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,26 +99,31 @@ export function PathScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-bg" contentContainerClassName="px-4 pb-16 pt-4">
-      {state.levels.map((group) => (
-        <View key={group.level}>
-          <View className="mb-3 mt-2 flex-row items-center gap-3">
-            <LevelChip level={group.level as CefrLevel} />
-            <View className="h-px flex-1 bg-border" />
+    <View className="flex-1 bg-bg">
+      <ScrollView className="flex-1" contentContainerClassName="px-4 pb-16 pt-4">
+        {state.levels.map((group) => (
+          <View key={group.level}>
+            <View className="mb-3 mt-2 flex-row items-center gap-3">
+              <LevelChip level={group.level as CefrLevel} />
+              <View className="h-px flex-1 bg-border" />
+            </View>
+            {group.tracks.map((trackGroup) => (
+              <TrackSection
+                key={trackGroup.track}
+                level={group.level}
+                group={trackGroup}
+                currentId={currentId}
+                selectedId={selectedId}
+                onToggle={toggleNode}
+              />
+            ))}
           </View>
-          {group.tracks.map((trackGroup) => (
-            <TrackSection
-              key={trackGroup.track}
-              level={group.level}
-              group={trackGroup}
-              currentId={currentId}
-              selectedId={selectedId}
-              onToggle={toggleNode}
-            />
-          ))}
-        </View>
-      ))}
-    </ScrollView>
+        ))}
+      </ScrollView>
+      {exitFx && (
+        <ThresholdOverlay direction="exit" accent={exitFx.accent} onDone={() => setExitFx(null)} />
+      )}
+    </View>
   );
 }
 
@@ -278,13 +289,17 @@ function UnitNode({
   const { tokens } = useAppTheme();
   const dim = unit.complete && !expanded;
   const accent = warm ? tokens.trackWarm : tokens.accent;
+  // T31: an expanded house unit's card is the "unit detail" — its room's
+  // scene breathes inside the card, clipped by the rounded corners.
+  const scene = unit.pack.themeScene;
 
   return (
     <View
-      className={`rounded-xl border bg-surface ${
+      className={`overflow-hidden rounded-xl border bg-surface ${
         isCurrent ? (warm ? 'border-track-warm/50' : 'border-accent/50') : 'border-border'
       } ${dim ? 'opacity-60' : ''}`}
     >
+      {expanded && <RoomScene scene={scene} accent={unit.pack.themeAccent} variant="card" />}
       <Pressable
         onPress={onToggle}
         accessibilityRole="button"

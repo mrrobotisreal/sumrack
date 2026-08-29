@@ -4,7 +4,6 @@ import Animated, {
   cancelAnimation,
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -13,6 +12,7 @@ import Animated, {
 import Svg, { Line, Path, Rect } from 'react-native-svg';
 
 import { Text } from '@/components/ui/text';
+import { useReduceMotion } from '@/store/motion-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import type { UnitState } from '../path-model';
@@ -153,7 +153,8 @@ export function HouseMap({ units, currentId, onPressRoom }: HouseMapProps) {
  */
 function RoomWindow({ state }: { state: 'completed' | 'current' | 'future' }) {
   const { tokens } = useAppTheme();
-  const reduceMotion = useReducedMotion();
+  // App setting OR OS flag (T31) — was OS-only when T30 shipped.
+  const reduceMotion = useReduceMotion();
   const glow = useSharedValue(1);
 
   React.useEffect(() => {

@@ -62,6 +62,13 @@ export const SETTING_KEYS = {
    */
   dialogueTapMode: 'games.dialogueTapMode',
   /**
+   * boolean (T31, default false): still every ambient animation — room
+   * scenes freeze on their poster frame, the threshold transition and the
+   * house-map flicker are skipped. OR-combined with the OS reduced-motion
+   * flag (store/motion-prefs.ts); Zod-validated on hydrate.
+   */
+  reduceMotion: 'motion.reduce',
+  /**
    * Daily-session composition (T14): { length, weights: { flashcard, mc,
    * cloze, sentenceBuilder, listening } } — Zod-validated on read
    * (store/daily-prefs.ts), corrupt values fall back to defaults.

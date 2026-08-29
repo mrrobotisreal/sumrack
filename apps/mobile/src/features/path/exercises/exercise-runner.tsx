@@ -16,6 +16,8 @@ interface ExerciseRunnerProps {
   trackPrefix: 'unit_quiz' | 'checkpoint';
   onQuit: () => void;
   onFinish: (outcomes: SpecOutcome[], durationMs: number) => void;
+  /** T31: let a host-owned ambient scene show through (unit quiz only). */
+  transparentBg?: boolean;
 }
 
 /**
@@ -25,7 +27,13 @@ interface ExerciseRunnerProps {
  * all-or-nothing, unlike reviews where every grade persists immediately);
  * the quit confirm says so.
  */
-export function ExerciseRunner({ specs, trackPrefix, onQuit, onFinish }: ExerciseRunnerProps) {
+export function ExerciseRunner({
+  specs,
+  trackPrefix,
+  onQuit,
+  onFinish,
+  transparentBg = false,
+}: ExerciseRunnerProps) {
   const [index, setIndex] = React.useState(0);
   const outcomesRef = React.useRef<SpecOutcome[]>([]);
   const startedAtRef = React.useRef(0);
@@ -91,7 +99,7 @@ export function ExerciseRunner({ specs, trackPrefix, onQuit, onFinish }: Exercis
 
   const spec = specs[index]!;
   return (
-    <SessionShell current={index} total={specs.length} onQuit={quit}>
+    <SessionShell current={index} total={specs.length} onQuit={quit} transparentBg={transparentBg}>
       {spec.kind === 'multiple-choice' && (
         <SpecMcView
           key={spec.id}

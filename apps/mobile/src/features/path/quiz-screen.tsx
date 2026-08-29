@@ -15,6 +15,10 @@ import { useAppTheme } from '@/theme/use-app-theme';
 import { ExerciseRunner } from './exercises/exercise-runner';
 import { scoreOutcomes, passes, type SpecOutcome } from './exercises/scoring';
 import { buildUnitQuizForPack } from './exercises/unit-quiz';
+import { isHouseScene } from './house-map/rooms';
+import { RoomScene } from './scenes/room-scene';
+import { signalRoomExit, ThresholdOverlay } from './scenes/threshold-transition';
+import { usePackTheme } from './scenes/use-pack-theme';
 import { getPassThreshold } from './threshold';
 import { pathQueryKey } from './use-path';
 
@@ -43,6 +47,36 @@ export function QuizScreen({ packId }: { packId: string }) {
   const [result, setResult] = React.useState<QuizResult | null>(null);
   const sessionIdRef = React.useRef<string | null>(null);
   const [attempt, setAttempt] = React.useState(0);
+
+  // T31: themed units render their room's ambient scene behind the quiz.
+  const theme = usePackTheme(packId);
+  const scened = isHouseScene(theme.scene);
+  const [entering, setEntering] = React.useState(true);
+  const themeRef = React.useRef(theme);
+  React.useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
+  React.useEffect(
+    () => () => {
+      const { scene, accent } = themeRef.current;
+      if (isHouseScene(scene)) signalRoomExit(scene, accent);
+    },
+    [],
+  );
+
+  const scenedWrap = (child: React.ReactNode) => (
+    <View className="flex-1 bg-bg">
+      {scened && <RoomScene scene={theme.scene} accent={theme.accent} />}
+      {child}
+      {scened && entering && (
+        <ThresholdOverlay
+          direction="enter"
+          accent={theme.accent}
+          onDone={() => setEntering(false)}
+        />
+      )}
+    </View>
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -111,16 +145,16 @@ export function QuizScreen({ packId }: { packId: string }) {
   );
 
   if (phase === 'loading') {
-    return (
-      <View className="flex-1 items-center justify-center bg-bg">
+    return scenedWrap(
+      <View className="flex-1 items-center justify-center">
         <ActivityIndicator color={tokens.accent} />
-      </View>
+      </View>,
     );
   }
 
   if (phase === 'error') {
-    return (
-      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+    return scenedWrap(
+      <View className="flex-1 items-center justify-center gap-3 px-8">
         <QueryError
           message="Couldn't build this quiz — something went wrong reading the database."
           onRetry={retry}
@@ -132,13 +166,13 @@ export function QuizScreen({ packId }: { packId: string }) {
         >
           <Text className="text-accent">Back</Text>
         </Pressable>
-      </View>
+      </View>,
     );
   }
 
   if (phase === 'empty') {
-    return (
-      <View className="flex-1 items-center justify-center gap-3 bg-bg px-8">
+    return scenedWrap(
+      <View className="flex-1 items-center justify-center gap-3 px-8">
         <Text className="text-center font-reading text-xl">Не из чего собрать квиз</Text>
         <Text variant="muted" className="text-center">
           This unit&apos;s content isn&apos;t installed (or has too few annotated words) to build a
@@ -151,13 +185,13 @@ export function QuizScreen({ packId }: { packId: string }) {
         >
           <Text className="text-accent">Back</Text>
         </Pressable>
-      </View>
+      </View>,
     );
   }
 
   if (phase === 'result' && result) {
-    return (
-      <View className="flex-1 items-center justify-center gap-4 bg-bg px-8">
+    return scenedWrap(
+      <View className="flex-1 items-center justify-center gap-4 px-8">
         <Text variant="caption" className="uppercase tracking-wider">
           Unit quiz
         </Text>
@@ -202,16 +236,17 @@ export function QuizScreen({ packId }: { packId: string }) {
             <Text className="text-accent">Try again</Text>
           </Pressable>
         )}
-      </View>
+      </View>,
     );
   }
 
-  return (
+  return scenedWrap(
     <ExerciseRunner
       specs={specs}
       trackPrefix="unit_quiz"
       onQuit={() => router.back()}
       onFinish={(outcomes, durationMs) => void finish(outcomes, durationMs)}
-    />
+      transparentBg={scened}
+    />,
   );
 }

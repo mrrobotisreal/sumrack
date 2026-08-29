@@ -282,7 +282,10 @@ export type AnalyticsEvent =
   | 'family_shelf_viewed'
   | 'family_rung_switched'
   | 'family_next_rung_shown'
-  | 'family_next_rung_tapped';
+  | 'family_next_rung_tapped'
+  // T31 ambient room scenes. Props carry the scene name / a boolean only.
+  | 'room_scene_shown'
+  | 'reduce_motion_toggled';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

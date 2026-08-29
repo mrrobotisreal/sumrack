@@ -21,6 +21,9 @@ module.exports = {
         danger: 'rgb(var(--danger) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
         scrim: 'rgb(var(--scrim) / <alpha-value>)',
+        // Content cards floating over ambient room scenes (T31) — surface at
+        // 92% so the scene breathes through without costing legibility
+        'surface-veil': 'rgb(var(--surface) / 0.92)',
         // Warm non-horror track identity («Семья», T30) — border/icon/caption
         // accents on track sections; soft = selection/highlight wash
         'track-warm': 'rgb(var(--track-warm) / <alpha-value>)',
