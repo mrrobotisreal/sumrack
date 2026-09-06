@@ -4,10 +4,12 @@ import { Text } from '@/components/ui/text';
 import { useAmbientPrefs } from '@/store/ambient-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { SOFT_AMBIENT_VOLUME } from './preferences';
+
 const VOLUMES = [
   { label: 'Very quiet', value: 0.04 },
   { label: 'Quiet', value: 0.08 },
-  { label: 'Soft', value: 0.15 },
+  { label: 'Soft', value: SOFT_AMBIENT_VOLUME },
 ];
 
 export function AmbientSettingsSection() {
@@ -23,8 +25,8 @@ export function AmbientSettingsSection() {
           <View className="flex-1 gap-0.5 pr-3">
             <Text className="font-ui-medium">Study ambience</Text>
             <Text variant="caption">
-              Quiet music while reading and playing. Pauses for speech, listening and pronunciation
-              exercises, and when you leave the app.
+              Music while reading and playing, including story narration. Pauses for word readouts,
+              listening and pronunciation exercises, and when you leave the app.
             </Text>
           </View>
           <Switch

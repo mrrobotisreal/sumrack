@@ -25,7 +25,7 @@ import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
 import { resolveRestoreTarget, type RestoreTarget } from './restore';
-import { useNarrationQuiet, useStudyAmbience } from '@/features/ambient-audio/activity';
+import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
@@ -134,12 +134,12 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     sentences,
     tracks: detail.data?.audio ?? [],
   });
-  useNarrationQuiet(narration.playing);
+  // Story narration accompanies the music; only reader readiness and overlays
+  // affect this activity. The host still owns focus/background and TTS pauses.
   useStudyAmbience(
     !!detail.data &&
       !progress.isPending &&
       listReady &&
-      !narration.playing &&
       !popupTarget &&
       !phraseTarget &&
       !explainTarget &&

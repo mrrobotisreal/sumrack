@@ -17,16 +17,18 @@ loading, empty, failure and results screens render outside it.
 - Bundle the supplied MP3 inside the mobile app for offline use. It is
   unchanged: 800.026 seconds, stereo 44.1 kHz, 320 kbps, 32,002,132 bytes.
 - Default enabled at 8% player gain. Settings → Background music offers
-  an off switch and Very quiet (4%), Quiet (8%), Soft (15%) levels.
+  an off switch and Very quiet (4%), Quiet (8%), Soft (20%) levels.
+  The previous 15% Soft setting upgrades automatically to 20% on load.
   These gains multiply the device's media volume; they are not perceived
   loudness percentages. Stored values are validated and capped at 20%.
 - Start once a focused reader has loaded and restored its visible text,
   or when a focused `SessionShell` is mounted for an actual exercise.
   This includes flashcards, multiple choice, cloze, sentence builder,
   mixed daily sessions, path quizzes and checkpoints.
-- Pause for reader narration, reader lookup/explanation/typography sheets,
-  and Piper or system speech. Narration remains a global blocker when a
-  reader is retained behind a different screen.
+- Keep music playing at its selected level alongside story narration.
+  Playing, pausing or finishing narration does not restart or duck the music.
+- Pause for reader lookup/explanation/typography sheets and Piper or system
+  speech. Story narration is a separate audio player, not a speech blocker.
 - Keep listening and pronunciation exercises silent for their entire
   focused lifetime, including replay and recording. Daily sessions resume
   music when they return to a non-listening exercise.
@@ -91,8 +93,11 @@ The Galaxy S25 (`R3GYA00L1XX`, SM-S931U1) was authorized and tested on
 the release-signed update was correctly rejected by Android. A separate copy
 of the feature APK was signed with the verified matching local development
 key and installed successfully with `adb install -r`, preserving app data.
-Installed feature version: 1.2.0 / versionCode 4. The original release-signed
-APK remains unchanged. See `ambient-study-music-device-check.md` for results.
+Installed feature version: 1.2.0 / versionCode 4. The narration-mixing follow-up
+was built with the existing development-signing fallback for this device;
+the current local APK output is development-signed. Use the release script
+to regenerate a release-key-signed APK. See `ambient-study-music-device-check.md`
+for the initial and follow-up results.
 The remaining checks below are a broader release acceptance matrix.
 
 - Cold-launch directly into a reader: no music during the intro/loading;
@@ -101,9 +106,10 @@ The remaining checks below are a broader release acceptance matrix.
   resumes, with no duplicate playback or unexpected restart.
 - Start each supported game and a mixed daily session. Confirm silence
   on loading, empty queues, errors, completion and quitting.
-- Play narration, use word-segment lookup, and test both installed Piper
-  and system TTS. Speech should remain clear; music should resume after
-  speech finishes. Test fast repeated speech and cancellation.
+- Play, pause and finish story narration: both tracks play together, and
+  music continues at its selected level without restarting. Test word-segment
+  lookup and both installed Piper and system TTS separately: music pauses
+  for these readouts. Test fast repeated speech and cancellation.
 - Test a listening item in a daily session and a pronunciation recording.
   Confirm no music is heard or captured, and it resumes on later cards.
 - Home, app switcher, notification shade, screen lock, calls, wired/Bluetooth

@@ -33,19 +33,3 @@ export function useStudyAmbience(active = true) {
 export function useQuietStudy(active = true) {
   useRegistration('blockers', active);
 }
-
-/** Narration can keep playing from a reader retained underneath another screen. */
-export function useNarrationQuiet(active: boolean) {
-  React.useEffect(() => {
-    if (!active) return;
-    const id = Symbol('narration');
-    useAmbientActivity.setState((s) => ({ blockers: new Set(s.blockers).add(id) }));
-    return () => {
-      useAmbientActivity.setState((s) => {
-        const blockers = new Set(s.blockers);
-        blockers.delete(id);
-        return { blockers };
-      });
-    };
-  }, [active]);
-}
