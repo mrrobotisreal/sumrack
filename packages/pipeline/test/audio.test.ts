@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Pack, WordStamp } from '@sumrak/schema';
-import { runAudition, runFinalize } from '../src/audio.ts';
+import { runAudition, runFinalize, steerNarration } from '../src/audio.ts';
 import { annotateDrafts } from '../src/annotate.ts';
 import { ElevenLabsClient, ElevenLabsError } from '../src/elevenlabs.ts';
 import { resolveEnvVar } from '../src/env.ts';
@@ -363,6 +363,91 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
     });
     expect(captured[0]!.text.startsWith('Ночь.')).toBe(true);
     expect(captured[0]!.previous_text).toBe('Slow and quiet.');
+  });
+
+  it('v3 + audioCues: cue inserted after the separator, spans exact, coverage 1', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace(
+        '    settings:',
+        "    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[whispers]'\n    settings:",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 5);
+    const captured: { text: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    expect(captured[0]!.text).toBe(
+      `[fearful] Ночь.${SENTENCE_SEPARATOR}[whispers] Дом молчит, но кто-то ходит наверху.`,
+    );
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.coverage).toBe(1);
+    // Spans are exact: every stamp maps back onto the cued text at the shifted offset.
+    const story = draftPack().stories[0]!;
+    const narration = steerNarration(
+      buildNarration(story),
+      {
+        id: 'x',
+        audioTag: '[fearful]',
+        audioCues: { 't-s02': '[whispers]' },
+      },
+      true,
+    );
+    for (const span of narration.spans) {
+      const sentence = story.sentences.find((s) => s.id === span.sentenceId)!;
+      expect(narration.text.slice(span.start, span.end)).toBe(
+        sentence.tokens[span.tokenIndex]!.text,
+      );
+    }
+    // Cue chars themselves are never stamped: the first word of t-s02 starts after the cue.
+    const pack = JSON.parse(readFileSync(join(outDir, 'pack.json'), 'utf8')) as Pack;
+    const stamps = pack.stories[0]!.audio[0]!.timestamps;
+    const firstOfS02 = stamps.find((st) => st.sentenceId === 't-s02' && st.tokenIndex === 0)!;
+    const expectedStartMs = narration.spans.find((sp) => sp.sentenceId === 't-s02')!.start * 60;
+    expect(firstOfS02.startMs).toBe(expectedStartMs);
+  });
+
+  it('non-v3 model + audioCues: narration text unchanged', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace('    settings:', "    audioCues:\n      t-s02: '[whispers]'\n    settings:"),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: { text: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+    await runFinalize([draftFile], join(work, 'pack'), client, {
+      defaultSeed: 7,
+      modelId: 'eleven_multilingual_v2',
+    });
+    expect(captured[0]!.text).toBe(
+      `Ночь.${SENTENCE_SEPARATOR}Дом молчит, но кто-то ходит наверху.`,
+    );
+  });
+
+  it('audioCues keyed to an unknown sentence id throws (never a silent skip)', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace('    settings:', "    audioCues:\n      t-s99: '[whispers]'\n    settings:"),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const client = new ElevenLabsClient('test-key', { fetchImpl: fakeElevenLabsFetch(mp3) });
+    await expect(
+      runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 }),
+    ).rejects.toThrow(/audioCues reference sentence id\(s\) not in this story: t-s99/);
   });
 
   it('audition renders take files and never writes pack.json', async () => {

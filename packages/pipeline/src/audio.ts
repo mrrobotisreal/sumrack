@@ -133,6 +133,58 @@ function providerVoiceName(direction: VoiceDirection): string {
   return rest.join(':');
 }
 
+/**
+ * Insert `insert` into the narration text at character offset `at` (always a
+ * token boundary), shifting every span at or after it by the inserted length.
+ * The inserted characters belong to no token, so they are never stamped.
+ */
+function insertNarrationText(narration: NarrationText, at: number, insert: string): NarrationText {
+  if (insert.length === 0) return narration;
+  return {
+    text: narration.text.slice(0, at) + insert + narration.text.slice(at),
+    spans: narration.spans.map((s) =>
+      s.start >= at ? { ...s, start: s.start + insert.length, end: s.end + insert.length } : s,
+    ),
+  };
+}
+
+/**
+ * Apply the direction's v3 steering to a narration: the leading `audioTag`
+ * prefix on the whole text, and (CT011 Tier 2) each `audioCues` entry right
+ * before its sentence — i.e. immediately after that sentence's `\n\n`
+ * separator. v3 rejects previous_text, so tags in the text are the steering
+ * channel there; both are dropped for non-v3 models (the text is unchanged).
+ * Cue ids are validated against the story regardless of model: a cue keyed
+ * to a sentence that is not in the story is an authoring error, never a
+ * silent skip.
+ */
+export function steerNarration(
+  base: NarrationText,
+  direction: Pick<VoiceDirection, 'id' | 'audioTag' | 'audioCues'>,
+  v3: boolean,
+): NarrationText {
+  const cues = Object.entries(direction.audioCues ?? {});
+  const firstSpanOf = new Map<string, number>();
+  for (const s of base.spans)
+    if (!firstSpanOf.has(s.sentenceId)) firstSpanOf.set(s.sentenceId, s.start);
+  const unknown = cues.filter(([id]) => !firstSpanOf.has(id)).map(([id]) => id);
+  if (unknown.length > 0) {
+    throw new Error(
+      `track "${direction.id}": audioCues reference sentence id(s) not in this story: ${unknown.join(', ')}`,
+    );
+  }
+  if (!v3) return base;
+  let narration = base;
+  // Later insertion points first, so earlier offsets stay valid.
+  const ordered = cues
+    .map(([id, tags]) => ({ at: firstSpanOf.get(id)!, tags }))
+    .sort((a, b) => b.at - a.at);
+  for (const { at, tags } of ordered) narration = insertNarrationText(narration, at, `${tags} `);
+  return direction.audioTag
+    ? insertNarrationText(narration, 0, `${direction.audioTag} `)
+    : narration;
+}
+
 async function renderDirection(
   client: ElevenLabsClient,
   story: Story,
@@ -140,24 +192,14 @@ async function renderDirection(
   seed: number,
   modelId: string | undefined,
 ): Promise<{ audio: Buffer; stampResultFor: (durationMs: number) => StampResult }> {
-  const base = buildNarration(story);
   const model = modelId ?? DEFAULT_MODEL_ID;
   const v3 = isV3Model(model);
-  // v3 rejects previous_text; mood steering there is the leading audio tag.
-  // The tag becomes part of the rendered text, so shift every token span by
-  // the prefix length — stamp mapping stays exact, and the tag's own
-  // characters (near-silent in the alignment) are never stamped.
-  const prefix = v3 && direction.audioTag ? `${direction.audioTag} ` : '';
-  const narration: NarrationText = prefix
-    ? {
-        text: prefix + base.text,
-        spans: base.spans.map((s) => ({
-          ...s,
-          start: s.start + prefix.length,
-          end: s.end + prefix.length,
-        })),
-      }
-    : base;
+  // v3 rejects previous_text; mood steering there is the leading audio tag
+  // plus any per-sentence cues. Tags become part of the rendered text, so
+  // every token span shifts by the inserted length — stamp mapping stays
+  // exact, and the tags' own characters (near-silent in the alignment) are
+  // never stamped.
+  const narration = steerNarration(buildNarration(story), direction, v3);
   const voiceId = await client.resolveVoiceId(providerVoiceName(direction));
   const result = await client.renderWithTimestamps({
     voiceId,

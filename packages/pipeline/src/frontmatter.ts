@@ -49,6 +49,11 @@ export const VoiceSettingsSchema = z.strictObject({
   speed: z.number().min(0.7).max(1.2).optional(),
 });
 
+/** One or more `[bracketed]` Eleven v3 audio tags, e.g. "[whispers] [fearful]". */
+const AudioTagSchema = z
+  .string()
+  .regex(/^\[[^\]]+\](\s*\[[^\]]+\])*$/, 'audio tags are one or more [bracketed] v3 audio tags');
+
 /**
  * Voice direction for one narration rendition (consumed by T09's
  * `pipeline audio`; carried through untouched by `annotate`).
@@ -74,10 +79,16 @@ export const VoiceDirectionSchema = z.strictObject({
    * get ~0.1s of silence in the alignment). v3-family models only; ignored
    * for other models. Must be [bracketed] tags.
    */
-  audioTag: z
-    .string()
-    .regex(/^\[[^\]]+\](\s*\[[^\]]+\])*$/, 'audioTag is one or more [bracketed] v3 audio tags')
-    .optional(),
+  audioTag: AudioTagSchema.optional(),
+  /**
+   * Optional per-sentence audio cues (CT011 Tier 2): sentence id → one or
+   * more [bracketed] v3 tags inserted right before that sentence in the
+   * narration text (after its paragraph separator). Same mechanics as
+   * `audioTag`, mid-text: v3-family models only, render-time only, never
+   * spoken, never stamped, never written to pack.json. An id that is not in
+   * the story is an error.
+   */
+  audioCues: z.record(StableIdSchema, AudioTagSchema).optional(),
 });
 export type VoiceDirection = z.infer<typeof VoiceDirectionSchema>;
 export type VoiceSettings = z.infer<typeof VoiceSettingsSchema>;

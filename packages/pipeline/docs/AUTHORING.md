@@ -47,6 +47,18 @@ settings (`stability`, `style`, `speed`, `similarityBoost`), and `deliveryNotes`
 stay human-only. A track whose character alignment can't be trusted ships with
 zero word stamps (the app falls back to sentence-level karaoke) — the report
 says so; re-render with another seed rather than shipping bad stamps.
+Eleven v3 steering (the default model rejects `previous_text`, so `stylePrompt`
+is ignored there): `audioTag: '[whispers]'` — one or more `[bracketed]` v3 tags
+— is prepended once to the whole track. **Per-sentence cues (CT011 Tier 2):**
+`audioCues: { <sentence-id>: '[tags]' }` inserts tags right before that sentence
+(after its paragraph break) for mid-track mood shifts — e.g.
+`audioCues: { nea1p9-s105: '[calm] [ominous]' }`. Both are **v3-only**
+(non-v3 models render the plain text), **render-time only** (tag characters
+shift the token spans so word stamps stay exact and are never stamped
+themselves), and **never reach `pack.json`**. A cue keyed to a sentence id
+that is not in the story is an error, not a skip. Tag characters count toward
+the provider's per-request character cap.
+
 `pipeline publish` refuses same-version content changes: bump `pack.version`
 in every draft of the pack instead.
 
