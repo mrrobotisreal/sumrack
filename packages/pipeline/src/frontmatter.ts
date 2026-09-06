@@ -49,6 +49,11 @@ export const VoiceSettingsSchema = z.strictObject({
   speed: z.number().min(0.7).max(1.2).optional(),
 });
 
+/** Provider-prefixed voice id, e.g. "elevenlabs:Anton". */
+const VoiceIdSchema = z
+  .string()
+  .regex(/^[a-z0-9-]+:.+$/, 'voice is provider-prefixed, e.g. "elevenlabs:<voice-name>"');
+
 /** One or more `[bracketed]` Eleven v3 audio tags, e.g. "[whispers] [fearful]". */
 const AudioTagSchema = z
   .string()
@@ -62,9 +67,7 @@ export const VoiceDirectionSchema = z.strictObject({
   /** Audio track id the rendition will get, e.g. "photo-anton-creepy". */
   id: StableIdSchema,
   /** Provider-prefixed voice id, e.g. "elevenlabs:Anton". */
-  voice: z
-    .string()
-    .regex(/^[a-z0-9-]+:.+$/, 'voice is provider-prefixed, e.g. "elevenlabs:<voice-name>"'),
+  voice: VoiceIdSchema,
   /** Emotional/delivery style label: "creepy-whisper", "neutral", ... */
   style: z.string().min(1),
   /** Prompt-style description of the delivery, for the TTS request. */
@@ -89,6 +92,17 @@ export const VoiceDirectionSchema = z.strictObject({
    * the story is an error.
    */
   audioCues: z.record(StableIdSchema, AudioTagSchema).optional(),
+  /**
+   * Optional per-sentence voice override (CT011): sentence id → a different
+   * provider-prefixed voice for that sentence. The story is rendered as
+   * consecutive same-voice runs, each with its own voice; the runs are
+   * level-matched and concatenated into the ONE track this direction
+   * produces, with word stamps offset so they stay exact across every
+   * splice. Override runs get no narrator `audioTag` (steer them with an
+   * `audioCues` entry on the same id). Render-time only — never in
+   * pack.json. An id that is not in the story is an error.
+   */
+  sentenceVoices: z.record(StableIdSchema, VoiceIdSchema).optional(),
 });
 export type VoiceDirection = z.infer<typeof VoiceDirectionSchema>;
 export type VoiceSettings = z.infer<typeof VoiceSettingsSchema>;

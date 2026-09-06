@@ -254,7 +254,13 @@ async function audioCommand(args: string[]): Promise<void> {
   const filters = { stories, tracks, dialogues, playerAudio };
   try {
     // Cost gate BEFORE the client exists — an unconfirmed run fires nothing.
-    const plan = planAudioRun(drafts, { ...filters, extrasPath: extras, audition, takes });
+    const plan = planAudioRun(drafts, {
+      ...filters,
+      extrasPath: extras,
+      audition,
+      takes,
+      modelId: model,
+    });
     await confirmAudioRun(plan, yes);
   } catch (e) {
     if (e instanceof DraftError) fail(e.issues.map(formatIssue).join('\n'), 1);

@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync, unlinkSync } from 'node:fs';
 
 /**
  * Opus encoding + duration probing via ffmpeg/ffprobe (T09, design §8 step 3:
@@ -62,4 +63,78 @@ export function probeDurationMs(path: string): number {
     throw new Error(`ffprobe reported no usable duration for ${path} (got "${out.trim()}")`);
   }
   return Math.floor(seconds * 1000);
+}
+
+/** Decode any audio file to mono 44.1 kHz 16-bit PCM WAV (exact, gap-free durations). */
+export function decodeToWav(inPath: string, outPath: string): void {
+  run('ffmpeg', [
+    '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    inPath,
+    '-ac',
+    '1',
+    '-ar',
+    '44100',
+    '-c:a',
+    'pcm_s16le',
+    outPath,
+  ]);
+}
+
+export interface LoudnessStats {
+  meanDb: number;
+  maxDb: number;
+}
+
+/** Mean/peak level of a file via ffmpeg's volumedetect (dBFS). Digital silence → -91/-91. */
+export function measureLoudness(path: string): LoudnessStats {
+  const res = spawnSync(
+    'ffmpeg',
+    ['-hide_banner', '-nostats', '-i', path, '-af', 'volumedetect', '-f', 'null', '-'],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
+  if (res.error) throw res.error;
+  const grab = (key: string): number => {
+    const m = new RegExp(`${key}:\\s*(-?[\\d.]+|-inf)\\s*dB`).exec(res.stderr);
+    if (!m) throw new Error(`volumedetect reported no ${key} for ${path}`);
+    return m[1] === '-inf' ? -91 : Number.parseFloat(m[1]!);
+  };
+  return { meanDb: grab('mean_volume'), maxDb: grab('max_volume') };
+}
+
+/**
+ * Concatenate audio runs (any decodable inputs, WAV preferred) into one MP3
+ * at the provider's 44.1 kHz / 128 kbps shape, applying a per-run gain in dB
+ * first. One ffmpeg invocation; sample-accurate joins.
+ */
+export function concatRunsToMp3(
+  runs: readonly { file: string; gainDb: number }[],
+  outPath: string,
+): void {
+  if (runs.length === 0) throw new Error('concatRunsToMp3: no runs');
+  const inputs = runs.flatMap((r) => ['-i', r.file]);
+  const gains = runs.map((r, i) => `[${i}:a]volume=${r.gainDb.toFixed(2)}dB[g${i}]`).join(';');
+  const concat = `${runs.map((_, i) => `[g${i}]`).join('')}concat=n=${runs.length}:v=0:a=1[out]`;
+  if (existsSync(outPath)) unlinkSync(outPath);
+  run('ffmpeg', [
+    '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    ...inputs,
+    '-filter_complex',
+    `${gains};${concat}`,
+    '-map',
+    '[out]',
+    '-c:a',
+    'libmp3lame',
+    '-b:a',
+    '128k',
+    '-ar',
+    '44100',
+    outPath,
+  ]);
 }

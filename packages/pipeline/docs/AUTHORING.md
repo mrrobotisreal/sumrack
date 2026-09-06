@@ -59,6 +59,19 @@ themselves), and **never reach `pack.json`**. A cue keyed to a sentence id
 that is not in the story is an error, not a skip. Tag characters count toward
 the provider's per-request character cap.
 
+**Per-sentence voice override (CT011):** `sentenceVoices: { <sentence-id>:
+'elevenlabs:<other voice>' }` renders those sentences in a second voice — e.g.
+a child's line inside a first-person narration. The story is rendered as
+consecutive same-voice runs (each its own provider request), the override runs
+are level-matched to the narrator runs' mean level (never boosted into
+clipping), the runs are concatenated sample-accurately, and every run's word
+stamps are offset by the runs before it so karaoke stays exact across each
+seam. The pack still carries **one** track per part; nothing about the
+override reaches `pack.json`. Override runs get no narrator `audioTag` — steer
+them with an `audioCues` entry on the same id (e.g. `'[calm]'`). Works on v3
+and non-v3 models alike (`stylePrompt` is only sent for narrator runs). An id
+not in the story is an error. Per-request character caps apply per run.
+
 `pipeline publish` refuses same-version content changes: bump `pack.version`
 in every draft of the pack instead.
 

@@ -246,19 +246,33 @@ describe('ElevenLabsClient key hygiene', () => {
 });
 
 /** A fake ElevenLabs backend: real HTTP shapes, deterministic audio + alignment. */
-function fakeElevenLabsFetch(mp3: Buffer, captured: unknown[] = []): typeof fetch {
+const ANTON_ID = 'v'.repeat(20);
+const LUNYA_ID = 'l'.repeat(20);
+
+function fakeElevenLabsFetch(
+  mp3: Buffer,
+  captured: unknown[] = [],
+  mp3ByVoice: Record<string, Buffer> = {},
+): typeof fetch {
   return (async (url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
     if (u.includes('/v1/voices')) {
-      return Response.json({ voices: [{ voice_id: 'v'.repeat(20), name: 'Anton' }] });
+      return Response.json({
+        voices: [
+          { voice_id: ANTON_ID, name: 'Anton' },
+          { voice_id: LUNYA_ID, name: 'Lunya - Little Fairy' },
+        ],
+      });
     }
     if (u.includes('/with-timestamps')) {
       const body = JSON.parse(String(init!.body)) as { text: string };
-      captured.push(body);
+      captured.push({ ...body, url: u });
+      const voiceId = /text-to-speech\/([^/]+)\//.exec(u)![1]!;
+      const audio = mp3ByVoice[voiceId] ?? mp3;
       const characters = Array.from(body.text);
       // 60ms per char, comfortably inside the generated audio's duration.
       return Response.json({
-        audio_base64: mp3.toString('base64'),
+        audio_base64: audio.toString('base64'),
         alignment: {
           characters,
           character_start_times_seconds: characters.map((_, i) => (i * 60) / 1000),
@@ -272,7 +286,7 @@ function fakeElevenLabsFetch(mp3: Buffer, captured: unknown[] = []): typeof fetc
 
 /** Generate a short silent MP3 with ffmpeg (long enough to cover the alignment). */
 function makeSilentMp3(dir: string, seconds: number): Buffer {
-  const file = join(dir, 'silence.mp3');
+  const file = join(dir, `silence-${seconds}.mp3`);
   execFileSync('ffmpeg', [
     '-y',
     '-hide_banner',
@@ -448,6 +462,92 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
     await expect(
       runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 }),
     ).rejects.toThrow(/audioCues reference sentence id\(s\) not in this story: t-s99/);
+  });
+
+  const DRAFT3 = `${DRAFT}
+## t-s03
+
+RU: Тишина.
+EN: Silence.
+
+| text   | lemma  | translation | pos  | grammar    | level | note |
+| ------ | ------ | ----------- | ---- | ---------- | ----- | ---- |
+| Тишина | тишина | silence     | noun | f.sg. nom. | A1    |      |
+| .      |        |             |      |            |       |      |
+`;
+
+  it('sentenceVoices: runs render per voice, splice to one track, stamps exact across both seams', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT3.replace(
+        '    settings:',
+        "    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[calm]'\n    sentenceVoices:\n      t-s02: 'elevenlabs:Lunya - Little Fairy'\n    settings:",
+      ),
+    );
+    const narratorMp3 = makeSilentMp3(work, 3);
+    const lunyaMp3 = makeSilentMp3(work, 4);
+    const captured: { text: string; url: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(narratorMp3, captured, { [LUNYA_ID]: lunyaMp3 }),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    // Three runs: narrator / Lunya / narrator — override run carries no narrator tag.
+    expect(captured).toHaveLength(3);
+    expect(captured[0]!.url).toContain(ANTON_ID);
+    expect(captured[0]!.text).toBe('[fearful] Ночь.');
+    expect(captured[1]!.url).toContain(LUNYA_ID);
+    expect(captured[1]!.text).toBe('[calm] Дом молчит, но кто-то ходит наверху.');
+    expect(captured[2]!.url).toContain(ANTON_ID);
+    expect(captured[2]!.text).toBe('[fearful] Тишина.');
+
+    // ONE track whose duration is the sum of the runs (MP3 framing tolerance).
+    const pack = JSON.parse(readFileSync(join(outDir, 'pack.json'), 'utf8')) as Pack;
+    expect(pack.stories[0]!.audio).toHaveLength(1);
+    const track = pack.stories[0]!.audio[0]!;
+    expect(Math.abs(track.durationMs - 10_000)).toBeLessThan(150);
+
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.coverage).toBe(1);
+    expect(report.stampResult.issues.join(' ')).toMatch(/level-matched/);
+
+    // Stamps: monotonic across both seams, and each run's words sit inside
+    // that run's slice of the spliced track (offset by the runs before it).
+    const stamps = track.timestamps;
+    expect(stamps).toHaveLength(8);
+    for (let i = 1; i < stamps.length; i++) {
+      expect(stamps[i]!.startMs).toBeGreaterThanOrEqual(stamps[i - 1]!.endMs);
+    }
+    const s01 = stamps.filter((st) => st.sentenceId === 't-s01');
+    const s02 = stamps.filter((st) => st.sentenceId === 't-s02');
+    const s03 = stamps.filter((st) => st.sentenceId === 't-s03');
+    expect(s01.every((st) => st.endMs <= 3_000)).toBe(true);
+    // "[calm] " is 7 chars → first Lunya word starts 420ms into her run, at ~3000ms + 420.
+    expect(Math.abs(s02[0]!.startMs - (3_000 + 7 * 60))).toBeLessThan(60);
+    expect(s02.every((st) => st.startMs >= 3_000 && st.endMs <= 7_000)).toBe(true);
+    expect(Math.abs(s03[0]!.startMs - (7_000 + '[fearful] '.length * 60))).toBeLessThan(60);
+  });
+
+  it('sentenceVoices keyed to an unknown sentence id throws', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace(
+        '    settings:',
+        "    sentenceVoices:\n      t-s99: 'elevenlabs:Lunya - Little Fairy'\n    settings:",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const client = new ElevenLabsClient('test-key', { fetchImpl: fakeElevenLabsFetch(mp3) });
+    await expect(
+      runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 }),
+    ).rejects.toThrow(/sentenceVoices reference sentence id\(s\) not in this story: t-s99/);
   });
 
   it('audition renders take files and never writes pack.json', async () => {

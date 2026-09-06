@@ -1,11 +1,13 @@
 import { randomInt } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   safeParsePack,
   type AudioTrack,
   type NodeAudio,
   type Pack,
+  type Sentence,
   type Story,
 } from '@sumrak/schema';
 import { annotateDrafts } from './annotate.ts';
@@ -21,8 +23,14 @@ import { DEFAULT_MODEL_ID, ElevenLabsClient, isV3Model } from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras } from './extras.ts';
 import type { VoiceDirection } from './frontmatter.ts';
-import { buildNarration, type NarrationText } from './narration.ts';
-import { encodeOpus, probeDurationMs } from './opus.ts';
+import { buildNarrationFromSentences, type NarrationText } from './narration.ts';
+import {
+  concatRunsToMp3,
+  decodeToWav,
+  encodeOpus,
+  measureLoudness,
+  probeDurationMs,
+} from './opus.ts';
 import { mapAlignmentToStamps, type StampResult } from './stamps.ts';
 
 /**
@@ -123,11 +131,11 @@ function parseAll(
   return { drafts, pack };
 }
 
-function providerVoiceName(direction: VoiceDirection): string {
-  const [provider, ...rest] = direction.voice.split(':');
+function providerVoiceName(direction: VoiceDirection, voice = direction.voice): string {
+  const [provider, ...rest] = voice.split(':');
   if (provider !== 'elevenlabs' || rest.length === 0) {
     throw new Error(
-      `track "${direction.id}": unsupported voice "${direction.voice}" — only "elevenlabs:<name>" is implemented`,
+      `track "${direction.id}": unsupported voice "${voice}" — only "elevenlabs:<name>" is implemented`,
     );
   }
   return rest.join(':');
@@ -185,6 +193,68 @@ export function steerNarration(
     : narration;
 }
 
+/** One same-voice stretch of a story's sentences, with its steered narration text. */
+export interface NarrationRun {
+  /** Provider-prefixed voice this run renders with. */
+  voice: string;
+  /** True for a `sentenceVoices` override run (renders without the narrator `audioTag`). */
+  override: boolean;
+  sentences: Sentence[];
+  narration: NarrationText;
+}
+
+/**
+ * Split a story into consecutive same-voice runs (CT011 `sentenceVoices`).
+ * Without overrides there is exactly one run — the whole story in the
+ * direction's voice, steered by `audioTag` + `audioCues`. Override runs keep
+ * only the cues keyed to their own sentences and get no narrator tag. Every
+ * `sentenceVoices` / `audioCues` id must exist in the story.
+ */
+export function planNarrationRuns(
+  story: Story,
+  direction: VoiceDirection,
+  v3: boolean,
+): NarrationRun[] {
+  const ids = new Set(story.sentences.map((s) => s.id));
+  const overrides = direction.sentenceVoices ?? {};
+  const unknown = Object.keys(overrides).filter((id) => !ids.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `track "${direction.id}": sentenceVoices reference sentence id(s) not in this story: ${unknown.join(', ')}`,
+    );
+  }
+  // Validate every cue against the whole story up front (a cue on an override
+  // sentence is legal — it steers that run).
+  steerNarration(buildNarrationFromSentences(story.sentences), direction, false);
+
+  const groups: { voice: string; override: boolean; sentences: Sentence[] }[] = [];
+  for (const sentence of story.sentences) {
+    const voice = overrides[sentence.id] ?? direction.voice;
+    const override = voice !== direction.voice;
+    const last = groups.at(-1);
+    if (last && last.voice === voice && last.override === override) last.sentences.push(sentence);
+    else groups.push({ voice, override, sentences: [sentence] });
+  }
+  const cues = direction.audioCues ?? {};
+  return groups.map((g) => {
+    const own = new Set(g.sentences.map((s) => s.id));
+    const runCues = Object.fromEntries(Object.entries(cues).filter(([id]) => own.has(id)));
+    const narration = steerNarration(
+      buildNarrationFromSentences(g.sentences),
+      {
+        id: direction.id,
+        audioTag: g.override ? undefined : direction.audioTag,
+        audioCues: runCues,
+      },
+      v3,
+    );
+    return { voice: g.voice, override: g.override, sentences: g.sentences, narration };
+  });
+}
+
+/** Never boost a run into clipping when level-matching. */
+const LEVEL_MATCH_PEAK_CEILING_DB = -1;
+
 async function renderDirection(
   client: ElevenLabsClient,
   story: Story,
@@ -199,31 +269,143 @@ async function renderDirection(
   // every token span shifts by the inserted length — stamp mapping stays
   // exact, and the tags' own characters (near-silent in the alignment) are
   // never stamped.
-  const narration = steerNarration(buildNarration(story), direction, v3);
-  const voiceId = await client.resolveVoiceId(providerVoiceName(direction));
-  const result = await client.renderWithTimestamps({
-    voiceId,
-    text: narration.text,
-    modelId: model,
-    seed,
-    ...(v3 ? {} : { previousText: direction.stylePrompt }),
-    voiceSettings: direction.settings,
-  });
-  return {
-    audio: result.audio,
-    stampResultFor: (durationMs: number) =>
-      result.alignment
-        ? mapAlignmentToStamps(narration, result.alignment, durationMs)
-        : {
-            stamps: [],
-            trusted: false,
-            wordTokens: narration.spans.filter((s) => !s.isPunct).length,
-            stampedTokens: 0,
-            coverage: 0,
-            matchedCharRatio: 0,
-            issues: ['provider returned no character alignment'],
-          },
-  };
+  const runs = planNarrationRuns(story, direction, v3);
+  const rendered = [];
+  for (const run of runs) {
+    const voiceId = await client.resolveVoiceId(providerVoiceName(direction, run.voice));
+    const result = await client.renderWithTimestamps({
+      voiceId,
+      text: run.narration.text,
+      modelId: model,
+      seed,
+      ...(v3 || run.override ? {} : { previousText: direction.stylePrompt }),
+      voiceSettings: direction.settings,
+    });
+    rendered.push({ run, result });
+  }
+
+  const stampsOf = (
+    narration: NarrationText,
+    alignment: { characters: string[]; startSeconds: number[]; endSeconds: number[] } | null,
+    durationMs: number,
+  ): StampResult =>
+    alignment
+      ? mapAlignmentToStamps(narration, alignment, durationMs)
+      : {
+          stamps: [],
+          trusted: false,
+          wordTokens: narration.spans.filter((s) => !s.isPunct).length,
+          stampedTokens: 0,
+          coverage: 0,
+          matchedCharRatio: 0,
+          issues: ['provider returned no character alignment'],
+        };
+
+  if (rendered.length === 1) {
+    const only = rendered[0]!;
+    return {
+      audio: only.result.audio,
+      stampResultFor: (durationMs) =>
+        stampsOf(only.run.narration, only.result.alignment, durationMs),
+    };
+  }
+
+  // Several voices: splice the per-run audio into ONE track (CT011 §5.4).
+  // Decode each run to PCM (exact, gap-free durations), level-match override
+  // runs to the narrator runs' mean level, concatenate sample-accurately, and
+  // offset every run's stamps by the accumulated duration of the runs before
+  // it so word stamps stay exact across each seam.
+  const work = mkdtempSync(join(tmpdir(), 'sumrak-runs-'));
+  try {
+    const parts = rendered.map(({ run, result }, i) => {
+      const mp3 = join(work, `run${i}.mp3`);
+      const wav = join(work, `run${i}.wav`);
+      writeFileSync(mp3, result.audio);
+      decodeToWav(mp3, wav);
+      return { run, result, wav, durationMs: probeDurationMs(wav), level: measureLoudness(wav) };
+    });
+    const narratorLevels = parts.filter((p) => !p.run.override).map((p) => p.level.meanDb);
+    const reference =
+      narratorLevels.length > 0
+        ? narratorLevels.reduce((a, b) => a + b, 0) / narratorLevels.length
+        : parts[0]!.level.meanDb;
+    const gains = parts.map((p) => {
+      if (!p.run.override) return 0;
+      const wanted = reference - p.level.meanDb;
+      return Math.min(wanted, LEVEL_MATCH_PEAK_CEILING_DB - p.level.maxDb);
+    });
+    const outMp3 = join(work, 'track.mp3');
+    concatRunsToMp3(
+      parts.map((p, i) => ({ file: p.wav, gainDb: gains[i]! })),
+      outMp3,
+    );
+    const audio = readFileSync(outMp3);
+    const levelNotes = parts
+      .map((p, i) =>
+        p.run.override
+          ? `run ${i + 1} (${p.run.voice}) level-matched ${gains[i]! >= 0 ? '+' : ''}${gains[i]!.toFixed(1)} dB`
+          : null,
+      )
+      .filter((n): n is string => n !== null);
+
+    // The per-run results are captured now; stamps are mapped lazily against
+    // the final (Opus or MP3) duration like the single-run path.
+    const runStamps = parts.map((p) => ({
+      run: p.run,
+      durationMs: p.durationMs,
+      result: stampsOf(p.run.narration, p.result.alignment, p.durationMs),
+    }));
+    return {
+      audio,
+      stampResultFor: (totalMs) => {
+        const stamps: StampResult['stamps'] = [];
+        const issues: string[] = [...levelNotes];
+        let offset = 0;
+        let wordTokens = 0;
+        let stampedTokens = 0;
+        let matchedCharRatio = 1;
+        let trusted = true;
+        for (const { run, durationMs, result } of runStamps) {
+          wordTokens += result.wordTokens;
+          stampedTokens += result.stampedTokens;
+          matchedCharRatio = Math.min(matchedCharRatio, result.matchedCharRatio);
+          if (!result.trusted) {
+            trusted = false;
+            issues.push(`run ${run.voice}: ${result.issues.join('; ')}`);
+          } else {
+            issues.push(...result.issues);
+            for (const st of result.stamps) {
+              const startMs = st.startMs + offset;
+              const endMs = Math.min(st.endMs + offset, totalMs);
+              if (startMs >= totalMs || endMs <= startMs) continue;
+              stamps.push({ ...st, startMs, endMs });
+            }
+          }
+          offset += durationMs;
+        }
+        // Seams are monotonic by construction (each run's stamps are clamped
+        // to its own duration); assert it anyway — never ship a bad splice.
+        for (let i = 1; i < stamps.length; i++) {
+          if (stamps[i]!.startMs < stamps[i - 1]!.endMs) {
+            trusted = false;
+            issues.push('stamps overlap across a voice seam — dropping all stamps for this track');
+            break;
+          }
+        }
+        return {
+          stamps: trusted ? stamps : [],
+          trusted,
+          wordTokens,
+          stampedTokens: trusted ? stampedTokens : 0,
+          coverage: wordTokens === 0 ? 1 : (trusted ? stampedTokens : 0) / wordTokens,
+          matchedCharRatio,
+          issues,
+        };
+      },
+    };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
 }
 
 function newSeed(): number {
@@ -457,7 +639,12 @@ export interface AudioRunPlan {
  */
 export function planAudioRun(
   draftPaths: readonly string[],
-  opts: AudioFilters & { extrasPath?: string; audition?: boolean; takes?: number },
+  opts: AudioFilters & {
+    extrasPath?: string;
+    audition?: boolean;
+    takes?: number;
+    modelId?: string;
+  },
 ): AudioRunPlan {
   const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
@@ -466,9 +653,13 @@ export function planAudioRun(
   let storyRequests = 0;
   let storyChars = 0;
   for (const { story, directions } of plans) {
-    const chars = buildNarration(story).text.length;
-    storyRequests += directions.length;
-    storyChars += chars * directions.length;
+    for (const direction of directions) {
+      // One request per same-voice run, counting the steering tags/cues that
+      // ride along in the text (they bill like any other character).
+      const runs = planNarrationRuns(story, direction, isV3Model(opts.modelId ?? DEFAULT_MODEL_ID));
+      storyRequests += runs.length;
+      storyChars += runs.reduce((n, r) => n + r.narration.text.length, 0);
+    }
   }
 
   let dialogueRequests: number;
