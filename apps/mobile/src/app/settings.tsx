@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { AiSettingsSection } from '@/features/ai/ai-settings-section';
+import { AmbientSettingsSection } from '@/features/ambient-audio/ambient-settings-section';
 import { BackupSettingsSection } from '@/features/backup/backup-settings-section';
 import { GoalSettingsSection } from '@/features/motivation/goal-settings-section';
 import { NotificationsSettingsSection } from '@/features/motivation/notifications-settings-section';
@@ -159,6 +160,8 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
+
+      <AmbientSettingsSection />
 
       <GoalSettingsSection />
 

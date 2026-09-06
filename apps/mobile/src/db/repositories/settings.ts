@@ -49,6 +49,8 @@ export const SETTING_KEYS = {
   lastSyncCheckAt: 'sync.lastCheckAt',
   /** Narration playback prefs (T10): { rate } — validated on read in use-narration. */
   narrationPrefs: 'narration.prefs',
+  /** Quiet study soundtrack: { enabled, volume (0–0.2) }. */
+  ambientAudio: 'audio.ambient',
   /** TTS voice selection (T11): { selectedVoiceId } — Zod-validated on read (features/tts/catalog). */
   ttsVoice: 'tts.voice',
   /**

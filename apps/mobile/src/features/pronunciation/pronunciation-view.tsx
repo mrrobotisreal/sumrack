@@ -1,3 +1,4 @@
+import { useQuietStudy } from '@/features/ambient-audio/activity';
 import { Ionicons } from '@expo/vector-icons';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as React from 'react';
@@ -35,6 +36,7 @@ interface PronunciationViewProps {
  * free practice; Continue grades the BEST attempt (no punishment mechanics).
  */
 export function PronunciationView({ entry, onComplete }: PronunciationViewProps) {
+  useQuietStudy();
   const { tokens } = useAppTheme();
   const [phase, setPhase] = React.useState<AttemptPhase>('idle');
   const [level, setLevel] = React.useState(0);

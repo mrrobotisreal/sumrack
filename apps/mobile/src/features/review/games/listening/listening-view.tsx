@@ -1,3 +1,4 @@
+import { useQuietStudy } from '@/features/ambient-audio/activity';
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
 import { Pressable, Text as RNText, TextInput, Vibration, View } from 'react-native';
@@ -28,6 +29,7 @@ interface ListeningViewProps {
  * Remounted per item (key on the session screen).
  */
 export function ListeningView({ entry, onDone }: ListeningViewProps) {
+  useQuietStudy();
   const { tokens: theme } = useAppTheme();
   const audio = useListeningAudio(entry.audio);
 

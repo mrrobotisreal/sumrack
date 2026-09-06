@@ -25,6 +25,7 @@ import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
 import { resolveRestoreTarget, type RestoreTarget } from './restore';
+import { useNarrationQuiet, useStudyAmbience } from '@/features/ambient-audio/activity';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
@@ -133,6 +134,17 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     sentences,
     tracks: detail.data?.audio ?? [],
   });
+  useNarrationQuiet(narration.playing);
+  useStudyAmbience(
+    !!detail.data &&
+      !progress.isPending &&
+      listReady &&
+      !narration.playing &&
+      !popupTarget &&
+      !phraseTarget &&
+      !explainTarget &&
+      !typeSheetOpen,
+  );
   const trackLoaded = narration.currentTrack != null;
 
   // Auto-follow with gentle catch-up (UI_DESIGN §4/§5): ease the active

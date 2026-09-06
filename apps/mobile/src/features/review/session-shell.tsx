@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { Text } from '@/components/ui/text';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -30,6 +31,7 @@ export function SessionShell({
   children,
   transparentBg = false,
 }: SessionShellProps) {
+  useStudyAmbience();
   const insets = useSafeAreaInsets();
   const { tokens } = useAppTheme();
   const progress = total > 0 ? Math.min(1, current / total) : 0;

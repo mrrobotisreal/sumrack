@@ -33,6 +33,9 @@ interface TtsState {
   downloadErrors: Record<string, string>;
   /** Native module reports playback state (dev screen indicator). */
   speaking: boolean;
+  /** Separate from Piper events so one engine cannot unmute the other. */
+  systemSpeaking: boolean;
+  setSystemSpeaking: (speaking: boolean) => void;
 
   setSelectedVoiceId: (id: string) => void;
   setInstalled: (installed: Record<string, InstalledVoice>) => void;
@@ -47,6 +50,8 @@ export const useTtsStore = create<TtsState>((set) => ({
   downloads: {},
   downloadErrors: {},
   speaking: false,
+  systemSpeaking: false,
+  setSystemSpeaking: (systemSpeaking) => set({ systemSpeaking }),
 
   setSelectedVoiceId: (id) => set({ selectedVoiceId: id }),
   setInstalled: (installed) => set({ installed }),

@@ -48,9 +48,27 @@ async function ensureVoiceLoaded(voiceId: string): Promise<void> {
   }
 }
 
+let systemSpeechGeneration = 0;
+
 function speakSystem(text: string, rate: number): void {
+  const generation = ++systemSpeechGeneration;
+  const finish = () => {
+    if (generation === systemSpeechGeneration) useTtsStore.getState().setSystemSpeaking(false);
+  };
   Speech.stop();
-  Speech.speak(text, { language: 'ru-RU', rate });
+  useTtsStore.getState().setSystemSpeaking(true);
+  try {
+    Speech.speak(text, {
+      language: 'ru-RU',
+      rate,
+      onDone: finish,
+      onStopped: finish,
+      onError: finish,
+    });
+  } catch (error) {
+    finish();
+    throw error;
+  }
 }
 
 /**
@@ -90,8 +108,10 @@ export async function speakWithInfo(text: string, opts?: SpeakOptions): Promise<
 }
 
 export async function stopSpeaking(): Promise<void> {
+  const generation = ++systemSpeechGeneration;
   SherpaSpeech.stop();
-  Speech.stop();
+  await Speech.stop();
+  if (generation === systemSpeechGeneration) useTtsStore.getState().setSystemSpeaking(false);
 }
 
 /** Change the active voice (Settings). Persists + warm-loads Piper voices. */

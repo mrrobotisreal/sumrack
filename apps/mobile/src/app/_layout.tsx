@@ -29,6 +29,7 @@ import { AiQueue } from '@/components/ai-queue';
 import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
+import { AmbientAudioHost } from '@/features/ambient-audio/ambient-audio-host';
 import { ShareIntentGate } from '@/features/import/share-gate';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
 import { NotificationRouter } from '@/features/motivation/notification-router';
@@ -176,6 +177,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
                 <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
               </Stack>
+              <AmbientAudioHost ready={introDone} />
               <AutoSync />
               <AutoBackup />
               <AiQueue />
