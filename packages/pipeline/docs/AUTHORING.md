@@ -72,6 +72,17 @@ them with an `audioCues` entry on the same id (e.g. `'[calm]'`). Works on v3
 and non-v3 models alike (`stylePrompt` is only sent for narrator runs). An id
 not in the story is an error. Per-request character caps apply per run.
 
+**Inline notation in source docs (CT013):** a story doc may carry its cue
+script inline — an italic *Leading tag* line per part (→ `audioTag`), `{Имя}`
+at the start of a dialogue paragraph (→ `sentenceVoices` on the one block that
+paragraph becomes), and `[tag]` immediately before a sentence (→ `audioCues` on
+that sentence's id; a cue at the head of a multi-sentence paragraph keys to the
+first sentence only). None of it is story content: drafts are authored from the
+STRIPPED body, and a small converter (`Stories/_build/<pack>/cues-from-doc.py`,
+modes `--strip` / `--rekey` / `--apply`) writes the `voice:` blocks by exact
+sentence-text match, failing loudly on any mismatch. The reusable contract is
+`sumrak-content/series/lost-shadow/SERIES.md` §2.1.
+
 `pipeline publish` refuses same-version content changes: bump `pack.version`
 in every draft of the pack instead.
 
