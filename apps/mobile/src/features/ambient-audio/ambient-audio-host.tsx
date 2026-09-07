@@ -8,6 +8,7 @@ import { useAmbientPrefs } from '@/store/ambient-prefs';
 
 import { useAmbientActivity } from './activity';
 import { createAmbientController } from './controller';
+import { shouldPlayAmbience } from './playback-policy';
 
 export function AmbientAudioHost({ ready }: { ready: boolean }) {
   React.useEffect(() => {
@@ -24,16 +25,18 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
       (error) => logError('manual', error),
     );
     const update = () => {
-      const { enabled, volume } = useAmbientPrefs.getState();
-      const { activities, blockers } = useAmbientActivity.getState();
-      const active =
-        ready &&
-        enabled &&
-        foreground &&
-        activities.size > 0 &&
-        blockers.size === 0 &&
-        !useTtsStore.getState().speaking &&
-        !useTtsStore.getState().systemSpeaking;
+      const prefs = useAmbientPrefs.getState();
+      const { volume } = prefs;
+      const { activities, blockers, narrations } = useAmbientActivity.getState();
+      const speech = useTtsStore.getState();
+      const active = shouldPlayAmbience(prefs, {
+        ready,
+        foreground,
+        studying: activities.size > 0,
+        blocked: blockers.size > 0,
+        speaking: speech.speaking || speech.systemSpeaking,
+        narrating: narrations.size > 0,
+      });
       const target = `${active}:${volume}`;
       if (target === previousTarget) return;
       previousTarget = target;

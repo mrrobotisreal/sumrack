@@ -25,7 +25,7 @@ import type { PhraseSelection } from './token-text';
 import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
 import { resolveRestoreTarget, type RestoreTarget } from './restore';
-import { useStudyAmbience } from '@/features/ambient-audio/activity';
+import { useNarrationActivity, useStudyAmbience } from '@/features/ambient-audio/activity';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
@@ -134,8 +134,9 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     sentences,
     tracks: detail.data?.audio ?? [],
   });
-  // Story narration accompanies the music; only reader readiness and overlays
-  // affect this activity. The host still owns focus/background and TTS pauses.
+  // The shared host applies the user's narration preference independently of
+  // reader readiness, overlays, screen focus and foreground state.
+  useNarrationActivity(narration.playing);
   useStudyAmbience(
     !!detail.data &&
       !progress.isPending &&

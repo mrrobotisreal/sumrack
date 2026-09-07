@@ -5,7 +5,8 @@ import { create } from 'zustand';
 export const useAmbientActivity = create<{
   activities: ReadonlySet<symbol>;
   blockers: ReadonlySet<symbol>;
-}>(() => ({ activities: new Set(), blockers: new Set() }));
+  narrations: ReadonlySet<symbol>;
+}>(() => ({ activities: new Set(), blockers: new Set(), narrations: new Set() }));
 
 function useRegistration(kind: 'activities' | 'blockers', enabled: boolean) {
   useFocusEffect(
@@ -32,4 +33,20 @@ export function useStudyAmbience(active = true) {
 /** Listening/recording exercises stay silent for their whole focused lifetime. */
 export function useQuietStudy(active = true) {
   useRegistration('blockers', active);
+}
+
+/** Narration can outlive screen focus, so track it until pause/end/unmount. */
+export function useNarrationActivity(playing: boolean) {
+  React.useEffect(() => {
+    if (!playing) return;
+    const id = Symbol('narration');
+    useAmbientActivity.setState((state) => ({ narrations: new Set(state.narrations).add(id) }));
+    return () => {
+      useAmbientActivity.setState((state) => {
+        const narrations = new Set(state.narrations);
+        narrations.delete(id);
+        return { narrations };
+      });
+    };
+  }, [playing]);
 }

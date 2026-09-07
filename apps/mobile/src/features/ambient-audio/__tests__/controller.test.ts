@@ -87,17 +87,23 @@ describe('ambient playback lifecycle', () => {
 
 describe('saved ambience preferences', () => {
   it('defaults to enabled and quiet, preserves false, and rejects corrupt values', () => {
-    expect(parseAmbientPrefs(null)).toEqual({ enabled: true, volume: 0.08 });
+    expect(parseAmbientPrefs(null)).toEqual({
+      enabled: true,
+      volume: 0.2,
+      playDuringNarration: true,
+    });
     expect(parseAmbientPrefs({ enabled: false, volume: 0.04 })).toEqual({
       enabled: false,
       volume: 0.04,
+      playDuringNarration: true,
     });
     expect(parseAmbientPrefs({ enabled: 'false', volume: NaN })).toEqual({
       enabled: true,
-      volume: 0.08,
+      volume: 0.2,
+      playDuringNarration: true,
     });
-    expect(parseAmbientPrefs({ volume: Infinity }).volume).toBe(0.08);
-    expect(parseAmbientPrefs({ volume: 10 }).volume).toBe(0.2);
+    expect(parseAmbientPrefs({ volume: Infinity }).volume).toBe(0.2);
+    expect(parseAmbientPrefs({ volume: 10 }).volume).toBe(1);
     expect(parseAmbientPrefs({ volume: -1 }).volume).toBe(0);
   });
 });
