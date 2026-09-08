@@ -83,6 +83,23 @@ modes `--strip` / `--rekey` / `--apply`) writes the `voice:` blocks by exact
 sentence-text match, failing loudly on any mismatch. The reusable contract is
 `sumrak-content/series/lost-shadow/SERIES.md` §2.1.
 
+**Speech/narration split for inline-attributed dialogue (CT015):** when a
+story's dialogue carries attribution and action *inside* dash paragraphs
+(«— Да? — Голос у Рейнольдса низкий, мягкий и спокойный. — Кто это?»), the
+one-paragraph-one-block merge rule cannot express a second voice. Such a
+family authors one block per VOICE SEGMENT instead: a dash paragraph splits at
+every sentence-initial «— » that opens a new sentence with a capital letter;
+each segment — a run of one character's pure speech, a narrator attribution
+sentence, or a single sentence mixing speech and attribution («— Коннер, —
+говорит наконец старик.», which is narrator) — is one `## id` block, so a
+`{Имя}` marker can sit mid-paragraph and always maps to exactly one
+`sentenceVoices` id. The converter emits the block split as
+`stripped/part-N.blocks.txt` (one numbered block per line) and drafts are
+authored to it verbatim. Very short character runs («— Да?») render fine on
+`eleven_v3` but should be gated per run with ASR (a run that hallucinates on
+two seeds folds back to the narrator by removing its marker). The contract is
+`sumrak-content/series/roadwork/SERIES.md` §2.1 (additions 1–3).
+
 `pipeline publish` refuses same-version content changes: bump `pack.version`
 in every draft of the pack instead.
 
