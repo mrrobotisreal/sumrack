@@ -1,15 +1,18 @@
 import { randomInt } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   safeParsePack,
+  WordStampSchema,
   type AudioTrack,
   type NodeAudio,
   type Pack,
   type Sentence,
   type Story,
+  type WordStamp,
 } from '@sumrak/schema';
+import { z } from 'zod';
 import { annotateDrafts } from './annotate.ts';
 import {
   planDialogueItems,
@@ -28,10 +31,16 @@ import {
   concatRunsToMp3,
   decodeToWav,
   encodeOpus,
+  exciseWav,
   measureLoudness,
   probeDurationMs,
 } from './opus.ts';
-import { mapAlignmentToStamps, type StampResult } from './stamps.ts';
+import {
+  alignCharacters,
+  mapAlignmentToStamps,
+  type CharAlignment,
+  type StampResult,
+} from './stamps.ts';
 
 /**
  * `pipeline audio` (T09, design §8 step 3): drafts → rendered narration.
@@ -99,6 +108,8 @@ export interface AuditionTake {
 interface StoryPlan {
   story: Story;
   directions: VoiceDirection[];
+  /** Directory of the story's draft file — `sentenceAudio` clip paths resolve against it. */
+  draftDir: string;
 }
 
 function planStories(
@@ -106,13 +117,21 @@ function planStories(
   drafts: readonly ParsedDraft[],
   filters: AudioFilters,
 ): StoryPlan[] {
-  const byStory = new Map(drafts.map((d) => [d.frontmatter.story.id, d.frontmatter.voice ?? []]));
+  const byStory = new Map(
+    drafts.map((d) => [
+      d.frontmatter.story.id,
+      { directions: d.frontmatter.voice ?? [], draftDir: dirname(resolve(d.file)) },
+    ]),
+  );
   const plans: StoryPlan[] = [];
   for (const story of pack.stories) {
     if (filters.stories && !filters.stories.includes(story.id)) continue;
-    const all = byStory.get(story.id) ?? [];
+    const entry = byStory.get(story.id);
+    const all = entry?.directions ?? [];
     const directions = filters.tracks ? all.filter((v) => filters.tracks!.includes(v.id)) : all;
-    if (directions.length > 0) plans.push({ story, directions });
+    if (directions.length > 0) {
+      plans.push({ story, directions, draftDir: entry?.draftDir ?? process.cwd() });
+    }
   }
   return plans;
 }
@@ -168,37 +187,78 @@ function insertNarrationText(narration: NarrationText, at: number, insert: strin
  */
 export function steerNarration(
   base: NarrationText,
-  direction: Pick<VoiceDirection, 'id' | 'audioTag' | 'audioCues'>,
+  direction: Pick<VoiceDirection, 'id' | 'audioTag' | 'audioCues' | 'contextCues'>,
   v3: boolean,
 ): NarrationText {
   const cues = Object.entries(direction.audioCues ?? {});
+  const contexts = Object.entries(direction.contextCues ?? {});
   const firstSpanOf = new Map<string, number>();
   for (const s of base.spans)
     if (!firstSpanOf.has(s.sentenceId)) firstSpanOf.set(s.sentenceId, s.start);
-  const unknown = cues.filter(([id]) => !firstSpanOf.has(id)).map(([id]) => id);
-  if (unknown.length > 0) {
-    throw new Error(
-      `track "${direction.id}": audioCues reference sentence id(s) not in this story: ${unknown.join(', ')}`,
-    );
+  for (const [field, entries] of [
+    ['audioCues', cues],
+    ['contextCues', contexts],
+  ] as const) {
+    const unknown = entries.filter(([id]) => !firstSpanOf.has(id)).map(([id]) => id);
+    if (unknown.length > 0) {
+      throw new Error(
+        `track "${direction.id}": ${field} reference sentence id(s) not in this story: ${unknown.join(', ')}`,
+      );
+    }
   }
-  if (!v3) return base;
   let narration = base;
-  // Later insertion points first, so earlier offsets stay valid.
+  // Context narration (any model): rendered around its sentence, then cut
+  // out of the audio. A `{}` in the text stands for the sentence — text
+  // before it is spoken before the sentence, text after it right after (an
+  // attribution such as «— шепчет он.»); without `{}` the whole text leads.
+  // Later insertion points first, so earlier offsets stay valid; the
+  // recorded cut ranges shift with every later insertion.
+  const lastSpanOf = new Map<string, number>();
+  for (const s of base.spans) lastSpanOf.set(s.sentenceId, s.end);
+  const inserts: { at: number; text: string }[] = [];
+  for (const [id, raw] of contexts) {
+    const [lead = '', trail = ''] = raw.includes('{}') ? raw.split('{}', 2) : [raw, ''];
+    if (lead.trim()) inserts.push({ at: firstSpanOf.get(id)!, text: `${lead.trim()} ` });
+    if (trail.trim()) inserts.push({ at: lastSpanOf.get(id)!, text: ` ${trail.trim()}` });
+  }
+  const cuts: { start: number; end: number }[] = [];
+  for (const { at, text } of inserts.sort((a, b) => b.at - a.at)) {
+    narration = insertNarrationText(narration, at, text);
+    for (const c of cuts) if (c.start >= at) ((c.start += text.length), (c.end += text.length));
+    cuts.push({ start: at, end: at + text.length });
+  }
+  if (!v3)
+    return cuts.length > 0
+      ? { ...narration, cuts: cuts.sort((a, b) => a.start - b.start) }
+      : narration;
+  const shiftCuts = (at: number, len: number) => {
+    for (const c of cuts) if (c.start >= at) ((c.start += len), (c.end += len));
+  };
   const ordered = cues
     .map(([id, tags]) => ({ at: firstSpanOf.get(id)!, tags }))
     .sort((a, b) => b.at - a.at);
-  for (const { at, tags } of ordered) narration = insertNarrationText(narration, at, `${tags} `);
-  return direction.audioTag
-    ? insertNarrationText(narration, 0, `${direction.audioTag} `)
+  for (const { at, tags } of ordered) {
+    // The tag goes before the context text (which sits at the same offset).
+    narration = insertNarrationText(narration, at, `${tags} `);
+    shiftCuts(at, tags.length + 1);
+  }
+  if (direction.audioTag) {
+    narration = insertNarrationText(narration, 0, `${direction.audioTag} `);
+    shiftCuts(0, direction.audioTag.length + 1);
+  }
+  return cuts.length > 0
+    ? { ...narration, cuts: cuts.sort((a, b) => a.start - b.start) }
     : narration;
 }
 
 /** One same-voice stretch of a story's sentences, with its steered narration text. */
 export interface NarrationRun {
-  /** Provider-prefixed voice this run renders with. */
+  /** Provider-prefixed voice this run renders with (`file:<path>` for a pre-rendered clip). */
   voice: string;
-  /** True for a `sentenceVoices` override run (renders without the narrator `audioTag`). */
+  /** True for a `sentenceVoices` / `sentenceAudio` override run (renders without the narrator `audioTag`). */
   override: boolean;
+  /** Absolute path of a pre-rendered clip that IS this run's audio (no provider request). */
+  audioFile?: string;
   sentences: Sentence[];
   narration: NarrationText;
 }
@@ -214,42 +274,224 @@ export function planNarrationRuns(
   story: Story,
   direction: VoiceDirection,
   v3: boolean,
+  draftDir: string = process.cwd(),
 ): NarrationRun[] {
   const ids = new Set(story.sentences.map((s) => s.id));
   const overrides = direction.sentenceVoices ?? {};
-  const unknown = Object.keys(overrides).filter((id) => !ids.has(id));
-  if (unknown.length > 0) {
+  const clips = direction.sentenceAudio ?? {};
+  for (const [field, map] of [
+    ['sentenceVoices', overrides],
+    ['sentenceAudio', clips],
+  ] as const) {
+    const unknown = Object.keys(map).filter((id) => !ids.has(id));
+    if (unknown.length > 0) {
+      throw new Error(
+        `track "${direction.id}": ${field} reference sentence id(s) not in this story: ${unknown.join(', ')}`,
+      );
+    }
+  }
+  const both = Object.keys(clips).filter((id) => id in overrides);
+  if (both.length > 0) {
     throw new Error(
-      `track "${direction.id}": sentenceVoices reference sentence id(s) not in this story: ${unknown.join(', ')}`,
+      `track "${direction.id}": sentence id(s) carry both sentenceVoices and sentenceAudio: ${both.join(', ')}`,
     );
   }
   // Validate every cue against the whole story up front (a cue on an override
   // sentence is legal — it steers that run).
   steerNarration(buildNarrationFromSentences(story.sentences), direction, false);
 
-  const groups: { voice: string; override: boolean; sentences: Sentence[] }[] = [];
+  const groups: { voice: string; override: boolean; audioFile?: string; sentences: Sentence[] }[] =
+    [];
   for (const sentence of story.sentences) {
+    const clip = clips[sentence.id];
+    if (clip !== undefined) {
+      // A pre-rendered clip is always its own run — never merged.
+      const audioFile = resolve(draftDir, clip);
+      groups.push({ voice: `file:${clip}`, override: true, audioFile, sentences: [sentence] });
+      continue;
+    }
     const voice = overrides[sentence.id] ?? direction.voice;
     const override = voice !== direction.voice;
     const last = groups.at(-1);
-    if (last && last.voice === voice && last.override === override) last.sentences.push(sentence);
+    if (last && last.voice === voice && last.override === override && !last.audioFile)
+      last.sentences.push(sentence);
     else groups.push({ voice, override, sentences: [sentence] });
   }
   const cues = direction.audioCues ?? {};
+  const contexts = direction.contextCues ?? {};
   return groups.map((g) => {
     const own = new Set(g.sentences.map((s) => s.id));
     const runCues = Object.fromEntries(Object.entries(cues).filter(([id]) => own.has(id)));
+    const runContexts = Object.fromEntries(Object.entries(contexts).filter(([id]) => own.has(id)));
     const narration = steerNarration(
       buildNarrationFromSentences(g.sentences),
       {
         id: direction.id,
         audioTag: g.override ? undefined : direction.audioTag,
-        audioCues: runCues,
+        audioCues: g.audioFile ? {} : runCues,
+        contextCues: g.audioFile ? {} : runContexts,
       },
       v3,
     );
-    return { voice: g.voice, override: g.override, sentences: g.sentences, narration };
+    return {
+      voice: g.voice,
+      override: g.override,
+      ...(g.audioFile !== undefined && { audioFile: g.audioFile }),
+      sentences: g.sentences,
+      narration,
+    };
   });
+}
+
+/** Sibling stamp file of a pre-rendered clip: WordStamp[] relative to the clip start. */
+const ClipStampsSchema = z.array(WordStampSchema);
+
+/**
+ * Word stamps for a pre-rendered clip run: read from `<clip>.stamps.json`
+ * when present (validated, sorted, clamped to the clip), else an empty but
+ * still-trusted result — a stampless clip must not wipe the whole track's
+ * stamps the way an untrusted provider alignment does.
+ */
+function clipStamps(run: NarrationRun, clipDurationMs: number): StampResult {
+  const wordTokens = run.narration.spans.filter((s) => !s.isPunct).length;
+  const stampsFile = `${run.audioFile!}.stamps.json`;
+  if (!existsSync(stampsFile)) {
+    return {
+      stamps: [],
+      trusted: true,
+      wordTokens,
+      stampedTokens: 0,
+      coverage: wordTokens === 0 ? 1 : 0,
+      matchedCharRatio: 1,
+      issues: [`pre-rendered clip ${run.voice} has no ${stampsFile.split('/').pop()} — unstamped`],
+    };
+  }
+  const parsed = ClipStampsSchema.safeParse(JSON.parse(readFileSync(stampsFile, 'utf8')));
+  if (!parsed.success)
+    throw new Error(`${stampsFile} is not a WordStamp[]: ${parsed.error.message}`);
+  const own = new Set(run.sentences.map((s) => s.id));
+  const foreign = parsed.data.filter((st) => !own.has(st.sentenceId)).map((st) => st.sentenceId);
+  if (foreign.length > 0) {
+    throw new Error(
+      `${stampsFile} stamps sentence id(s) outside the clip's run: ${[...new Set(foreign)].join(', ')}`,
+    );
+  }
+  const stamps = parsed.data
+    .map((st) => ({ ...st, endMs: Math.min(st.endMs, clipDurationMs) }))
+    .filter((st) => st.startMs < clipDurationMs && st.endMs > st.startMs)
+    .sort((a, b) => a.startMs - b.startMs);
+  return {
+    stamps,
+    trusted: true,
+    wordTokens,
+    stampedTokens: stamps.length,
+    coverage: wordTokens === 0 ? 1 : stamps.length / wordTokens,
+    matchedCharRatio: 1,
+    issues: [`pre-rendered clip ${run.voice} spliced with ${stamps.length} carried stamps`],
+  };
+}
+
+/** Never cut closer than this to the first word of the cued sentence. */
+const CUT_GUARD_MS = 40;
+
+/**
+ * Locate each `contextCues` cut in the rendered audio via the provider's
+ * character alignment: from the first context character's start to just
+ * before the cued sentence's first character (never before the context's own
+ * last character ends). Returns `[startMs, endMs)` ranges in run time.
+ */
+export function locateCuts(
+  narration: NarrationText,
+  alignment: CharAlignment,
+): { startMs: number; endMs: number }[] {
+  const cuts = narration.cuts ?? [];
+  if (cuts.length === 0) return [];
+  const charMap = alignCharacters(narration.text, alignment.characters);
+  // UTF-16 offset → code-point index (the alignment is per code point).
+  const utf16ToCp = new Int32Array(narration.text.length + 1).fill(-1);
+  {
+    let cp = 0;
+    let u = 0;
+    for (const ch of Array.from(narration.text)) {
+      utf16ToCp[u] = cp;
+      if (ch.length === 2) utf16ToCp[u + 1] = cp;
+      u += ch.length;
+      cp++;
+    }
+    utf16ToCp[u] = cp;
+  }
+  const timeOf = (from: number, to: number): { start: number; end: number } | null => {
+    let start = Infinity;
+    let end = -Infinity;
+    for (let u = from; u < to; u++) {
+      const p = charMap[utf16ToCp[u]!]!;
+      if (p === -1) continue;
+      start = Math.min(start, alignment.startSeconds[p]!);
+      end = Math.max(end, alignment.endSeconds[p]!);
+    }
+    return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
+  };
+  const out: { startMs: number; endMs: number }[] = [];
+  for (const cut of cuts) {
+    const ctx = timeOf(cut.start, cut.end);
+    if (!ctx) throw new Error('context cue text was not found in the provider alignment');
+    let startMs = Math.round(ctx.start * 1000);
+    let endMs = Math.round(ctx.end * 1000);
+    // Leading context: the cued sentence's first token follows immediately —
+    // cut up to (a guard before) its first sound. Trailing context: the
+    // sentence's last token precedes it — never cut into that token's tail.
+    const nextSpan = narration.spans.find((s) => s.start === cut.end);
+    if (nextSpan) {
+      const next = timeOf(nextSpan.start, nextSpan.end);
+      if (next) endMs = Math.max(endMs, Math.round(next.start * 1000) - CUT_GUARD_MS);
+    }
+    const prevSpan = [...narration.spans].reverse().find((s) => s.end === cut.start);
+    if (prevSpan) {
+      const prev = timeOf(prevSpan.start, prevSpan.end);
+      if (prev) startMs = Math.max(startMs, Math.round(prev.end * 1000));
+    }
+    if (endMs > startMs) out.push({ startMs, endMs });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
+}
+
+/** Shift stamps past each cut back by the cut's length; drop any inside a cut. */
+export function applyCutsToStamps(
+  result: StampResult,
+  cuts: readonly { startMs: number; endMs: number }[],
+  newDurationMs: number,
+): StampResult {
+  if (cuts.length === 0 || !result.trusted) return result;
+  const stamps: WordStamp[] = [];
+  let dropped = 0;
+  for (const st of result.stamps) {
+    let shift = 0;
+    let inside = false;
+    for (const c of cuts) {
+      if (st.startMs >= c.endMs) shift += c.endMs - c.startMs;
+      else if (st.endMs > c.startMs) inside = true;
+    }
+    if (inside) {
+      dropped++;
+      continue;
+    }
+    const startMs = st.startMs - shift;
+    const endMs = Math.min(st.endMs - shift, newDurationMs);
+    if (startMs >= newDurationMs || endMs <= startMs) {
+      dropped++;
+      continue;
+    }
+    stamps.push({ ...st, startMs, endMs });
+  }
+  const issues = [...result.issues, `${cuts.length} context cue(s) cut out`];
+  if (dropped > 0) issues.push(`${dropped} stamp(s) fell inside a context cut and were dropped`);
+  return {
+    ...result,
+    stamps,
+    stampedTokens: stamps.length,
+    coverage: result.wordTokens === 0 ? 1 : stamps.length / result.wordTokens,
+    issues,
+  };
 }
 
 /** Never boost a run into clipping when level-matching. */
@@ -261,17 +503,28 @@ async function renderDirection(
   direction: VoiceDirection,
   seed: number,
   modelId: string | undefined,
+  draftDir: string = process.cwd(),
 ): Promise<{ audio: Buffer; stampResultFor: (durationMs: number) => StampResult }> {
-  const model = modelId ?? DEFAULT_MODEL_ID;
+  const model = direction.model ?? modelId ?? DEFAULT_MODEL_ID;
   const v3 = isV3Model(model);
   // v3 rejects previous_text; mood steering there is the leading audio tag
   // plus any per-sentence cues. Tags become part of the rendered text, so
   // every token span shifts by the inserted length — stamp mapping stays
   // exact, and the tags' own characters (near-silent in the alignment) are
-  // never stamped.
-  const runs = planNarrationRuns(story, direction, v3);
-  const rendered = [];
+  // never stamped. Context cues (any model) are rendered and then cut out.
+  const runs = planNarrationRuns(story, direction, v3, draftDir);
+  const rendered: {
+    run: NarrationRun;
+    result: { audio: Buffer; alignment: CharAlignment | null } | null;
+  }[] = [];
   for (const run of runs) {
+    if (run.audioFile) {
+      if (!existsSync(run.audioFile)) {
+        throw new Error(`track "${direction.id}": sentenceAudio clip not found: ${run.audioFile}`);
+      }
+      rendered.push({ run, result: null });
+      continue;
+    }
     const voiceId = await client.resolveVoiceId(providerVoiceName(direction, run.voice));
     const result = await client.renderWithTimestamps({
       voiceId,
@@ -279,6 +532,7 @@ async function renderDirection(
       modelId: model,
       seed,
       ...(v3 || run.override ? {} : { previousText: direction.stylePrompt }),
+      ...(direction.language !== undefined && { languageCode: direction.language }),
       voiceSettings: direction.settings,
     });
     rendered.push({ run, result });
@@ -301,28 +555,58 @@ async function renderDirection(
           issues: ['provider returned no character alignment'],
         };
 
-  if (rendered.length === 1) {
+  const needsEditing = rendered.some(
+    (r) => r.run.audioFile !== undefined || (r.run.narration.cuts?.length ?? 0) > 0,
+  );
+  if (rendered.length === 1 && !needsEditing) {
     const only = rendered[0]!;
     return {
-      audio: only.result.audio,
+      audio: only.result!.audio,
       stampResultFor: (durationMs) =>
-        stampsOf(only.run.narration, only.result.alignment, durationMs),
+        stampsOf(only.run.narration, only.result!.alignment, durationMs),
     };
   }
 
-  // Several voices: splice the per-run audio into ONE track (CT011 §5.4).
-  // Decode each run to PCM (exact, gap-free durations), level-match override
-  // runs to the narrator runs' mean level, concatenate sample-accurately, and
-  // offset every run's stamps by the accumulated duration of the runs before
-  // it so word stamps stay exact across each seam.
+  // Several voices, pre-rendered clips, or context cuts: edit the per-run
+  // audio into ONE track (CT011 §5.4). Decode each run to PCM (exact, gap-free
+  // durations), cut out any context narration, level-match override runs to
+  // the narrator runs' mean level, concatenate sample-accurately, and offset
+  // every run's stamps by the accumulated duration of the runs before it so
+  // word stamps stay exact across each seam.
   const work = mkdtempSync(join(tmpdir(), 'sumrak-runs-'));
   try {
     const parts = rendered.map(({ run, result }, i) => {
-      const mp3 = join(work, `run${i}.mp3`);
       const wav = join(work, `run${i}.wav`);
-      writeFileSync(mp3, result.audio);
-      decodeToWav(mp3, wav);
-      return { run, result, wav, durationMs: probeDurationMs(wav), level: measureLoudness(wav) };
+      if (run.audioFile) {
+        decodeToWav(run.audioFile, wav);
+        const durationMs = probeDurationMs(wav);
+        return {
+          run,
+          wav,
+          durationMs,
+          level: measureLoudness(wav),
+          stamps: clipStamps(run, durationMs),
+        };
+      }
+      const mp3 = join(work, `run${i}.mp3`);
+      writeFileSync(mp3, result!.audio);
+      const raw = join(work, `run${i}.raw.wav`);
+      decodeToWav(mp3, raw);
+      const rawDurationMs = probeDurationMs(raw);
+      let stamps = stampsOf(run.narration, result!.alignment, rawDurationMs);
+      if ((run.narration.cuts?.length ?? 0) > 0) {
+        if (!result!.alignment) {
+          throw new Error(
+            `track "${direction.id}": context cues need the provider alignment to cut, but none came back`,
+          );
+        }
+        const cuts = locateCuts(run.narration, result!.alignment);
+        exciseWav(raw, wav, cuts);
+        const durationMs = probeDurationMs(wav);
+        stamps = applyCutsToStamps(stamps, cuts, durationMs);
+        return { run, wav, durationMs, level: measureLoudness(wav), stamps };
+      }
+      return { run, wav: raw, durationMs: rawDurationMs, level: measureLoudness(raw), stamps };
     });
     const narratorLevels = parts.filter((p) => !p.run.override).map((p) => p.level.meanDb);
     const reference =
@@ -348,12 +632,11 @@ async function renderDirection(
       )
       .filter((n): n is string => n !== null);
 
-    // The per-run results are captured now; stamps are mapped lazily against
-    // the final (Opus or MP3) duration like the single-run path.
+    // Each run's stamps are already relative to its own (edited) audio.
     const runStamps = parts.map((p) => ({
       run: p.run,
       durationMs: p.durationMs,
-      result: stampsOf(p.run.narration, p.result.alignment, p.durationMs),
+      result: p.stamps,
     }));
     return {
       audio,
@@ -435,11 +718,18 @@ export async function runAudition(
   mkdirSync(auditionDir, { recursive: true });
   const takes: AuditionTake[] = [];
 
-  for (const { story, directions } of plans) {
+  for (const { story, directions, draftDir } of plans) {
     for (const direction of directions) {
       for (let take = 1; take <= opts.takes; take++) {
         const seed = newSeed();
-        const rendered = await renderDirection(client, story, direction, seed, opts.modelId);
+        const rendered = await renderDirection(
+          client,
+          story,
+          direction,
+          seed,
+          opts.modelId,
+          draftDir,
+        );
         const file = join(auditionDir, `${direction.id}--take${take}--seed${seed}.mp3`);
         writeFileSync(file, rendered.audio);
         // MP3 duration ≈ Opus duration; probing the MP3 is close enough for
@@ -544,11 +834,18 @@ export async function runFinalize(
   const reports: TrackReport[] = [];
   const renderedByStory = new Map<string, AudioTrack[]>();
 
-  for (const { story, directions } of plans) {
+  for (const { story, directions, draftDir } of plans) {
     const tracks: AudioTrack[] = [];
     for (const direction of directions) {
       const seed = opts.seeds?.[direction.id] ?? opts.defaultSeed ?? newSeed();
-      const rendered = await renderDirection(client, story, direction, seed, opts.modelId);
+      const rendered = await renderDirection(
+        client,
+        story,
+        direction,
+        seed,
+        opts.modelId,
+        draftDir,
+      );
       const mp3File = join(renderDir, `${direction.id}.mp3`);
       writeFileSync(mp3File, rendered.audio);
       const opusRelPath = `audio/${direction.id}.opus`;
@@ -652,11 +949,17 @@ export function planAudioRun(
 
   let storyRequests = 0;
   let storyChars = 0;
-  for (const { story, directions } of plans) {
+  for (const { story, directions, draftDir } of plans) {
     for (const direction of directions) {
-      // One request per same-voice run, counting the steering tags/cues that
-      // ride along in the text (they bill like any other character).
-      const runs = planNarrationRuns(story, direction, isV3Model(opts.modelId ?? DEFAULT_MODEL_ID));
+      // One request per same-voice run (pre-rendered clips fire none), counting
+      // the steering tags/cues/context that ride along in the text (they bill
+      // like any other character).
+      const runs = planNarrationRuns(
+        story,
+        direction,
+        isV3Model(direction.model ?? opts.modelId ?? DEFAULT_MODEL_ID),
+        draftDir,
+      ).filter((r) => r.audioFile === undefined);
       storyRequests += runs.length;
       storyChars += runs.reduce((n, r) => n + r.narration.text.length, 0);
     }

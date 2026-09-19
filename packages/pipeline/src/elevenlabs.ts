@@ -24,8 +24,11 @@ export const DEFAULT_MODEL_ID = 'eleven_v3';
 export function isV3Model(modelId: string): boolean {
   return modelId.startsWith('eleven_v3');
 }
-/** Highest-quality MP3 the with-timestamps endpoint serves on standard plans. */
-const OUTPUT_FORMAT = 'mp3_44100_128';
+/**
+ * Highest-quality MP3 the with-timestamps endpoint serves on the Creator tier
+ * (PCM needs Pro). The Opus the app ships is transcoded from this.
+ */
+const OUTPUT_FORMAT = 'mp3_44100_192';
 const REQUEST_TIMEOUT_MS = 180_000;
 
 export interface VoiceSettings {
@@ -48,6 +51,8 @@ export interface RenderRequest {
    * has no explicit style-prompt input).
    */
   previousText?: string;
+  /** ISO 639-1 language enforcement (`language_code`) for models that accept it. */
+  languageCode?: string;
   voiceSettings?: VoiceSettings;
 }
 
@@ -187,6 +192,7 @@ export class ElevenLabsClient {
     };
     if (req.seed !== undefined) body.seed = req.seed;
     if (req.previousText !== undefined) body.previous_text = req.previousText;
+    if (req.languageCode !== undefined) body.language_code = req.languageCode;
     if (settings) {
       body.voice_settings = {
         ...(settings.stability !== undefined && { stability: settings.stability }),

@@ -132,9 +132,64 @@ export function concatRunsToMp3(
     '-c:a',
     'libmp3lame',
     '-b:a',
-    '128k',
+    '192k',
     '-ar',
     '44100',
+    outPath,
+  ]);
+}
+
+/** Fade length at every excision joint — long enough to kill clicks, too short to hear. */
+const EXCISE_FADE_S = 0.006;
+
+/**
+ * Remove `[startMs, endMs)` ranges from a WAV (context narration that was
+ * rendered for prosody and must never be heard), keeping the complementary
+ * segments in order with a tiny fade at each joint. One ffmpeg invocation;
+ * sample-accurate.
+ */
+export function exciseWav(
+  inPath: string,
+  outPath: string,
+  cuts: readonly { startMs: number; endMs: number }[],
+): void {
+  const totalMs = probeDurationMs(inPath);
+  const sorted = [...cuts].sort((a, b) => a.startMs - b.startMs);
+  const keep: { start: number; end: number }[] = [];
+  let cursor = 0;
+  for (const c of sorted) {
+    if (c.startMs > cursor) keep.push({ start: cursor, end: c.startMs });
+    cursor = Math.max(cursor, c.endMs);
+  }
+  if (cursor < totalMs) keep.push({ start: cursor, end: totalMs });
+  if (keep.length === 0) throw new Error('exciseWav: cuts cover the whole file');
+  const seg = keep.map((k, i) => {
+    const len = (k.end - k.start) / 1000;
+    const fades = [
+      i > 0 ? `afade=t=in:st=0:d=${EXCISE_FADE_S}` : null,
+      i < keep.length - 1
+        ? `afade=t=out:st=${Math.max(0, len - EXCISE_FADE_S).toFixed(4)}:d=${EXCISE_FADE_S}`
+        : null,
+    ]
+      .filter((f): f is string => f !== null)
+      .join(',');
+    return `[0:a]atrim=start=${(k.start / 1000).toFixed(4)}:end=${(k.end / 1000).toFixed(4)},asetpts=PTS-STARTPTS${fades ? `,${fades}` : ''}[k${i}]`;
+  });
+  const concat = `${keep.map((_, i) => `[k${i}]`).join('')}concat=n=${keep.length}:v=0:a=1[out]`;
+  if (existsSync(outPath)) unlinkSync(outPath);
+  run('ffmpeg', [
+    '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    inPath,
+    '-filter_complex',
+    `${seg.join(';')};${concat}`,
+    '-map',
+    '[out]',
+    '-c:a',
+    'pcm_s16le',
     outPath,
   ]);
 }

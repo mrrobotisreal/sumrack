@@ -26,6 +26,12 @@ export interface NarrationText {
   text: string;
   /** One span per token, in reading order. */
   spans: TokenSpan[];
+  /**
+   * Character ranges of rendered-then-cut context narration (`contextCues`):
+   * each is `[start, end)` in `text`, belongs to no token, and is excised
+   * from the audio after rendering.
+   */
+  cuts?: { start: number; end: number }[];
 }
 
 /**

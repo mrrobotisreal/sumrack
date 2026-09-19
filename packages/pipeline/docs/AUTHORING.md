@@ -72,8 +72,28 @@ them with an `audioCues` entry on the same id (e.g. `'[calm]'`). Works on v3
 and non-v3 models alike (`stylePrompt` is only sent for narrator runs). An id
 not in the story is an error. Per-request character caps apply per run.
 
+**Non-v3 expressiveness — context cues, per-direction model/language, pre-rendered
+clips (No End House re-voice, 2026-09-19):** a direction may pin its own
+`model: eleven_multilingual_v2` (wins over the CLI `--model`) and
+`language: ru` (sent as `language_code`); `settings.useSpeakerBoost` maps to
+the provider's speaker boost. Multilingual v2 has no audio tags, so mood is
+steered with **`contextCues: { <sentence-id>: '<context text>' }`** — a short
+Russian stage direction («Я шепчу с ужасом:») rendered immediately BEFORE the
+sentence and then **cut out of the audio** using the provider's character
+timestamps, with every later word stamp shifted back by the cut (a `{}` in the
+text stands for the sentence, so `'Он умоляет: {} — всхлипывает он.'` renders an
+attribution after the line and cuts that too). Context characters bill like any
+other; the listener never hears them; nothing reaches `pack.json`; an unknown id
+is an error. **`sentenceAudio: { <sentence-id>: <path relative to the draft> }`**
+splices a pre-rendered clip in as that sentence's audio with no provider request
+(a character line from a voice this account no longer has, cut out of an
+earlier track); a sibling `<clip>.stamps.json` (`WordStamp[]` relative to the
+clip start) carries its word stamps, otherwise the run ships unstamped while
+the rest of the track stays stamped. Clips are level-matched and spliced exactly
+like `sentenceVoices`.
+
 **Inline notation in source docs (CT013):** a story doc may carry its cue
-script inline — an italic *Leading tag* line per part (→ `audioTag`), `{Имя}`
+script inline — an italic _Leading tag_ line per part (→ `audioTag`), `{Имя}`
 at the start of a dialogue paragraph (→ `sentenceVoices` on the one block that
 paragraph becomes), and `[tag]` immediately before a sentence (→ `audioCues` on
 that sentence's id; a cue at the head of a multi-sentence paragraph keys to the
@@ -84,7 +104,7 @@ sentence-text match, failing loudly on any mismatch. The reusable contract is
 `sumrak-content/series/lost-shadow/SERIES.md` §2.1.
 
 **Speech/narration split for inline-attributed dialogue (CT015):** when a
-story's dialogue carries attribution and action *inside* dash paragraphs
+story's dialogue carries attribution and action _inside_ dash paragraphs
 («— Да? — Голос у Рейнольдса низкий, мягкий и спокойный. — Кто это?»), the
 one-paragraph-one-block merge rule cannot express a second voice. Such a
 family authors one block per VOICE SEGMENT instead: a dash paragraph splits at

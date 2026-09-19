@@ -550,6 +550,196 @@ EN: Silence.
     ).rejects.toThrow(/sentenceVoices reference sentence id\(s\) not in this story: t-s99/);
   });
 
+  it('per-direction model + language: model_id and language_code reach the provider', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace(
+        '    settings:',
+        "    model: eleven_multilingual_v2\n    language: ru\n    audioTag: '[whispers]'\n    settings:\n      useSpeakerBoost: true",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: {
+      text: string;
+      model_id: string;
+      language_code?: string;
+      previous_text?: string;
+      voice_settings?: Record<string, unknown>;
+    }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+    await runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 });
+    expect(captured[0]!.model_id).toBe('eleven_multilingual_v2'); // draft wins over the CLI default
+    expect(captured[0]!.language_code).toBe('ru');
+    expect(captured[0]!.text.startsWith('Ночь.')).toBe(true); // non-v3: the tag is dropped
+    expect(captured[0]!.previous_text).toBe('Slow and quiet.');
+    expect(captured[0]!.voice_settings).toMatchObject({ stability: 0.4, use_speaker_boost: true });
+  });
+
+  it('contextCues: context is rendered before its sentence, then cut out with the stamps shifted back', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT3.replace(
+        '    settings:',
+        "    model: eleven_multilingual_v2\n    contextCues:\n      t-s02: 'Он шепчет.'\n    settings:",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 5);
+    const captured: { text: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    // The context sits right after the separator, before the cued sentence.
+    expect(captured[0]!.text).toBe(
+      `Ночь.${SENTENCE_SEPARATOR}Он шепчет. Дом молчит, но кто-то ходит наверху.${SENTENCE_SEPARATOR}Тишина.`,
+    );
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.coverage).toBe(1);
+    expect(report.stampResult.issues.join(' ')).toMatch(/1 context cue\(s\) cut out/);
+
+    // 'Он шепчет. ' = 11 chars × 60 ms = 660 ms removed from the audio…
+    const pack = JSON.parse(readFileSync(join(outDir, 'pack.json'), 'utf8')) as Pack;
+    const track = pack.stories[0]!.audio[0]!;
+    expect(Math.abs(track.durationMs - (5_000 - 660))).toBeLessThan(150);
+    // …and every stamp after the cut moved back by exactly that much: 'Дом' was
+    // at char 18 (1080 ms), now at char 7's time (420 ms).
+    const stamps = track.timestamps;
+    const dom = stamps.find((st) => st.sentenceId === 't-s02' && st.tokenIndex === 0)!;
+    expect(dom.startMs).toBe(420);
+    const noch = stamps.find((st) => st.sentenceId === 't-s01')!;
+    expect(noch.startMs).toBe(0); // before the cut: untouched
+    const tishina = stamps.find((st) => st.sentenceId === 't-s03')!;
+    const narrationIdx = captured[0]!.text.indexOf('Тишина');
+    expect(tishina.startMs).toBe(narrationIdx * 60 - 660);
+    for (let i = 1; i < stamps.length; i++) {
+      expect(stamps[i]!.startMs).toBeGreaterThanOrEqual(stamps[i - 1]!.endMs);
+    }
+  });
+
+  it('contextCues with a {} placeholder: trailing attribution is rendered after the sentence and cut', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT3.replace(
+        '    settings:',
+        "    model: eleven_multilingual_v2\n    contextCues:\n      t-s02: 'Тихо: {} — шепчет он.'\n    settings:",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 6);
+    const captured: { text: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+    expect(captured[0]!.text).toBe(
+      `Ночь.${SENTENCE_SEPARATOR}Тихо: Дом молчит, но кто-то ходит наверху. — шепчет он.${SENTENCE_SEPARATOR}Тишина.`,
+    );
+    expect(summary.reports[0]!.stampResult.issues.join(' ')).toMatch(/2 context cue\(s\) cut out/);
+    const pack = JSON.parse(readFileSync(join(outDir, 'pack.json'), 'utf8')) as Pack;
+    const track = pack.stories[0]!.audio[0]!;
+    // 'Тихо: ' (6) + ' — шепчет он.' (13) = 19 chars × 60 ms removed.
+    expect(Math.abs(track.durationMs - (6_000 - 19 * 60))).toBeLessThan(150);
+    const dom = track.timestamps.find((st) => st.sentenceId === 't-s02' && st.tokenIndex === 0)!;
+    expect(dom.startMs).toBe(7 * 60); // sits where the lead-in started
+    const tishina = track.timestamps.find((st) => st.sentenceId === 't-s03')!;
+    expect(tishina.startMs).toBe(captured[0]!.text.indexOf('Тишина') * 60 - 19 * 60);
+  });
+
+  it('contextCues keyed to an unknown sentence id throws', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace('    settings:', "    contextCues:\n      t-s99: 'Он шепчет.'\n    settings:"),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const client = new ElevenLabsClient('test-key', { fetchImpl: fakeElevenLabsFetch(mp3) });
+    await expect(
+      runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 }),
+    ).rejects.toThrow(/contextCues reference sentence id\(s\) not in this story: t-s99/);
+  });
+
+  it('sentenceAudio: a pre-rendered clip is spliced in without a request, its stamps carried', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    const clip = makeSilentMp3(work, 4);
+    writeFileSync(join(work, 'girl.mp3'), clip);
+    writeFileSync(
+      join(work, 'girl.mp3.stamps.json'),
+      JSON.stringify([
+        { sentenceId: 't-s02', tokenIndex: 0, startMs: 100, endMs: 500 },
+        { sentenceId: 't-s02', tokenIndex: 1, startMs: 600, endMs: 900 },
+      ]),
+    );
+    writeFileSync(
+      draftFile,
+      DRAFT3.replace(
+        '    settings:',
+        "    audioTag: '[fearful]'\n    sentenceAudio:\n      t-s02: girl.mp3\n    settings:",
+      ),
+    );
+    const narratorMp3 = makeSilentMp3(work, 3);
+    const captured: { text: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(narratorMp3, captured),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    // Two provider requests (narrator before / after); the clip fires none.
+    expect(captured).toHaveLength(2);
+    expect(captured[0]!.text).toBe('[fearful] Ночь.');
+    expect(captured[1]!.text).toBe('[fearful] Тишина.');
+
+    const pack = JSON.parse(readFileSync(join(outDir, 'pack.json'), 'utf8')) as Pack;
+    expect(pack.stories[0]!.audio).toHaveLength(1);
+    const track = pack.stories[0]!.audio[0]!;
+    expect(Math.abs(track.durationMs - 10_000)).toBeLessThan(150);
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.issues.join(' ')).toMatch(/carried stamps/);
+    expect(report.stampResult.issues.join(' ')).toMatch(/level-matched/);
+    const s02 = track.timestamps.filter((st) => st.sentenceId === 't-s02');
+    expect(s02.map((st) => [st.startMs, st.endMs])).toEqual([
+      [3_100, 3_500],
+      [3_600, 3_900],
+    ]);
+    const s03 = track.timestamps.filter((st) => st.sentenceId === 't-s03');
+    expect(s03[0]!.startMs).toBe(7_000 + '[fearful] '.length * 60);
+  });
+
+  it('sentenceAudio without a stamps file ships that run unstamped but keeps the track trusted', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(join(work, 'girl.mp3'), makeSilentMp3(work, 2));
+    writeFileSync(
+      draftFile,
+      DRAFT3.replace('    settings:', '    sentenceAudio:\n      t-s02: girl.mp3\n    settings:'),
+    );
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(makeSilentMp3(work, 3)),
+    });
+    const summary = await runFinalize([draftFile], join(work, 'pack'), client, { defaultSeed: 7 });
+    const report = summary.reports[0]!;
+    expect(report.stampResult.trusted).toBe(true);
+    expect(report.stampResult.issues.join(' ')).toMatch(/unstamped/);
+    expect(report.stampResult.stamps.some((st) => st.sentenceId === 't-s02')).toBe(false);
+    expect(report.stampResult.stamps.some((st) => st.sentenceId === 't-s03')).toBe(true);
+  });
+
   it('audition renders take files and never writes pack.json', async () => {
     const work = tempDir();
     const draftFile = join(work, 'test.draft.md');
