@@ -19,6 +19,7 @@ import { repos } from '@/db';
 import {
   useBookmarkedStoryKeys,
   useDialogues,
+  usePackClassification,
   usePacks,
   useStories,
   useStoryProgressList,
@@ -29,7 +30,12 @@ import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
 import { useImportedPackMeta } from '@/features/import/hooks';
 import { ChipRow } from '@/features/library/category-chips';
-import { ALL_GENRES, labelForCategory } from '@/features/library/categories';
+import {
+  ALL_GENRES,
+  classificationEventProps,
+  labelForCategory,
+  type Classified,
+} from '@/features/library/categories';
 import {
   defaultRungLevel,
   groupByFamily,
@@ -76,6 +82,9 @@ interface LibrarySection {
   };
 }
 
+/** A pack the classification map hasn't seen (row just removed) — the dialogue default. */
+const UNKNOWN_PACK: Classified = { category: 'stories', genre: null };
+
 /**
  * Библиотека (design §7.2 nav / T04): installed packs with their stories —
  * level chips, tags, and the read-state each story carries (unread /
@@ -96,17 +105,28 @@ export function LibraryScreen() {
   const genre = useLibraryPrefs((s) => s.genre);
   const setCategory = useLibraryPrefs((s) => s.setCategory);
   const setGenre = useLibraryPrefs((s) => s.setGenre);
+  // M14 (T46): category/genre props for bookmark_* and dialogue_opened —
+  // a memoized Map over the same usePacks() query, no extra read.
+  const classification = usePackClassification();
+  const eventPropsFor = React.useCallback(
+    (packId: string) => classificationEventProps(classification.get(packId) ?? UNKNOWN_PACK),
+    [classification],
+  );
 
   // T24: long-press a story row to toggle its story bookmark (recorded
   // placement decision — the row press stays "open the reader").
   const toggleBookmark = React.useCallback(
     (packId: string, storyId: string) => {
       void repos.bookmarks.toggleStory(packId, storyId).then(({ added }) => {
-        track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'story', from: 'library' });
+        track(added ? 'bookmark_added' : 'bookmark_removed', {
+          kind: 'story',
+          from: 'library',
+          ...eventPropsFor(packId),
+        });
         void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
       });
     },
-    [queryClient],
+    [queryClient, eventPropsFor],
   );
 
   useFocusEffect(
@@ -504,6 +524,7 @@ export function LibraryScreen() {
                   packId: item.dialogue.packId,
                   dialogueId: item.dialogue.id,
                   from: 'library',
+                  ...eventPropsFor(item.dialogue.packId),
                 });
                 router.push(`/dialogue/${item.dialogue.packId}/${item.dialogue.id}`);
               }}

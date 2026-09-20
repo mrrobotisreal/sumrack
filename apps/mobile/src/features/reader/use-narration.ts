@@ -5,6 +5,7 @@ import * as React from 'react';
 import { repos } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 import type { AudioTrackRow } from '@/db/repositories/content';
+import type { ClassificationEventProps } from '@/features/library/categories';
 import { track as trackEvent } from '@/services/analytics';
 
 import {
@@ -18,6 +19,7 @@ import {
   type KaraokeIndex,
   type KaraokeSentenceInput,
 } from './karaoke';
+import { trackLabel } from './track-label';
 
 /**
  * Narration playback controller (T10, design §7.1) — owns the expo-audio
@@ -101,14 +103,17 @@ interface UseNarrationArgs {
   packTitleRu: string;
   sentences: readonly KaraokeSentenceInput[];
   tracks: readonly AudioTrackRow[];
+  /**
+   * M14 (T46): the reader's per-mount `category`/`genre` props, spread onto
+   * every narration event fired from inside the hook (the hook never
+   * reaches for the pack row itself).
+   */
+  eventProps?: ClassificationEventProps;
 }
 
-/** "elevenlabs:Elen Kuragina" + "creepy-whisper" → "Elen Kuragina · creepy whisper". */
-export function trackLabel(track: Pick<AudioTrackRow, 'voice' | 'style'>): string {
-  const voice = track.voice.replace(/^[^:]+:/, '');
-  const style = track.style.replace(/-/g, ' ');
-  return `${voice} · ${style}`;
-}
+// `trackLabel` lives in ./track-label (pure, unit-tested); re-exported so
+// the audio bar's import path is unchanged.
+export { trackLabel } from './track-label';
 
 export function useNarration({
   packId,
@@ -117,6 +122,7 @@ export function useNarration({
   packTitleRu,
   sentences,
   tracks,
+  eventProps,
 }: UseNarrationArgs): Narration {
   const playableTracks = React.useMemo(() => tracks.filter((t) => t.localUri != null), [tracks]);
 
@@ -132,6 +138,13 @@ export function useNarration({
   } | null>(null);
   // See Narration.lastUserSeekAtRef — 0 = no user seek yet this mount.
   const lastUserSeekAtRef = React.useRef(0);
+  // M14 event props are read through a ref everywhere: the player status
+  // listener is registered once, and none of the callbacks/effects below
+  // should re-create (or re-fire) because the classification resolved.
+  const eventPropsRef = React.useRef(eventProps);
+  React.useEffect(() => {
+    eventPropsRef.current = eventProps;
+  }, [eventProps]);
 
   // Selection state only records explicit user switches; before the first
   // switch the first playable track is the derived default.
@@ -166,10 +179,16 @@ export function useNarration({
       trackId: currentTrack.id,
       mode: index.mode,
       stamps: index.stamps.length,
+      ...eventPropsRef.current,
     });
     if (index.mode === 'sentence') {
       // The §11 degradation path actually engaged — worth seeing in analytics.
-      trackEvent('karaoke_fallback_sentence_mode', { packId, storyId, trackId: currentTrack.id });
+      trackEvent('karaoke_fallback_sentence_mode', {
+        packId,
+        storyId,
+        trackId: currentTrack.id,
+        ...eventPropsRef.current,
+      });
     }
   }, [index, currentTrack, packId, storyId]);
 
@@ -232,7 +251,7 @@ export function useNarration({
         setActiveWord(null);
         setActiveSentence(null);
         setPositionMs(Math.round(status.duration * 1000));
-        trackEvent('narration_finished', {});
+        trackEvent('narration_finished', { ...eventPropsRef.current });
         // Park the player back at 0 immediately: ExoPlayer's ENDED state is
         // race-prone (play() at the end can re-emit didJustFinish before a
         // rewind lands — hit on the S24 Ultra). Pause first — a seek from
@@ -275,6 +294,7 @@ export function useNarration({
         storyId,
         from: prev.track.id,
         to: currentTrack.id,
+        ...eventPropsRef.current,
       });
     }
     prevTrackRef.current = { track: currentTrack, index: null };
@@ -346,7 +366,12 @@ export function useNarration({
     if (!player || !currentTrack) return;
     if (player.playing) {
       player.pause();
-      trackEvent('narration_pause', { packId, storyId, trackId: currentTrack.id });
+      trackEvent('narration_pause', {
+        packId,
+        storyId,
+        trackId: currentTrack.id,
+        ...eventPropsRef.current,
+      });
     } else {
       applyLockScreen(player, currentTrack);
       // Play after the track ended = listen again from the top.
@@ -359,7 +384,12 @@ export function useNarration({
       } else {
         player.play();
       }
-      trackEvent('narration_play', { packId, storyId, trackId: currentTrack.id });
+      trackEvent('narration_play', {
+        packId,
+        storyId,
+        trackId: currentTrack.id,
+        ...eventPropsRef.current,
+      });
     }
   }, [currentTrack, applyLockScreen, packId, storyId, syncFromPosition]);
 
@@ -371,7 +401,13 @@ export function useNarration({
       void player.seekTo(clamped / 1000).then(() => syncFromPosition(clamped, true));
       if (method !== 'auto') {
         lastUserSeekAtRef.current = Date.now();
-        trackEvent('narration_seek', { packId, storyId, method, toMs: clamped });
+        trackEvent('narration_seek', {
+          packId,
+          storyId,
+          method,
+          toMs: clamped,
+          ...eventPropsRef.current,
+        });
       }
     },
     [currentTrack, syncFromPosition, packId, storyId],
@@ -396,7 +432,7 @@ export function useNarration({
     setRate(next);
     playerRef.current?.setPlaybackRate(next, 'high');
     void repos.settings.set(SETTING_KEYS.narrationPrefs, { rate: next });
-    trackEvent('narration_rate_changed', { rate: next });
+    trackEvent('narration_rate_changed', { rate: next, ...eventPropsRef.current });
   }, []);
 
   const switchTrack = React.useCallback(

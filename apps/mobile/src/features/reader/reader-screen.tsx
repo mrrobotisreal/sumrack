@@ -15,6 +15,12 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ExplainSheet } from '@/features/ai/explain-sheet';
 import type { ExplainTarget } from '@/features/ai/explain';
+import {
+  classificationEventProps,
+  classifyPack,
+  type ClassificationEventProps,
+  type Classified,
+} from '@/features/library/categories';
 import { recordReading, recordStoryFinished } from '@/features/motivation/service';
 
 import { AudioBar } from './audio-bar';
@@ -63,6 +69,8 @@ const RESTORE_STEP_ROWS = 8;
 const SEEK_SAVE_SUPPRESS_MS = 2500;
 /** Reserved space above the safe area for the narration bar (list padding). */
 const AUDIO_BAR_HEIGHT = 104;
+/** M14: what `classifyPack` gives a legacy remote pack — used until the detail row lands. */
+const PENDING_CLASSIFICATION: Classified = { category: 'stories', genre: 'horror' };
 
 interface ReaderScreenProps {
   packId: string;
@@ -125,6 +133,25 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   const readingStyle = React.useMemo(() => readingTextStyle(prefs), [prefs]);
   const translationStyle = React.useMemo(() => translationTextStyle(prefs), [prefs]);
 
+  // M14 (T46): classify ONCE per mount — the header badge, every reader
+  // event and (via options) every narration event read this same object.
+  // Before the detail row lands it holds the legacy-remote defaults; the
+  // props object is keyed on the two slugs so a detail refetch never yields
+  // a new object (callbacks and effects below depend on it).
+  const cls = React.useMemo(
+    () => (detail.data ? classifyPack(detail.data.pack) : PENDING_CLASSIFICATION),
+    [detail.data],
+  );
+  const { category: clsCategory, genre: clsGenre } = cls;
+  const clsProps = React.useMemo<ClassificationEventProps>(
+    () => classificationEventProps({ category: clsCategory, genre: clsGenre }),
+    [clsCategory, clsGenre],
+  );
+  const clsPropsRef = React.useRef(clsProps);
+  React.useEffect(() => {
+    clsPropsRef.current = clsProps;
+  }, [clsProps]);
+
   // ---- narration + karaoke (T10) ----------------------------------------
   const narration = useNarration({
     packId,
@@ -133,6 +160,7 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     packTitleRu: detail.data?.pack.titleRu ?? '',
     sentences,
     tracks: detail.data?.audio ?? [],
+    eventProps: clsProps,
   });
   // The shared host applies the user's narration preference independently of
   // reader readiness, overlays, screen focus and foreground state.
@@ -174,11 +202,19 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     [seekToSentence],
   );
 
+  // story_opened waits for the detail row so its category/genre are the
+  // pack's, not the placeholder (still exactly once per open — the row is
+  // cached across re-renders and the guard ref survives them).
+  const openedTrackedRef = React.useRef(false);
   React.useEffect(() => {
-    track('story_opened', { packId, storyId, from: from ?? 'library' });
-  }, [packId, storyId, from]);
+    if (!detail.data || openedTrackedRef.current) return;
+    openedTrackedRef.current = true;
+    track('story_opened', { packId, storyId, from: from ?? 'library', ...clsProps });
+  }, [detail.data, packId, storyId, from, clsProps]);
 
   // Reading time → daily_activity.readingMs (feeds the Today goal ring, §7.7).
+  // The classification is read through the ref so a pending→loaded change
+  // never restarts (splits) the session.
   useFocusEffect(
     React.useCallback(() => {
       const startedAt = Date.now();
@@ -187,7 +223,7 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
         if (ms >= MIN_READING_SESSION_MS) {
           // recordReading bumps readingMs + XP and evaluates goal/streak (T19).
           void recordReading(ms);
-          track('reading_session_ended', { packId, storyId, ms });
+          track('reading_session_ended', { packId, storyId, ms, ...clsPropsRef.current });
         }
       };
     }, [packId, storyId]),
@@ -240,14 +276,14 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
       finishRequestedRef.current = true;
       void repos.reading.markFinished(packId, storyId).then((newlyFinished) => {
         if (newlyFinished) {
-          track('story_finished', { packId, storyId });
+          track('story_finished', { packId, storyId, ...clsProps });
           // Bumps storiesFinished + XP, unlocks first-story, evaluates (T19).
           void recordStoryFinished();
         }
         invalidateProgress();
       });
     },
-    [packId, storyId, invalidateProgress],
+    [packId, storyId, invalidateProgress, clsProps],
   );
 
   // Arm saves + karaoke follow, reveal the list, and log the restore if one
@@ -268,10 +304,11 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
           storyId,
           sentenceIdx: restored.targetIdx,
           from: from ?? 'library',
+          ...clsProps,
         });
       }
     },
-    [packId, storyId, from],
+    [packId, storyId, from, clsProps],
   );
 
   const attemptRestoreScroll = React.useCallback(() => {
@@ -407,26 +444,34 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   }, [queryClient]);
   const toggleStoryBookmark = React.useCallback(() => {
     void repos.bookmarks.toggleStory(packId, storyId).then(({ added }) => {
-      track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'story', from: 'reader' });
+      track(added ? 'bookmark_added' : 'bookmark_removed', {
+        kind: 'story',
+        from: 'reader',
+        ...clsProps,
+      });
       invalidateBookmarks();
     });
-  }, [packId, storyId, invalidateBookmarks]);
+  }, [packId, storyId, invalidateBookmarks, clsProps]);
   const toggleSentenceBookmark = React.useCallback(
     (sentenceId: string) => {
       void repos.bookmarks.toggleSentence(packId, storyId, sentenceId).then(({ added }) => {
-        track(added ? 'bookmark_added' : 'bookmark_removed', { kind: 'sentence', from: 'reader' });
+        track(added ? 'bookmark_added' : 'bookmark_removed', {
+          kind: 'sentence',
+          from: 'reader',
+          ...clsProps,
+        });
         invalidateBookmarks();
       });
     },
-    [packId, storyId, invalidateBookmarks],
+    [packId, storyId, invalidateBookmarks, clsProps],
   );
 
   const handleWordPress = React.useCallback(
     (token: TokenRow, sentenceId: string) => {
-      track('word_tapped', { lemma: token.lemma ?? token.text, sentenceId });
-      setPopupTarget({ token, sentenceId, storyId });
+      track('word_tapped', { lemma: token.lemma ?? token.text, sentenceId, ...clsProps });
+      setPopupTarget({ token, sentenceId, storyId, eventProps: clsProps });
     },
-    [storyId],
+    [storyId, clsProps],
   );
 
   const sentenceById = React.useMemo(() => new Map(sentences.map((s) => [s.id, s])), [sentences]);
@@ -438,27 +483,37 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
       track('phrase_selection_completed', {
         sentenceId,
         chunks: selection.range.end - selection.range.start + 1,
+        ...clsProps,
       });
-      setPhraseTarget({ selection, sentenceRu: sentence.ru, sentenceId, storyId });
+      setPhraseTarget({
+        selection,
+        sentenceRu: sentence.ru,
+        sentenceId,
+        storyId,
+        eventProps: clsProps,
+      });
     },
-    [sentenceById, storyId],
+    [sentenceById, storyId, clsProps],
   );
 
-  const toggleSentence = React.useCallback((sentenceId: string) => {
-    setRevealed((prev) => {
-      const next = new Set(prev);
-      const nowRevealed = !next.has(sentenceId);
-      if (nowRevealed) next.add(sentenceId);
-      else next.delete(sentenceId);
-      track('sentence_reveal_toggled', { sentenceId, revealed: nowRevealed });
-      return next;
-    });
-  }, []);
+  const toggleSentence = React.useCallback(
+    (sentenceId: string) => {
+      setRevealed((prev) => {
+        const next = new Set(prev);
+        const nowRevealed = !next.has(sentenceId);
+        if (nowRevealed) next.add(sentenceId);
+        else next.delete(sentenceId);
+        track('sentence_reveal_toggled', { sentenceId, revealed: nowRevealed, ...clsProps });
+        return next;
+      });
+    },
+    [clsProps],
+  );
 
   const toggleRevealAll = React.useCallback(() => {
-    track('reveal_all_toggled', { packId, storyId, revealed: !allRevealed });
+    track('reveal_all_toggled', { packId, storyId, revealed: !allRevealed, ...clsProps });
     setRevealed(allRevealed ? new Set() : new Set(sentenceIds));
-  }, [allRevealed, sentenceIds, packId, storyId]);
+  }, [allRevealed, sentenceIds, packId, storyId, clsProps]);
 
   if (detail.isPending || progress.isPending) {
     return (
@@ -487,6 +542,14 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
 
   const { story } = detail.data;
   const finished = progress.data?.finishedAt != null;
+  const source = story.sourceName
+    ? {
+        name: story.sourceName,
+        url: story.sourceUrl,
+        publishedAt: story.sourcePublishedAt,
+        author: story.sourceAuthor,
+      }
+    : null;
 
   return (
     <View className="flex-1 bg-bg">
@@ -541,6 +604,13 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
             packTitleRu={detail.data.pack.titleRu}
             sentenceCount={sentences.length}
             finished={finished}
+            category={cls.category}
+            genre={cls.genre}
+            subtitleRu={story.subtitleRu}
+            source={source}
+            onSourceLinkOpened={() =>
+              track('story_source_link_opened', { packId, storyId, category: cls.category })
+            }
           />
         }
         ListFooterComponent={<StoryEnd finished={finished} />}

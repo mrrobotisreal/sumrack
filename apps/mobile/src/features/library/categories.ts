@@ -125,6 +125,21 @@ export function classifyPack(
   return { category: 'stories', genre: genre ?? 'horror' }; // stories, course-unit (and anything else)
 }
 
+/** Analytics props (M14 §4.5) — slugs only; genre-less = `'none'`. */
+export interface ClassificationEventProps {
+  category: string;
+  genre: string;
+}
+
+/**
+ * The `category` + `genre` props every reader/narration/dialogue event
+ * carries (T46). One `classifyPack()` per screen mount feeds this; call
+ * sites spread the result rather than re-classifying.
+ */
+export function classificationEventProps(c: Classified): ClassificationEventProps {
+  return { category: c.category, genre: c.genre ?? 'none' };
+}
+
 export const categoryOf = (p: Parameters<typeof classifyPack>[0]): string =>
   classifyPack(p).category;
 export const genreOf = (p: Parameters<typeof classifyPack>[0]): string | null =>

@@ -17,6 +17,10 @@ export type AnalyticsEvent =
   | 'debug_db_search'
   // T44 dev-screen fixture import (__DEV__ only). Props: packId only.
   | 'debug_fixture_imported'
+  // Reader (T04/T05). Since M14 (T46) every reader event below through
+  // phrase_added_to_bank — and the reader-fired bookmark_added/removed —
+  // carries `category` + `genre` (`'none'` when genre-less) from ONE
+  // classifyPack() per reader mount (LIBRARY_CATEGORIES §4.5).
   | 'story_opened'
   | 'story_finished'
   | 'reading_session_ended'
@@ -55,7 +59,9 @@ export type AnalyticsEvent =
   | 'sync_pat_cleared'
   | 'wifi_only_audio_toggled'
   | 'packs_screen_opened'
-  // T10 narration + karaoke
+  // T10 narration + karaoke. Since M14 (T46) narration_* and
+  // karaoke_fallback_sentence_mode carry `category` + `genre` via
+  // useNarration's `eventProps` option (word_segment_played does not).
   | 'narration_track_loaded'
   | 'narration_play'
   | 'narration_pause'
@@ -115,7 +121,9 @@ export type AnalyticsEvent =
   | 'import_review_split'
   | 'import_review_sentence_deleted'
   | 'import_commit_flagged_excluded'
-  // T27 dialogue player (scores/attempt counts/modes only — never transcripts)
+  // T27 dialogue player (scores/attempt counts/modes only — never transcripts).
+  // dialogue_opened carries `category` + `genre` since M14 (T46) — dialogues
+  // classify `stories`/`'none'` unless authored.
   | 'dialogue_tap_mode_toggled'
   | 'dialogues_list_opened'
   | 'dialogue_opened'
@@ -275,6 +283,8 @@ export type AnalyticsEvent =
   // only — never the query text (privacy-by-shape, same rule as bank_searched).
   | 'global_search_performed'
   | 'global_search_result_opened'
+  // bookmark_added/removed carry `category` + `genre` from the reader and
+  // the Library (M14, T46); the bookmarks-list removal has no pack row.
   | 'bookmark_added'
   | 'bookmark_removed'
   | 'bookmark_opened'
@@ -289,6 +299,7 @@ export type AnalyticsEvent =
   | 'room_scene_shown'
   | 'reduce_motion_toggled'
   // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
+  // story_source_link_opened {packId, storyId, category} fires from the reader header's source line.
   | 'library_category_switched'
   | 'library_genre_switched'
   | 'library_empty_category_viewed'

@@ -5,6 +5,7 @@ import { Modal, Pressable, Text as RNText, TextInput, Vibration, View } from 're
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import type { ClassificationEventProps } from '@/features/library/categories';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -18,6 +19,8 @@ export interface PhraseCardTarget {
   sentenceRu: string;
   sentenceId: string;
   storyId: string;
+  /** M14 (T46): the reader's per-mount `category`/`genre` props for `phrase_added_to_bank`. */
+  eventProps?: ClassificationEventProps;
 }
 
 interface PhraseCardSheetProps {
@@ -70,7 +73,11 @@ function PhraseSheet({ target, onClose }: { target: PhraseCardTarget; onClose: (
         needsEnrichment: translation.trim().length === 0,
       })
       .then((result) => {
-        track('phrase_added_to_bank', { words: wordCount, created: result.created });
+        track('phrase_added_to_bank', {
+          words: wordCount,
+          created: result.created,
+          ...target.eventProps,
+        });
         void queryClient.invalidateQueries({ queryKey: ['bank-items'] });
         void queryClient.invalidateQueries({ queryKey: ['bank-count'] });
         void queryClient.invalidateQueries({ queryKey: ['due-count'] });

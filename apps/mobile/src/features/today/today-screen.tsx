@@ -9,10 +9,12 @@ import { Text } from '@/components/ui/text';
 import {
   useDialogues,
   useDueCardCount,
+  usePackClassification,
   useProductionDueCount,
   useStories,
   useStoryProgressList,
 } from '@/db/hooks';
+import { classificationEventProps } from '@/features/library/categories';
 import { GoalRingCard } from '@/features/motivation/goal-ring-card';
 import { NotificationPromptCard } from '@/features/motivation/notification-prompt-card';
 import type { PathNode } from '@/features/path/path-model';
@@ -71,6 +73,8 @@ export function TodayScreen() {
     () => (dialogues.data ?? []).find((d) => d.finishedRunCount === 0) ?? null,
     [dialogues.data],
   );
+  // M14 (T46): dialogue_opened carries category/genre (stories/none unless authored).
+  const classification = usePackClassification();
 
   const coreQueries = [due, productionDue, progressList, stories, path, dialogues];
   const loading = coreQueries.some((q) => q.isPending);
@@ -161,6 +165,9 @@ export function TodayScreen() {
               packId: dialogueTarget.packId,
               dialogueId: dialogueTarget.id,
               from: 'today',
+              ...classificationEventProps(
+                classification.get(dialogueTarget.packId) ?? { category: 'stories', genre: null },
+              ),
             });
             router.push(`/dialogue/${dialogueTarget.packId}/${dialogueTarget.id}`);
           }}

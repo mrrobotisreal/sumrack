@@ -6,8 +6,9 @@ import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { LevelChip } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
-import { useDialogues } from '@/db/hooks';
+import { useDialogues, usePackClassification } from '@/db/hooks';
 import type { DialogueListItem } from '@/db/repositories/dialogues';
+import { classificationEventProps } from '@/features/library/categories';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -20,6 +21,8 @@ export function DialoguesListScreen() {
   const router = useRouter();
   const { tokens: theme } = useAppTheme();
   const dialogues = useDialogues();
+  // M14 (T46): dialogue_opened carries category/genre (stories/none unless authored).
+  const classification = usePackClassification();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -68,7 +71,14 @@ export function DialoguesListScreen() {
         <DialogueRow
           item={item}
           onPress={() => {
-            track('dialogue_opened', { packId: item.packId, dialogueId: item.id, from: 'games' });
+            track('dialogue_opened', {
+              packId: item.packId,
+              dialogueId: item.id,
+              from: 'games',
+              ...classificationEventProps(
+                classification.get(item.packId) ?? { category: 'stories', genre: null },
+              ),
+            });
             router.push(`/dialogue/${item.packId}/${item.id}`);
           }}
         />

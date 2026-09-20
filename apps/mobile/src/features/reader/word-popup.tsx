@@ -9,6 +9,7 @@ import { repos } from '@/db';
 import { queryKeys } from '@/db/hooks';
 import { normalizeRu } from '@/db/normalize';
 import type { TokenRow } from '@/db/repositories/content';
+import type { ClassificationEventProps } from '@/features/library/categories';
 import { track } from '@/services/analytics';
 import { getSpeechService, speak } from '@/services/speech';
 import { useLookupPrefs } from '@/store/lookup-prefs';
@@ -21,6 +22,12 @@ export interface WordPopupTarget {
   /** Source refs for the encounter/bank writes. */
   sentenceId: string;
   storyId: string;
+  /**
+   * M14 (T46): the reader's per-mount `category`/`genre` props, spread onto
+   * `encounter_recorded` / `word_added_to_bank`. Optional — the dialogue
+   * player's popup (T27) has no pack row at hand and fires them bare.
+   */
+  eventProps?: ClassificationEventProps;
 }
 
 interface WordPopupProps {
@@ -96,7 +103,11 @@ function WordPopupSheet({
     void repos.bank
       .addEncounter(bankStatus.data.id, token.text, { sentenceId: target.sentenceId })
       .then(() => {
-        track('encounter_recorded', { via: 'tap-lookup', lemma: effectiveLemma });
+        track('encounter_recorded', {
+          via: 'tap-lookup',
+          lemma: effectiveLemma,
+          ...target.eventProps,
+        });
         invalidateBank();
       });
   }, [
@@ -104,6 +115,7 @@ function WordPopupSheet({
     encounterOnLookup,
     token.text,
     target.sentenceId,
+    target.eventProps,
     effectiveLemma,
     invalidateBank,
   ]);
@@ -133,6 +145,7 @@ function WordPopupSheet({
           lemma: effectiveLemma,
           created: result.created,
           level: token.level ?? '',
+          ...target.eventProps,
         });
         setJustAdded(true);
         invalidateBank();
