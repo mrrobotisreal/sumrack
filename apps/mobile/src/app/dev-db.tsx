@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
 import { importPack, type ImportResult } from '@/db/importer';
 import { classifyPack } from '@/features/library/categories';
+import { detectRuDatePath, formatRuDate } from '@/features/library/library-filter';
 import { syncQueryKeys } from '@/features/sync/hooks';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -116,6 +117,10 @@ export default function DevDbScreen() {
               </Pressable>
             ))}
           </View>
+          {/* T45: which caption-date path this Hermes build takes (recorded in the ticket row). */}
+          <Text variant="caption" className="mt-2">
+            formatRuDate path: {detectRuDatePath()} · 2026-09-14 → {formatRuDate('2026-09-14')}
+          </Text>
         </View>
       )}
 
