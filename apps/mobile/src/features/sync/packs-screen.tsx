@@ -181,23 +181,26 @@ function PackRowView({
   const { tokens } = useAppTheme();
   const { state, pack } = item;
   const synced = new Date(state.updatedAt);
-  // M14 (T46): remote rows carry a category badge (the pack row already has
-  // category/genre); imported pastes are always «Импортировано» — no badge.
+  // M14 (T46): remote rows carry the md category badge on the caption line
+  // (the pack row already has category/genre) — a side column ate the title
+  // width on the S25; imported pastes are always «Импортировано» — no badge.
   const cls = withCategory && pack ? classifyPack(pack) : null;
   return (
     <View
       className={`flex-row items-center gap-3 px-4 py-3.5 ${first ? '' : 'border-t border-border'}`}
     >
       {pack ? <LevelChip level={pack.level} /> : null}
-      {cls ? <CategoryBadge category={cls.category} genre={cls.genre} size="md" /> : null}
       <View className="flex-1 gap-0.5">
         <Text className="font-ui-medium" numberOfLines={1}>
           {pack?.titleRu ?? state.packId}
         </Text>
-        <Text variant="caption" numberOfLines={1}>
-          v{state.version} · {formatBytes(state.bytes)} · {sourceLabel(state.source)} ·{' '}
-          {synced.toLocaleDateString()}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          {cls ? <CategoryBadge category={cls.category} genre={cls.genre} size="md" /> : null}
+          <Text variant="caption" numberOfLines={1} className="shrink">
+            {cls ? '· ' : ''}v{state.version} · {formatBytes(state.bytes)} ·{' '}
+            {sourceLabel(state.source)} · {synced.toLocaleDateString()}
+          </Text>
+        </View>
       </View>
       <Pressable
         onPress={onRemove}
