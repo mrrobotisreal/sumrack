@@ -129,6 +129,12 @@ On a fresh install (or after data loss):
   guard end-to-end: the app shows the recovery screen instead of dying, and
   the error appears in the log.
 - **DB debug** (dev builds only): Settings → Developer → Database debug.
+  Its «Fixture packs (M14)» buttons (T44) import the M14 test packs
+  `a2-news-090` / `a2-podcast-090` / `a1-comedy-090` from `@sumrak/schema`
+  fixtures — a newspaper article with subtitle + source, a podcast episode,
+  and a comedy story — so the category chips, reader header source line and
+  badges can be exercised without a content sync (idempotent; re-tap shows
+  `unchanged`). Remove them via the packs screen like any installed pack.
 - All analytics are local (SQLite `analytics_events`); nothing reports to any
   third party, ever.
 
