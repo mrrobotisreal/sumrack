@@ -3,11 +3,13 @@ import { SchemaValidationError } from '@sumrak/schema';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
+import comedyJson from '@sumrak/schema/fixtures/packs/a1-comedy-090/pack.json';
 import hallwayJson from '@sumrak/schema/fixtures/packs/a1-course-unit-090/pack.json';
 import greenhouseJson from '@sumrak/schema/fixtures/packs/a1-course-unit-093/pack.json';
 import pack1Json from '@sumrak/schema/fixtures/packs/a1-creepypasta-001/pack.json';
 import pack2Json from '@sumrak/schema/fixtures/packs/a1-creepypasta-002/pack.json';
 import familyJson from '@sumrak/schema/fixtures/packs/a2-family-090/pack.json';
+import newsJson from '@sumrak/schema/fixtures/packs/a2-news-090/pack.json';
 
 import { importPack, removePack } from '../importer';
 import { createBankRepo } from '../repositories/bank';
@@ -20,6 +22,29 @@ const pack2 = pack2Json as unknown as Pack;
 const hallwayPack = hallwayJson as unknown as Pack;
 const greenhousePack = greenhouseJson as unknown as Pack;
 const familyPack = familyJson as unknown as Pack;
+const newsPack = newsJson as unknown as Pack;
+const comedyPack = comedyJson as unknown as Pack;
+
+/** The M14 story columns, selected raw so the test pins the SQL names too. */
+const M14_STORY_SQL = sql`SELECT id, subtitle_ru, subtitle_en, source_name, source_url,
+  source_published_at, source_author FROM stories WHERE pack_id = `;
+interface M14StoryRow {
+  id: string;
+  subtitle_ru: string | null;
+  subtitle_en: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  source_published_at: string | null;
+  source_author: string | null;
+}
+const NULL_STORY_COLUMNS = {
+  subtitle_ru: null,
+  subtitle_en: null,
+  source_name: null,
+  source_url: null,
+  source_published_at: null,
+  source_author: null,
+};
 
 /** v2 of pack 1: last sentence dropped, first translation reworded — real content churn. */
 function pack1v2(): Pack {
@@ -201,6 +226,106 @@ describe('pack importer', () => {
       sql`SELECT theme_scene, theme_accent FROM packs WHERE id = 'a1-course-unit-093'`,
     );
     expect(rows[0]).toEqual({ theme_scene: 'greenhouse', theme_accent: null });
+  });
+
+  it('T44: news fixture round-trips category + every story subtitle/source column', async () => {
+    const db = createTestDb();
+    const content = createContentRepo(db);
+    expect((await importPack(db, newsPack, { source: 'bundled' })).action).toBe('installed');
+
+    const packRows = await db.all<{ category: string | null; genre: string | null }>(
+      sql`SELECT category, genre FROM packs WHERE id = 'a2-news-090'`,
+    );
+    expect(packRows[0]).toEqual({ category: 'news', genre: null });
+
+    const rows = await db.all<M14StoryRow>(sql`${M14_STORY_SQL}'a2-news-090' ORDER BY order_idx`);
+    expect(rows).toEqual([
+      {
+        id: 'news-090-a1',
+        subtitle_ru: 'Мост через реку Зальцах строили два года',
+        subtitle_en: 'The bridge over the Salzach took two years to build',
+        source_name: 'Сумрак-тест',
+        source_url: null, // #1 has no url
+        source_published_at: '2026-09-10',
+        source_author: 'Редакция',
+      },
+      {
+        id: 'news-090-a2',
+        subtitle_ru: 'Ночью температура упала ниже нуля',
+        subtitle_en: 'Overnight the temperature fell below zero',
+        source_name: 'Сумрак-тест',
+        source_url: 'https://example.invalid/first-snow',
+        source_published_at: '2026-09-14',
+        source_author: null, // #2 has no byline
+      },
+    ]);
+
+    // The typed read path exposes them without column enumeration:
+    // listStories() spreads the full stories row, getStoryDetail() too.
+    const list = await content.listStories();
+    const second = list.find((s) => s.id === 'news-090-a2')!;
+    expect(second.sourceUrl).toBe('https://example.invalid/first-snow');
+    expect(second.sourcePublishedAt).toBe('2026-09-14');
+    expect(second.subtitleRu).toBe('Ночью температура упала ниже нуля');
+    const detail = await content.getStoryDetail('a2-news-090', 'news-090-a1');
+    expect(detail!.pack.category).toBe('news');
+    expect(detail!.story.sourceAuthor).toBe('Редакция');
+  });
+
+  it('T44: comedy fixture maps genre; its story has no source/subtitle', async () => {
+    const db = createTestDb();
+    await importPack(db, comedyPack, { source: 'bundled' });
+    const packRows = await db.all<{ category: string | null; genre: string | null }>(
+      sql`SELECT category, genre FROM packs WHERE id = 'a1-comedy-090'`,
+    );
+    expect(packRows[0]).toEqual({ category: 'stories', genre: 'comedy' });
+    const rows = await db.all<M14StoryRow>(sql`${M14_STORY_SQL}'a1-comedy-090'`);
+    expect(rows).toEqual([{ id: 'com-090-s1', ...NULL_STORY_COLUMNS }]);
+  });
+
+  it('T44: a legacy pack (no M14 fields) leaves all eight columns NULL', async () => {
+    const db = createTestDb();
+    await importPack(db, pack1, { source: 'bundled' });
+    const packRows = await db.all<{ category: string | null; genre: string | null }>(
+      sql`SELECT category, genre FROM packs WHERE id = 'a1-creepypasta-001'`,
+    );
+    expect(packRows[0]).toEqual({ category: null, genre: null });
+    const rows = await db.all<M14StoryRow>(sql`${M14_STORY_SQL}'a1-creepypasta-001'`);
+    expect(rows).toEqual([{ id: 'knock-in-the-wall', ...NULL_STORY_COLUMNS }]);
+  });
+
+  it('T44: a version-bump re-import rewrites the M14 columns (update path)', async () => {
+    const db = createTestDb();
+    await importPack(db, newsPack, { source: 'bundled' });
+
+    const v2: Pack = JSON.parse(JSON.stringify(newsPack));
+    v2.version = 2;
+    v2.genre = 'absurd'; // ignored by the app for non-stories, but stored verbatim
+    const first = v2.stories[0]!;
+    first.subtitle = { ru: 'Новый подзаголовок', en: 'New subtitle' };
+    first.source = { name: 'Медуза', url: 'https://example.invalid/v2', publishedAt: '2026-09-20' };
+    delete v2.stories[1]!.source;
+    delete v2.stories[1]!.subtitle;
+
+    expect((await importPack(db, v2, { source: 'bundled' })).action).toBe('updated');
+
+    const packRows = await db.all<{ category: string | null; genre: string | null }>(
+      sql`SELECT category, genre FROM packs WHERE id = 'a2-news-090'`,
+    );
+    expect(packRows[0]).toEqual({ category: 'news', genre: 'absurd' });
+    const rows = await db.all<M14StoryRow>(sql`${M14_STORY_SQL}'a2-news-090' ORDER BY order_idx`);
+    expect(rows).toEqual([
+      {
+        id: 'news-090-a1',
+        subtitle_ru: 'Новый подзаголовок',
+        subtitle_en: 'New subtitle',
+        source_name: 'Медуза',
+        source_url: 'https://example.invalid/v2',
+        source_published_at: '2026-09-20',
+        source_author: null, // v2 dropped the byline — must not linger from v1
+      },
+      { id: 'news-090-a2', ...NULL_STORY_COLUMNS },
+    ]);
   });
 
   it('rejects invalid packs with precise schema errors before touching the DB', async () => {

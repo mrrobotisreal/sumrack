@@ -208,6 +208,10 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     themeScene: pack.theme?.scene ?? null,
     themeAccent: pack.theme?.accent ?? null,
     track: pack.track ?? null,
+    // T44 (M14): category/genre verbatim; NULL = not authored → the app
+    // default via classifyPack() (LIBRARY_CATEGORIES §2.4).
+    category: pack.category ?? null,
+    genre: pack.genre ?? null,
   });
 
   for (const [storyIdx, story] of pack.stories.entries()) {
@@ -218,6 +222,13 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       titleRu: story.title.ru,
       titleEn: story.title.en,
       level: story.level,
+      // T44 (M14): subtitle + source provenance, NULL when absent (fiction).
+      subtitleRu: story.subtitle?.ru ?? null,
+      subtitleEn: story.subtitle?.en ?? null,
+      sourceName: story.source?.name ?? null,
+      sourceUrl: story.source?.url ?? null,
+      sourcePublishedAt: story.source?.publishedAt ?? null,
+      sourceAuthor: story.source?.author ?? null,
     });
 
     for (const [sentenceIdx, sentence] of story.sentences.entries()) {
