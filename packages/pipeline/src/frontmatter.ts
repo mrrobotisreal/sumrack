@@ -91,70 +91,70 @@ export const VoiceDirectionSchema = z
     voice: VoiceIdSchema.optional(),
     /** Emotional/delivery style label: "creepy-whisper", "neutral", ... Required unless `register` is set. */
     style: z.string().min(1).optional(),
-  /**
-   * Optional ElevenLabs model id for this rendition (e.g.
-   * `eleven_multilingual_v2`); overrides the CLI `--model` so a draft records
-   * the model it was voiced with.
-   */
-  model: z.string().min(1).optional(),
-  /** Prompt-style description of the delivery, for the TTS request. */
-  stylePrompt: z.string().min(1).optional(),
-  /** Free-form human notes on pacing, emphasis, pauses. */
-  deliveryNotes: z.string().min(1).optional(),
-  /** Optional provider voice settings for this rendition (T09, additive). */
-  settings: VoiceSettingsSchema.optional(),
-  /**
-   * Optional Eleven v3 audio tag(s) prepended to the narration text, e.g.
-   * "[whispers]" — steers delivery without being spoken (verified: tag chars
-   * get ~0.1s of silence in the alignment). v3-family models only; ignored
-   * for other models. Must be [bracketed] tags.
-   */
-  audioTag: AudioTagSchema.optional(),
-  /**
-   * Optional per-sentence audio cues (CT011 Tier 2): sentence id → one or
-   * more [bracketed] v3 tags inserted right before that sentence in the
-   * narration text (after its paragraph separator). Same mechanics as
-   * `audioTag`, mid-text: v3-family models only, render-time only, never
-   * spoken, never stamped, never written to pack.json. An id that is not in
-   * the story is an error.
-   */
-  audioCues: z.record(StableIdSchema, AudioTagSchema).optional(),
-  /**
-   * Optional per-sentence voice override (CT011): sentence id → a different
-   * provider-prefixed voice for that sentence. The story is rendered as
-   * consecutive same-voice runs, each with its own voice; the runs are
-   * level-matched and concatenated into the ONE track this direction
-   * produces, with word stamps offset so they stay exact across every
-   * splice. Override runs get no narrator `audioTag` (steer them with an
-   * `audioCues` entry on the same id). Render-time only — never in
-   * pack.json. An id that is not in the story is an error.
-   */
-  sentenceVoices: z.record(StableIdSchema, VoiceIdSchema).optional(),
-  /**
-   * Optional pre-rendered audio for a sentence (re-voice sessions): sentence
-   * id → a path, relative to the draft file, of a clip that IS that
-   * sentence's audio (e.g. a character line rendered by a voice the current
-   * account no longer has, cut out of an earlier track). The sentence becomes
-   * its own override run with NO provider request; a sibling
-   * `<path>.stamps.json` (WordStamp[] relative to the clip start) supplies
-   * its word stamps, otherwise the run ships stampless. Level-matched and
-   * spliced exactly like `sentenceVoices`. Render-time only.
-   */
-  sentenceAudio: z.record(StableIdSchema, z.string().min(1)).optional(),
-  /**
-   * Optional context narration (any model): sentence id → a short text that
-   * is rendered immediately BEFORE that sentence to steer its delivery
-   * (mood, whisper, laughter — written in the story's language, in the
-   * narrator's voice), then CUT OUT of the audio using the provider's
-   * character timestamps, with every later word stamp shifted back by the
-   * cut. The listener never hears it; it never reaches pack.json. Its
-   * characters bill like any other. An id not in the story is an error.
-   */
-  contextCues: z.record(StableIdSchema, z.string().min(1)).optional(),
-  /**
-   * Optional ISO 639-1 language to enforce on the provider (`language_code`),
-   * e.g. 'ru' — for models that accept it (multilingual v2 does).
-   */
+    /**
+     * Optional ElevenLabs model id for this rendition (e.g.
+     * `eleven_multilingual_v2`); overrides the CLI `--model` so a draft records
+     * the model it was voiced with.
+     */
+    model: z.string().min(1).optional(),
+    /** Prompt-style description of the delivery, for the TTS request. */
+    stylePrompt: z.string().min(1).optional(),
+    /** Free-form human notes on pacing, emphasis, pauses. */
+    deliveryNotes: z.string().min(1).optional(),
+    /** Optional provider voice settings for this rendition (T09, additive). */
+    settings: VoiceSettingsSchema.optional(),
+    /**
+     * Optional Eleven v3 audio tag(s) prepended to the narration text, e.g.
+     * "[whispers]" — steers delivery without being spoken (verified: tag chars
+     * get ~0.1s of silence in the alignment). v3-family models only; ignored
+     * for other models. Must be [bracketed] tags.
+     */
+    audioTag: AudioTagSchema.optional(),
+    /**
+     * Optional per-sentence audio cues (CT011 Tier 2): sentence id → one or
+     * more [bracketed] v3 tags inserted right before that sentence in the
+     * narration text (after its paragraph separator). Same mechanics as
+     * `audioTag`, mid-text: v3-family models only, render-time only, never
+     * spoken, never stamped, never written to pack.json. An id that is not in
+     * the story is an error.
+     */
+    audioCues: z.record(StableIdSchema, AudioTagSchema).optional(),
+    /**
+     * Optional per-sentence voice override (CT011): sentence id → a different
+     * provider-prefixed voice for that sentence. The story is rendered as
+     * consecutive same-voice runs, each with its own voice; the runs are
+     * level-matched and concatenated into the ONE track this direction
+     * produces, with word stamps offset so they stay exact across every
+     * splice. Override runs get no narrator `audioTag` (steer them with an
+     * `audioCues` entry on the same id). Render-time only — never in
+     * pack.json. An id that is not in the story is an error.
+     */
+    sentenceVoices: z.record(StableIdSchema, VoiceIdSchema).optional(),
+    /**
+     * Optional pre-rendered audio for a sentence (re-voice sessions): sentence
+     * id → a path, relative to the draft file, of a clip that IS that
+     * sentence's audio (e.g. a character line rendered by a voice the current
+     * account no longer has, cut out of an earlier track). The sentence becomes
+     * its own override run with NO provider request; a sibling
+     * `<path>.stamps.json` (WordStamp[] relative to the clip start) supplies
+     * its word stamps, otherwise the run ships stampless. Level-matched and
+     * spliced exactly like `sentenceVoices`. Render-time only.
+     */
+    sentenceAudio: z.record(StableIdSchema, z.string().min(1)).optional(),
+    /**
+     * Optional context narration (any model): sentence id → a short text that
+     * is rendered immediately BEFORE that sentence to steer its delivery
+     * (mood, whisper, laughter — written in the story's language, in the
+     * narrator's voice), then CUT OUT of the audio using the provider's
+     * character timestamps, with every later word stamp shifted back by the
+     * cut. The listener never hears it; it never reaches pack.json. Its
+     * characters bill like any other. An id not in the story is an error.
+     */
+    contextCues: z.record(StableIdSchema, z.string().min(1)).optional(),
+    /**
+     * Optional ISO 639-1 language to enforce on the provider (`language_code`),
+     * e.g. 'ru' — for models that accept it (multilingual v2 does).
+     */
     language: z
       .string()
       .regex(/^[a-z]{2}$/, 'language is an ISO 639-1 code, e.g. "ru"')

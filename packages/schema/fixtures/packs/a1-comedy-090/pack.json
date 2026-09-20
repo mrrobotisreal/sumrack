@@ -1,0 +1,343 @@
+{
+  "id": "a1-comedy-090",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Комедия — тестовая полка",
+    "en": "Comedy — test shelf"
+  },
+  "level": "A1",
+  "tags": [
+    "comedy",
+    "test-fixture"
+  ],
+  "stories": [
+    {
+      "id": "com-090-s1",
+      "title": {
+        "ru": "Кот и холодильник",
+        "en": "The cat and the fridge"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "com090s1-s01",
+          "ru": "У меня есть кот.",
+          "en": "I have a cat.",
+          "tokens": [
+            {
+              "text": "У",
+              "lemma": "у",
+              "translation": "at (possession)",
+              "pos": "prep",
+              "grammar": "+ gen.; у меня есть = I have",
+              "level": "A1"
+            },
+            {
+              "text": "меня",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "gen.",
+              "level": "A1"
+            },
+            {
+              "text": "есть",
+              "lemma": "есть",
+              "translation": "there is",
+              "pos": "pred",
+              "grammar": "existential (у меня есть = I have)",
+              "level": "A1"
+            },
+            {
+              "text": "кот",
+              "lemma": "кот",
+              "translation": "a cat",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "possession-u-genitive",
+            "existential-est"
+          ]
+        },
+        {
+          "id": "com090s1-s02",
+          "ru": "Кот очень любит холодильник.",
+          "en": "The cat loves the fridge very much.",
+          "tokens": [
+            {
+              "text": "Кот",
+              "lemma": "кот",
+              "translation": "the cat",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "очень",
+              "lemma": "очень",
+              "translation": "very much",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "любит",
+              "lemma": "любить",
+              "translation": "loves",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "холодильник",
+              "lemma": "холодильник",
+              "translation": "the fridge",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "accusative-direct-object"
+          ]
+        },
+        {
+          "id": "com090s1-s03",
+          "ru": "Каждую ночь он сидит около холодильника и ждёт.",
+          "en": "Every night he sits by the fridge and waits.",
+          "tokens": [
+            {
+              "text": "Каждую",
+              "lemma": "каждый",
+              "translation": "every",
+              "pos": "pron",
+              "grammar": "f.sg. acc. (time expression)",
+              "level": "A1"
+            },
+            {
+              "text": "ночь",
+              "lemma": "ночь",
+              "translation": "night",
+              "pos": "noun",
+              "grammar": "f.sg. acc. (time expression)",
+              "level": "A1"
+            },
+            {
+              "text": "он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "сидит",
+              "lemma": "сидеть",
+              "translation": "sits",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "около",
+              "lemma": "около",
+              "translation": "by / near",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "холодильника",
+              "lemma": "холодильник",
+              "translation": "the fridge",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "ждёт",
+              "lemma": "ждать",
+              "translation": "waits",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "time-expressions",
+            "verbs-of-position",
+            "prepositional-location"
+          ]
+        },
+        {
+          "id": "com090s1-s04",
+          "ru": "Он думает, что холодильник — это дверь в рай.",
+          "en": "He thinks the fridge is a door to paradise.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думает",
+              "lemma": "думать",
+              "translation": "thinks",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "что",
+              "lemma": "что",
+              "translation": "that",
+              "pos": "conj",
+              "grammar": "introduces the clause",
+              "level": "A1"
+            },
+            {
+              "text": "холодильник",
+              "lemma": "холодильник",
+              "translation": "the fridge",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "—",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "это",
+              "lemma": "это",
+              "translation": "is",
+              "pos": "pron",
+              "grammar": "zero-copula marker: X — это Y",
+              "level": "A1"
+            },
+            {
+              "text": "дверь",
+              "lemma": "дверь",
+              "translation": "a door",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (destination)",
+              "level": "A1"
+            },
+            {
+              "text": "рай",
+              "lemma": "рай",
+              "translation": "paradise",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "reported-speech",
+            "zero-copula",
+            "accusative-direction"
+          ]
+        },
+        {
+          "id": "com090s1-s05",
+          "ru": "Может быть, он прав.",
+          "en": "Maybe he's right.",
+          "tokens": [
+            {
+              "text": "Может",
+              "lemma": "мочь",
+              "translation": "maybe",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.), in the fixed phrase может быть",
+              "level": "A1",
+              "note": "может быть = maybe"
+            },
+            {
+              "text": "быть",
+              "lemma": "быть",
+              "translation": "maybe",
+              "pos": "verb",
+              "grammar": "infinitive, in the fixed phrase может быть",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "прав",
+              "lemma": "правый",
+              "translation": "right",
+              "pos": "adj",
+              "grammar": "m.sg. short form",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "short-adjectives"
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "category": "stories",
+  "genre": "comedy"
+}

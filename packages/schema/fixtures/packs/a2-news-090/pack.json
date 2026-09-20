@@ -1,0 +1,747 @@
+{
+  "id": "a2-news-090",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Новости — тестовая полка",
+    "en": "News — test shelf"
+  },
+  "level": "A2",
+  "tags": [
+    "news",
+    "test-fixture"
+  ],
+  "stories": [
+    {
+      "id": "news-090-a1",
+      "title": {
+        "ru": "В Зальцбурге открыли новый мост",
+        "en": "A new bridge opens in Salzburg"
+      },
+      "subtitle": {
+        "ru": "Мост через реку Зальцах строили два года",
+        "en": "The bridge over the Salzach took two years to build"
+      },
+      "source": {
+        "name": "Сумрак-тест",
+        "publishedAt": "2026-09-10",
+        "author": "Редакция"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "nw090a1-s01",
+          "ru": "Вчера в Зальцбурге открыли новый мост через реку Зальцах.",
+          "en": "Yesterday a new bridge over the Salzach river was opened in Salzburg.",
+          "tokens": [
+            {
+              "text": "Вчера",
+              "lemma": "вчера",
+              "translation": "yesterday",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "Зальцбурге",
+              "lemma": "Зальцбург",
+              "translation": "Salzburg",
+              "pos": "name",
+              "grammar": "m.sg. prep.",
+              "level": "A2",
+              "note": "city in Austria"
+            },
+            {
+              "text": "открыли",
+              "lemma": "открыть",
+              "translation": "(they) opened",
+              "pos": "verb",
+              "grammar": "3pl. past (pf.), indefinite-personal = \"was opened\"",
+              "level": "A1"
+            },
+            {
+              "text": "новый",
+              "lemma": "новый",
+              "translation": "new",
+              "pos": "adj",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "мост",
+              "lemma": "мост",
+              "translation": "bridge",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "через",
+              "lemma": "через",
+              "translation": "across",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A2"
+            },
+            {
+              "text": "реку",
+              "lemma": "река",
+              "translation": "river",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "Зальцах",
+              "lemma": "Зальцах",
+              "translation": "Salzach",
+              "pos": "name",
+              "grammar": "m.sg. acc. (indeclinable here)",
+              "level": "A2",
+              "note": "the river through Salzburg"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "indefinite-personal",
+            "prepositional-location",
+            "accusative-direct-object"
+          ]
+        },
+        {
+          "id": "nw090a1-s02",
+          "ru": "Строительство шло два года.",
+          "en": "Construction went on for two years.",
+          "tokens": [
+            {
+              "text": "Строительство",
+              "lemma": "строительство",
+              "translation": "construction",
+              "pos": "noun",
+              "grammar": "n.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "шло",
+              "lemma": "идти",
+              "translation": "went on",
+              "pos": "verb",
+              "grammar": "n.sg. past (impf.), idiom: строительство идёт = construction is under way",
+              "level": "A1"
+            },
+            {
+              "text": "два",
+              "lemma": "два",
+              "translation": "two",
+              "pos": "num",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "года",
+              "lemma": "год",
+              "translation": "years",
+              "pos": "noun",
+              "grammar": "m.sg. gen. (after 2–4)",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "time-expressions",
+            "numbers-genitive"
+          ]
+        },
+        {
+          "id": "nw090a1-s03",
+          "ru": "На открытие пришли сотни жителей города.",
+          "en": "Hundreds of city residents came to the opening.",
+          "tokens": [
+            {
+              "text": "На",
+              "lemma": "на",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (destination)",
+              "level": "A1"
+            },
+            {
+              "text": "открытие",
+              "lemma": "открытие",
+              "translation": "the opening",
+              "pos": "noun",
+              "grammar": "n.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "пришли",
+              "lemma": "прийти",
+              "translation": "came",
+              "pos": "verb",
+              "grammar": "3pl. past (pf.), pf. of приходить",
+              "level": "A1"
+            },
+            {
+              "text": "сотни",
+              "lemma": "сотня",
+              "translation": "hundreds",
+              "pos": "num",
+              "grammar": "f.pl. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "жителей",
+              "lemma": "житель",
+              "translation": "of residents",
+              "pos": "noun",
+              "grammar": "m.pl. gen. (after сотни)",
+              "level": "A2"
+            },
+            {
+              "text": "города",
+              "lemma": "город",
+              "translation": "of the city",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "verbs-of-motion-prefixed",
+            "accusative-direction",
+            "genitive-plural",
+            "numbers-genitive"
+          ]
+        },
+        {
+          "id": "nw090a1-s04",
+          "ru": "Мэр сказал, что мост сделает дорогу в центр короче.",
+          "en": "The mayor said the bridge will make the trip to the centre shorter.",
+          "tokens": [
+            {
+              "text": "Мэр",
+              "lemma": "мэр",
+              "translation": "the mayor",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "сказал",
+              "lemma": "сказать",
+              "translation": "said",
+              "pos": "verb",
+              "grammar": "m.sg. past (pf.), pf. of говорить",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "что",
+              "lemma": "что",
+              "translation": "that",
+              "pos": "conj",
+              "grammar": "introduces reported speech",
+              "level": "A1"
+            },
+            {
+              "text": "мост",
+              "lemma": "мост",
+              "translation": "the bridge",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "сделает",
+              "lemma": "сделать",
+              "translation": "will make",
+              "pos": "verb",
+              "grammar": "3sg. fut. (pf.), pf. of делать",
+              "level": "A1"
+            },
+            {
+              "text": "дорогу",
+              "lemma": "дорога",
+              "translation": "the trip",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1",
+              "note": "here: the way / journey"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (destination)",
+              "level": "A1"
+            },
+            {
+              "text": "центр",
+              "lemma": "центр",
+              "translation": "the centre",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "короче",
+              "lemma": "короткий",
+              "translation": "shorter",
+              "pos": "adj",
+              "grammar": "comparative",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "reported-speech",
+            "future-tense",
+            "comparatives",
+            "accusative-direction"
+          ]
+        },
+        {
+          "id": "nw090a1-s05",
+          "ru": "Автобусы поедут по новому мосту уже в понедельник.",
+          "en": "Buses will run over the new bridge as early as Monday.",
+          "tokens": [
+            {
+              "text": "Автобусы",
+              "lemma": "автобус",
+              "translation": "buses",
+              "pos": "noun",
+              "grammar": "m.pl. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "поедут",
+              "lemma": "поехать",
+              "translation": "will run",
+              "pos": "verb",
+              "grammar": "3pl. fut. (pf.), pf. of ехать",
+              "level": "A1"
+            },
+            {
+              "text": "по",
+              "lemma": "по",
+              "translation": "over / along",
+              "pos": "prep",
+              "grammar": "+ dat. (route)",
+              "level": "A1"
+            },
+            {
+              "text": "новому",
+              "lemma": "новый",
+              "translation": "the new",
+              "pos": "adj",
+              "grammar": "m.sg. dat.",
+              "level": "A1"
+            },
+            {
+              "text": "мосту",
+              "lemma": "мост",
+              "translation": "bridge",
+              "pos": "noun",
+              "grammar": "m.sg. dat.",
+              "level": "A2"
+            },
+            {
+              "text": "уже",
+              "lemma": "уже",
+              "translation": "as early as",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ acc. (days of the week)",
+              "level": "A1"
+            },
+            {
+              "text": "понедельник",
+              "lemma": "понедельник",
+              "translation": "Monday",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "future-tense",
+            "verbs-of-motion-prefixed",
+            "dative-direction",
+            "time-expressions"
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "news-090-a2",
+      "title": {
+        "ru": "Первый снег в горах",
+        "en": "First snow in the mountains"
+      },
+      "subtitle": {
+        "ru": "Ночью температура упала ниже нуля",
+        "en": "Overnight the temperature fell below zero"
+      },
+      "source": {
+        "name": "Сумрак-тест",
+        "url": "https://example.invalid/first-snow",
+        "publishedAt": "2026-09-14"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "nw090a2-s01",
+          "ru": "В австрийских Альпах выпал первый снег.",
+          "en": "The first snow has fallen in the Austrian Alps.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "австрийских",
+              "lemma": "австрийский",
+              "translation": "Austrian",
+              "pos": "adj",
+              "grammar": "pl. prep.",
+              "level": "A2"
+            },
+            {
+              "text": "Альпах",
+              "lemma": "Альпы",
+              "translation": "the Alps",
+              "pos": "name",
+              "grammar": "pl. prep. (plural-only noun)",
+              "level": "A2"
+            },
+            {
+              "text": "выпал",
+              "lemma": "выпасть",
+              "translation": "fell",
+              "pos": "verb",
+              "grammar": "m.sg. past (pf.), pf. of выпадать; of snow/rain",
+              "level": "A2"
+            },
+            {
+              "text": "первый",
+              "lemma": "первый",
+              "translation": "the first",
+              "pos": "num",
+              "grammar": "m.sg. nom. (ordinal)",
+              "level": "A1"
+            },
+            {
+              "text": "снег",
+              "lemma": "снег",
+              "translation": "snow",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "prepositional-location",
+            "ordinal-numbers"
+          ]
+        },
+        {
+          "id": "nw090a2-s02",
+          "ru": "Ночью температура упала ниже нуля.",
+          "en": "Overnight the temperature fell below zero.",
+          "tokens": [
+            {
+              "text": "Ночью",
+              "lemma": "ночью",
+              "translation": "at night",
+              "pos": "adv",
+              "grammar": "frozen instr. of ночь",
+              "level": "A1"
+            },
+            {
+              "text": "температура",
+              "lemma": "температура",
+              "translation": "the temperature",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "упала",
+              "lemma": "упасть",
+              "translation": "fell",
+              "pos": "verb",
+              "grammar": "f.sg. past (pf.), pf. of падать",
+              "level": "A1"
+            },
+            {
+              "text": "ниже",
+              "lemma": "низкий",
+              "translation": "below",
+              "pos": "adj",
+              "grammar": "comparative, used as a preposition + gen.",
+              "level": "A2"
+            },
+            {
+              "text": "нуля",
+              "lemma": "ноль",
+              "translation": "zero",
+              "pos": "num",
+              "grammar": "m.sg. gen. (after ниже)",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "instrumental-time",
+            "comparatives",
+            "numbers-genitive"
+          ]
+        },
+        {
+          "id": "nw090a2-s03",
+          "ru": "Дороги в горах стали скользкими.",
+          "en": "The roads in the mountains have become slippery.",
+          "tokens": [
+            {
+              "text": "Дороги",
+              "lemma": "дорога",
+              "translation": "the roads",
+              "pos": "noun",
+              "grammar": "f.pl. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (location)",
+              "level": "A1"
+            },
+            {
+              "text": "горах",
+              "lemma": "гора",
+              "translation": "the mountains",
+              "pos": "noun",
+              "grammar": "f.pl. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "стали",
+              "lemma": "стать",
+              "translation": "have become",
+              "pos": "verb",
+              "grammar": "3pl. past (pf.), pf. of становиться, + instr.",
+              "level": "A1"
+            },
+            {
+              "text": "скользкими",
+              "lemma": "скользкий",
+              "translation": "slippery",
+              "pos": "adj",
+              "grammar": "pl. instr. (predicate after стать)",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "past-tense",
+            "prepositional-location",
+            "instrumental-predicate"
+          ]
+        },
+        {
+          "id": "nw090a2-s04",
+          "ru": "Полиция просит водителей ехать медленно.",
+          "en": "Police are asking drivers to drive slowly.",
+          "tokens": [
+            {
+              "text": "Полиция",
+              "lemma": "полиция",
+              "translation": "the police",
+              "pos": "noun",
+              "grammar": "f.sg. nom. (singular in Russian)",
+              "level": "A1"
+            },
+            {
+              "text": "просит",
+              "lemma": "просить",
+              "translation": "is asking",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.), + acc. + infinitive",
+              "level": "A1"
+            },
+            {
+              "text": "водителей",
+              "lemma": "водитель",
+              "translation": "drivers",
+              "pos": "noun",
+              "grammar": "m.pl. acc. (animate = gen.)",
+              "level": "A2"
+            },
+            {
+              "text": "ехать",
+              "lemma": "ехать",
+              "translation": "to drive",
+              "pos": "verb",
+              "grammar": "infinitive (impf., unidirectional)",
+              "level": "A1"
+            },
+            {
+              "text": "медленно",
+              "lemma": "медленно",
+              "translation": "slowly",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "accusative-direct-object",
+            "verbs-of-motion-unidirectional"
+          ]
+        },
+        {
+          "id": "nw090a2-s05",
+          "ru": "Синоптики говорят, что тепло вернётся в четверг.",
+          "en": "Forecasters say the warmth will return on Thursday.",
+          "tokens": [
+            {
+              "text": "Синоптики",
+              "lemma": "синоптик",
+              "translation": "forecasters",
+              "pos": "noun",
+              "grammar": "m.pl. nom.",
+              "level": "B1"
+            },
+            {
+              "text": "говорят",
+              "lemma": "говорить",
+              "translation": "say",
+              "pos": "verb",
+              "grammar": "3pl. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "что",
+              "lemma": "что",
+              "translation": "that",
+              "pos": "conj",
+              "grammar": "introduces reported speech",
+              "level": "A1"
+            },
+            {
+              "text": "тепло",
+              "lemma": "тепло",
+              "translation": "the warmth",
+              "pos": "noun",
+              "grammar": "n.sg. nom.",
+              "level": "A2",
+              "note": "also the adverb \"warmly\""
+            },
+            {
+              "text": "вернётся",
+              "lemma": "вернуться",
+              "translation": "will return",
+              "pos": "verb",
+              "grammar": "3sg. fut. (pf.), reflexive, pf. of возвращаться",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ acc. (days of the week)",
+              "level": "A1"
+            },
+            {
+              "text": "четверг",
+              "lemma": "четверг",
+              "translation": "Thursday",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "reported-speech",
+            "future-tense",
+            "reflexive-verbs",
+            "time-expressions"
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "category": "news"
+}

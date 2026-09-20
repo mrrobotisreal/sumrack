@@ -3,7 +3,14 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { annotateDrafts, DraftError, parseDraft, runValidate } from '../src/index.ts';
+import {
+  annotateDrafts,
+  applyRegister,
+  DraftError,
+  parseDraft,
+  planAudioRun,
+  runValidate,
+} from '../src/index.ts';
 
 const pkgDir = join(__dirname, '..');
 const fixture = (...p: string[]) => join(pkgDir, 'fixtures', ...p);
@@ -93,12 +100,111 @@ describe('reference draft round-trip', () => {
   });
 });
 
+describe('M14 fixtures (a2-news-090, a2-podcast-090, a1-comedy-090)', () => {
+  const m14 = (name: string) => fixture('m14', name);
+  const schemaPack = (id: string) =>
+    join(pkgDir, '..', 'schema', 'fixtures', 'packs', id, 'pack.json');
+  const cases: { id: string; drafts: string[]; category: string; style: string }[] = [
+    {
+      id: 'a2-news-090',
+      drafts: ['news-090-1.draft.md', 'news-090-2.draft.md'],
+      category: 'news',
+      style: 'anchor',
+    },
+    { id: 'a2-podcast-090', drafts: ['podcast-090.draft.md'], category: 'podcast', style: 'host' },
+    {
+      id: 'a1-comedy-090',
+      drafts: ['comedy-090.draft.md'],
+      category: 'stories',
+      style: 'narrator',
+    },
+  ];
+
+  it.each(cases)(
+    '$id: the drafts annotate byte-identically to the committed fixture',
+    ({ id, drafts }) => {
+      const pack = annotateDrafts(
+        drafts.map((d) => ({ path: m14(d), source: readFileSync(m14(d), 'utf8') })),
+      );
+      // `runAnnotate` writes `JSON.stringify(pack, null, 2) + '\n'` — same bytes here.
+      expect(`${JSON.stringify(pack, null, 2)}\n`).toBe(readFileSync(schemaPack(id), 'utf8'));
+    },
+  );
+
+  it.each(cases)(
+    '$id: register-only directions resolve to Mr. Wintrow / $style',
+    ({ drafts, category, style }) => {
+      for (const d of drafts) {
+        const parsed = parseDraft(m14(d), readFileSync(m14(d), 'utf8'));
+        expect(parsed.frontmatter.pack.category).toBe(category);
+        const directions = parsed.frontmatter.voice ?? [];
+        expect(directions.length).toBeGreaterThan(0);
+        for (const direction of directions) {
+          expect(direction.voice).toBeUndefined(); // the drafts pin neither
+          expect(direction.style).toBeUndefined();
+          const resolved = applyRegister(direction, category);
+          expect(resolved.voice).toBe('elevenlabs:Mr. Wintrow');
+          expect(resolved.style).toBe(style);
+          expect(resolved.settings?.useSpeakerBoost).toBe(true);
+          expect(resolved.stylePrompt).toBeDefined();
+        }
+      }
+    },
+  );
+
+  it('planAudioRun reports the resolved model / language / voice / style per track without any network call', () => {
+    const plan = planAudioRun([m14('news-090-1.draft.md')], { audition: true, takes: 1 });
+    expect(plan.tracks).toEqual([
+      {
+        storyId: 'news-090-a1',
+        trackId: 'nw090a1-wintrow-anchor',
+        voice: 'elevenlabs:Mr. Wintrow',
+        style: 'anchor',
+        model: 'eleven_multilingual_v2',
+        languageCode: 'ru',
+        requests: 1,
+        chars: expect.any(Number),
+      },
+    ]);
+    expect(plan.requests).toBe(1);
+    // --model eleven_v3 for the run: no language_code on the plan row.
+    const v3 = planAudioRun([m14('comedy-090.draft.md')], { modelId: 'eleven_v3' });
+    expect(v3.tracks[0]).toMatchObject({ model: 'eleven_v3', style: 'narrator' });
+    expect('languageCode' in v3.tracks[0]!).toBe(false);
+  });
+
+  it('the news fixture carries subtitle + source per story (second story newer, no author)', () => {
+    const pack = JSON.parse(readFileSync(schemaPack('a2-news-090'), 'utf8'));
+    expect(pack.category).toBe('news');
+    expect(pack.stories.map((s: { id: string }) => s.id)).toEqual(['news-090-a1', 'news-090-a2']);
+    expect(pack.stories[0].source).toEqual({
+      name: 'Сумрак-тест',
+      publishedAt: '2026-09-10',
+      author: 'Редакция',
+    });
+    expect(pack.stories[1].source).toEqual({
+      name: 'Сумрак-тест',
+      url: 'https://example.invalid/first-snow',
+      publishedAt: '2026-09-14',
+    });
+    expect(pack.stories[1].source.publishedAt > pack.stories[0].source.publishedAt).toBe(true);
+    const comedy = JSON.parse(readFileSync(schemaPack('a1-comedy-090'), 'utf8'));
+    expect(comedy.genre).toBe('comedy');
+    expect('subtitle' in comedy.stories[0]).toBe(false);
+    expect('source' in comedy.stories[0]).toBe(false);
+  });
+});
+
 describe('category / genre / subtitle / source round-trip (M14)', () => {
   it('copies pack category+genre and story subtitle+source into the pack, never emitting undefined keys', () => {
     const draft = minimalDraft((lines) => {
       lines.splice(8, 0, '  category: stories', '  genre: comedy');
       lines.splice(13, 0, '  subtitle: { ru: "Эпизод 1", en: "Episode 1" }');
-      lines.splice(14, 0, '  source: { name: "Сумрак", publishedAt: "2026-09-01", author: "Мистер Уинтроу" }');
+      lines.splice(
+        14,
+        0,
+        '  source: { name: "Сумрак", publishedAt: "2026-09-01", author: "Мистер Уинтроу" }',
+      );
     });
     const pack = annotate(draft);
     expect(pack.category).toBe('stories');
@@ -111,7 +217,15 @@ describe('category / genre / subtitle / source round-trip (M14)', () => {
       author: 'Мистер Уинтроу',
     });
     // Key order: subtitle/source sit between title and level, like the schema declares.
-    expect(Object.keys(story)).toEqual(['id', 'title', 'subtitle', 'source', 'level', 'sentences', 'audio']);
+    expect(Object.keys(story)).toEqual([
+      'id',
+      'title',
+      'subtitle',
+      'source',
+      'level',
+      'sentences',
+      'audio',
+    ]);
     // Round-trips through JSON without any `undefined` keys.
     expect(JSON.parse(JSON.stringify(pack))).toEqual(pack);
   });

@@ -178,7 +178,7 @@ describe('applyRegister', () => {
         model: 'eleven_v3',
         language: 'ru',
         audioTag: '[whispers]',
-        contextCues: { 's01': 'Тихо.' },
+        contextCues: { s01: 'Тихо.' },
         sentenceVoices: { s02: 'elevenlabs:Other' },
       }),
     );
@@ -191,6 +191,8 @@ describe('applyRegister', () => {
   });
 
   it('throws on a hand-built direction with no register and no voice/style', () => {
-    expect(() => applyRegister({ id: 'x' } as VoiceDirection)).toThrow(/voice and style are required/);
+    expect(() => applyRegister({ id: 'x' } as VoiceDirection)).toThrow(
+      /voice and style are required/,
+    );
   });
 });

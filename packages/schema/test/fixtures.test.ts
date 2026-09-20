@@ -57,6 +57,51 @@ describe('sample pack fixtures', () => {
     expect(family.prompts).toHaveLength(1);
   });
 
+  it('M14 fixtures validate, carrying category/genre/subtitle/source exactly as authored', () => {
+    const news = loadPack('a2-news-090');
+    expect(news.category).toBe('news');
+    expect(news.genre).toBeUndefined();
+    expect(news.stories).toHaveLength(2);
+    expect(news.stories[0]!.subtitle?.ru).toBe('Мост через реку Зальцах строили два года');
+    expect(news.stories[0]!.source).toEqual({
+      name: 'Сумрак-тест',
+      publishedAt: '2026-09-10',
+      author: 'Редакция',
+    });
+    expect(news.stories[1]!.source?.author).toBeUndefined();
+    expect(news.stories[1]!.source?.url).toBe('https://example.invalid/first-snow');
+    expect(news.stories[1]!.source!.publishedAt! > news.stories[0]!.source!.publishedAt!).toBe(
+      true,
+    );
+
+    const podcast = loadPack('a2-podcast-090');
+    expect(podcast.category).toBe('podcast');
+    expect(podcast.stories[0]!.subtitle).toEqual({ ru: 'Эпизод 1', en: 'Episode 1' });
+    expect(podcast.stories[0]!.source?.author).toBe('Мистер Уинтроу');
+
+    const comedy = loadPack('a1-comedy-090');
+    expect(comedy.category).toBe('stories');
+    expect(comedy.genre).toBe('comedy');
+    expect(comedy.stories[0]!.subtitle).toBeUndefined();
+    expect(comedy.stories[0]!.source).toBeUndefined();
+
+    // Every word token fully annotated, like the creepypasta fixtures.
+    for (const pack of [news, podcast, comedy]) {
+      for (const story of pack.stories) {
+        for (const sentence of story.sentences) {
+          for (const token of sentence.tokens) {
+            if (token.isPunct) continue;
+            const where = `${pack.id}/${sentence.id}/"${token.text}"`;
+            expect(token.lemma, `${where} lemma`).toBeDefined();
+            expect(token.translation, `${where} translation`).toBeDefined();
+            expect(token.pos, `${where} pos`).toBeDefined();
+            expect(token.level, `${where} level`).toBeDefined();
+          }
+        }
+      }
+    }
+  });
+
   it('a1-prompts-001 («Первые страницы») validates as a prompts pack', () => {
     const pack = loadPack('a1-prompts-001');
     expect(pack.type).toBe('prompts');

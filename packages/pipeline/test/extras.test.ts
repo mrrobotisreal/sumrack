@@ -215,7 +215,10 @@ describe('category & genre in extras pack meta (M14)', () => {
     // Same pack meta as the reference draft, plus a category the draft does not carry.
     const withCategory = categorizedExtras
       .replace('id: a1-checkpoint-test', 'id: a1-creepypasta-002')
-      .replace("title: { ru: 'Тест', en: 'Test' }", `title: { ru: 'Фотография', en: 'The Photograph' }`)
+      .replace(
+        "title: { ru: 'Тест', en: 'Test' }",
+        `title: { ru: 'Фотография', en: 'The Photograph' }`,
+      )
       .replace(
         "tags: ['news']",
         `tags: ['creepypasta', 'horror', 'family', 'grammar:genitive', 'grammar:past-tense']`,

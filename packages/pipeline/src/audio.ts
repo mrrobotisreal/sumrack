@@ -22,7 +22,12 @@ import {
   type DialogueTrackReport,
 } from './dialogue-audio.ts';
 import { sniffDraftKind } from './dialogue-draft.ts';
-import { DEFAULT_MODEL_ID, ElevenLabsClient, isV3Model } from './elevenlabs.ts';
+import {
+  DEFAULT_LANGUAGE_CODE,
+  DEFAULT_MODEL_ID,
+  ElevenLabsClient,
+  isV3Model,
+} from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras } from './extras.ts';
 import type { VoiceDirection } from './frontmatter.ts';
@@ -931,9 +936,26 @@ export async function runFinalize(
   return { pack: validated.data, outFile: packFile, reports, dialogueReports };
 }
 
+export interface PlannedTrack {
+  storyId: string;
+  trackId: string;
+  /** Register-resolved voice / style (M14) — what pack.json will record. */
+  voice: string;
+  style: string;
+  /** Resolved model: per-direction `model` → CLI `--model` → default. */
+  model: string;
+  /** `language_code` the request will carry (absent on v3). */
+  languageCode?: string;
+  /** Provider requests this track fires (same-voice runs; clips fire none). */
+  requests: number;
+  chars: number;
+}
+
 export interface AudioRunPlan {
   /** Story × voice-direction tracks that would render. */
   storyTracks: number;
+  /** One row per story track, with the resolved model / voice / style. */
+  tracks: PlannedTrack[];
   /** Dialogue node lines that would render (incl. coach player lines). */
   dialogueNodes: number;
   /** Choice coach renders that would render (only with --player-audio). */
@@ -965,19 +987,31 @@ export function planAudioRun(
 
   let storyRequests = 0;
   let storyChars = 0;
+  const tracks: PlannedTrack[] = [];
   for (const { story, directions, draftDir } of plans) {
     for (const direction of directions) {
       // One request per same-voice run (pre-rendered clips fire none), counting
       // the steering tags/cues/context that ride along in the text (they bill
       // like any other character).
-      const runs = planNarrationRuns(
-        story,
-        direction,
-        isV3Model(direction.model ?? opts.modelId ?? DEFAULT_MODEL_ID),
-        draftDir,
-      ).filter((r) => r.audioFile === undefined);
+      const model = direction.model ?? opts.modelId ?? DEFAULT_MODEL_ID;
+      const v3 = isV3Model(model);
+      const runs = planNarrationRuns(story, direction, v3, draftDir).filter(
+        (r) => r.audioFile === undefined,
+      );
+      const chars = runs.reduce((n, r) => n + r.narration.text.length, 0);
       storyRequests += runs.length;
-      storyChars += runs.reduce((n, r) => n + r.narration.text.length, 0);
+      storyChars += chars;
+      const languageCode = direction.language ?? (v3 ? undefined : DEFAULT_LANGUAGE_CODE);
+      tracks.push({
+        storyId: story.id,
+        trackId: direction.id,
+        voice: direction.voice,
+        style: direction.style,
+        model,
+        ...(languageCode !== undefined && { languageCode }),
+        requests: runs.length,
+        chars,
+      });
     }
   }
 
@@ -1001,6 +1035,7 @@ export function planAudioRun(
   const takes = opts.audition ? (opts.takes ?? 3) : 1;
   return {
     storyTracks: storyRequests,
+    tracks,
     dialogueNodes: dialogueItems.filter((i) => i.kind === 'node').length,
     dialogueChoices: dialogueItems.filter((i) => i.kind === 'choice').length,
     requests: (storyRequests + dialogueRequests) * takes,

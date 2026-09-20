@@ -190,6 +190,15 @@ async function confirmAudioRun(plan: AudioRunPlan, yes: boolean): Promise<void> 
     `Pre-render summary: ${parts.join(', ') || 'nothing'} — ` +
       `${plan.requests} ElevenLabs request(s), ~${plan.chars} characters.`,
   );
+  // Per-track resolution (M14): the register-resolved voice/style and the
+  // model/language each request will carry — readable before anything fires.
+  for (const t of plan.tracks) {
+    const lang = t.languageCode === undefined ? '' : `, language_code ${t.languageCode}`;
+    console.log(
+      `  ${t.storyId}/${t.trackId}: model ${t.model}${lang}, voice ${t.voice}, style ${t.style} — ` +
+        `${t.requests} request(s), ~${t.chars} chars`,
+    );
+  }
   if (plan.requests === 0) fail('nothing to render — check the filters', 2);
   if (yes) return;
   if (!process.stdin.isTTY) {

@@ -1,0 +1,473 @@
+{
+  "id": "a2-podcast-090",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Подкаст — тестовая полка",
+    "en": "Podcast — test shelf"
+  },
+  "level": "A2",
+  "tags": [
+    "podcast",
+    "test-fixture"
+  ],
+  "stories": [
+    {
+      "id": "pod-090-e1",
+      "title": {
+        "ru": "Почему мы любим страшные истории",
+        "en": "Why we love scary stories"
+      },
+      "subtitle": {
+        "ru": "Эпизод 1",
+        "en": "Episode 1"
+      },
+      "source": {
+        "name": "Сумрак",
+        "publishedAt": "2026-09-01",
+        "author": "Мистер Уинтроу"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "pod090e1-s01",
+          "ru": "Привет, друзья, и добро пожаловать в подкаст.",
+          "en": "Hi friends, and welcome to the podcast.",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "interj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "друзья",
+              "lemma": "друг",
+              "translation": "friends",
+              "pos": "noun",
+              "grammar": "m.pl. nom. (address)",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "добро",
+              "lemma": "добро",
+              "translation": "welcome",
+              "pos": "adv",
+              "grammar": "in the fixed phrase добро пожаловать",
+              "level": "A1",
+              "note": "добро пожаловать = welcome"
+            },
+            {
+              "text": "пожаловать",
+              "lemma": "пожаловать",
+              "translation": "welcome",
+              "pos": "verb",
+              "grammar": "infinitive (pf.), only in добро пожаловать",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (destination)",
+              "level": "A1"
+            },
+            {
+              "text": "подкаст",
+              "lemma": "подкаст",
+              "translation": "the podcast",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "accusative-direction"
+          ]
+        },
+        {
+          "id": "pod090e1-s02",
+          "ru": "Сегодня мы говорим о страшных историях.",
+          "en": "Today we're talking about scary stories.",
+          "tokens": [
+            {
+              "text": "Сегодня",
+              "lemma": "сегодня",
+              "translation": "today",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "говорим",
+              "lemma": "говорить",
+              "translation": "are talking",
+              "pos": "verb",
+              "grammar": "1pl. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep. (topic)",
+              "level": "A1"
+            },
+            {
+              "text": "страшных",
+              "lemma": "страшный",
+              "translation": "scary",
+              "pos": "adj",
+              "grammar": "f.pl. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "историях",
+              "lemma": "история",
+              "translation": "stories",
+              "pos": "noun",
+              "grammar": "f.pl. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "prepositional-case"
+          ]
+        },
+        {
+          "id": "pod090e1-s03",
+          "ru": "Почему нам нравится бояться?",
+          "en": "Why do we like being scared?",
+          "tokens": [
+            {
+              "text": "Почему",
+              "lemma": "почему",
+              "translation": "why",
+              "pos": "adv",
+              "grammar": "question word",
+              "level": "A1"
+            },
+            {
+              "text": "нам",
+              "lemma": "мы",
+              "translation": "we (lit. to us)",
+              "pos": "pron",
+              "grammar": "dat. (experiencer of нравится)",
+              "level": "A1"
+            },
+            {
+              "text": "нравится",
+              "lemma": "нравиться",
+              "translation": "like",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.), reflexive; нам нравится = we like",
+              "level": "A1"
+            },
+            {
+              "text": "бояться",
+              "lemma": "бояться",
+              "translation": "to be scared",
+              "pos": "verb",
+              "grammar": "infinitive (impf.), reflexive",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "question-intonation",
+            "dative-experiencer",
+            "reflexive-verbs",
+            "present-tense"
+          ]
+        },
+        {
+          "id": "pod090e1-s04",
+          "ru": "Знаете, я думаю, что страх — это тоже удовольствие.",
+          "en": "You know, I think fear is a pleasure too.",
+          "tokens": [
+            {
+              "text": "Знаете",
+              "lemma": "знать",
+              "translation": "you know",
+              "pos": "verb",
+              "grammar": "2pl. pres. (impf.), conversational filler",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думаю",
+              "lemma": "думать",
+              "translation": "think",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "что",
+              "lemma": "что",
+              "translation": "that",
+              "pos": "conj",
+              "grammar": "introduces the clause",
+              "level": "A1"
+            },
+            {
+              "text": "страх",
+              "lemma": "страх",
+              "translation": "fear",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "—",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "это",
+              "lemma": "это",
+              "translation": "is",
+              "pos": "pron",
+              "grammar": "zero-copula marker: X — это Y",
+              "level": "A1"
+            },
+            {
+              "text": "тоже",
+              "lemma": "тоже",
+              "translation": "too",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "удовольствие",
+              "lemma": "удовольствие",
+              "translation": "a pleasure",
+              "pos": "noun",
+              "grammar": "n.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "reported-speech",
+            "zero-copula"
+          ]
+        },
+        {
+          "id": "pod090e1-s05",
+          "ru": "Но только когда мы в безопасности.",
+          "en": "But only when we're safe.",
+          "tokens": [
+            {
+              "text": "Но",
+              "lemma": "но",
+              "translation": "but",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "только",
+              "lemma": "только",
+              "translation": "only",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "когда",
+              "lemma": "когда",
+              "translation": "when",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep. (state)",
+              "level": "A1"
+            },
+            {
+              "text": "безопасности",
+              "lemma": "безопасность",
+              "translation": "safety",
+              "pos": "noun",
+              "grammar": "f.sg. prep.; в безопасности = safe",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "prepositional-location"
+          ]
+        },
+        {
+          "id": "pod090e1-s06",
+          "ru": "Кстати, напишите мне, какая история напугала вас больше всего.",
+          "en": "By the way, write to me which story scared you the most.",
+          "tokens": [
+            {
+              "text": "Кстати",
+              "lemma": "кстати",
+              "translation": "by the way",
+              "pos": "adv",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "напишите",
+              "lemma": "написать",
+              "translation": "write",
+              "pos": "verb",
+              "grammar": "2pl. imper. (pf.), pf. of писать",
+              "level": "A1"
+            },
+            {
+              "text": "мне",
+              "lemma": "я",
+              "translation": "to me",
+              "pos": "pron",
+              "grammar": "dat.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "какая",
+              "lemma": "какой",
+              "translation": "which",
+              "pos": "pron",
+              "grammar": "f.sg. nom. (interrogative)",
+              "level": "A1"
+            },
+            {
+              "text": "история",
+              "lemma": "история",
+              "translation": "story",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "напугала",
+              "lemma": "напугать",
+              "translation": "scared",
+              "pos": "verb",
+              "grammar": "f.sg. past (pf.), pf. of пугать",
+              "level": "A2"
+            },
+            {
+              "text": "вас",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "acc.",
+              "level": "A1"
+            },
+            {
+              "text": "больше",
+              "lemma": "много",
+              "translation": "more",
+              "pos": "adv",
+              "grammar": "comparative",
+              "level": "A1"
+            },
+            {
+              "text": "всего",
+              "lemma": "весь",
+              "translation": "of all",
+              "pos": "pron",
+              "grammar": "n.sg. gen.; больше всего = most of all",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "imperative",
+            "dative-indirect-object",
+            "past-tense",
+            "superlatives",
+            "accusative-direct-object"
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "category": "podcast"
+}
