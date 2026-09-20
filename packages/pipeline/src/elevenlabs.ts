@@ -11,24 +11,31 @@ import type { CharAlignment } from './stamps.ts';
 
 const DEFAULT_BASE_URL = 'https://api.elevenlabs.io';
 /**
- * Eleven v3: the flagship expressive model (74 languages). Verified against
- * this account: supports character timestamps and seed, accepts continuous
- * voice settings, honors leading audio tags like "[whispers]" without
- * speaking them — but rejects previous_text (see isV3Model callers).
- * `eleven_multilingual_v2` remains available via --model for
- * consistency-critical renders.
+ * Multilingual v2 — the narration default since ADR-0016 (2026-09-20): the
+ * model Mitch's professional clone `Mr. Wintrow` was proven on (CT011e). It
+ * accepts `previous_text` (our `stylePrompt`), `language_code`, continuous
+ * voice settings, seed and character timestamps; it has NO audio-tag
+ * channel — steering is `stylePrompt` + `contextCues` + settings. `eleven_v3`
+ * (tags, no previous_text) stays available per direction (`model:`) or per
+ * run (`--model eleven_v3`) as the legacy / character-voice path.
  */
-export const DEFAULT_MODEL_ID = 'eleven_v3';
+export const DEFAULT_MODEL_ID = 'eleven_multilingual_v2';
+/**
+ * Sent as `language_code` on every non-v3 request whose direction pins no
+ * `language` (v3 rejects the field, so it stays off there).
+ */
+export const DEFAULT_LANGUAGE_CODE = 'ru';
 
-/** v3-family models differ in accepted params (no previous_text). */
+/** v3-family models differ in accepted params (no previous_text, no language_code; audio tags instead). */
 export function isV3Model(modelId: string): boolean {
   return modelId.startsWith('eleven_v3');
 }
 /**
  * Highest-quality MP3 the with-timestamps endpoint serves on the Creator tier
- * (PCM needs Pro). The Opus the app ships is transcoded from this.
+ * (PCM needs Pro) — "Studio quality" in the web UI. The Opus the app ships
+ * is transcoded from this.
  */
-const OUTPUT_FORMAT = 'mp3_44100_192';
+export const OUTPUT_FORMAT = 'mp3_44100_192';
 const REQUEST_TIMEOUT_MS = 180_000;
 
 export interface VoiceSettings {
@@ -57,7 +64,7 @@ export interface RenderRequest {
 }
 
 export interface RenderResult {
-  /** MP3 bytes (44.1kHz / 128kbps). */
+  /** MP3 bytes (`OUTPUT_FORMAT`). */
   audio: Buffer;
   /** Character-level alignment for the exact input text (may be absent). */
   alignment: CharAlignment | null;
@@ -182,17 +189,28 @@ export class ElevenLabsClient {
     );
   }
 
-  /** Render text to speech with character-level timestamps. */
+  /**
+   * Render text to speech with character-level timestamps. Non-v3 requests
+   * default `language_code` to {@link DEFAULT_LANGUAGE_CODE} and speaker
+   * boost to on (ADR-0016) when the caller pins neither; v3 gets neither
+   * field unless the caller asks (it rejects `language_code`).
+   */
   async renderWithTimestamps(req: RenderRequest): Promise<RenderResult> {
     const path = `/v1/text-to-speech/${encodeURIComponent(req.voiceId)}/with-timestamps?output_format=${OUTPUT_FORMAT}`;
-    const settings = req.voiceSettings;
+    const modelId = req.modelId ?? DEFAULT_MODEL_ID;
+    const v3 = isV3Model(modelId);
+    const settings =
+      !v3 && req.voiceSettings?.useSpeakerBoost === undefined
+        ? { ...req.voiceSettings, useSpeakerBoost: true }
+        : req.voiceSettings;
     const body: Record<string, unknown> = {
       text: req.text,
-      model_id: req.modelId ?? DEFAULT_MODEL_ID,
+      model_id: modelId,
     };
     if (req.seed !== undefined) body.seed = req.seed;
     if (req.previousText !== undefined) body.previous_text = req.previousText;
-    if (req.languageCode !== undefined) body.language_code = req.languageCode;
+    const languageCode = req.languageCode ?? (v3 ? undefined : DEFAULT_LANGUAGE_CODE);
+    if (languageCode !== undefined) body.language_code = languageCode;
     if (settings) {
       body.voice_settings = {
         ...(settings.stability !== undefined && { stability: settings.stability }),

@@ -93,6 +93,46 @@ describe('reference draft round-trip', () => {
   });
 });
 
+describe('category / genre / subtitle / source round-trip (M14)', () => {
+  it('copies pack category+genre and story subtitle+source into the pack, never emitting undefined keys', () => {
+    const draft = minimalDraft((lines) => {
+      lines.splice(8, 0, '  category: stories', '  genre: comedy');
+      lines.splice(13, 0, '  subtitle: { ru: "Эпизод 1", en: "Episode 1" }');
+      lines.splice(14, 0, '  source: { name: "Сумрак", publishedAt: "2026-09-01", author: "Мистер Уинтроу" }');
+    });
+    const pack = annotate(draft);
+    expect(pack.category).toBe('stories');
+    expect(pack.genre).toBe('comedy');
+    const story = pack.stories[0]!;
+    expect(story.subtitle).toEqual({ ru: 'Эпизод 1', en: 'Episode 1' });
+    expect(story.source).toEqual({
+      name: 'Сумрак',
+      publishedAt: '2026-09-01',
+      author: 'Мистер Уинтроу',
+    });
+    // Key order: subtitle/source sit between title and level, like the schema declares.
+    expect(Object.keys(story)).toEqual(['id', 'title', 'subtitle', 'source', 'level', 'sentences', 'audio']);
+    // Round-trips through JSON without any `undefined` keys.
+    expect(JSON.parse(JSON.stringify(pack))).toEqual(pack);
+  });
+
+  it('omits the keys entirely when unauthored', () => {
+    const pack = annotate(minimalDraft());
+    expect('category' in pack).toBe(false);
+    expect('genre' in pack).toBe(false);
+    expect('subtitle' in pack.stories[0]!).toBe(false);
+    expect('source' in pack.stories[0]!).toBe(false);
+  });
+
+  it('a bad source date in a draft fails with the frontmatter path', () => {
+    const draft = minimalDraft((lines) => {
+      lines.splice(12, 0, '  source: { name: "Сумрак", publishedAt: "14.09.2026" }');
+    });
+    const issues = issuesOf(() => annotate(draft));
+    expect(issues[0]!.message).toContain('story.source.publishedAt');
+  });
+});
+
 describe('spaceBefore derivation («» quoting)', () => {
   it('derives spaceBefore overrides from the sentence text', () => {
     const draft = minimalDraft((lines) => {
@@ -240,6 +280,24 @@ describe('draft grammar errors', () => {
       ]),
     );
     expect(issues[0]!.message).toContain('"pack" section differs');
+  });
+
+  it('M14: a `category: news` draft next to a category-less draft fails, naming the file', () => {
+    const a = minimalDraft();
+    const b = minimalDraft((lines) => {
+      lines.splice(8, 0, '  category: news');
+      lines[10] = '  id: other-story';
+      lines[15] = '## test-s02';
+    });
+    const issues = issuesOf(() =>
+      annotateDrafts([
+        { path: 'stories.md', source: a },
+        { path: 'news.md', source: b },
+      ]),
+    );
+    expect(issues[0]!.file).toBe('news.md');
+    expect(issues[0]!.message).toContain('"pack" section differs from stories.md');
+    expect(issues[0]!.message).toContain('category');
   });
 
   it('escaped pipes in cells survive as literal "|"', () => {

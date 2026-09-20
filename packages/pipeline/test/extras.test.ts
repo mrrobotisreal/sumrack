@@ -198,3 +198,32 @@ track: family
     expect(issuesOf(() => parseExtras('x.md', bad))[0]!.message).toMatch(/accent/);
   });
 });
+
+describe('category & genre in extras pack meta (M14)', () => {
+  const categorizedExtras = checkpointExtras
+    .replace('type: checkpoint', 'type: stories')
+    .replace("tags: ['checkpoint']", "tags: ['news']\n  category: news")
+    .replace(/exercises:[\s\S]*---\n/, '---\n');
+
+  it('parses category in the extras pack meta', () => {
+    const extras = parseExtras('news.extras.md', categorizedExtras);
+    expect(extras.pack?.category).toBe('news');
+    expect(extras.pack?.genre).toBeUndefined();
+  });
+
+  it('a category in the extras that the drafts lack trips the identical-meta check', () => {
+    // Same pack meta as the reference draft, plus a category the draft does not carry.
+    const withCategory = categorizedExtras
+      .replace('id: a1-checkpoint-test', 'id: a1-creepypasta-002')
+      .replace("title: { ru: 'Тест', en: 'Test' }", `title: { ru: 'Фотография', en: 'The Photograph' }`)
+      .replace(
+        "tags: ['news']",
+        `tags: ['creepypasta', 'horror', 'family', 'grammar:genitive', 'grammar:past-tense']`,
+      );
+    const extras = parseExtras('news.extras.md', withCategory);
+    const issues = issuesOf(() =>
+      annotateDrafts([{ path: 'draft.md', source: referenceDraft }], extras),
+    );
+    expect(issues[0]!.message).toMatch(/extras "pack" section differs/);
+  });
+});

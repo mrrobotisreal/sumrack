@@ -330,7 +330,7 @@ export function assemblePack(
       issues.push({
         file: m.file,
         line: 2,
-        message: `frontmatter "pack" section differs from ${first!.file} — all drafts of one pack must carry identical pack meta`,
+        message: `frontmatter "pack" section differs from ${first!.file} — all drafts of one pack must carry identical pack meta (id, version, type, title, level, tags, category, genre)`,
       });
     }
   }
@@ -391,13 +391,20 @@ export function assemblePack(
     }
   }
 
-  const stories: Story[] = drafts.map((d) => ({
-    id: d.frontmatter.story.id,
-    title: d.frontmatter.story.title,
-    level: d.frontmatter.story.level,
-    sentences: d.sentences.map((s) => assembleSentence(d.file, s, issues)),
-    audio: [], // audio tracks are attached by T09's `pipeline audio`
-  }));
+  const stories: Story[] = drafts.map((d) => {
+    const { subtitle, source } = d.frontmatter.story;
+    return {
+      id: d.frontmatter.story.id,
+      title: d.frontmatter.story.title,
+      // M14: optional dek + provenance — emitted only when authored, so
+      // pack.json stays an honest, byte-stable record.
+      ...(subtitle !== undefined && { subtitle }),
+      ...(source !== undefined && { source }),
+      level: d.frontmatter.story.level,
+      sentences: d.sentences.map((s) => assembleSentence(d.file, s, issues)),
+      audio: [], // audio tracks are attached by T09's `pipeline audio`
+    };
+  });
   const dialogues: Dialogue[] = dialogueDrafts.map((d) => assembleDialogue(d, issues));
 
   const meta = first ? first.pack : extras!.pack!;
@@ -416,6 +423,10 @@ export function assemblePack(
   if (extras?.exercises) pack.exercises = extras.exercises;
   if (extras?.theme) pack.theme = extras.theme;
   if (extras?.track) pack.track = extras.track;
+  // M14: category / genre ride on the pack meta (identical across drafts —
+  // the JSON comparison above already covers them).
+  if (meta.category !== undefined) pack.category = meta.category;
+  if (meta.genre !== undefined) pack.genre = meta.genre;
 
   // Extras id hygiene: prompt/exercise ids unique within their section.
   for (const [section, ids] of [

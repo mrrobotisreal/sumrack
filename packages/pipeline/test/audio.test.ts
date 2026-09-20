@@ -333,7 +333,7 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
     expect(track.timestamps.length).toBe(7);
   });
 
-  it('v3 default: audioTag prefixes the text, spans stay exact, previous_text omitted', async () => {
+  it('ADR-0016 default: multilingual v2, language_code ru, speaker boost on, previous_text sent, audioTag ignored', async () => {
     const work = tempDir();
     const draftFile = join(work, 'test.draft.md');
     writeFileSync(
@@ -341,7 +341,48 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
       DRAFT.replace('    settings:', "    audioTag: '[whispers]'\n    settings:"),
     );
     const mp3 = makeSilentMp3(work, 4);
-    const captured: { text: string; previous_text?: string; model_id: string }[] = [];
+    const captured: {
+      text: string;
+      previous_text?: string;
+      model_id: string;
+      language_code?: string;
+      voice_settings?: Record<string, unknown>;
+    }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
+
+    const outDir = join(work, 'pack');
+    const summary = await runFinalize([draftFile], outDir, client, { defaultSeed: 7 });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.model_id).toBe('eleven_multilingual_v2');
+    expect(captured[0]!.language_code).toBe('ru');
+    expect(captured[0]!.text.startsWith('Ночь.')).toBe(true); // v3 tag not applied on v2
+    expect(captured[0]!.previous_text).toBe('Slow and quiet.');
+    // The draft's settings only pinned stability; boost defaults on for non-v3.
+    expect(captured[0]!.voice_settings).toEqual({ stability: 0.4, use_speaker_boost: true });
+    expect(summary.reports[0]!.stampResult.coverage).toBe(1);
+  });
+
+  it('opt-in v3 per direction: audioTag prefixes the text, no language_code, no previous_text, no boost default', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(
+      draftFile,
+      DRAFT.replace(
+        '    settings:',
+        "    model: eleven_v3\n    audioTag: '[whispers]'\n    settings:",
+      ),
+    );
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: {
+      text: string;
+      previous_text?: string;
+      model_id: string;
+      language_code?: string;
+      voice_settings?: Record<string, unknown>;
+    }[] = [];
     const client = new ElevenLabsClient('test-key', {
       fetchImpl: fakeElevenLabsFetch(mp3, captured),
     });
@@ -351,32 +392,46 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
 
     expect(captured).toHaveLength(1);
     expect(captured[0]!.model_id).toBe('eleven_v3');
+    expect(captured[0]!.language_code).toBeUndefined(); // v3 rejects it
     expect(captured[0]!.text.startsWith('[whispers] Ночь.')).toBe(true);
     expect(captured[0]!.previous_text).toBeUndefined(); // v3 rejects it
+    expect(captured[0]!.voice_settings).toEqual({ stability: 0.4 });
     const report = summary.reports[0]!;
     expect(report.stampResult.trusted).toBe(true);
     expect(report.stampResult.coverage).toBe(1); // tag chars never stamped, tokens all are
   });
 
-  it('non-v3 model keeps previous_text and ignores audioTag', async () => {
+  it('--model eleven_v3 for a whole run applies to directions that pin no model', async () => {
     const work = tempDir();
     const draftFile = join(work, 'test.draft.md');
-    writeFileSync(
-      draftFile,
-      DRAFT.replace('    settings:', "    audioTag: '[whispers]'\n    settings:"),
-    );
+    writeFileSync(draftFile, DRAFT);
     const mp3 = makeSilentMp3(work, 4);
-    const captured: { text: string; previous_text?: string }[] = [];
+    const captured: { model_id: string; language_code?: string }[] = [];
     const client = new ElevenLabsClient('test-key', {
       fetchImpl: fakeElevenLabsFetch(mp3, captured),
     });
+    await runFinalize([draftFile], join(work, 'pack'), client, {
+      defaultSeed: 7,
+      modelId: 'eleven_v3',
+    });
+    expect(captured[0]!.model_id).toBe('eleven_v3');
+    expect(captured[0]!.language_code).toBeUndefined();
+  });
 
+  it('per-direction model beats --model', async () => {
+    const work = tempDir();
+    const draftFile = join(work, 'test.draft.md');
+    writeFileSync(draftFile, DRAFT.replace('    settings:', '    model: eleven_v3\n    settings:'));
+    const mp3 = makeSilentMp3(work, 4);
+    const captured: { model_id: string }[] = [];
+    const client = new ElevenLabsClient('test-key', {
+      fetchImpl: fakeElevenLabsFetch(mp3, captured),
+    });
     await runFinalize([draftFile], join(work, 'pack'), client, {
       defaultSeed: 7,
       modelId: 'eleven_multilingual_v2',
     });
-    expect(captured[0]!.text.startsWith('Ночь.')).toBe(true);
-    expect(captured[0]!.previous_text).toBe('Slow and quiet.');
+    expect(captured[0]!.model_id).toBe('eleven_v3');
   });
 
   it('v3 + audioCues: cue inserted after the separator, spans exact, coverage 1', async () => {
@@ -386,7 +441,7 @@ describe('runFinalize (fake provider, real ffmpeg)', () => {
       draftFile,
       DRAFT.replace(
         '    settings:',
-        "    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[whispers]'\n    settings:",
+        "    model: eleven_v3\n    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[whispers]'\n    settings:",
       ),
     );
     const mp3 = makeSilentMp3(work, 5);
@@ -483,7 +538,7 @@ EN: Silence.
       draftFile,
       DRAFT3.replace(
         '    settings:',
-        "    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[calm]'\n    sentenceVoices:\n      t-s02: 'elevenlabs:Lunya - Little Fairy'\n    settings:",
+        "    model: eleven_v3\n    audioTag: '[fearful]'\n    audioCues:\n      t-s02: '[calm]'\n    sentenceVoices:\n      t-s02: 'elevenlabs:Lunya - Little Fairy'\n    settings:",
       ),
     );
     const narratorMp3 = makeSilentMp3(work, 3);
@@ -687,7 +742,7 @@ EN: Silence.
       draftFile,
       DRAFT3.replace(
         '    settings:',
-        "    audioTag: '[fearful]'\n    sentenceAudio:\n      t-s02: girl.mp3\n    settings:",
+        "    model: eleven_v3\n    audioTag: '[fearful]'\n    sentenceAudio:\n      t-s02: girl.mp3\n    settings:",
       ),
     );
     const narratorMp3 = makeSilentMp3(work, 3);
@@ -773,11 +828,12 @@ describe('runPublish', () => {
     return dir;
   }
 
-  function makePackDir(version = 1, audioBytes = 'OPUSDATA'): string {
+  function makePackDir(version = 1, audioBytes = 'OPUSDATA', category?: string): string {
     const dir = tempDir();
     const pack = draftPack();
     const withAudio: Pack = {
       ...pack,
+      ...(category !== undefined && { category }),
       version,
       stories: pack.stories.map((s) => ({
         ...s,
@@ -854,5 +910,17 @@ describe('runPublish', () => {
     const content = makeContentRepo();
     writeFileSync(join(content, 'stray.txt'), 'uncommitted');
     expect(() => runPublish(makePackDir(), content)).toThrow(/uncommitted changes/);
+  });
+
+  it('M14: the manifest entry carries category for a categorized pack and omits the key otherwise', () => {
+    const content = makeContentRepo();
+    runPublish(makePackDir(1, 'OPUS-A'), content);
+    let manifest = JSON.parse(readFileSync(join(content, 'manifest.json'), 'utf8'));
+    expect('category' in manifest.packs[0]).toBe(false);
+
+    runPublish(makePackDir(2, 'OPUS-B', 'news'), content);
+    manifest = JSON.parse(readFileSync(join(content, 'manifest.json'), 'utf8'));
+    expect(manifest.packs).toHaveLength(1);
+    expect(manifest.packs[0].category).toBe('news');
   });
 });

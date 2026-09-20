@@ -3,8 +3,10 @@ import {
   LocalizedTextSchema,
   PackTypeSchema,
   StableIdSchema,
+  StorySourceSchema,
 } from '@sumrak/schema';
 import { z } from 'zod';
+import { REGISTER_SLUGS } from './registers.ts';
 
 /**
  * Draft frontmatter (YAML between `---` fences at the top of a draft file).
@@ -24,6 +26,10 @@ export const PackMetaSchema = z.strictObject({
   title: LocalizedTextSchema,
   level: CefrLevelSchema,
   tags: z.array(z.string().min(1)),
+  /** M14: content category slug (`news`, `podcast`, …); absent = `stories` app-side. */
+  category: StableIdSchema.optional(),
+  /** M14: fiction genre slug (`horror`, `comedy`, …); absent = app default. */
+  genre: StableIdSchema.optional(),
 });
 export type PackMeta = z.infer<typeof PackMetaSchema>;
 
@@ -31,6 +37,10 @@ export type PackMeta = z.infer<typeof PackMetaSchema>;
 export const StoryMetaSchema = z.strictObject({
   id: StableIdSchema,
   title: LocalizedTextSchema,
+  /** M14: optional dek / episode tagline / lesson subtitle. */
+  subtitle: LocalizedTextSchema.optional(),
+  /** M14: provenance (`name` at minimum; `publishedAt` for anything dated). */
+  source: StorySourceSchema.optional(),
   level: CefrLevelSchema,
 });
 export type StoryMeta = z.infer<typeof StoryMetaSchema>;
@@ -65,13 +75,22 @@ const AudioTagSchema = z
  * Voice direction for one narration rendition (consumed by T09's
  * `pipeline audio`; carried through untouched by `annotate`).
  */
-export const VoiceDirectionSchema = z.strictObject({
-  /** Audio track id the rendition will get, e.g. "photo-anton-creepy". */
-  id: StableIdSchema,
-  /** Provider-prefixed voice id, e.g. "elevenlabs:Anton". */
-  voice: VoiceIdSchema,
-  /** Emotional/delivery style label: "creepy-whisper", "neutral", ... */
-  style: z.string().min(1),
+export const VoiceDirectionSchema = z
+  .strictObject({
+    /** Audio track id the rendition will get, e.g. "photo-anton-creepy". */
+    id: StableIdSchema,
+    /**
+     * M14 register preset (`narrator | anchor | lecturer | host | voiceover |
+     * guide`, LIBRARY_CATEGORIES §2.5): fills `voice` (→ `Mr. Wintrow`),
+     * `style` (→ the slug), `settings` and `stylePrompt` unless authored here.
+     * Without it, a pack `category` still implies its default register when
+     * `settings`, `stylePrompt` and `style` are all absent (see registers.ts).
+     */
+    register: z.enum(REGISTER_SLUGS).optional(),
+    /** Provider-prefixed voice id, e.g. "elevenlabs:Anton". Required unless `register` is set. */
+    voice: VoiceIdSchema.optional(),
+    /** Emotional/delivery style label: "creepy-whisper", "neutral", ... Required unless `register` is set. */
+    style: z.string().min(1).optional(),
   /**
    * Optional ElevenLabs model id for this rendition (e.g.
    * `eleven_multilingual_v2`); overrides the CLI `--model` so a draft records
@@ -136,11 +155,26 @@ export const VoiceDirectionSchema = z.strictObject({
    * Optional ISO 639-1 language to enforce on the provider (`language_code`),
    * e.g. 'ru' — for models that accept it (multilingual v2 does).
    */
-  language: z
-    .string()
-    .regex(/^[a-z]{2}$/, 'language is an ISO 639-1 code, e.g. "ru"')
-    .optional(),
-});
+    language: z
+      .string()
+      .regex(/^[a-z]{2}$/, 'language is an ISO 639-1 code, e.g. "ru"')
+      .optional(),
+  })
+  .superRefine((direction, ctx) => {
+    // A direction with no register must be fully self-describing, exactly as
+    // every pre-M14 draft was. (A pack `category` alone does not lift this:
+    // its default register is resolved later, at render time.)
+    if (direction.register !== undefined) return;
+    for (const field of ['voice', 'style'] as const) {
+      if (direction[field] === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [field],
+          message: `${field} is required unless "register" is set`,
+        });
+      }
+    }
+  });
 export type VoiceDirection = z.infer<typeof VoiceDirectionSchema>;
 export type VoiceSettings = z.infer<typeof VoiceSettingsSchema>;
 

@@ -152,6 +152,8 @@ export function runPublish(
     type: pack.type,
     level: pack.level,
     title: pack.title,
+    // M14 §2.3: mirror the pack's category; the key is absent otherwise.
+    ...(pack.category ? { category: pack.category } : {}),
     bytes: totalBytes,
     files: files.map(({ path, sha256 }) => ({ path, sha256 })),
   };

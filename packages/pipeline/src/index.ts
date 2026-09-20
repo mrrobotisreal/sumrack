@@ -25,13 +25,28 @@ export {
   type DialogueTrackReport,
 } from './dialogue-audio.ts';
 export {
+  DEFAULT_LANGUAGE_CODE,
   DEFAULT_MODEL_ID,
   ElevenLabsClient,
   ElevenLabsError,
+  OUTPUT_FORMAT,
+  isV3Model,
   type ElevenLabsVoice,
   type RenderRequest,
   type RenderResult,
 } from './elevenlabs.ts';
+export {
+  CATEGORY_DEFAULT_REGISTER,
+  DEFAULT_VOICE,
+  REGISTERS,
+  REGISTER_SLUGS,
+  applyRegister,
+  resolveRegisterSlug,
+  type Register,
+  type RegisterSettings,
+  type RegisterSlug,
+  type ResolvedVoiceDirection,
+} from './registers.ts';
 export { resolveEnvVar } from './env.ts';
 export {
   buildNarration,

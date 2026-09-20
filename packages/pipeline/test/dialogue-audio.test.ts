@@ -158,8 +158,10 @@ describe('dialogue finalize (fake provider, real ffmpeg)', () => {
     const client = new ElevenLabsClient('test-key', { fetchImpl: fakeFetch(mp3, captured) });
     const outDir = join(work, 'pack');
 
+    // Character audioTags are a v3 channel (ADR-0016: opt-in via --model).
     const summary = await runFinalize([FIXTURE_DRAFT], outDir, client, {
       playerAudio: true,
+      modelId: 'eleven_v3',
       seeds: { 'dinner-mini/mama': 11, 'dinner-mini/babushka': 22, 'dinner-mini/player': 33 },
     });
 
@@ -210,10 +212,11 @@ describe('dialogue finalize (fake provider, real ffmpeg)', () => {
     }
   }, 60_000);
 
-  it('omits coach audio entirely without playerAudio', async () => {
+  it('omits coach audio entirely without playerAudio; default requests are v2 + language_code ru', async () => {
     const work = tempDir();
     const mp3 = makeSilentMp3(work, 4);
-    const client = new ElevenLabsClient('test-key', { fetchImpl: fakeFetch(mp3) });
+    const captured: { text: string; model_id?: string; language_code?: string }[] = [];
+    const client = new ElevenLabsClient('test-key', { fetchImpl: fakeFetch(mp3, captured) });
     const outDir = join(work, 'pack');
 
     const summary = await runFinalize([FIXTURE_DRAFT], outDir, client, {});
@@ -221,6 +224,13 @@ describe('dialogue finalize (fake provider, real ffmpeg)', () => {
     const pack = summary.pack;
     for (const node of pack.dialogues![0]!.nodes) {
       for (const choice of node.choices ?? []) expect(choice.audio).toBeUndefined();
+    }
+    // ADR-0016: dialogue audio inherits the same default constant as stories.
+    expect(captured.length).toBe(11);
+    for (const req of captured) {
+      expect(req.model_id).toBe('eleven_multilingual_v2');
+      expect(req.language_code).toBe('ru');
+      expect(req.text.startsWith('[')).toBe(false); // tags are not applied on v2
     }
   }, 60_000);
 });

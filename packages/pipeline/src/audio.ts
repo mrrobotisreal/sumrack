@@ -27,6 +27,7 @@ import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras } from './extras.ts';
 import type { VoiceDirection } from './frontmatter.ts';
 import { buildNarrationFromSentences, type NarrationText } from './narration.ts';
+import { applyRegister, type ResolvedVoiceDirection } from './registers.ts';
 import {
   concatRunsToMp3,
   decodeToWav,
@@ -107,11 +108,19 @@ export interface AuditionTake {
 
 interface StoryPlan {
   story: Story;
-  directions: VoiceDirection[];
+  /** Register-resolved directions (M14): `voice`/`style` always present. */
+  directions: ResolvedVoiceDirection[];
   /** Directory of the story's draft file — `sentenceAudio` clip paths resolve against it. */
   draftDir: string;
 }
 
+/**
+ * Story × direction plan. Registers are resolved HERE, once: the pack's
+ * `category` (draft `pack:` frontmatter → `assemblePack` → `pack.category`)
+ * supplies the default register for directions that name none, and every
+ * consumer below — track ids, provider voice, the `AudioTrack.voice`/`style`
+ * written to pack.json — sees the resolved values.
+ */
 function planStories(
   pack: Pack,
   drafts: readonly ParsedDraft[],
@@ -120,7 +129,10 @@ function planStories(
   const byStory = new Map(
     drafts.map((d) => [
       d.frontmatter.story.id,
-      { directions: d.frontmatter.voice ?? [], draftDir: dirname(resolve(d.file)) },
+      {
+        directions: (d.frontmatter.voice ?? []).map((v) => applyRegister(v, pack.category)),
+        draftDir: dirname(resolve(d.file)),
+      },
     ]),
   );
   const plans: StoryPlan[] = [];
@@ -150,7 +162,7 @@ function parseAll(
   return { drafts, pack };
 }
 
-function providerVoiceName(direction: VoiceDirection, voice = direction.voice): string {
+function providerVoiceName(direction: ResolvedVoiceDirection, voice = direction.voice): string {
   const [provider, ...rest] = voice.split(':');
   if (provider !== 'elevenlabs' || rest.length === 0) {
     throw new Error(
@@ -272,7 +284,7 @@ export interface NarrationRun {
  */
 export function planNarrationRuns(
   story: Story,
-  direction: VoiceDirection,
+  direction: ResolvedVoiceDirection,
   v3: boolean,
   draftDir: string = process.cwd(),
 ): NarrationRun[] {
@@ -500,18 +512,22 @@ const LEVEL_MATCH_PEAK_CEILING_DB = -1;
 async function renderDirection(
   client: ElevenLabsClient,
   story: Story,
-  direction: VoiceDirection,
+  direction: ResolvedVoiceDirection,
   seed: number,
   modelId: string | undefined,
   draftDir: string = process.cwd(),
 ): Promise<{ audio: Buffer; stampResultFor: (durationMs: number) => StampResult }> {
+  // Per-direction model beats the CLI --model, which beats the default (v2).
   const model = direction.model ?? modelId ?? DEFAULT_MODEL_ID;
   const v3 = isV3Model(model);
   // v3 rejects previous_text; mood steering there is the leading audio tag
   // plus any per-sentence cues. Tags become part of the rendered text, so
   // every token span shifts by the inserted length — stamp mapping stays
   // exact, and the tags' own characters (near-silent in the alignment) are
-  // never stamped. Context cues (any model) are rendered and then cut out.
+  // never stamped. On non-v3 models the tags are simply not applied (plain
+  // text renders). Context cues (any model) are rendered and then cut out.
+  // `language_code` (default ru) and speaker boost (default on) are filled
+  // in by the client for non-v3 requests.
   const runs = planNarrationRuns(story, direction, v3, draftDir);
   const rendered: {
     run: NarrationRun;
