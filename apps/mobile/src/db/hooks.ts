@@ -1,4 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import * as React from 'react';
+
+import { classifyPack, type Classified } from '@/features/library/categories';
 
 import { repos } from './index';
 import type { BankFilter, EncounterRow } from './repositories/bank';
@@ -50,6 +53,20 @@ export const queryKeys = {
 
 export function usePacks() {
   return useQuery({ queryKey: queryKeys.packs, queryFn: () => repos.content.listPacks() });
+}
+
+/**
+ * `packId → Classified` for every installed pack (M14, LIBRARY_CATEGORIES
+ * §5): derived from usePacks() through the one classification function —
+ * no SQL change. Empty Map while packs load. Consumers: the Library chip
+ * filter (T45), CategoryBadge in the reader/search/bookmarks (T46).
+ */
+export function usePackClassification(): Map<string, Classified> {
+  const packs = usePacks().data;
+  return React.useMemo(
+    () => new Map((packs ?? []).map((p) => [p.id, classifyPack(p)] as const)),
+    [packs],
+  );
 }
 
 export function useStories() {

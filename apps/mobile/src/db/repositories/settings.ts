@@ -71,6 +71,13 @@ export const SETTING_KEYS = {
    */
   reduceMotion: 'motion.reduce',
   /**
+   * Library shelf filter (T44, LIBRARY_CATEGORIES §4.4): { category, genre }
+   * slugs, defaults { 'stories', 'all' } — Zod-validated on read
+   * (store/library-prefs.ts); a malformed value heals to the defaults, an
+   * unknown-but-well-formed slug is kept (forward-compatible).
+   */
+  libraryFilter: 'library.filter',
+  /**
    * Daily-session composition (T14): { length, weights: { flashcard, mc,
    * cloze, sentenceBuilder, listening } } — Zod-validated on read
    * (store/daily-prefs.ts), corrupt values fall back to defaults.

@@ -15,6 +15,8 @@ export type AnalyticsEvent =
   | 'pack_removed'
   | 'debug_db_opened'
   | 'debug_db_search'
+  // T44 dev-screen fixture import (__DEV__ only). Props: packId only.
+  | 'debug_fixture_imported'
   | 'story_opened'
   | 'story_finished'
   | 'reading_session_ended'
@@ -285,7 +287,12 @@ export type AnalyticsEvent =
   | 'family_next_rung_tapped'
   // T31 ambient room scenes. Props carry the scene name / a boolean only.
   | 'room_scene_shown'
-  | 'reduce_motion_toggled';
+  | 'reduce_motion_toggled'
+  // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
+  | 'library_category_switched'
+  | 'library_genre_switched'
+  | 'library_empty_category_viewed'
+  | 'story_source_link_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
