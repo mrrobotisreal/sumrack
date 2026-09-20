@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
 import { importPack, type ImportResult } from '@/db/importer';
 import { classifyPack } from '@/features/library/categories';
-import { detectRuDatePath, formatRuDate } from '@/features/library/library-filter';
+import { detectRuDatePath, formatRuDate } from '@/lib/ru-date';
 import { syncQueryKeys } from '@/features/sync/hooks';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';

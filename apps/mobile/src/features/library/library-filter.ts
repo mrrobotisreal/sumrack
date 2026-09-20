@@ -9,6 +9,7 @@ import {
   type IoniconName,
 } from '@/features/library/categories';
 import type { PackRow } from '@/db/repositories/content';
+import { formatRuDate } from '@/lib/ru-date';
 
 /**
  * Library shelf filtering, ordering and captions (M14, T45 —
@@ -17,7 +18,8 @@ import type { PackRow } from '@/db/repositories/content';
  * runs BEFORE `groupByFamily` (so a family shelf can only ever hold rungs of
  * the selected category), `genreRowItems` decides whether the genre sub-row
  * renders, `orderRowsForCategory` gives news its newest-first order, and
- * `formatRuDate` renders `source.publishedAt` for row captions. Unit-tested
+ * `storyRowCaption` renders `source.name · date` captions (date helpers
+ * live in `lib/ru-date.ts` since T46). Unit-tested
  * without a DB; the chip row itself is verified on-device (node env).
  */
 
@@ -145,69 +147,14 @@ export function orderRowsForCategory<R extends OrderableRow>(
   });
 }
 
-// Genitive short month names — the ru-RU `month: 'short'` output ICU produces
-// («мая» has no dot; «сент.», «нояб.», «февр.» are the standard abbreviations).
-const RU_MONTHS_SHORT = [
-  'янв.',
-  'февр.',
-  'мар.',
-  'апр.',
-  'мая',
-  'июн.',
-  'июл.',
-  'авг.',
-  'сент.',
-  'окт.',
-  'нояб.',
-  'дек.',
-] as const;
-
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/** Table-driven `d MMM yyyy` — the path Hermes takes when it lacks ru-RU data. */
-export function formatRuDateFallback(iso: string): string {
-  const m = ISO_DATE.exec(iso);
-  if (!m) return iso;
-  const month = RU_MONTHS_SHORT[Number(m[2]) - 1];
-  if (!month) return iso;
-  return `${Number(m[3])} ${month} ${m[1]}`;
-}
-
-export type RuDatePath = 'intl' | 'fallback';
-
-function intlRuDate(iso: string): string | null {
-  const m = ISO_DATE.exec(iso);
-  if (!m) return null;
-  try {
-    const out = new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-    // Hermes ships limited locale data: without ru-RU it answers in English
-    // or numerals — no Cyrillic means the table must take over. Full ICU
-    // appends « г.» («14 сент. 2026 г.»); the caption spec is without it, so
-    // both paths agree byte-for-byte.
-    return /[Ѐ-ӿ]/.test(out) ? out.replace(/\s*г\.$/, '') : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Which path this runtime takes — printed on the dev-db screen for the device record. */
-export function detectRuDatePath(): RuDatePath {
-  return intlRuDate('2026-09-14') ? 'intl' : 'fallback';
-}
-
-/**
- * `'2026-09-14'` → `'14 сент. 2026'` (§4.3 caption date). Prefers
- * `Intl.DateTimeFormat('ru-RU')` when it produces Russian output, otherwise
- * the fallback table. Malformed input is returned unchanged.
- */
-export function formatRuDate(iso: string): string {
-  return intlRuDate(iso) ?? formatRuDateFallback(iso);
-}
+// T46: the date helpers moved to `lib/ru-date.ts` (the reader header's
+// source line shares them); re-exported so T45 callers/tests are unchanged.
+export {
+  detectRuDatePath,
+  formatRuDate,
+  formatRuDateFallback,
+  type RuDatePath,
+} from '@/lib/ru-date';
 
 /**
  * Story row caption (§4.3): `source.name · date` for sourced rows (date part
