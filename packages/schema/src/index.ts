@@ -51,6 +51,7 @@ export {
   PackSchema,
   PackThemeSchema,
   StorySchema,
+  StorySourceSchema,
   type AudioTrack,
   type ExerciseSpec,
   type JournalPrompt,
@@ -58,6 +59,7 @@ export {
   type Pack,
   type PackTheme,
   type Story,
+  type StorySource,
 } from './pack';
 export {
   ManifestEntrySchema,

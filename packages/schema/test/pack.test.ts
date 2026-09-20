@@ -166,6 +166,106 @@ describe('PackSchema', () => {
       expectIssue(pack, 'theme', 'mood');
     });
   });
+
+  // M14 (T43): optional category/genre on the pack, subtitle/source on a
+  // story — plain slugs the APP classifies; absent = app default (§2.4).
+  describe('category, genre, subtitle & source (M14)', () => {
+    it('accepts category and genre slugs and passes unknown values through', () => {
+      const pack = makeValidPack() as any;
+      pack.category = 'news';
+      pack.genre = 'comedy';
+      const result = PackSchema.safeParse(pack);
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.category).toBe('news');
+      expect(result.success && result.data.genre).toBe('comedy');
+
+      const future = makeValidPack() as any;
+      future.category = 'radio-drama';
+      future.genre = 'slice-of-life';
+      expect(PackSchema.safeParse(future).success).toBe(true);
+    });
+
+    it('leaves category and genre absent (not defaulted) when unauthored', () => {
+      const result = PackSchema.safeParse(makeValidPack());
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect('category' in result.data).toBe(false);
+        expect('genre' in result.data).toBe(false);
+      }
+    });
+
+    it('rejects non-kebab-case category / genre values', () => {
+      for (const bad of ['News', 'news article', '']) {
+        const pack = makeValidPack() as any;
+        pack.category = bad;
+        expectIssue(pack, 'category', bad === '' ? '' : 'kebab-case');
+        const pack2 = makeValidPack() as any;
+        pack2.genre = bad;
+        expectIssue(pack2, 'genre', bad === '' ? '' : 'kebab-case');
+      }
+    });
+
+    it('does not tie genre to category (a genre on a news pack is legal)', () => {
+      const pack = makeValidPack() as any;
+      pack.category = 'news';
+      pack.genre = 'horror';
+      expect(PackSchema.safeParse(pack).success).toBe(true);
+    });
+
+    it('accepts a story subtitle as a localized pair and rejects a bare string', () => {
+      const pack = makeValidPack() as any;
+      pack.stories[0].subtitle = { ru: 'Эпизод 1', en: 'Episode 1' };
+      const result = PackSchema.safeParse(pack);
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.stories[0]!.subtitle).toEqual({
+        ru: 'Эпизод 1',
+        en: 'Episode 1',
+      });
+
+      const bare = makeValidPack() as any;
+      bare.stories[0].subtitle = 'Эпизод 1';
+      expectIssue(bare, 'stories[0].subtitle', '');
+    });
+
+    it('accepts a minimal source { name } and a full source', () => {
+      const minimal = makeValidPack() as any;
+      minimal.stories[0].source = { name: 'Сумрак' };
+      expect(PackSchema.safeParse(minimal).success).toBe(true);
+
+      const full = makeValidPack() as any;
+      full.stories[0].source = {
+        name: 'Медуза',
+        url: 'https://example.invalid/story',
+        publishedAt: '2026-09-14',
+        author: 'Редакция',
+      };
+      const result = PackSchema.safeParse(full);
+      expect(result.success).toBe(true);
+      expect(result.success && result.data.stories[0]!.source).toEqual(full.stories[0].source);
+    });
+
+    it('rejects a source with an empty name, a bad date, or a bad URL', () => {
+      const noName = makeValidPack() as any;
+      noName.stories[0].source = { name: '' };
+      expectIssue(noName, 'stories[0].source.name', '');
+
+      for (const date of ['2026-9-1', '14.09.2026', '2026-09-14T00:00:00Z']) {
+        const bad = makeValidPack() as any;
+        bad.stories[0].source = { name: 'Сумрак', publishedAt: date };
+        expectIssue(bad, 'stories[0].source.publishedAt', '');
+      }
+
+      const badUrl = makeValidPack() as any;
+      badUrl.stories[0].source = { name: 'Сумрак', url: 'example.invalid/x' };
+      expectIssue(badUrl, 'stories[0].source.url', '');
+    });
+
+    it('rejects unknown keys inside source (strict object)', () => {
+      const pack = makeValidPack() as any;
+      pack.stories[0].source = { name: 'Сумрак', publisher: 'x' };
+      expectIssue(pack, 'stories[0].source', 'publisher');
+    });
+  });
 });
 
 describe('reconstructSentenceRu', () => {

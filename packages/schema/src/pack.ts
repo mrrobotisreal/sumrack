@@ -38,6 +38,23 @@ export const AudioTrackSchema = z.strictObject({
 export type AudioTrack = z.infer<typeof AudioTrackSchema>;
 
 /**
+ * A story's provenance (M14 §2.2, LIBRARY_CATEGORIES) — where a non-fiction
+ * item came from. Recorded for Mitch's own pieces too (`name: 'Mitchell
+ * Wintrow'`). `publishedAt` drives newest-first ordering on the news shelf.
+ */
+export const StorySourceSchema = z.strictObject({
+  /** Publication / channel / author-as-publisher, e.g. "Медуза", "Сумрак". */
+  name: z.string().min(1),
+  /** Original URL when one exists. */
+  url: z.url().optional(),
+  /** Publication date, ISO calendar date "YYYY-MM-DD". */
+  publishedAt: z.iso.date().optional(),
+  /** Byline. */
+  author: z.string().min(1).optional(),
+});
+export type StorySource = z.infer<typeof StorySourceSchema>;
+
+/**
  * A single readable text (story, article, or dialogue) inside a pack
  * (design §4.2 `Story`), composed of sentences.
  */
@@ -46,6 +63,10 @@ export const StorySchema = z.strictObject({
   id: StableIdSchema,
   /** Bilingual story title. */
   title: LocalizedTextSchema,
+  /** M14 §2.2: optional dek / episode tagline / lesson subtitle. */
+  subtitle: LocalizedTextSchema.optional(),
+  /** M14 §2.2: provenance for non-fiction (also recorded for Mitch's own pieces). */
+  source: StorySourceSchema.optional(),
   /** CEFR level of this story (may differ from siblings in the same pack). */
   level: CefrLevelSchema,
   /** The story text, sentence by sentence, in reading order. */
@@ -246,6 +267,19 @@ export const PackSchema = z
      * pack JSON stays an honest record of what was authored.
      */
     track: StableIdSchema.optional(),
+    /**
+     * M14 §2.1: content category slug — 'stories' | 'news' | 'education' |
+     * 'podcast' | 'documentary' | 'travel' | (future). Plain string; the APP
+     * owns the known set (like `theme.scene`). ABSENT = 'stories' (app default).
+     */
+    category: StableIdSchema.optional(),
+    /**
+     * M14 §2.1: fiction genre slug, meaningful when category is 'stories' —
+     * 'horror' | 'action' | 'comedy' | 'romance' | 'family' | … Plain string.
+     * ABSENT = app default (LIBRARY_CATEGORIES §2.4). No rule ties it to
+     * `category`: a genre on a non-stories pack is simply ignored by the app.
+     */
+    genre: StableIdSchema.optional(),
   })
   .superRefine((pack, ctx) => {
     // type → required sections

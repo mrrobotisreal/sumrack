@@ -35,6 +35,11 @@ export const ManifestEntrySchema = z.strictObject({
   level: CefrLevelSchema,
   /** The pack's bilingual title — matches `Pack.title` (shown pre-download). */
   title: LocalizedTextSchema,
+  /**
+   * M14 §2.3: mirrors `Pack.category` when the pack has one (metadata for
+   * the packs screen / future selective sync). Optional — no schemaVersion bump.
+   */
+  category: StableIdSchema.optional(),
   /** Total size of all pack files in bytes (drives download UI / Wi-Fi-only decisions). */
   bytes: z.number().int().positive(),
   /** Every file in the pack with its hash. Always includes "pack.json". */

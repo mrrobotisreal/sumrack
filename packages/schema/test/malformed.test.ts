@@ -41,6 +41,17 @@ const cases: Array<{ fixture: string; path: string; message: string }> = [
     path: 'dialogues[0].nodes[4]',
     message: 'node "dlg-n5" is unreachable from startNodeId "dlg-n1"',
   },
+  // M14: story.source provenance (LIBRARY_CATEGORIES §2.2)
+  {
+    fixture: 'source-bad-date',
+    path: 'stories[0].source.publishedAt',
+    message: 'Invalid ISO date',
+  },
+  {
+    fixture: 'source-bad-url',
+    path: 'stories[0].source.url',
+    message: 'Invalid URL',
+  },
 ];
 
 describe('malformed pack fixtures produce specific, readable errors', () => {

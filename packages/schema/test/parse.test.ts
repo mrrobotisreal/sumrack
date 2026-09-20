@@ -74,6 +74,24 @@ describe('manifest schema edge cases', () => {
     expect(result.issues.some((i) => i.message.includes('duplicate pack id'))).toBe(true);
     expect(result.issues.some((i) => i.message.includes('"pack.json"'))).toBe(true);
   });
+
+  // M14 §2.3: `category` mirrors Pack.category; optional, schemaVersion stays 1.
+  it('accepts entries with and without a category at schemaVersion 1', () => {
+    const news = { ...structuredClone(entry), id: 'pack-news', category: 'news' };
+    const result = safeParseManifest({ schemaVersion: 1, packs: [entry, news] });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect('category' in result.data.packs[0]!).toBe(false);
+    expect(result.data.packs[1]!.category).toBe('news');
+  });
+
+  it('rejects a non-kebab-case entry category', () => {
+    const bad = { ...structuredClone(entry), category: 'News' };
+    const result = safeParseManifest({ schemaVersion: 1, packs: [bad] });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.message).toContain('packs[0].category');
+  });
 });
 
 describe('backup envelope (T20 format)', () => {
