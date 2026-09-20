@@ -29,7 +29,7 @@ import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
 import { useImportedPackMeta } from '@/features/import/hooks';
 import { ChipRow } from '@/features/library/category-chips';
-import { labelForCategory } from '@/features/library/categories';
+import { ALL_GENRES, labelForCategory } from '@/features/library/categories';
 import {
   defaultRungLevel,
   groupByFamily,
@@ -199,6 +199,16 @@ export function LibraryScreen() {
     () => (category === 'stories' ? genreRowItems(remoteAll) : null),
     [remoteAll, category],
   );
+  // A persisted genre the row no longer offers (its last pack was removed,
+  // or the row is hidden) must not keep filtering the shelf to nothing —
+  // found on-device (T45): removing a1-comedy-090 with «Комедия» selected
+  // produced a false «Пока пусто». Fall back to «Все» and heal the store.
+  const genreStale =
+    genre !== ALL_GENRES && !(genreItems?.some((item) => item.key === genre) ?? false);
+  const effectiveGenre = genreStale ? ALL_GENRES : genre;
+  React.useEffect(() => {
+    if (genreStale && packs.data) setGenre(ALL_GENRES);
+  }, [genreStale, packs.data, setGenre]);
   const installedInCategory = React.useCallback(
     (slug: string) => categoryItems.find((item) => item.key === slug)?.count ?? 0,
     [categoryItems],
@@ -241,7 +251,7 @@ export function LibraryScreen() {
     // a newly synced higher rung joins the shelf instead of appending at the
     // bottom). Single-member families and untagged packs pass through as-is.
     return groupByFamily(
-      filterSectionsByCategory(remoteAll, { category, genre }).map(orderRows),
+      filterSectionsByCategory(remoteAll, { category, genre: effectiveGenre }).map(orderRows),
       (section) => ({
         packId: section.pack.id,
         level: section.pack.level,
@@ -268,7 +278,7 @@ export function LibraryScreen() {
         },
       };
     });
-  }, [remoteAll, category, genre, progressByStory, rungChoice]);
+  }, [remoteAll, category, effectiveGenre, progressByStory, rungChoice]);
 
   // The selected category has nothing installed while packs exist → the
   // «Пока пусто» block goes into the list header, with only the local
@@ -379,7 +389,7 @@ export function LibraryScreen() {
         {genreItems && (
           <ChipRow
             items={genreItems}
-            selected={genre}
+            selected={effectiveGenre}
             onSelect={onSelectGenre}
             size="sm"
             testID="library-genre-chips"
@@ -388,7 +398,15 @@ export function LibraryScreen() {
         {emptyCategory && <EmptyCategory category={category} />}
       </View>
     ),
-    [categoryItems, category, onSelectCategory, genreItems, genre, onSelectGenre, emptyCategory],
+    [
+      categoryItems,
+      category,
+      onSelectCategory,
+      genreItems,
+      effectiveGenre,
+      onSelectGenre,
+      emptyCategory,
+    ],
   );
 
   if (packs.isPending || stories.isPending) {
