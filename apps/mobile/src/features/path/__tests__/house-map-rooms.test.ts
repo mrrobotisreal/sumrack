@@ -21,6 +21,8 @@ function unitFor(id: string, themeScene: string | null): ReturnType<typeof build
     themeScene,
     themeAccent: null,
     track: null,
+    category: null,
+    genre: null,
   };
   const input: Omit<BuildPathInput, 'packs' | 'checkpointResults'> = {
     stories: [],

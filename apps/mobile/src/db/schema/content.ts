@@ -49,6 +49,19 @@ export const packs = sqliteTable('packs', {
    * (path-model), keeping the row an honest mirror of the pack JSON.
    */
   track: text('track'),
+  /**
+   * Library category (T44, LIBRARY_CATEGORIES §2.1): 'stories' | 'news' |
+   * 'education' | 'podcast' | 'documentary' | 'travel' | (future). Plain
+   * string — the APP owns the known set (features/library/categories.ts);
+   * NULL = not authored → the app default ('stories'). Never read directly
+   * for presentation: go through `classifyPack()`.
+   */
+  category: text('category'),
+  /**
+   * Fiction genre slug (§2.1), meaningful when the category is 'stories'.
+   * NULL = not authored → the app default per pack type (`classifyPack()`).
+   */
+  genre: text('genre'),
 });
 
 export const stories = sqliteTable(
@@ -63,8 +76,26 @@ export const stories = sqliteTable(
     titleRu: text('title_ru').notNull(),
     titleEn: text('title_en').notNull(),
     level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
+    /** Optional dek / episode tagline / lesson subtitle (T44, LIBRARY_CATEGORIES §2.2). */
+    subtitleRu: text('subtitle_ru'),
+    subtitleEn: text('subtitle_en'),
+    /**
+     * Provenance for non-fiction (§2.2): publication/channel name, original
+     * URL, publication date as an ISO calendar date string 'YYYY-MM-DD'
+     * (lexicographic order == chronological order, so `DESC NULLS LAST`
+     * newest-first sorting needs no date type), byline. All NULL for fiction.
+     */
+    sourceName: text('source_name'),
+    sourceUrl: text('source_url'),
+    sourcePublishedAt: text('source_published_at'),
+    sourceAuthor: text('source_author'),
   },
-  (t) => [primaryKey({ columns: [t.packId, t.id] }), index('stories_id_idx').on(t.id)],
+  (t) => [
+    primaryKey({ columns: [t.packId, t.id] }),
+    index('stories_id_idx').on(t.id),
+    // T44: serves the news shelf's per-pack newest-first ordering (T45).
+    index('stories_source_date_idx').on(t.packId, t.sourcePublishedAt),
+  ],
 );
 
 export const sentences = sqliteTable(

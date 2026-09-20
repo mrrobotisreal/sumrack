@@ -12,6 +12,7 @@ import m0007 from './0007_bookmarks.sql';
 import m0008 from './0008_dialogues.sql';
 import m0009 from './0009_imports.sql';
 import m0010 from './0010_path-theme-track.sql';
+import m0011 from './0011_library-categories.sql';
 
 export default {
   journal,
@@ -27,5 +28,6 @@ export default {
     m0008,
     m0009,
     m0010,
+    m0011,
   },
 };

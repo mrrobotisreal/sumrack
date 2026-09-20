@@ -35,6 +35,8 @@ function pack(
     themeScene: null,
     themeAccent: null,
     track: null,
+    category: null,
+    genre: null,
     ...extra,
   };
 }

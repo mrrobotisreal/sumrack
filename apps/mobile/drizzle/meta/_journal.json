@@ -78,6 +78,13 @@
       "when": 1787726713316,
       "tag": "0010_path-theme-track",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789927448420,
+      "tag": "0011_library-categories",
+      "breakpoints": true
     }
   ]
 }
