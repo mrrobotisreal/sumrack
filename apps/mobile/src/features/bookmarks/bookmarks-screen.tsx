@@ -4,10 +4,12 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
+import { CategoryBadge } from '@/components/category-badge';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import { useResolvedBookmarks, type ResolvedBookmark } from '@/db/hooks';
+import { usePackClassification, useResolvedBookmarks, type ResolvedBookmark } from '@/db/hooks';
+import type { Classified } from '@/features/library/categories';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -23,6 +25,8 @@ export function BookmarksScreen() {
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
   const bookmarks = useResolvedBookmarks();
+  // M14 (T46): badge lookups — a Map over usePacks(), no bookmarks-query change.
+  const classification = usePackClassification();
 
   const invalidate = React.useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
@@ -98,6 +102,7 @@ export function BookmarksScreen() {
         <BookmarkCard
           key={row.id}
           row={row}
+          classified={classification.get(row.packId) ?? null}
           onOpen={() => open(row)}
           onRemove={() => remove(row)}
         />
@@ -111,6 +116,7 @@ export function BookmarksScreen() {
         <BookmarkCard
           key={row.id}
           row={row}
+          classified={classification.get(row.packId) ?? null}
           onOpen={() => open(row)}
           onRemove={() => remove(row)}
         />
@@ -121,10 +127,13 @@ export function BookmarksScreen() {
 
 function BookmarkCard({
   row,
+  classified,
   onOpen,
   onRemove,
 }: {
   row: ResolvedBookmark;
+  /** null when the pack is gone (removed state) — no badge then. */
+  classified: Classified | null;
   onOpen: () => void;
   onRemove: () => void;
 }) {
@@ -149,6 +158,9 @@ function BookmarkCard({
           <Text className="flex-1 font-ui-medium text-sm" numberOfLines={1}>
             {title}
           </Text>
+          {classified ? (
+            <CategoryBadge category={classified.category} genre={classified.genre} size="sm" />
+          ) : null}
         </View>
         {row.kind === 'sentence' && (
           <Text className="font-reading text-sm leading-5" numberOfLines={2}>

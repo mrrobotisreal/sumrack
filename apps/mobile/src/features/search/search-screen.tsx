@@ -3,9 +3,10 @@ import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { CategoryBadge } from '@/components/category-badge';
 import { LevelChip, type CefrLevel } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
-import { useGlobalSearch } from '@/db/hooks';
+import { useGlobalSearch, usePackClassification } from '@/db/hooks';
 import type { SentenceSearchHit } from '@/db/repositories/content';
 import type { JournalEntryRow, NoteRow } from '@/db/repositories/journal';
 import { track } from '@/services/analytics';
@@ -28,6 +29,8 @@ export function GlobalSearchScreen() {
   const [query, setQuery] = React.useState('');
   const deferred = React.useDeferredValue(query);
   const trimmed = deferred.trim();
+  // M14 (T46): badge lookups — a Map over usePacks(), no search-query change.
+  const classification = usePackClassification();
 
   const results = useGlobalSearch(trimmed);
 
@@ -130,6 +133,11 @@ export function GlobalSearchScreen() {
                 <View key={`${first.packId}/${first.storyId}`} className="gap-1.5">
                   <View className="mt-1 flex-row items-center gap-2">
                     <LevelChip level={first.level as CefrLevel} />
+                    <CategoryBadge
+                      category={classification.get(first.packId)?.category ?? 'stories'}
+                      genre={classification.get(first.packId)?.genre ?? null}
+                      size="sm"
+                    />
                     <Text className="flex-1 font-ui-medium text-sm" numberOfLines={1}>
                       {first.storyTitleRu}
                     </Text>
