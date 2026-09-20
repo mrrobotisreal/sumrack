@@ -50,6 +50,29 @@ i.e. the `sumrak-content` directory at the workspace root).
    read-write) saved. Then Library → pull-to-refresh (or Packs → Check for
    updates). Audio can defer to Wi-Fi per the Wi-Fi-only toggle.
 
+**Variant — a non-fiction pack (news / education / podcast / documentary /
+travel, M14 / ADR-0016).** Same five steps, with three differences:
+
+- **Frontmatter** (AUTHORING.md "Frontmatter" + "Non-fiction registers"):
+  `pack.category: news` (one shelf per pack), each `story.source:` (`name`
+  always, `publishedAt: YYYY-MM-DD` for anything dated, `url`/`author` when
+  they exist) and `story.subtitle:` when the source has a dek; the `voice:`
+  block names `register: anchor` (news) / `lecturer` / `host` / `voiceover` /
+  `guide` and **omits `voice:`/`style:`** — the default voice `Mr. Wintrow` on
+  `eleven_multilingual_v2` + `language_code ru` is filled in by the register.
+  Fiction packs name `category: stories` + `genre:` and `register: narrator`.
+  The pre-render summary prints the resolved model / voice / style per track
+  before anything fires — check it says `eleven_multilingual_v2 … Mr. Wintrow`.
+- **Anthology packs grow by appending**: one open-ended pack per shelf and
+  rung (`a2-news-001`, `a2-edu-001`, `a2-podcast-001`, `a2-doc-001`,
+  `a2-travel-001`). A new item = a new draft passed **after** the existing
+  drafts, `pack.version` bumped in every draft, the same `_build/<pack-id>`
+  dir (so earlier opus files are carried), `--stories <new-id>` on the audio
+  run; never reorder or re-id old items (the SAR-stories rule,
+  `../sumrak-content/series/sar-stories/SERIES.md` §2).
+- **Publish** as usual; the manifest entry now carries `category`, which the
+  app's Библиотека shelves read (T44–T45).
+
 ## 2. Add a TTS voice or the ASR model
 
 Everything is on-device and on-demand; nothing ships in the APK.

@@ -38,59 +38,54 @@ pnpm pipeline audio s1.draft.md s2.draft.md -o packs/my-pack \
 pnpm pipeline publish packs/my-pack --content ../sumrak-content --push
 ```
 
-**Voice ids must resolve to a voice on the ElevenLabs account** — the resolver matches the alias before " - tagline" in the account's voice list. Copy the id from a recently published draft rather than inventing one; a wrong id fails at the first render call (annotate only shape-checks it). Known-resolving ids at T25 time: `elevenlabs:Ivan` (creepy-whisper, pack 003 v2); `elevenlabs:Mariia` and `elevenlabs:Kate` are the design §6.2 picks for warm/gentle family voices — confirm against the account before an audio session. (T22: the worked example previously said `elevenlabs:Anton`, a fixture-era id.)
+**Voice ids must resolve to a voice on the ElevenLabs account** — the resolver matches the alias before " - tagline" in the account's voice list. Copy the id from a recently published draft rather than inventing one; a wrong id fails at the first render call (annotate only shape-checks it). Since ADR-0016 the default voice is **`elevenlabs:Mr. Wintrow`** (Mitch's professional clone on the new account, `professional`, id `HQ4Xi3gPf8Q6bJUlao6z`) — a direction that names a `register:` and no `voice:` renders with it. Character voices are cast per family in its `SERIES.md`; confirm against the account before an audio session (the old account's My-Voices library — `Anton`, `Ivan`, `Lunya - Little Fairy` … — is **not** on the new one; see `sentenceAudio` below for carrying such lines).
 
-Audio notes: the `voice:` frontmatter drives rendering — `stylePrompt` is fed
-to ElevenLabs as `previous_text` (write it in Russian, in the story's mood, as
-if it were the narrator's preceding lines), `settings` maps to provider voice
-settings (`stability`, `style`, `speed`, `similarityBoost`), and `deliveryNotes`
-stay human-only. A track whose character alignment can't be trusted ships with
-zero word stamps (the app falls back to sentence-level karaoke) — the report
-says so; re-render with another seed rather than shipping bad stamps.
-Eleven v3 steering (the default model rejects `previous_text`, so `stylePrompt`
-is ignored there): `audioTag: '[whispers]'` — one or more `[bracketed]` v3 tags
-— is prepended once to the whole track. **Per-sentence cues (CT011 Tier 2):**
-`audioCues: { <sentence-id>: '[tags]' }` inserts tags right before that sentence
-(after its paragraph break) for mid-track mood shifts — e.g.
-`audioCues: { nea1p9-s105: '[calm] [ominous]' }`. Both are **v3-only**
-(non-v3 models render the plain text), **render-time only** (tag characters
-shift the token spans so word stamps stay exact and are never stamped
-themselves), and **never reach `pack.json`**. A cue keyed to a sentence id
-that is not in the story is an error, not a skip. Tag characters count toward
-the provider's per-request character cap.
+### Narration audio — the default path (Multilingual v2 · Mr. Wintrow · registers)
 
-**Per-sentence voice override (CT011):** `sentenceVoices: { <sentence-id>:
-'elevenlabs:<other voice>' }` renders those sentences in a second voice — e.g.
-a child's line inside a first-person narration. The story is rendered as
-consecutive same-voice runs (each its own provider request), the override runs
-are level-matched to the narrator runs' mean level (never boosted into
-clipping), the runs are concatenated sample-accurately, and every run's word
-stamps are offset by the runs before it so karaoke stays exact across each
-seam. The pack still carries **one** track per part; nothing about the
-override reaches `pack.json`. Override runs get no narrator `audioTag` — steer
-them with an `audioCues` entry on the same id (e.g. `'[calm]'`). Works on v3
-and non-v3 models alike (`stylePrompt` is only sent for narrator runs). An id
-not in the story is an error. Per-request character caps apply per run.
+`pipeline audio` renders every story track with **`eleven_multilingual_v2` · `language_code: ru` · `elevenlabs:Mr. Wintrow` · `mp3_44100_192` · speaker boost on** unless a direction says otherwise (ADR-0016, 2026-09-20 — the CT011e re-voice made default). Multilingual v2 accepts `previous_text` (our `stylePrompt`) and continuous voice settings but has **no audio-tag channel**; expressiveness comes from the register preset, the `stylePrompt`, `settings`, and `contextCues` (next section).
 
-**Non-v3 expressiveness — context cues, per-direction model/language, pre-rendered
-clips (No End House re-voice, 2026-09-19):** a direction may pin its own
-`model: eleven_multilingual_v2` (wins over the CLI `--model`) and
-`language: ru` (sent as `language_code`); `settings.useSpeakerBoost` maps to
-the provider's speaker boost. Multilingual v2 has no audio tags, so mood is
-steered with **`contextCues: { <sentence-id>: '<context text>' }`** — a short
-Russian stage direction («Я шепчу с ужасом:») rendered immediately BEFORE the
-sentence and then **cut out of the audio** using the provider's character
-timestamps, with every later word stamp shifted back by the cut (a `{}` in the
-text stands for the sentence, so `'Он умоляет: {} — всхлипывает он.'` renders an
-attribution after the line and cuts that too). Context characters bill like any
-other; the listener never hears them; nothing reaches `pack.json`; an unknown id
-is an error. **`sentenceAudio: { <sentence-id>: <path relative to the draft> }`**
-splices a pre-rendered clip in as that sentence's audio with no provider request
-(a character line from a voice this account no longer has, cut out of an
-earlier track); a sibling `<clip>.stamps.json` (`WordStamp[]` relative to the
-clip start) carries its word stamps, otherwise the run ships unstamped while
-the rest of the track stays stamped. Clips are level-matched and spliced exactly
-like `sentenceVoices`.
+A **register** is a preset that fills a direction's defaults — `voice`, `style` (the register slug, which the app shows as a Russian label), `settings` and `stylePrompt`. Name it in the `voice:` block and omit everything the preset already covers:
+
+```yaml
+voice:
+  - id: nw001a1-wintrow-anchor
+    register: anchor # narrator | anchor | lecturer | host | voiceover | guide
+    deliveryNotes: >- # human-only, as before
+      Evening-bulletin pace; each sentence is its own item.
+```
+
+| register    | `style` label in-app | default for `category` | `stability / similarityBoost / style / speed / useSpeakerBoost` | `stylePrompt` (sent as `previous_text`)                                                                                                 |
+| ----------- | -------------------- | ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `narrator`  | Рассказчик           | `stories`              | `0.50 / 0.75 / 0.00 / 1.00 / true` (No End House §5.6, CT011e)  | «Я рассказываю эту историю медленно, тихо, будто вспоминаю то, чего не хотел бы помнить.»                                               |
+| `anchor`    | Диктор               | `news`                 | `0.70 / 0.80 / 0.15 / 1.05 / true`                              | «Добрый вечер. В эфире вечерний выпуск новостей. Коротко о главном.»                                                                    |
+| `lecturer`  | Лектор               | `education`            | `0.65 / 0.80 / 0.20 / 0.97 / true`                              | «Итак, продолжим лекцию. Сегодня мы разберём эту тему спокойно и по порядку. Обратите внимание на примеры.»                             |
+| `host`      | Ведущий              | `podcast`              | `0.35 / 0.75 / 0.50 / 1.05 / true`                              | «Привет-привет! Вы слушаете наш подкаст. Устраивайтесь поудобнее — сегодня будет интересно, и я, честно говоря, сам не могу дождаться.» |
+| `voiceover` | Закадровый голос     | `documentary`          | `0.60 / 0.80 / 0.25 / 0.95 / true`                              | «Здесь, вдали от городов, природа живёт по своим законам. Каждый год здесь повторяется одна и та же история.»                           |
+| `guide`     | Гид                  | `travel`               | `0.40 / 0.75 / 0.45 / 1.02 / true`                              | «Смотрите, мы только что приехали, и я вам сейчас всё покажу. Это место — одно из моих любимых.»                                        |
+
+Precedence (`packages/pipeline/src/registers.ts`, `applyRegister`):
+
+1. An explicit `register:` applies its preset. **Anything authored in the block wins field by field** — `voice`, `style`, `stylePrompt` replace the preset's; `settings` **merge key-wise** (an authored `stability: 0.4` overrides only `stability`; the other four knobs still come from the preset). `model`, `language`, cues and everything else pass through untouched.
+2. No `register:`, but the pack has a `category:` with a default register (table above) **and** the block omits `settings`, `stylePrompt` **and** `style` → the category's preset applies exactly as in 1. A block that carries any of those three is left **exactly as written** (every pre-M14 draft is such a block).
+3. Otherwise the block is used as authored. Without a register, `voice` and `style` are **required**.
+
+The resolved `voice`/`style` are what `pack.json`'s `AudioTrack` records and what the track id / audition file names use. `deliveryNotes` stay human-only. A family or anthology bible may pin tuned settings after audition, exactly as before — presets are starting points. Seeds, the audition → ear-check → finalize loop, and the per-request character-cap split rule are unchanged.
+
+A track whose character alignment can't be trusted ships with zero word stamps (the app falls back to sentence-level karaoke) — the report says so; re-render with another seed rather than shipping bad stamps.
+
+### Steering on v2: stylePrompt, contextCues, sentenceVoices, sentenceAudio
+
+**`stylePrompt`** is fed to ElevenLabs as `previous_text` — write it in Russian, in the piece's register, as if it were the narrator's preceding lines (a register preset supplies one; author your own to replace it). **`settings`** maps to provider voice settings (`stability`, `similarityBoost`, `style`, `speed`, `useSpeakerBoost` — boost defaults on for non-v3 renders). A direction may pin its own **`model:`** (wins over the CLI `--model`) and **`language:`** (sent as `language_code`; defaults to `ru` on non-v3 models).
+
+**Context cues (No End House re-voice, 2026-09-19):** v2 has no audio tags, so per-sentence mood is steered with **`contextCues: { <sentence-id>: '<context text>' }`** — a short Russian stage direction («Я шепчу с ужасом:», or a news anchor's «А теперь — к погоде.») rendered immediately BEFORE the sentence and then **cut out of the audio** using the provider's character timestamps, with every later word stamp shifted back by the cut (a `{}` in the text stands for the sentence, so `'Он умоляет: {} — всхлипывает он.'` renders an attribution after the line and cuts that too). Context characters bill like any other; the listener never hears them; nothing reaches `pack.json`; an unknown id is an error. Works on any model.
+
+**Per-sentence voice override (CT011):** `sentenceVoices: { <sentence-id>: 'elevenlabs:<other voice>' }` renders those sentences in a second voice — a child's line inside a first-person narration, a podcast guest. The story is rendered as consecutive same-voice runs (each its own provider request), the override runs are level-matched to the narrator runs' mean level (never boosted into clipping), the runs are concatenated sample-accurately, and every run's word stamps are offset by the runs before it so karaoke stays exact across each seam. The pack still carries **one** track per part; nothing about the override reaches `pack.json`. Override runs get no narrator `audioTag` (v3) and no `stylePrompt`. Works on v3 and non-v3 models alike. An id not in the story is an error. Per-request character caps apply per run.
+
+**Pre-rendered clips:** `sentenceAudio: { <sentence-id>: <path relative to the draft> }` splices a pre-rendered clip in as that sentence's audio with no provider request (a character line from a voice this account no longer has, cut out of an earlier track); a sibling `<clip>.stamps.json` (`WordStamp[]` relative to the clip start) carries its word stamps, otherwise the run ships unstamped while the rest of the track stays stamped. Clips are level-matched and spliced exactly like `sentenceVoices`.
+
+### Legacy: Eleven v3 tags (audioTag / audioCues) — opt-in
+
+`eleven_v3` is no longer the default. Opt in **per direction** with `model: eleven_v3` in the `voice:` block (wins over the CLI flag) or **per run** with `--model eleven_v3`; a CT that wants it says why in its ticket. On v3, `previous_text` is rejected (so `stylePrompt` is ignored there) and `language_code` is not sent; steering is the tag channel: `audioTag: '[whispers]'` — one or more `[bracketed]` v3 tags — is prepended once to the whole track, and **per-sentence cues (CT011 Tier 2)** `audioCues: { <sentence-id>: '[tags]' }` insert tags right before that sentence (after its paragraph break) for mid-track mood shifts — e.g. `audioCues: { nea1p9-s105: '[calm] [ominous]' }`. Both are **v3-only** (on non-v3 models they are silently not applied — the plain text renders; not an error), **render-time only** (tag characters shift the token spans so word stamps stay exact and are never stamped themselves), and **never reach `pack.json`**. A cue keyed to a sentence id that is not in the story is an error regardless of model. Tag characters count toward the provider's per-request character cap. Every family voiced before 2026-09-19 was rendered this way; those records in the CT tickets and `SERIES.md` §5 tables stand as history (ADR-0016).
 
 **Inline notation in source docs (CT013):** a story doc may carry its cue
 script inline — an italic _Leading tag_ line per part (→ `audioTag`), `{Имя}`
@@ -193,17 +188,25 @@ pack:
   title: { ru: 'Фотография', en: 'The Photograph' }
   level: A1 # A1 | A2 | B1 | B2 | C1  (no C2)
   tags: ['creepypasta', 'horror', 'grammar:genitive']
+  category: stories # OPTIONAL (M14): stories | news | education | podcast | documentary | travel
+  genre: horror # OPTIONAL (M14): fiction genre — horror | mystery | scifi | fantasy | action |
+  #   comedy | romance | drama | family | slice-of-life | absurd | fairy-tale
 story:
   id: the-photograph # unique within the pack
   title: { ru: 'Фотография', en: 'The Photograph' }
+  subtitle: { ru: 'Эпизод 1', en: 'Episode 1' } # OPTIONAL (M14): dek / tagline / lesson subtitle
+  source: # OPTIONAL (M14): provenance — `name` at minimum
+    name: 'Сумрак' #   publication / channel / author-as-publisher
+    url: 'https://example.invalid/x' #   original URL when one exists
+    publishedAt: '2026-09-14' #   ISO calendar date YYYY-MM-DD (news sorts newest-first on it)
+    author: 'Мистер Уинтроу' #   byline
   level: A1 # may differ from the pack level
 voice: # OPTIONAL — voice direction for narration (used by `pipeline audio`, T09)
-  - id: photo-anton-creepy # audio track id this rendition will get
-    voice: elevenlabs:Ivan # provider-prefixed voice id
-    style: creepy-whisper # short style label
-    stylePrompt: >- # prompt-style delivery description
-      Slow, hushed, uneasy narration — a man describing something
-      he does not want to believe.
+  - id: photo-wintrow-narrator # audio track id this rendition will get
+    register: narrator # M14 preset: fills voice (Mr. Wintrow), style, settings, stylePrompt
+    stylePrompt: >- # OPTIONAL — replaces the preset's; sent as previous_text
+      Медленно, тихо, с тревогой — как человек, который рассказывает о том,
+      во что не хочет верить.
     deliveryNotes: >- # free-form notes: pacing, pauses, emphasis
       Pause slightly before the last sentence.
 ---
@@ -211,9 +214,11 @@ voice: # OPTIONAL — voice direction for narration (used by `pipeline audio`, T
 
 Rules:
 
-- `pack:` and `story:` are required; `voice:` is optional (add it when you already know how the story should be narrated — `annotate` validates its shape and otherwise ignores it).
+- `pack:` and `story:` are required; `voice:` is optional (add it when you already know how the story should be narrated — `annotate` validates its shape and otherwise ignores it). A `voice:` block names either a `register:` or both `voice:` and `style:` (the pre-M14 form — see the narration section above).
 - All ids are lowercase kebab-case (`[a-z0-9-]`), stable forever — never renumber or reuse.
-- In a multi-story pack, every draft's `pack:` section must be **byte-identical** in meaning (same id, version, type, title, level, tags) or the pipeline refuses.
+- In a multi-story pack, every draft's `pack:` section must be **byte-identical** in meaning (same id, version, type, title, level, tags, category, genre) or the pipeline refuses.
+- **`category` / `genre` (M14, `docs/design/LIBRARY_CATEGORIES.md` §2)** are plain kebab-case slugs the **app** classifies — unknown values are valid and render with their raw slug until the app learns them; `genre` only means something on the `stories` shelf and is never tied to `category` by the schema. `category` is per pack (every story in a pack sits on the same shelf). **Every new CT names `category` (+ `genre` for fiction) and `register`.** App-side defaults when absent: `stories` / `course-unit` packs → `stories` + `horror`; `dialogue` packs → `stories` with no genre; imported pastes always sit on their own «Импортировано» shelf.
+- **`subtitle` / `source` (M14)** are per story: `subtitle` is the dek / episode tagline / lesson subtitle; `source` is provenance — `name` always (Mitch's own pieces: `name: 'Mitchell Wintrow'` or «Сумрак»), `publishedAt` for anything dated (it drives the news shelf's newest-first order), `url`/`author` when they exist. Fiction rungs normally carry neither.
 
 ### Sentence blocks
 
@@ -299,10 +304,9 @@ story:
   title: { ru: 'Дверь', en: 'The Door' }
   level: A1
 voice:
-  - id: door-anton-creepy
-    voice: elevenlabs:Anton
-    style: creepy-whisper
-    stylePrompt: >-
+  - id: door-wintrow-narrator
+    register: narrator
+    deliveryNotes: >-
       Quiet, confessional dread. The narrator is trying to stay calm.
 ---
 
@@ -492,7 +496,7 @@ No `SPEAKER:` in choices — choices always speak as `player`. A node with `CHOI
 
 `pipeline audio` renders dialogues **per node**: every NPC line becomes its own small Opus file in that node's character voice, written to `audio/<dialogue-id>/<sentence-id>.opus` with its own word stamps (the ≥95 % aligner gate and monotonicity rules apply per node; an untrusted alignment ships that node with no stamps → sentence-level highlight).
 
-- **Character steering**: give a character an optional `audioTag: '[warm]'` in the frontmatter (one or more `[bracketed]` Eleven v3 tags, same mechanics as a story track's `audioTag`) — it conditions delivery without being spoken. `style` stays a human label.
+- **Character steering**: give a character an optional `audioTag: '[warm]'` in the frontmatter (one or more `[bracketed]` Eleven v3 tags, same mechanics as a story track's `audioTag`) — it conditions delivery without being spoken. `style` stays a human label. Dialogue renders on the same default model as stories (Multilingual v2, `language_code ru` — ADR-0016), where tags are not applied; pass `--model eleven_v3` for a run that needs them.
 - **Audition & seeds group per (dialogue, character)** — not per node. `--audition N` renders N takes of ONE representative line per character (their longest), e.g. `dinner-mini--mama--take1--seed…mp3`; pick a take per character and finalize with `--seed dinner-mini/mama=<seed>`. Pinned seeds reproduce the same take (identical duration + word timing) across runs; the raw PCM is not bit-identical (v3 seeds are take-deterministic, not sample-deterministic).
 - **`--player-audio`** additionally renders **coach audio** — every choice, plus any scripted `SPEAKER: player` line — in the reserved `player` character's voice ("hear how to say it", optional per V2 §3.2). Omit the flag and no coach files are rendered.
 - **Cost gate**: every `audio` run first prints node/choice/request/character counts and asks to proceed; pass `--yes` for scripted runs. An unconfirmed run makes zero ElevenLabs calls.
@@ -501,6 +505,7 @@ No `SPEAKER:` in choices — choices always speak as `player`. A node with `CHOI
 ## Reference files
 
 - `packages/pipeline/fixtures/the-photograph.draft.md` — the canonical full-length story example: the T02 sample pack «Фотография» in draft form; `annotate` reproduces that pack exactly.
+- `packages/pipeline/fixtures/m14/` — the M14 category fixtures: `news-090-1/2.draft.md` (`category: news`, `register: anchor`, `subtitle` + `source` on each story → `a2-news-090`), `podcast-090.draft.md` (`podcast` / `host` → `a2-podcast-090`), `comedy-090.draft.md` (`stories` + `genre: comedy` / `narrator` → `a1-comedy-090`); `annotate` reproduces their `packages/schema/fixtures/packs/<id>/pack.json` byte-for-byte.
 - `packages/pipeline/fixtures/the-dinner.dialogue.md` — the canonical dialogue example: the T25 fixture pack «Ужин у мамы» (11 nodes, 2 choice points, 3 endings, a legal loop) in draft form; `annotate` reproduces `packages/schema/fixtures/packs/a2-dialogue-001` exactly.
 - `packages/pipeline/fixtures/broken/` — deliberately broken drafts showing the big failure classes (missing lemma, misaligned table, dead branch, trap cycle, dangling references) and their error messages.
 - `packages/schema/src/pack.ts` + `packages/schema/src/dialogue.ts` — the Zod schemas every emitted pack must satisfy (the pipeline runs them for you).
@@ -513,3 +518,15 @@ Target reader: an adult A1→C1 learner who loves Dark-Somnium-style creepypasta
 - Sentences should be **narratable**: they become ElevenLabs audio, so favor rhythm and natural speech over textbook stiffness.
 - Reuse core vocabulary across a pack's stories (the app's FSRS engine feeds on repeated encounters in fresh contexts).
 - Tag grammar topics honestly and consistently — they drive "what needs work" recommendations.
+
+### Non-fiction registers (M14)
+
+The news, education, podcast, documentary and travel shelves are fed by the same CT flow (source → Claude adaptation to the target rung → draft with a full token table → `annotate` → `audio` → `publish`); each item is a **story in a story pack** with `category:` on the pack, `register:` on its direction, `source:` on the story (`name` at minimum, `publishedAt` for anything dated) and `subtitle:` when the source has a dek. Style rules per shelf:
+
+- **news** (`register: anchor`): short declarative sentences; the lede first (who / what / where in sentence one); dateline facts — places, dates, numbers; past tense for events, present for standing facts; no first person; `contextCues` for item breaks («А теперь — к погоде.»).
+- **education** (`register: lecturer`): definitions via «X — это Y» (tag `zero-copula`, the «это» row as the gloss marker) followed by **one worked example per concept**; imperative address to the learner — «обратите внимание», «сравните», «запомните»; numbered steps where order matters.
+- **podcast** (`register: host`): conversational particles and fillers — «ну», «кстати», «знаете», «честно говоря»; rhetorical questions the host then answers; direct address («напишите мне», «вы»); a guest speaks through `sentenceVoices` on their lines (a casting decision recorded in the anthology bible).
+- **documentary** (`register: voiceover`): measured third person; numbers, dates and measurements stated plainly; place names in full — a multi-word place name is one `name` token per word (the roadwork bible's «Северная Каролина» rule), and a river / range / city keeps its capital in the lemma.
+- **travel** (`register: guide`): second person «вы» throughout; imperatives — «посмотрите», «поверните», «попробуйте»; sensory adjectives (light, smell, sound, texture); the guide's own opinion is allowed («одно из моих любимых»).
+
+**Anthology packs grow by appending** (the SAR-stories rule, `sumrak-content/series/sar-stories/SERIES.md` §2; `LIBRARY_CATEGORIES.md` §6): one open-ended pack per shelf and rung — `a2-news-001`, `a2-edu-001`, `a2-podcast-001`, `a2-doc-001`, `a2-travel-001` (the level prefix follows the rung; a second rung is a new pack id). New items are new drafts appended **after** the existing ones at a `pack.version` bump; old items are never reordered, re-ided or re-rendered; one build dir per pack forever so every earlier opus is carried.
