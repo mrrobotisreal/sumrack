@@ -7,6 +7,7 @@ import { logError } from '@/services/error-log';
 import { useAmbientPrefs } from '@/store/ambient-prefs';
 
 import { useAmbientActivity } from './activity';
+import { AMBIENT_THEMES } from './beds';
 import { createAmbientController } from './controller';
 import { shouldPlayAmbience } from './playback-policy';
 
@@ -18,7 +19,9 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
       // Background narration owns its own policy. Do not change that global flag.
       () => setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'doNotMix' }),
       () =>
-        createAudioPlayer(require('../../../assets/audio/creepy-bg-music-no-vocals.mp3'), {
+        // T47: the registry's horror bed (same master, re-encoded to Opus at
+        // its own level). T48 walks the per-theme rotation from here.
+        createAudioPlayer(AMBIENT_THEMES.horror.beds[0]!.source, {
           updateInterval: 1000,
           keepAudioSessionActive: true,
         }),
