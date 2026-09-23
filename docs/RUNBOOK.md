@@ -144,3 +144,32 @@ Debug-signed (dev client) and release-signed builds cannot update over each
 other. To switch: Settings → Backup → **Export to file** (or Back up now),
 uninstall, install the other build, then §3 with the exported file. Same
 `versionCode` rules as README "Versioning scheme".
+
+## 6. Themed study soundtracks
+
+The five study-ambience themes (`horror` default · `news` · `comedy` ·
+`action` · `education`) are Opus beds bundled in the APK under
+`apps/mobile/assets/audio/ambient/<theme>/` and listed in the hand-written
+registry `apps/mobile/src/features/ambient-audio/beds.ts` (design
+`docs/design/AMBIENT_SOUNDTRACKS.md`, ADR-0017). T49 finishes this section.
+
+**Re-encode** (after replacing or adding a master):
+
+```sh
+export PATH="/opt/homebrew/bin:$PATH"   # ffmpeg + ffprobe from Homebrew
+pnpm --filter sumrak-mobile encode:ambient            # skips unchanged masters (sha256)
+pnpm --filter sumrak-mobile encode:ambient -- --force  # re-encode everything
+```
+
+- **Masters** live outside the repo in the workspace-root `assets/audio/`
+  (`../assets/audio` from the `Sumrak` repo root): the Suno WAVs plus
+  `creepy-bg-music-no-vocals.mp3` for horror. The theme → file table is the
+  `SOURCES` constant at the top of `apps/mobile/scripts/encode-ambient-beds.mjs`.
+- **−26 LUFS / −2 dBTP** is the level every bed is normalised to. It equals the
+  original horror bed's measured loudness, so the volume slider's 20 % default
+  means the same thing for every theme and the horror experience did not
+  change. Don't "fix" it to −23 or −16.
+- The script rewrites `assets/audio/ambient/beds.json`; a new or renamed bed
+  also needs its `require()` in `sources.ts` and a row in `beds.ts`
+  (`beds.test.ts` fails until both agree with the ledger). Commit the `.opus`
+  files as plain files (no LFS).
