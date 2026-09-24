@@ -303,7 +303,14 @@ export type AnalyticsEvent =
   | 'library_category_switched'
   | 'library_genre_switched'
   | 'library_empty_category_viewed'
-  | 'story_source_link_opened';
+  | 'story_source_link_opened'
+  // M15 themed ambience (T48). Props: theme/bed slugs + ms only.
+  // ambient_theme_started {theme, bed, resumedMs} — a theme begins (fresh or resumed);
+  // ambient_theme_switched {fromTheme, toTheme} — a live switch with fade;
+  // ambient_bed_advanced {theme, fromBed, toBed} — rotation stepped on didJustFinish.
+  | 'ambient_theme_started'
+  | 'ambient_theme_switched'
+  | 'ambient_bed_advanced';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

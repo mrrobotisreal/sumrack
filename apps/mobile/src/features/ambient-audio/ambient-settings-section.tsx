@@ -22,7 +22,10 @@ export function AmbientSettingsSection() {
         <View className="flex-row items-center justify-between px-4 py-3.5">
           <View className="flex-1 gap-0.5 pr-3">
             <Text className="font-ui-medium">Study ambience</Text>
-            <Text variant="caption">A creepy soundtrack for reading and games.</Text>
+            <Text variant="caption">
+              A soundtrack matched to what you&apos;re reading — creepy for stories, a newsroom bed
+              for news, upbeat for comedy, driving for action, focus music for study.
+            </Text>
           </View>
           <Switch
             value={enabled}
