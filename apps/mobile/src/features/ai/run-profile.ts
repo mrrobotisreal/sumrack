@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { repos } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
+import type { AiEffort, AiProvider, AiQuality } from '@/db/schema/user';
 
 import { ModelSchema } from './config';
 
@@ -19,9 +20,12 @@ import { ModelSchema } from './config';
 
 // --- §4.1 Types and tables --------------------------------------------------
 
-export type AiProvider = 'anthropic' | 'openai';
-export type AiQuality = 'fastest' | 'fast' | 'normal' | 'best';
-export type AiEffort = 'low' | 'medium' | 'high' | 'ultra';
+/**
+ * The enums are defined ONCE on the schema side (`db/schema/user.ts`, T52 —
+ * the `word_profiles` / `grammar_lessons` columns are typed with them) and
+ * re-exported here so feature code keeps importing them from the run profile.
+ */
+export type { AiEffort, AiProvider, AiQuality } from '@/db/schema/user';
 export const PROVIDER_ORDER: readonly AiProvider[] = ['anthropic', 'openai'];
 export const QUALITY_ORDER: readonly AiQuality[] = ['fastest', 'fast', 'normal', 'best'];
 export const EFFORT_ORDER: readonly AiEffort[] = ['low', 'medium', 'high', 'ultra'];

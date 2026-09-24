@@ -101,6 +101,8 @@ describe('migrations from empty DB', () => {
       'achievements',
       'import_requests',
       'imported_packs',
+      'word_profiles',
+      'grammar_lessons',
       'settings',
       'sync_state',
       'analytics_events',
@@ -146,6 +148,102 @@ describe('migrations from empty DB', () => {
     const db = createTestDb();
     expect(await columnNames(db, 'review_log')).toContain('source');
     expect(await indexNames(db, 'review_log')).toContain('review_log_source_idx');
+  });
+
+  it('0013_word-profiles: fresh DB has both M16 tables, all indexes, and the partial unique index', async () => {
+    const db = createTestDb();
+    await expectWordProfileTables(db);
+  });
+});
+
+const WORD_PROFILE_COLUMNS = [
+  'id',
+  'lemma_norm',
+  'kind',
+  'headword',
+  'pos',
+  'is_current',
+  'payload',
+  'provider',
+  'model',
+  'quality',
+  'effort',
+  'effort_applied',
+  'prompt_tokens',
+  'completion_tokens',
+  'reasoning_tokens',
+  'cost_usd',
+  'duration_ms',
+  'created_at',
+];
+const GRAMMAR_LESSON_COLUMNS = [
+  'id',
+  'lemma_norm',
+  'kind',
+  'headword',
+  'section_id',
+  'profile_id',
+  'markdown',
+  'provider',
+  'model',
+  'quality',
+  'effort',
+  'effort_applied',
+  'prompt_tokens',
+  'completion_tokens',
+  'reasoning_tokens',
+  'cost_usd',
+  'duration_ms',
+  'created_at',
+];
+
+/** T52 shape assertions shared by the fresh + upgrade cases (WORD_FORMS §2.2/§2.3). */
+async function expectWordProfileTables(db: SumrakDB) {
+  expect(await columnNames(db, 'word_profiles')).toEqual(WORD_PROFILE_COLUMNS);
+  expect(await columnNames(db, 'grammar_lessons')).toEqual(GRAMMAR_LESSON_COLUMNS);
+  expect(await indexNames(db, 'word_profiles')).toEqual(
+    expect.arrayContaining(['word_profiles_key_idx', 'word_profiles_current_uq']),
+  );
+  expect(await indexNames(db, 'grammar_lessons')).toEqual(
+    expect.arrayContaining(['grammar_lessons_key_idx', 'grammar_lessons_created_idx']),
+  );
+  // The partial unique index must keep its WHERE through drizzle-kit — the
+  // versioning invariant (one current per key) rests on it.
+  const idx = await db.all<{ name: string; unique: number; partial: number }>(
+    sql.raw('PRAGMA index_list(word_profiles)'),
+  );
+  const current = idx.find((i) => i.name === 'word_profiles_current_uq');
+  expect(current).toMatchObject({ unique: 1, partial: 1 });
+  const master = await db.all<{ sql: string }>(
+    sql`SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'word_profiles_current_uq'`,
+  );
+  expect(master[0]!.sql).toMatch(/WHERE\s+is_current\s*=\s*1/i);
+}
+
+describe('0013_word-profiles upgrade from 0012', () => {
+  it('creates both tables + indexes on a device that ran 0012; the partial index enforces one current per key', async () => {
+    const { sqlite, db } = createDbUpTo('0012_review-source');
+    const before = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('word_profiles', 'grammar_lessons')`,
+    );
+    expect(before).toEqual([]);
+
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+
+    await expectWordProfileTables(db);
+    const insert = sqlite.prepare(
+      `INSERT INTO word_profiles (id, lemma_norm, kind, headword, pos, is_current, payload, provider, model, quality, effort, effort_applied, duration_ms, created_at)
+       VALUES (?, 'говорить', 'word', 'говорить', 'verb', ?, '{}', 'anthropic', 'm', 'normal', 'high', 1, 1, ?)`,
+    );
+    insert.run('wp-1', 1, 1);
+    // A second CURRENT row for the same key is rejected by the partial index…
+    expect(() => insert.run('wp-2', 1, 2)).toThrow(/UNIQUE/);
+    // …while a non-current version of the same key is fine (old versions kept).
+    insert.run('wp-3', 0, 3);
+    const applied = sqlite.prepare('SELECT COUNT(*) AS n FROM "__drizzle_migrations"').get() as {
+      n: number;
+    };
+    expect(applied.n).toBe(journal.entries.length);
   });
 });
 

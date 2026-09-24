@@ -411,6 +411,95 @@ export const importedPacks = sqliteTable('imported_packs', {
   createdAt: integer('created_at').notNull(),
 });
 
+export type ProfileKind = 'word' | 'phrase';
+/**
+ * The AI run profile enums (M16, WORD_FORMS §2.2 / §4.1). Defined HERE —
+ * the one definition — because the schema cannot import from features/;
+ * `features/ai/run-profile.ts` re-exports them.
+ */
+export type AiProvider = 'anthropic' | 'openai';
+export type AiQuality = 'fastest' | 'fast' | 'normal' | 'best';
+export type AiEffort = 'low' | 'medium' | 'high' | 'ultra';
+
+/**
+ * Word profiles (T52, WORD_FORMS §2.2, ADR-0018): the persisted, versioned,
+ * AI-generated grammar dossier of one lemma or phrase. Keyed by the bank
+ * dedup key `(lemma_norm, kind)` — NOT by bank row — so a profile survives
+ * item deletion and re-adding (decision 10: old versions kept, exactly one
+ * current per key, promotable). User data: backed up, never in content.
+ */
+export const wordProfiles = sqliteTable(
+  'word_profiles',
+  {
+    id: text('id').primaryKey(),
+    /** Profile key — the bank dedup key: normalizeRu(lemma) for words, normalizePhrase(surface) for phrases. */
+    lemmaNorm: text('lemma_norm').notNull(),
+    kind: text('kind').$type<ProfileKind>().notNull(),
+    /** Headword as stored on the bank item at generation time (ё preserved, no stress marks). */
+    headword: text('headword').notNull(),
+    /** Model-classified part of speech (catalog slug) — informational, not part of the key. */
+    pos: text('pos').notNull(),
+    /** Exactly one current version per (lemma_norm, kind). */
+    isCurrent: integer('is_current', { mode: 'boolean' }).notNull().default(false),
+    /** WordProfile JSON (schema §5) — Zod-parsed on read; unreadable → treated as absent, never a crash. */
+    payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    provider: text('provider').$type<AiProvider>().notNull(),
+    model: text('model').notNull(),
+    quality: text('quality').$type<AiQuality>().notNull(),
+    effort: text('effort').$type<AiEffort>().notNull(),
+    /** true when the effort param was accepted; false when the client had to retry without it (§4.4). */
+    effortApplied: integer('effort_applied', { mode: 'boolean' }).notNull().default(true),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    reasoningTokens: integer('reasoning_tokens'),
+    costUsd: real('cost_usd'),
+    durationMs: integer('duration_ms').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    index('word_profiles_key_idx').on(t.lemmaNorm, t.kind, t.createdAt),
+    uniqueIndex('word_profiles_current_uq')
+      .on(t.lemmaNorm, t.kind)
+      .where(sql`is_current = 1`),
+  ],
+);
+
+/**
+ * Grammar lessons (T54, WORD_FORMS §2.3; the table ships in T52's migration
+ * so T54 needs none): append-only saved AI markdown about one word × one
+ * catalog section, with its receipt. `profileId` is an unenforced ref.
+ */
+export const grammarLessons = sqliteTable(
+  'grammar_lessons',
+  {
+    id: text('id').primaryKey(),
+    lemmaNorm: text('lemma_norm').notNull(),
+    kind: text('kind').$type<ProfileKind>().notNull(),
+    headword: text('headword').notNull(),
+    /** Section catalog id (§5.3) the lesson is about. */
+    sectionId: text('section_id').notNull(),
+    /** The profile version the lesson was generated from (unenforced ref — a promoted/older version may be gone). */
+    profileId: text('profile_id'),
+    /** Lesson markdown (bounded, §6.2). */
+    markdown: text('markdown').notNull(),
+    provider: text('provider').$type<AiProvider>().notNull(),
+    model: text('model').notNull(),
+    quality: text('quality').$type<AiQuality>().notNull(),
+    effort: text('effort').$type<AiEffort>().notNull(),
+    effortApplied: integer('effort_applied', { mode: 'boolean' }).notNull().default(true),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    reasoningTokens: integer('reasoning_tokens'),
+    costUsd: real('cost_usd'),
+    durationMs: integer('duration_ms').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    index('grammar_lessons_key_idx').on(t.lemmaNorm, t.kind, t.sectionId, t.createdAt),
+    index('grammar_lessons_created_idx').on(t.createdAt),
+  ],
+);
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
