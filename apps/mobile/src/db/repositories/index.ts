@@ -14,6 +14,7 @@ import { createReviewsRepo } from './reviews';
 import { createSettingsRepo } from './settings';
 import { createStatsRepo } from './stats';
 import { createSyncStateRepo } from './sync-state';
+import { createWordFormsRepo } from './word-forms';
 
 /**
  * The repository layer — the ONLY place Drizzle/SQL is allowed (roadmap §3).
@@ -47,6 +48,7 @@ export function createRepositories(db: SumrakDB) {
     stats: createStatsRepo(db),
     settings: createSettingsRepo(db),
     syncState: createSyncStateRepo(db),
+    wordForms: createWordFormsRepo(db),
   };
 }
 
@@ -65,3 +67,4 @@ export * from './reviews';
 export * from './settings';
 export * from './stats';
 export * from './sync-state';
+export * from './word-forms';
