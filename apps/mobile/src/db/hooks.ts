@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 
 import { classifyPack, type Classified } from '@/features/library/categories';
+import { profileKeyFor } from '@/features/word-forms/profile-core';
 
 import { repos } from './index';
-import type { BankFilter, BankSort, EncounterRow } from './repositories/bank';
+import type { BankFilter, BankItemRow, BankSort, EncounterRow } from './repositories/bank';
 import type { BookmarkRow } from './repositories/bookmarks';
 import type { ResolvedSentence } from './repositories/content';
+import type { ProfileKind } from './schema';
 import { MIXED_SESSION_DIRECTIONS, UNIFIED_SESSION_DIRECTIONS } from './repositories/reviews';
 
 /**
@@ -50,6 +52,13 @@ export const queryKeys = {
   dialogueRuns: (dialogueId?: string) => ['dialogue-runs', dialogueId ?? 'all'] as const,
   dialogueStamps: (packId: string, sentenceId: string) =>
     ['dialogue-stamps', packId, sentenceId] as const,
+  // M16 word profiles (T53, WORD_FORMS §5.4 key): keyed by the profile key,
+  // not the bank item id — profiles outlive items and are shared by lemma.
+  wordProfile: (lemmaNorm: string, kind: ProfileKind) => ['word-profile', lemmaNorm, kind] as const,
+  wordProfileVersions: (lemmaNorm: string, kind: ProfileKind) =>
+    ['word-profile', lemmaNorm, kind, 'versions'] as const,
+  lessonCounts: (lemmaNorm: string, kind: ProfileKind) =>
+    ['lesson-counts', lemmaNorm, kind] as const,
 };
 
 export function usePacks() {
@@ -389,4 +398,65 @@ export function useDialogueStamps(packId: string | undefined, sentenceId: string
     queryFn: () => repos.dialogues.getStampsForSentence(packId!, sentenceId!),
     enabled: !!packId && !!sentenceId,
   });
+}
+
+// --- M16 word profiles (T53) ------------------------------------------------
+
+type ProfileKeyItem = Pick<BankItemRow, 'kind' | 'lemmaNorm' | 'normalized'>;
+
+/**
+ * The current profile of a bank item (null = none yet, or the payload is
+ * unreadable). Disabled for lemma-less words — they have no key (§5.4), the
+ * Forms tab shows «Add a lemma first» instead of querying.
+ */
+export function useCurrentProfile(item: ProfileKeyItem | null | undefined) {
+  const key = item ? profileKeyFor(item) : null;
+  return useQuery({
+    queryKey: queryKeys.wordProfile(key?.lemmaNorm ?? '', key?.kind ?? 'word'),
+    queryFn: () => repos.wordForms.getCurrentProfile(key!.lemmaNorm, key!.kind),
+    enabled: key !== null,
+  });
+}
+
+/** Every stored version for the item's key, newest first (the Versions sheet). */
+export function useProfileVersions(item: ProfileKeyItem | null | undefined) {
+  const key = item ? profileKeyFor(item) : null;
+  return useQuery({
+    queryKey: queryKeys.wordProfileVersions(key?.lemmaNorm ?? '', key?.kind ?? 'word'),
+    queryFn: () => repos.wordForms.listProfileVersions(key!.lemmaNorm, key!.kind),
+    enabled: key !== null,
+  });
+}
+
+/** Lesson counts per section for the item's key (0 until T54 writes lessons). */
+export function useLessonCounts(item: ProfileKeyItem | null | undefined) {
+  const key = item ? profileKeyFor(item) : null;
+  return useQuery({
+    queryKey: queryKeys.lessonCounts(key?.lemmaNorm ?? '', key?.kind ?? 'word'),
+    queryFn: () => repos.wordForms.countLessonsForKey(key!.lemmaNorm, key!.kind),
+    enabled: key !== null,
+  });
+}
+
+/**
+ * Invalidate everything the Forms tab reads for one key: the current
+ * profile, its versions list, and the lesson counts (T54 placeholder) —
+ * after generate and promote, so the badge and the tables never disagree
+ * (ticket technical note). Also the batch entry's «N words without forms»
+ * count (T55) which changes whenever a profile appears.
+ */
+export function useInvalidateWordProfile() {
+  const queryClient = useQueryClient();
+  return React.useCallback(
+    (key: { lemmaNorm: string; kind: ProfileKind }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['word-profile', key.lemmaNorm, key.kind],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonCounts(key.lemmaNorm, key.kind),
+      });
+      void queryClient.invalidateQueries({ queryKey: ['profile-coverage'] });
+    },
+    [queryClient],
+  );
 }

@@ -337,7 +337,17 @@ export type AnalyticsEvent =
   | 'word_profile_requested'
   | 'word_profile_generated'
   | 'word_profile_invalid_retry'
-  | 'word_profile_failed';
+  | 'word_profile_failed'
+  // M16 Forms tab + popup (T53, WORD_FORMS §2.5). Props: kind, booleans, a catalog section id —
+  // never the headword. forms_tab_viewed {kind, hasProfile} — the tab focused (once per mount);
+  // forms_section_expanded {sectionId} — a section card opened (once per section per mount);
+  // word_profile_version_promoted {kind} — «Make current» in the Versions sheet;
+  // popup_forms_opened {banked} — the reader/dialogue popup's «Формы» (banked=false ⇒ the word
+  // was added to the bank on the way).
+  | 'forms_tab_viewed'
+  | 'forms_section_expanded'
+  | 'word_profile_version_promoted'
+  | 'popup_forms_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

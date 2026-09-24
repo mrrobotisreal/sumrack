@@ -14,10 +14,18 @@ import {
 import { LevelChip } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
-import { useBankItemDetail, useItemReviewState, type EncounterWithContext } from '@/db/hooks';
+import {
+  useBankItemDetail,
+  useItemReviewState,
+  useLessonCounts,
+  type EncounterWithContext,
+} from '@/db/hooks';
 import type { CardRow, ReviewLogRow } from '@/db/repositories/reviews';
 import type { CardDirection } from '@/db/schema';
 import { ExplainSheet } from '@/features/ai/explain-sheet';
+import { ChipRow } from '@/features/library/category-chips';
+import type { ChipItem } from '@/features/library/library-filter';
+import { FormsTab } from '@/features/word-forms/forms-tab';
 import { DIRECTION_LABELS, formatDue, ratingName, stateName } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { speak } from '@/services/speech';
@@ -29,18 +37,44 @@ import { EditItemSheet } from './edit-item-sheet';
 const DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening', 'production'];
 const HISTORY_LIMIT = 12;
 
+/** The item-detail tab strip (M16/T53, WORD_FORMS §7.1); `?tab=` deep-links into forms/lessons. */
+export type ItemDetailTab = 'overview' | 'forms' | 'lessons';
+
 /**
  * Bank item detail (design §7.2): leads with encounters-in-context ("the
  * sentence is the memory hook", UI_DESIGN §4), real per-direction FSRS state
- * + review history (T06), edit and delete.
+ * + review history (T06), edit and delete. Since M16 (T53) the headword card
+ * is followed by an Overview · Forms · Lessons tab strip — Overview is the
+ * pre-M16 content, Forms is the word profile (`features/word-forms`), and
+ * Lessons is a placeholder until T54.
  */
-export function ItemDetailScreen({ id }: { id: string }) {
+export function ItemDetailScreen({
+  id,
+  initialTab = 'overview',
+}: {
+  id: string;
+  initialTab?: ItemDetailTab;
+}) {
   const router = useRouter();
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
   const detail = useBankItemDetail(id);
   const [editOpen, setEditOpen] = React.useState(false);
   const [explainOpen, setExplainOpen] = React.useState(false);
+  const [tab, setTab] = React.useState<ItemDetailTab>(initialTab);
+  const lessonCounts = useLessonCounts(detail.data);
+  const lessonTotal = React.useMemo(
+    () => Object.values(lessonCounts.data ?? {}).reduce((a, b) => a + b, 0),
+    [lessonCounts.data],
+  );
+  const tabItems = React.useMemo<ChipItem<ItemDetailTab>[]>(
+    () => [
+      { key: 'overview', label: 'Overview' },
+      { key: 'forms', label: 'Forms' },
+      { key: 'lessons', label: 'Lessons', count: lessonTotal },
+    ],
+    [lessonTotal],
+  );
 
   React.useEffect(() => {
     track('bank_item_viewed', { id });
@@ -183,21 +217,44 @@ export function ItemDetailScreen({ id }: { id: string }) {
         </View>
       </View>
 
-      {/* real FSRS state per direction (T06) */}
-      <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
-        Reviews
-      </Text>
-      <ReviewStateSection bankItemId={item.id} />
-
-      {/* encounters — the memory hooks */}
-      <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
-        Encounters · {item.encounters.length}
-      </Text>
-      <View className="gap-2">
-        {item.encounters.map((enc) => (
-          <EncounterCard key={enc.id} encounter={enc} />
-        ))}
+      {/* Overview · Forms · Lessons (M16/T53, §7.1) — the chip row already renders tabs */}
+      <View className="-mx-4 mt-4">
+        <ChipRow items={tabItems} selected={tab} onSelect={setTab} size="md" testID="item-tabs" />
       </View>
+
+      {tab === 'overview' && (
+        <>
+          {/* real FSRS state per direction (T06) */}
+          <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
+            Reviews
+          </Text>
+          <ReviewStateSection bankItemId={item.id} />
+
+          {/* encounters — the memory hooks */}
+          <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
+            Encounters · {item.encounters.length}
+          </Text>
+          <View className="gap-2">
+            {item.encounters.map((enc) => (
+              <EncounterCard key={enc.id} encounter={enc} />
+            ))}
+          </View>
+        </>
+      )}
+
+      {tab === 'forms' && (
+        <FormsTab item={item} headword={headword} lessonCounts={lessonCounts.data} />
+      )}
+
+      {tab === 'lessons' && (
+        <View className="mt-6 items-center gap-2 rounded-xl border border-border bg-surface px-6 py-10">
+          <Ionicons name="school-outline" size={24} color={theme.textMuted} />
+          <Text className="font-ui-medium">Lessons arrive with T54</Text>
+          <Text variant="caption" className="text-center">
+            Per-section grammar lessons will be listed here, newest first.
+          </Text>
+        </View>
+      )}
 
       <EditItemSheet
         open={editOpen}
