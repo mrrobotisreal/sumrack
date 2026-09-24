@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text as RNText, View, type TextStyle } from 'react-native';
+import { ScrollView, Text as RNText, View, type TextStyle } from 'react-native';
 
 import { SelectableText, type FreeSelection } from '@/components/selectable-text';
 import { chunkRuns } from '@/lib/free-text';
@@ -14,6 +14,19 @@ interface MarkdownViewProps {
 }
 
 const READING: TextStyle = { fontFamily: 'Literata_400Regular', fontSize: 17, lineHeight: 27 };
+/**
+ * Tables wider than this many columns scroll horizontally with fixed column
+ * widths instead of squeezing every cell to `flex-1` — a stress-marked form
+ * must never break mid-word (T54 lesson tables are 4–5 columns; the T22
+ * "never squished cells" convention, like the Forms tab's adjective grid).
+ */
+export const TABLE_FLEX_MAX_COLS = 3;
+const TABLE_FIXED_COL_WIDTH = 150;
+
+/** Exported for the unit test: does a table with `cols` columns scroll horizontally? */
+export function tableScrollsHorizontally(cols: number): boolean {
+  return cols > TABLE_FLEX_MAX_COLS;
+}
 const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 24, 2: 20, 3: 17 };
 
 /**
@@ -99,9 +112,14 @@ function renderBlock(
           {renderRuns(block.runs, { ...READING, fontFamily: 'Literata_400Regular_Italic' })}
         </View>
       );
-    case 'table':
-      return (
-        <View className="overflow-hidden rounded-lg border border-border">
+    case 'table': {
+      const cols = Math.max(0, ...block.rows.map((cells) => cells.length));
+      const scrolls = tableScrollsHorizontally(cols);
+      const table = (
+        <View
+          className="overflow-hidden rounded-lg border border-border"
+          style={scrolls ? { width: cols * TABLE_FIXED_COL_WIDTH } : undefined}
+        >
           {block.rows.map((cells, r) => (
             <View
               key={r}
@@ -110,7 +128,11 @@ function renderBlock(
               }`}
             >
               {cells.map((runs, c) => (
-                <View key={c} className="flex-1 px-2.5 py-2">
+                <View
+                  key={c}
+                  className={scrolls ? 'px-2.5 py-2' : 'flex-1 px-2.5 py-2'}
+                  style={scrolls ? { width: TABLE_FIXED_COL_WIDTH } : undefined}
+                >
                   {renderRuns(
                     runs,
                     r === 0 && block.headerRow
@@ -123,6 +145,13 @@ function renderBlock(
           ))}
         </View>
       );
+      if (!scrolls) return table;
+      return (
+        <ScrollView horizontal showsHorizontalScrollIndicator bounces={false}>
+          {table}
+        </ScrollView>
+      );
+    }
     case 'code':
       return (
         <View className="rounded-lg bg-surface-2 px-3 py-2">

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { nounProfile, verbProfile } from '@/features/word-forms/__tests__/fixtures';
@@ -121,6 +121,15 @@ describe('word-forms repo — items without a profile (§5.4)', () => {
       translation: 'hair stood',
     });
     const other = await bank.addWord({ lemma: 'окно', surface: 'окно', translation: 'window' });
+    // Pin distinct created_at values: three inserts can land in the same
+    // millisecond, and the id tiebreak is random-suffixed (T54 saw it flake).
+    const t0 = Date.now() - 1000;
+    for (const [i, id] of [word.item.id, phrase.item.id, other.item.id].entries()) {
+      await db
+        .update(bankItems)
+        .set({ createdAt: t0 + i })
+        .where(eq(bankItems.id, id));
+    }
     // A needs-enrichment word with no lemma yet (the popup's capture path writes these).
     await db.insert(bankItems).values({
       id: 'bi-nolemma',
