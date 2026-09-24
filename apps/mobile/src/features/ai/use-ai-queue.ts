@@ -4,10 +4,11 @@ import { AppState } from 'react-native';
 import { onConnectivityRegained } from './connectivity';
 import { pumpImportAnnotateQueue } from './import-annotate';
 import { pumpFeedbackQueue } from './journal-feedback';
+import { pumpWordFormsBatch } from '@/features/word-forms/batch-service';
 
 /**
  * Queue worker triggers (mirrors T07's useAutoSync): pump queued journal-
- * feedback and import-annotation requests on app start, on return to
+ * feedback, import-annotation and word-forms batch (T55) requests on app start, on return to
  * foreground, and the moment connectivity comes back — the acceptance path
  * "queued offline → auto-submits when online" runs through the
  * connectivity listener here. Both pumps join concurrent runs and treat
@@ -18,6 +19,7 @@ export function useAiQueueWorker() {
     const pumpAll = () => {
       void pumpFeedbackQueue();
       void pumpImportAnnotateQueue();
+      void pumpWordFormsBatch();
     };
     pumpAll();
     const appState = AppState.addEventListener('change', (state) => {

@@ -359,7 +359,16 @@ export type AnalyticsEvent =
   | 'lesson_requested'
   | 'lesson_generated'
   | 'lesson_failed'
-  | 'lessons_screen_opened';
+  | 'lessons_screen_opened'
+  // M16 durable batch (T55, WORD_FORMS §2.5). Props: counts, run-profile slugs, ms, cost —
+  // never a headword. profile_batch_started {count, provider, quality, effort} — the row was
+  // written; profile_batch_progress {done, failed, remaining} — at most once per resolved item
+  // (done + failed + remaining = count, always); profile_batch_finished {done, failed, ms,
+  // costUsd} — pending reached zero; profile_batch_cancelled {done, remaining} — Cancel tapped.
+  | 'profile_batch_started'
+  | 'profile_batch_progress'
+  | 'profile_batch_finished'
+  | 'profile_batch_cancelled';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

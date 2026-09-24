@@ -393,11 +393,12 @@ export async function processBatch(deps: BatchDeps): Promise<BatchPassResult> {
       });
     }
     if (isBatchFinished(state) && state.finishedAt === undefined) {
-      state = { ...state, finishedAt: deps.now() };
+      const finishedAt = deps.now();
+      state = { ...state, finishedAt };
       deps.track('profile_batch_finished', {
         done: state.done,
         failed: state.failed.length,
-        ms: state.finishedAt - state.startedAt,
+        ms: finishedAt - state.startedAt,
         costUsd: Math.round(state.costUsd * 1000) / 1000,
       });
     }

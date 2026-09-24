@@ -452,6 +452,18 @@ export function useLessonCounts(item: ProfileKeyItem | null | undefined) {
 }
 
 /**
+ * How many bank items have no current profile — the batch entry row's N
+ * (T55, WORD_FORMS §7.5). Keyed under `['profile-coverage']`, which every
+ * profile write invalidates (`useInvalidateWordProfile`, the batch service).
+ */
+export function useItemsWithoutProfileCount() {
+  return useQuery({
+    queryKey: ['profile-coverage', 'count'] as const,
+    queryFn: () => repos.wordForms.countItemsWithoutProfile(),
+  });
+}
+
+/**
  * Invalidate everything the Forms tab reads for one key: the current
  * profile, its versions list, and the lesson counts —
  * after generate and promote, so the badge and the tables never disagree

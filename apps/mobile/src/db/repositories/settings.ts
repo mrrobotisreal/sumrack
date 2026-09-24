@@ -133,6 +133,15 @@ export const SETTING_KEYS = {
    */
   grammarStats: 'grammar.stats',
   /**
+   * The durable word-forms batch (T55, WORD_FORMS §2.4): { v: 1, startedAt,
+   * preset: {provider, quality, effort}, pending: { bankItemId, lemmaNorm,
+   * kind, headword, attempts }[], done, failed: { …, code }[], count,
+   * costUsd, finishedAt? } or absent. Written BEFORE each request, an item
+   * removed AFTER its profile is stored; deleted when nothing is pending
+   * and nothing failed (features/word-forms/batch-service.ts).
+   */
+  grammarBatch: 'grammar.batch',
+  /**
    * Daily goal (T19, §7.7): { reviews, readingMin } — Zod-validated on read
    * (features/motivation/goal-prefs), defaults 20 reviews + 10 min reading.
    */
