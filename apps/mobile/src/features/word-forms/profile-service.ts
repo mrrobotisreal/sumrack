@@ -172,6 +172,11 @@ export async function generateProfile(
     if (!attempt.ok) {
       // §5.5 step 3: exactly one correction round with the verbatim issues.
       track('word_profile_invalid_retry', { issues: attempt.issues.length });
+      // Dev-only: the issues name Russian forms, so they go to the Metro log,
+      // never to analytics (T55's matrix reads them from here).
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        console.log('[word-profile] correction round:', attempt.issues);
+      }
       const retry = await chat(
         {
           ...request,
