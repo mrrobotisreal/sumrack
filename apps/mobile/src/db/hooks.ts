@@ -4,7 +4,7 @@ import * as React from 'react';
 import { classifyPack, type Classified } from '@/features/library/categories';
 
 import { repos } from './index';
-import type { BankFilter, EncounterRow } from './repositories/bank';
+import type { BankFilter, BankSort, EncounterRow } from './repositories/bank';
 import type { BookmarkRow } from './repositories/bookmarks';
 import type { ResolvedSentence } from './repositories/content';
 import { MIXED_SESSION_DIRECTIONS, UNIFIED_SESSION_DIRECTIONS } from './repositories/reviews';
@@ -18,7 +18,8 @@ export const queryKeys = {
   packs: ['packs'] as const,
   stories: ['stories'] as const,
   storyDetail: (packId: string, storyId: string) => ['story', packId, storyId] as const,
-  bankItems: (filter?: BankFilter) => ['bank-items', filter ?? {}] as const,
+  bankItems: (filter?: BankFilter, sort?: BankSort) =>
+    ['bank-items', filter ?? {}, sort ?? null] as const,
   bankItem: (id: string) => ['bank-item', id] as const,
   bankItemDetail: (id: string) => ['bank-item', id, 'detail'] as const,
   bankCount: ['bank-count'] as const,
@@ -81,10 +82,10 @@ export function useStoryDetail(packId: string, storyId: string) {
   });
 }
 
-export function useBankItems(filter?: BankFilter) {
+export function useBankItems(filter?: BankFilter, sort?: BankSort) {
   return useQuery({
-    queryKey: queryKeys.bankItems(filter),
-    queryFn: () => repos.bank.listItems(filter),
+    queryKey: queryKeys.bankItems(filter, sort),
+    queryFn: () => repos.bank.listItems(filter, sort),
   });
 }
 

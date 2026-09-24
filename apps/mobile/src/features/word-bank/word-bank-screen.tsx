@@ -9,7 +9,10 @@ import { Text } from '@/components/ui/text';
 import { useBankFilterOptions, useBankItems, useBankMasteryCounts, useStories } from '@/db/hooks';
 import type { BankFilter, BankListItem, MasteryFilter } from '@/db/repositories/bank';
 import { track } from '@/services/analytics';
+import { isDefaultBankSort, useBankPrefs } from '@/store/bank-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
+
+import { SortSheet, describeBankSort, isFamiliaritySort } from './sort-sheet';
 
 type KindFilter = 'all' | 'word' | 'phrase';
 
@@ -39,6 +42,12 @@ export function WordBankScreen() {
   const [sourceStoryId, setSourceStoryId] = React.useState<string | null>(null);
   const [needsInfo, setNeedsInfo] = React.useState(false);
   const [mastery, setMastery] = React.useState<MasteryFilter | null>(null);
+  /** T50: persisted sort (store/bank-prefs) + the sheet's open state. */
+  const sort = useBankPrefs((s) => s.sort);
+  const setSort = useBankPrefs((s) => s.setSort);
+  const [sortOpen, setSortOpen] = React.useState(false);
+  const sortIsDefault = isDefaultBankSort(sort);
+  const showFamiliarity = isFamiliaritySort(sort);
 
   const deferredSearch = React.useDeferredValue(search);
 
@@ -65,7 +74,7 @@ export function WordBankScreen() {
     [deferredSearch, kind, level, pos, sourceStoryId, needsInfo, mastery],
   );
 
-  const items = useBankItems(filter);
+  const items = useBankItems(filter, sort);
   const options = useBankFilterOptions();
   const masteryCounts = useBankMasteryCounts();
   const stories = useStories();
@@ -107,6 +116,20 @@ export function WordBankScreen() {
             </Pressable>
           )}
         </View>
+        <Pressable
+          onPress={() => setSortOpen(true)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Sort"
+          accessibilityState={{ selected: !sortIsDefault }}
+          className="h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface active:bg-surface-2"
+        >
+          <Ionicons
+            name="swap-vertical-outline"
+            size={22}
+            color={sortIsDefault ? theme.textMuted : theme.accent}
+          />
+        </Pressable>
         <Pressable
           onPress={() => router.push('/word-bank/add')}
           hitSlop={6}
@@ -196,6 +219,13 @@ export function WordBankScreen() {
         />
       </ScrollView>
 
+      {/* T50: one-line caption whenever the sort is not the default */}
+      {!sortIsDefault && (
+        <Text variant="caption" className="px-4 pb-2" accessibilityLabel="Current sort">
+          {describeBankSort(sort)}
+        </Text>
+      )}
+
       {/* enrichment call-to-action (T16): visible whenever items are flagged */}
       {(enrichable.data?.length ?? 0) > 0 && (
         <Pressable
@@ -231,10 +261,25 @@ export function WordBankScreen() {
           keyExtractor={(item) => item.id}
           contentContainerClassName="px-4 pb-12"
           renderItem={({ item }) => (
-            <BankRow item={item} onPress={() => router.push(`/word-bank/${item.id}`)} />
+            <BankRow
+              item={item}
+              showFamiliarity={showFamiliarity}
+              onPress={() => router.push(`/word-bank/${item.id}`)}
+            />
           )}
         />
       )}
+
+      <SortSheet
+        open={sortOpen}
+        sort={sort}
+        onChange={(patch) => {
+          setSort(patch);
+          const next = { ...sort, ...patch };
+          track('bank_sort_changed', { key: next.key, familiarity: next.familiarity });
+        }}
+        onClose={() => setSortOpen(false)}
+      />
     </View>
   );
 }
@@ -272,7 +317,16 @@ function FilterChip({
   );
 }
 
-function BankRow({ item, onPress }: { item: BankListItem; onPress: () => void }) {
+function BankRow({
+  item,
+  showFamiliarity,
+  onPress,
+}: {
+  item: BankListItem;
+  /** T50: trailing familiarity chip, only under a familiarity-driven sort. */
+  showFamiliarity: boolean;
+  onPress: () => void;
+}) {
   const { tokens: theme } = useAppTheme();
   const headword = item.kind === 'word' ? (item.lemma ?? item.surface) : item.surface;
   return (
@@ -303,8 +357,29 @@ function BankRow({ item, onPress }: { item: BankListItem; onPress: () => void })
           ×{item.encounterCount}
         </Text>
       )}
+      {showFamiliarity && <FamiliarityChip item={item} />}
       {item.level && <LevelChip level={item.level} />}
     </Pressable>
+  );
+}
+
+/**
+ * `‹n›%` from the last-10 flashcard grades; muted «new» for an unpracticed
+ * item. Same text-xs/rounded-full footprint as LevelChip so row height is
+ * unchanged (the default-sort list never renders it at all).
+ */
+function FamiliarityChip({ item }: { item: BankListItem }) {
+  const practiced = item.practiceCount > 0 && item.familiarity != null;
+  const pct = practiced ? Math.round(item.familiarity! * 100) : null;
+  return (
+    <View
+      className={`rounded-full px-2 py-0.5 ${practiced ? 'bg-accent-soft' : 'bg-surface-2'}`}
+      accessibilityLabel={practiced ? `Familiarity ${pct}%` : 'Not yet practiced'}
+    >
+      <Text className={`text-xs ${practiced ? 'font-ui-medium text-accent' : 'text-text-muted'}`}>
+        {practiced ? `${pct}%` : 'new'}
+      </Text>
+    </View>
   );
 }
 

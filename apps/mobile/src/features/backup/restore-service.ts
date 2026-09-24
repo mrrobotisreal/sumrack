@@ -9,6 +9,7 @@ import { track } from '@/services/analytics';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
 import { hydrateGoalPrefsFromDb } from '@/store/goal-prefs';
+import { hydrateBankPrefsFromDb } from '@/store/bank-prefs';
 import { hydrateLibraryPrefsFromDb } from '@/store/library-prefs';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
 import { hydrateNotificationPrefsFromDb } from '@/store/notification-prefs';
@@ -229,6 +230,7 @@ async function rehydrateAfterRestore(): Promise<void> {
   await hydrateThemeFromDb();
   await hydrateReaderPrefsFromDb();
   await hydrateLibraryPrefsFromDb();
+  await hydrateBankPrefsFromDb();
   await hydrateLookupPrefsFromDb();
   await hydrateGamePrefsFromDb();
   await hydrateDailyPrefsFromDb();

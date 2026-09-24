@@ -85,6 +85,13 @@ export const SETTING_KEYS = {
    */
   libraryFilter: 'library.filter',
   /**
+   * Словарь sort (T50, WORD_FORMS §2.4): { v: 1, key: BankSortKey,
+   * familiarity: 'least' | 'most' }, defaults { 'added-asc', 'least' } —
+   * Zod-validated on read (store/bank-prefs.ts); a malformed value heals
+   * field-by-field to the defaults.
+   */
+  bankSort: 'bank.sort',
+  /**
    * Daily-session composition (T14): { length, weights: { flashcard, mc,
    * cloze, sentenceBuilder, listening } } — Zod-validated on read
    * (store/daily-prefs.ts), corrupt values fall back to defaults.
