@@ -38,8 +38,11 @@ export const MODEL_OPTIONS: { id: string; label: string; hint: string }[] = [
   },
 ];
 
-/** Anything that plausibly looks like an OpenRouter model id. */
-const ModelSchema = z
+/**
+ * Anything that plausibly looks like an OpenRouter model id. Exported since
+ * T51: the run-profile model table validates its eight slugs with it too.
+ */
+export const ModelSchema = z
   .string()
   .trim()
   .min(3)
