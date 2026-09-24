@@ -6,6 +6,7 @@ import migrations from '../../drizzle/migrations';
 import { initMotivation } from '@/features/motivation/service';
 import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
+import { hydrateAmbientCursorsFromDb } from '@/store/ambient-cursors';
 import { hydrateAmbientPrefsFromDb } from '@/store/ambient-prefs';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
@@ -45,6 +46,7 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateReaderPrefsFromDb();
         await hydrateLibraryPrefsFromDb();
         await hydrateAmbientPrefsFromDb();
+        await hydrateAmbientCursorsFromDb();
         await hydrateLookupPrefsFromDb();
         await hydrateGamePrefsFromDb();
         await hydrateMotionPrefsFromDb();

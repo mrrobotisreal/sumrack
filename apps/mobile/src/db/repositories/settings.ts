@@ -51,6 +51,13 @@ export const SETTING_KEYS = {
   narrationPrefs: 'narration.prefs',
   /** Study soundtrack: { enabled, volume (0–1), playDuringNarration }. */
   ambientAudio: 'audio.ambient',
+  /**
+   * Study soundtrack rotation cursors (M15/T48): `{ [theme]: { bed, positionMs } }`
+   * — where each theme's playlist resumes. Parsed defensively on read
+   * (`features/ambient-audio/cursors.ts`); written by the ambient controller
+   * on pause/switch/advance/dispose and at most every 15 s while playing.
+   */
+  ambientCursors: 'audio.ambientCursors',
   /** TTS voice selection (T11): { selectedVoiceId } — Zod-validated on read (features/tts/catalog). */
   ttsVoice: 'tts.voice',
   /**
