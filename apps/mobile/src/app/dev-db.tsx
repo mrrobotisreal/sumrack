@@ -4,10 +4,19 @@ import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { db } from '@/db';
+import { db, repos } from '@/db';
 import { queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
 import { importPack, type ImportResult } from '@/db/importer';
+import type { WordProfileRow } from '@/db/repositories/word-forms';
+import { friendlyAiMessage } from '@/features/ai/errors';
+import {
+  getGrammarPreset,
+  PROVIDER_LABELS,
+  QUALITY_LABELS,
+  EFFORT_LABELS,
+} from '@/features/ai/run-profile';
 import { classifyPack } from '@/features/library/categories';
+import { generateProfile } from '@/features/word-forms/profile-service';
 import { detectRuDatePath, formatRuDate } from '@/lib/ru-date';
 import { syncQueryKeys } from '@/features/sync/hooks';
 import { track } from '@/services/analytics';
@@ -38,9 +47,74 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
  * repositories and exposes an FTS search box. Only reachable from the
  * dev-only link on the Settings screen.
  */
+/** T52 dev readout state: counts + the last 5 receipts, refreshed on focus and after a run. */
+interface WordProfileReadout {
+  profiles: { total: number; current: number; keys: number };
+  lessons: number;
+  withoutProfile: number;
+  recent: WordProfileRow[];
+}
+
+function formatReceipt(r: WordProfileRow): string {
+  const tokens = `${r.promptTokens ?? '?'}+${r.completionTokens ?? '?'}${
+    r.reasoningTokens ? ` (r${r.reasoningTokens})` : ''
+  } tok`;
+  const cost = r.costUsd == null ? 'cost ?' : `$${r.costUsd.toFixed(4)}`;
+  return `${r.headword} · ${r.pos} · ${r.provider} · ${r.model} · ${r.quality} · ${r.effort}${
+    r.effortApplied ? '' : ' (effort n/a)'
+  } · ${tokens} · ${cost} · ${(r.durationMs / 1000).toFixed(1)} s · ${r.isCurrent ? 'current' : 'old'}`;
+}
+
 export default function DevDbScreen() {
   const { tokens } = useAppTheme();
   const queryClient = useQueryClient();
+  // --- T52 «Word profiles» readout ---------------------------------------
+  const [readout, setReadout] = React.useState<WordProfileReadout | null>(null);
+  const [profileLog, setProfileLog] = React.useState<string[]>([]);
+  const [profileBusy, setProfileBusy] = React.useState(false);
+  const refreshReadout = React.useCallback(async () => {
+    const [profiles, lessons, withoutProfile, recent] = await Promise.all([
+      repos.wordForms.countProfiles(),
+      repos.wordForms.countLessons(),
+      repos.wordForms.countItemsWithoutProfile(),
+      repos.wordForms.listRecentProfiles(5),
+    ]);
+    setReadout({ profiles, lessons, withoutProfile, recent });
+  }, []);
+  const generateForNewest = React.useCallback(async () => {
+    if (!__DEV__ || profileBusy) return;
+    setProfileBusy(true);
+    const log = (line: string) => setProfileLog((l) => [...l.slice(-11), line]);
+    try {
+      const [newest] = await repos.bank.listItems(
+        { limit: 1 },
+        { key: 'added-desc', familiarity: 'least' },
+      );
+      if (!newest) {
+        log('bank is empty — add a word first');
+        return;
+      }
+      const preset = await getGrammarPreset();
+      log(
+        `→ «${newest.kind === 'word' ? (newest.lemma ?? newest.surface) : newest.surface}» (${newest.kind}) with ${PROVIDER_LABELS[preset.provider]} / ${QUALITY_LABELS[preset.quality]} / ${EFFORT_LABELS[preset.effort]}…`,
+      );
+      const started = Date.now();
+      const result = await generateProfile(newest, preset);
+      log(
+        `✓ ${result.profile.pos} · ${result.profile.sections.length} sections · ${((Date.now() - started) / 1000).toFixed(1)} s${result.corrected ? ' · corrected once' : ''} · row ${result.row.id}`,
+      );
+      log(
+        result.warnings.length === 0
+          ? 'soft warnings: none'
+          : `soft warnings (${result.warnings.length}): ${result.warnings.slice(0, 6).join(' | ')}${result.warnings.length > 6 ? ' | …' : ''}`,
+      );
+      await refreshReadout();
+    } catch (err) {
+      log(`✗ ${friendlyAiMessage(err)}`);
+    } finally {
+      setProfileBusy(false);
+    }
+  }, [profileBusy, refreshReadout]);
   const packs = usePacks();
   const stories = useStories();
   const [query, setQuery] = React.useState('');
@@ -84,7 +158,8 @@ export default function DevDbScreen() {
   useFocusEffect(
     React.useCallback(() => {
       track('debug_db_opened');
-    }, []),
+      void refreshReadout();
+    }, [refreshReadout]),
   );
 
   return (
@@ -123,6 +198,66 @@ export default function DevDbScreen() {
           </Text>
         </View>
       )}
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Word profiles (M16 · T52)
+        </Text>
+        <Text variant="caption">
+          profiles:{' '}
+          {readout
+            ? `${readout.profiles.total} rows · ${readout.profiles.current} current · ${readout.profiles.keys} keys`
+            : '…'}{' '}
+          · lessons: {readout?.lessons ?? '…'} · bank items without a profile:{' '}
+          {readout?.withoutProfile ?? '…'}
+        </Text>
+        {__DEV__ && (
+          <Pressable
+            onPress={() => void generateForNewest()}
+            disabled={profileBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Generate profile for the newest bank word"
+            className={`mt-2 rounded-xl border border-border p-3 ${
+              profileBusy ? 'bg-surface-2' : 'bg-surface active:opacity-80'
+            }`}
+          >
+            <Text className="font-ui-medium">
+              {profileBusy ? 'Generating…' : 'Generate for the newest bank word'}
+            </Text>
+            <Text variant="caption">
+              Runs the T52 service with the Settings → AI «Grammar & word forms» preset; prints the
+              validator&apos;s soft warnings.
+            </Text>
+          </Pressable>
+        )}
+        {profileLog.length > 0 && (
+          <View className="mt-2 gap-1 rounded-xl bg-surface px-3 py-2">
+            {profileLog.map((line, i) => (
+              <Text key={`${i}-${line.slice(0, 12)}`} variant="caption" selectable>
+                {line}
+              </Text>
+            ))}
+          </View>
+        )}
+        <Text variant="caption" className="mt-2">
+          Last 5 receipts
+        </Text>
+        <View className="mt-1 gap-1">
+          {readout?.recent.map((r) => (
+            <Text
+              key={r.id}
+              variant="caption"
+              selectable
+              className="rounded-lg bg-surface px-3 py-2"
+            >
+              {formatReceipt(r)}
+            </Text>
+          ))}
+          {readout && readout.recent.length === 0 && (
+            <Text variant="caption">No profiles yet.</Text>
+          )}
+        </View>
+      </View>
 
       <View>
         <Text variant="caption" className="mb-2 uppercase tracking-wider">
