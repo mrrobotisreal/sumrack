@@ -220,9 +220,174 @@ is a real activity — the cursor advances just as it would while reading.
 **Ducking (T41).** When per-story soundscapes arrive they play on a second
 player and must duck this bed to 0 for the story's duration (design §9).
 
-## 7. Word forms & lessons (M16 — filled by T55)
+## 7. Word forms & lessons (M16)
 
-Stub. Design: `<workspace>/docs/design/WORD_FORMS_AND_LESSONS.md` (ADR-0018).
-T55 writes this section: the «Grammar & word forms» preset, receipts, the
-batch («Generate forms for N words»), fixture re-capture, the model-table
-edit path and measured cost expectations.
+Every word in the Словарь can carry a **word profile** (its full
+conjugation/declension with stress, participles, verbal adverbs, aspect pair,
+word family, government) and, per section of that profile, saved **grammar
+lessons**. Both are generated once, online, by Claude or GPT through
+OpenRouter, then stored forever and read offline (design
+`<workspace>/docs/design/WORD_FORMS_AND_LESSONS.md`, ADR-0018). Nothing in
+the reader, the games or the existing Словарь filters gained an online
+dependency.
+
+### 7.1 The preset («Grammar & word forms»)
+
+Settings → AI → **Grammar & word forms**. Three controls: **Provider**
+(Anthropic / OpenAI), **Quality** (Fastest · Fast · Normal · Best — the
+model ladder) and **Effort** (Low · Medium · High · Ultra — the thinking
+level; Ultra = extra-high, slowest and most expensive). The default is
+Anthropic · Normal · High (= Claude Opus 5.5). The preset is the default for
+every Generate / Learn sheet; each sheet can override it for one run and
+has a «Save as my default» switch. The five older AI features (journal
+feedback, enrichment, explain, assessment, import annotation) do **not**
+use this preset — they keep the single model above it (ADR-0018 decision 6).
+
+**Test** (the button under the controls) sends a one-line request through
+the resolved model with the effort lever attached and prints «Served by
+<model>». It is the truth about whether a notch works today; run it after
+any slug edit or when a generation fails with «request rejected». «effort
+n/a (provider rejected it)» after a Test means the provider refused the
+effort parameter and the app retried without it (see 7.5).
+
+### 7.2 Receipts (what the columns mean)
+
+Every stored profile and lesson carries a receipt; the Forms tab footer,
+the Versions sheet and the lesson screen print it as
+
+    24 Sep 2026 21:43 · Anthropic · Claude Opus 5.5 (Normal) · High effort · $0.06 · 32 s
+
+| column          | meaning                                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| date/time       | when the row was stored (device local time)                                                                                                                                           |
+| Provider        | the OpenRouter provider family that served it                                                                                                                                         |
+| model (Quality) | the display name of the notch's default slug — or the raw slug when the table had been edited to something else (a receipt never claims a model it did not use)                       |
+| Effort          | the effort notch that was requested; «effort n/a» = the provider rejected the parameter and the run went out without it                                                               |
+| $               | OpenRouter usage accounting (`usage.include`), the whole generation including the one correction round — «< $0.01» under half a cent, «cost n/a» when the response had no usage block |
+| s               | wall-clock seconds from request to stored row, both rounds included                                                                                                                   |
+
+The same receipts feed the **estimate line** of every Generate sheet («~$0.11
+· ~45 s · from 6 runs»): it is the mean of the stored receipts for the
+selected provider × quality × effort × (profile | lesson) bucket in the
+`grammar.stats` settings row. With no receipts for a notch the sheet says
+«No data for this setting yet — the first run measures it» and never shows
+a number. `DELETE FROM settings WHERE key = 'grammar.stats'` resets the
+averages (the receipts on the rows themselves stay).
+
+### 7.3 The batch («Generate forms for N words»)
+
+The Словарь shows a row under the filter chips whenever bank items lack a
+current profile: **«{N} words without forms · Generate all»**. Tapping it
+opens the Generate sheet for the batch: the estimate is _per-word mean × N_,
+and a caption «{k} skipped — no lemma yet» counts the words the batch
+cannot run (a word without a lemma has no profile key — Edit or Enrich it
+first, then it joins the next batch). Phrases are profiled too.
+
+While it runs the row reads **«Generating forms · 12/37 · «страшный»…»**
+with **Cancel**. Facts to rely on:
+
+- **Sequential.** One request in flight, ever. A Best/Ultra batch of 40
+  words is a ~1-hour job; leave the app, it continues on the next foreground.
+- **Durable.** The queue is the `grammar.batch` row of the `settings` table.
+  It is written _before_ each request and the word is removed _after_ its
+  profile is stored, so killing the app loses at most one paid run (the one
+  in flight) and never a stored profile. Relaunch → the row resumes with
+  the done count preserved.
+- **Pauses offline.** No request goes out without connectivity; the row
+  reads «Paused — offline» and the worker resumes on reconnect / foreground
+  / launch (the T16 queue triggers). A missing or rejected OpenRouter key
+  pauses it the same way with the reason.
+- **Failures are per word.** A model answer that fails validation twice
+  (the service's one correction round) is _final_ for that word — it goes
+  to «failed» instead of being re-run forever. Transport errors (timeouts,
+  5xx, rate limits) retry 2 s / 8 s inside the pass, then wait for the next
+  pump; three exhausted passes also mark the word failed.
+- **Cancel** clears the pending list and keeps every profile already stored
+  (the in-flight run, if any, still completes and is kept).
+- **Retry** on the finished row («3 failed · 34 done · Retry») re-queues
+  only the failed words; **×** dismisses the result.
+
+Read the durable state directly on a debuggable build:
+
+```sh
+adb shell run-as io.winapps.sumrak sqlite3 files/SQLite/sumrak.db \
+  "SELECT value FROM settings WHERE key = 'grammar.batch'"
+```
+
+Absent = no batch (finished clean, cancelled with nothing failed, or never
+started). `pending` shrinks by one per stored profile; `done + failed +
+pending = count` always. The batch also writes `profile_batch_started /
+progress / finished / cancelled` to `analytics_events` with the same
+counts. Deleting the row by hand is a safe «cancel».
+
+### 7.4 Model table (the only place slugs live)
+
+Settings → AI → Grammar & word forms → **Advanced: model ids**. One
+OpenRouter slug per provider × quality; the defaults are decision 3 of the
+design (Claude Haiku 4.5 · Sonnet 5 · Opus 5.5 · Fable 5.1 and GPT-6 Luna ·
+Sol · Sol Pro · Astra). Slugs drift: when a notch starts failing with
+«request rejected», paste the current slug from openrouter.ai/models into
+that cell (blur commits; the regex refuses anything that is not
+`vendor/model`), then **Test**. A receipt for a run made through an edited
+slug prints the slug itself, not the display name. Reset a cell by
+clearing it (the placeholder is the default).
+
+### 7.5 Effort-param fallback («effort n/a»)
+
+Anthropic models take the effort notch as the top-level `verbosity` field,
+OpenAI models as `reasoning.effort` (Ultra = `xhigh` on both). If a
+provider answers a 4xx that names `verbosity` / `reasoning` / `effort` /
+«unsupported parameter», the app retries once without the lever (usage
+accounting kept), stores the row with `effort_applied = 0`, prints «effort
+n/a» in the receipt and writes `ai_effort_param_rejected {provider, model}`
+to `analytics_events`. Through 2026-09-25 no default slug has rejected it.
+
+### 7.6 Re-capturing the AI fixtures
+
+The unit tests parse recorded responses under
+`apps/mobile/src/features/ai/__tests__/__fixtures__/` (journal feedback,
+enrichment, explain, assessment, import annotation, the four word profiles,
+the grammar lesson). They are captured with the **same in-repo prompt
+builders the app ships**, on Claude Sonnet 5 at medium effort, and must be
+re-captured whenever a prompt template changes:
+
+```sh
+cd apps/mobile
+set -a; source ../../.env; set +a          # OPENROUTER_API_KEY — never paste it
+npx tsx scripts/capture-ai-fixtures.ts              # everything (≈ $0.20)
+npx tsx scripts/capture-ai-fixtures.ts word-profile-verb   # one fixture
+pnpm test                                            # the parsers must still pass
+```
+
+The fixtures keep `usage` and `finish_reason` (the T51 client parser is
+exercised by a real response) and contain synthetic study content only —
+safe to commit. Tests never call the network; this script is the only live
+caller outside the app.
+
+### 7.7 Cost expectations (measured, not priced)
+
+The app never hardcodes prices; these are the receipts actually observed on
+the S24U with Mitch's key. Use them to pick a notch before a batch.
+
+**Profiles** (one word; the whole generation incl. a correction round when it fired):
+
+| Provider · Quality · Effort              | Model           | mean time      | mean cost         | n   | measured                    |
+| ---------------------------------------- | --------------- | -------------- | ----------------- | --- | --------------------------- |
+| Anthropic · Normal · High                | Claude Opus 5.5 | 65 s (33–92 s) | $0.18 (0.08–0.26) | 5   | 2026-09-24 (T52)            |
+| Anthropic · Normal · High                | Claude Opus 5.5 | 49 s           | $0.11             | 1   | 2026-09-24 (T53, «описать») |
+| Anthropic · Normal · High                | Claude Opus 5.5 | 47 s           | $0.11             | 1   | 2026-09-24 (T54, «дешёвый») |
+| OpenAI · Fast · Medium                   | GPT-6 Sol       | 63–64 s        | $0.04             | 2   | 2026-09-24 (T52/T53)        |
+| Anthropic · Fast · Medium (host capture) | Claude Sonnet 5 | —              | ≈ $0.035          | 4   | 2026-09-24 (T52 fixtures)   |
+
+Nouns are the cheap end (≈ 33 s · $0.08), verbs and adjectives the expensive
+end (≈ 75 s · $0.21–0.26) — a verb profile is ~25 sections of forms.
+
+**Lessons** (one word × one section):
+
+| Provider · Quality · Effort              | Model           | mean time | mean cost | n   | measured                 |
+| ---------------------------------------- | --------------- | --------- | --------- | --- | ------------------------ |
+| Anthropic · Normal · High                | Claude Opus 5.5 | 32 s      | $0.06     | 4   | 2026-09-24 (T54)         |
+| OpenAI · Best · Ultra                    | GPT-6 Astra     | 111 s     | $0.23     | 1   | 2026-09-24 (T54)         |
+| Anthropic · Fast · Medium (host capture) | Claude Sonnet 5 | —         | $0.018    | 1   | 2026-09-24 (T54 fixture) |
+
+<!-- T55 appends the 2026-09-25 matrix rows below this line -->
