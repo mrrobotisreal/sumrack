@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, like, ne, not, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, like, ne, not, or, sql, type SQL } from 'drizzle-orm';
 
 import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN, type MasteryBand } from '@/lib/mastery';
 
@@ -73,7 +73,40 @@ export interface MasteryCounts {
 
 export interface BankListItem extends BankItemRow {
   encounterCount: number;
+  /**
+   * T50 familiarity ∈ [0, 1]: mean of `(rating − 1) / 3` over the item's last
+   * 10 qualifying grades (WORD_FORMS §3.2); null when unpracticed.
+   */
+  familiarity: number | null;
+  /** Number of qualifying grades, all time (0 = unpracticed). */
+  practiceCount: number;
+  /** Rating (1–4) of the most recent qualifying grade; null when unpracticed. */
+  latestRating: number | null;
 }
+
+/** Словарь sort keys (T50, WORD_FORMS §3.1). */
+export type BankSortKey =
+  | 'added-asc' // default — the order words were met (oldest first)
+  | 'added-desc' // newest first
+  | 'alpha-asc' // А → Я
+  | 'alpha-desc' // Я → А
+  | 'unpracticed-first' // unpracticed (added-asc) … then practiced (least familiar first, fixed)
+  | 'practiced-first'; // practiced (by `familiarity`) … then unpracticed (added-asc)
+export type FamiliaritySort = 'least' | 'most';
+export interface BankSort {
+  key: BankSortKey;
+  /** Sub-sort for `practiced-first`; stored regardless so it is remembered. */
+  familiarity: FamiliaritySort;
+}
+export const BANK_SORT_KEYS: readonly BankSortKey[] = [
+  'added-asc',
+  'added-desc',
+  'alpha-asc',
+  'alpha-desc',
+  'unpracticed-first',
+  'practiced-first',
+];
+export const DEFAULT_BANK_SORT: BankSort = { key: 'added-asc', familiarity: 'least' };
 
 /** Distinct values present in the bank — drives the Словарь filter chips (T05). */
 export interface BankFilterOptions {
@@ -101,6 +134,81 @@ export interface BankRepoHooks {
 const MIN_CORE_STABILITY = sql`(SELECT MIN(c.stability) FROM cards c
   WHERE c.bank_item_id = bank_items.id
     AND c.direction IN ('ru-en', 'en-ru') AND c.reps > 0)`;
+
+/**
+ * T50 qualifying grades (WORD_FORMS §3.2, decision 4): a review_log row on one
+ * of the item's core cards (ru-en / en-ru) that came from a flashcard press —
+ * or from a pre-T50 row (`source IS NULL`, unattributable, counted
+ * best-effort). MC/cloze/SB/listening/pronunciation/dialogue never count, nor
+ * does anything on a listening/production card. Same explicit-qualification
+ * rule as MIN_CORE_STABILITY: `bank_items.id` is the outer row.
+ */
+const QUALIFYING_GRADES_FROM = sql`FROM review_log r JOIN cards c ON c.id = r.card_id
+  WHERE c.bank_item_id = bank_items.id
+    AND c.direction IN ('ru-en', 'en-ru')
+    AND (r.source = 'flashcard' OR r.source IS NULL)`;
+
+/** Mean of (rating − 1) / 3 over the last 10 qualifying grades; NULL when none. */
+const FAMILIARITY = sql<number | null>`(SELECT AVG((q.rating - 1) / 3.0) FROM (
+  SELECT r.rating ${QUALIFYING_GRADES_FROM}
+  ORDER BY r.reviewed_at DESC LIMIT 10) q)`;
+const PRACTICE_COUNT = sql<number>`(SELECT COUNT(*) ${QUALIFYING_GRADES_FROM})`;
+const LATEST_RATING = sql<number | null>`(SELECT r.rating ${QUALIFYING_GRADES_FROM}
+  ORDER BY r.reviewed_at DESC LIMIT 1)`;
+
+/**
+ * ORDER BY for one sort (WORD_FORMS §3.2 table). The three familiarity
+ * columns are selected with `.as(...)` (an SQL.Aliased) and referenced here
+ * BY ALIAS — drizzle emits the bare alias outside the select list and SQLite
+ * resolves result-column aliases inside ORDER BY expressions. The un-aliased
+ * `encounterCount` select proves the alternative (bare `sql`) would fail with
+ * "no such column". NULL familiarity only exists in the unpracticed group,
+ * which the leading practiced flag segregates, so NULL ordering never matters.
+ */
+function bankOrderBy(sort: BankSort, cols: typeof SORT_COLUMNS): SQL[] {
+  const alphaKey = sql`COALESCE(${bankItems.lemmaNorm}, ${bankItems.normalized})`;
+  const practiced = sql`(${cols.practiceCount} > 0)`;
+  switch (sort.key) {
+    case 'added-asc':
+      return [asc(bankItems.createdAt), asc(bankItems.id)];
+    case 'added-desc':
+      return [desc(bankItems.createdAt), desc(bankItems.id)];
+    case 'alpha-asc':
+      return [asc(alphaKey), asc(bankItems.createdAt)];
+    case 'alpha-desc':
+      return [desc(alphaKey), asc(bankItems.createdAt)];
+    case 'unpracticed-first':
+      return [
+        asc(practiced),
+        asc(cols.familiarity),
+        asc(cols.latestRating),
+        desc(cols.practiceCount),
+        asc(bankItems.createdAt),
+      ];
+    case 'practiced-first':
+      return sort.familiarity === 'most'
+        ? [
+            desc(practiced),
+            desc(cols.familiarity),
+            desc(cols.latestRating),
+            desc(cols.practiceCount),
+            asc(bankItems.createdAt),
+          ]
+        : [
+            desc(practiced),
+            asc(cols.familiarity),
+            asc(cols.latestRating),
+            desc(cols.practiceCount),
+            asc(bankItems.createdAt),
+          ];
+  }
+}
+
+const SORT_COLUMNS = {
+  familiarity: FAMILIARITY.as('familiarity'),
+  practiceCount: PRACTICE_COUNT.as('practice_count'),
+  latestRating: LATEST_RATING.as('latest_rating'),
+};
 
 /** WHERE fragment for one mastery chip. NULL comparisons are false in SQLite,
  * so band conditions implicitly exclude never-reviewed items. */
@@ -311,7 +419,15 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
       return insertEncounter(bankItemId, surface, source);
     },
 
-    async listItems(filter: BankFilter = {}): Promise<BankListItem[]> {
+    /**
+     * The Словарь list. `sort` (T50) orders the page; the familiarity columns
+     * are correlated subqueries (no window functions) so limit/offset paging
+     * stays exact under every key and every filter/search combination.
+     */
+    async listItems(
+      filter: BankFilter = {},
+      sort: BankSort = DEFAULT_BANK_SORT,
+    ): Promise<BankListItem[]> {
       const conds = [];
       if (filter.kind) conds.push(eq(bankItems.kind, filter.kind));
       if (filter.level) conds.push(eq(bankItems.level, filter.level));
@@ -335,13 +451,22 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
           item: bankItems,
           // Literal SQL with explicit qualification (same pitfall as content.listPacks).
           encounterCount: sql<number>`(SELECT COUNT(*) FROM encounters WHERE encounters.bank_item_id = bank_items.id)`,
+          familiarity: SORT_COLUMNS.familiarity,
+          practiceCount: SORT_COLUMNS.practiceCount,
+          latestRating: SORT_COLUMNS.latestRating,
         })
         .from(bankItems)
         .where(conds.length ? and(...conds) : undefined)
-        .orderBy(desc(bankItems.createdAt))
+        .orderBy(...bankOrderBy(sort, SORT_COLUMNS))
         .limit(filter.limit ?? 200)
         .offset(filter.offset ?? 0);
-      return rows.map((r) => ({ ...r.item, encounterCount: r.encounterCount }));
+      return rows.map((r) => ({
+        ...r.item,
+        encounterCount: r.encounterCount,
+        familiarity: r.familiarity,
+        practiceCount: r.practiceCount,
+        latestRating: r.latestRating,
+      }));
     },
 
     /**
