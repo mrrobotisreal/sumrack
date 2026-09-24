@@ -28,6 +28,8 @@ export interface GenerateSheetProps {
   title: string;
   /** Batch only — the estimate multiplies by it. */
   count?: number;
+  /** Batch only — a caption under the estimate («3 skipped — no lemma yet»). */
+  note?: string;
   onClose: () => void;
   onGenerate: (profile: AiRunProfile, opts: { saveAsDefault: boolean }) => void;
 }
@@ -48,6 +50,7 @@ export function GenerateSheet({
   purpose,
   title,
   count,
+  note,
   onClose,
   onGenerate,
 }: GenerateSheetProps) {
@@ -124,6 +127,11 @@ export function GenerateSheet({
           {formatEstimate(estimate, multiplier)}
           {purpose === 'batch' && estimate ? ` × ${multiplier} words` : ''}
         </Text>
+        {note ? (
+          <Text variant="caption" className="mt-1" accessibilityLabel="Batch note">
+            {note}
+          </Text>
+        ) : null}
 
         <View className="mt-3 flex-row items-center justify-between">
           <Text className="text-sm">Save as my default</Text>

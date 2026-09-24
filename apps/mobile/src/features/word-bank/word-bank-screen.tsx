@@ -10,6 +10,7 @@ import { useBankFilterOptions, useBankItems, useBankMasteryCounts, useStories } 
 import type { BankFilter, BankListItem, MasteryFilter } from '@/db/repositories/bank';
 import { track } from '@/services/analytics';
 import { isDefaultBankSort, useBankPrefs } from '@/store/bank-prefs';
+import { WordFormsBatchRow } from '@/features/word-forms/batch-sheet';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { SortSheet, describeBankSort, isFamiliaritySort } from './sort-sheet';
@@ -225,6 +226,9 @@ export function WordBankScreen() {
           {describeBankSort(sort)}
         </Text>
       )}
+
+      {/* T55: the durable word-forms batch row (entry / progress / retry) */}
+      <WordFormsBatchRow />
 
       {/* enrichment call-to-action (T16): visible whenever items are flagged */}
       {(enrichable.data?.length ?? 0) > 0 && (

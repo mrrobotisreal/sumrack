@@ -463,6 +463,14 @@ export function useItemsWithoutProfileCount() {
   });
 }
 
+/** Words the batch must skip (no lemma ⇒ no key) — the sheet's «{k} skipped — no lemma yet». */
+export function useItemsWithoutLemmaCount() {
+  return useQuery({
+    queryKey: ['profile-coverage', 'no-lemma'] as const,
+    queryFn: () => repos.wordForms.countItemsWithoutLemma(),
+  });
+}
+
 /**
  * Invalidate everything the Forms tab reads for one key: the current
  * profile, its versions list, and the lesson counts —

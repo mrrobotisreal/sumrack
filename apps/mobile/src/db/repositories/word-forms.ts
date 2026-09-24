@@ -199,6 +199,15 @@ export function createWordFormsRepo(db: SumrakDB) {
         .limit(limit);
     },
 
+    /** Words without a lemma — they have no profile key (§5.4) and the batch skips them. */
+    async countItemsWithoutLemma(): Promise<number> {
+      const rows = await db
+        .select({ n: sql<number>`COUNT(*)` })
+        .from(bankItems)
+        .where(and(eq(bankItems.kind, 'word'), isNull(bankItems.lemmaNorm)));
+      return rows[0]?.n ?? 0;
+    },
+
     async countItemsWithoutProfile(): Promise<number> {
       const rows = await db
         .select({ n: sql<number>`COUNT(*)` })
