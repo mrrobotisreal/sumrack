@@ -204,3 +204,9 @@ is a real activity — the cursor advances just as it would while reading.
 **Ducking (T41).** When per-story soundscapes arrive they play on a second
 player and must duck this bed to 0 for the story's duration (design §9).
 
+## 7. Word forms & lessons (M16 — filled by T55)
+
+Stub. Design: `<workspace>/docs/design/WORD_FORMS_AND_LESSONS.md` (ADR-0018).
+T55 writes this section: the «Grammar & word forms» preset, receipts, the
+batch («Generate forms for N words»), fixture re-capture, the model-table
+edit path and measured cost expectations.
