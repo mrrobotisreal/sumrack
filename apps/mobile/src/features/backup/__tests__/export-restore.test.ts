@@ -148,6 +148,7 @@ async function seedSource(db: SumrakDB) {
     learningSteps: 1,
     reviewedAt: NOW - 3000,
     durationMs: 4200,
+    source: 'flashcard',
   });
   await db.insert(journalEntries).values({
     id: 'je-1',
@@ -461,6 +462,35 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(await target.select().from(bookmarks)).toHaveLength(0);
     // The rest of the payload landed normally.
     expect(result.rowCounts.bankItems).toBe(2);
+  });
+
+  it('a pre-T50 payload (review_log rows without a source key) still parses + restores as NULL', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as {
+      tables: { reviewLog: Record<string, unknown>[] };
+    };
+    for (const row of legacy.tables.reviewLog) delete row.source;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.reviewLog).toBe(1);
+    const rows = await target.select().from(reviewLog);
+    expect(rows[0]).toMatchObject({ id: 'rl-1', source: null });
+  });
+
+  it('review_log.source round-trips through export → restore (T50)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    expect(payload.tables.reviewLog[0]).toMatchObject({ id: 'rl-1', source: 'flashcard' });
+
+    const target = createTestDb();
+    await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    const rows = await target.select().from(reviewLog);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.source).toBe('flashcard');
   });
 
   it('an invalid payload is refused with ZERO writes (live DB untouched)', async () => {

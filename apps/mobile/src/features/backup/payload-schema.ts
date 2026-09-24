@@ -79,6 +79,12 @@ const reviewLogRow = z.strictObject({
   learningSteps: int,
   reviewedAt: int,
   durationMs: int.nullable(),
+  /**
+   * T50 activity that produced the grade. A plain string (not the enum —
+   * forward-compatible); `.default(null)` keeps pre-T50 snapshots restoring
+   * under PAYLOAD_VERSION 1.
+   */
+  source: z.string().nullable().default(null),
 });
 
 const journalEntryRow = z.strictObject({
