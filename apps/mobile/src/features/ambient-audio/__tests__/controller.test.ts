@@ -460,6 +460,38 @@ describe('rotation & resume', () => {
   });
 });
 
+describe('restart (T49 «Reset rotation»)', () => {
+  it('swaps the loaded theme back to bed 1 @ 0 on the same player and keeps playing', async () => {
+    const f = fixture({
+      cursors: { news: { bed: 'global-affairs-briefing-2', positionMs: 40_000 } },
+    });
+    const p = f.controller.update(true, 0.2, 'news');
+    await settle();
+    await p;
+    expect(f.player.source).toBe(3);
+    delete f.cursors.news; // the store's resetCursor ran
+    f.controller.restart('news');
+    expect(f.player.replace).toHaveBeenLastCalledWith(2);
+    expect(f.player.source).toBe(2);
+    expect(f.player.playing).toBe(true);
+    expect(f.createPlayer).toHaveBeenCalledTimes(1);
+    expect(f.onEvent).not.toHaveBeenCalledWith('ambient_theme_switched', expect.anything());
+  });
+
+  it('does nothing for a theme that is not loaded, and does not start audio while paused', async () => {
+    const f = fixture();
+    const p = f.controller.update(true, 0.2, 'news');
+    await settle();
+    await p;
+    f.controller.restart('comedy');
+    expect(f.player.replace).not.toHaveBeenCalled();
+    await f.controller.update(false, 0.2, 'news');
+    f.controller.restart('news');
+    expect(f.player.replace).toHaveBeenCalledTimes(1);
+    expect(f.player.playing).toBe(false);
+  });
+});
+
 describe('saved ambience preferences', () => {
   it('defaults to enabled and quiet, preserves false, and rejects corrupt values', () => {
     expect(parseAmbientPrefs(null)).toEqual({

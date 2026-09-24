@@ -29,8 +29,8 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
       (error) => logError('manual', error),
       {
         themes: AMBIENT_THEMES,
-        // Cursors are read on start/switch and written by the controller —
-        // the host never needs to subscribe to the cursor store.
+        // Cursors are read on start/switch and written by the controller; the
+        // host only watches the store's reset signal (below).
         getCursor: (theme) => useAmbientCursors.getState().cursors[theme],
         saveCursor: (theme, cursor) => useAmbientCursors.getState().setCursor(theme, cursor),
         onEvent: (event, props) => track(event, props),
@@ -58,6 +58,12 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
     const prefsSub = useAmbientPrefs.subscribe(update);
     const activitySub = useAmbientActivity.subscribe(update);
     const speechSub = useTtsStore.subscribe(update);
+    // T49 «Reset rotation»: restart the loaded theme from bed 1 @ 0.
+    const resetSub = useAmbientCursors.subscribe((state, previous) => {
+      if (state.resetRevision !== previous.resetRevision && state.lastReset) {
+        controller.restart(state.lastReset);
+      }
+    });
     // Synchronous pause on background/inactive, even if React hasn't rendered yet.
     const appSub = AppState.addEventListener('change', (state) => {
       foreground = state === 'active';
@@ -68,6 +74,7 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
       prefsSub();
       activitySub();
       speechSub();
+      resetSub();
       appSub.remove();
       controller.dispose();
     };

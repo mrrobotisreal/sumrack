@@ -27,10 +27,19 @@ function persist(cursors: AmbientCursors) {
  */
 export const useAmbientCursors = create<{
   cursors: AmbientCursors;
+  /**
+   * Bumped by every `resetCursor` (T49): the ambient host watches it and asks
+   * the controller to restart that theme from bed 1 @ 0 if it is the one
+   * loaded — the engine's same-theme branch would otherwise resume in place.
+   */
+  resetRevision: number;
+  lastReset: AmbientThemeId | null;
   setCursor(theme: AmbientThemeId, cursor: AmbientCursor): void;
   resetCursor(theme: AmbientThemeId): void;
 }>((set, get) => ({
   cursors: {},
+  resetRevision: 0,
+  lastReset: null,
   setCursor(theme, cursor) {
     const cursors = parseAmbientCursors({ ...get().cursors, [theme]: cursor });
     set({ cursors });
@@ -39,7 +48,7 @@ export const useAmbientCursors = create<{
   resetCursor(theme) {
     const cursors = { ...get().cursors };
     delete cursors[theme];
-    set({ cursors });
+    set({ cursors, resetRevision: get().resetRevision + 1, lastReset: theme });
     persist(cursors);
   },
 }));

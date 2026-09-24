@@ -310,7 +310,11 @@ export type AnalyticsEvent =
   // ambient_bed_advanced {theme, fromBed, toBed} — rotation stepped on didJustFinish.
   | 'ambient_theme_started'
   | 'ambient_theme_switched'
-  | 'ambient_bed_advanced';
+  | 'ambient_bed_advanced'
+  // T49 Settings «Soundtracks» panel. Props: the theme slug only.
+  // ambient_preview_played {theme} — ▶ on a row; ambient_rotation_reset {theme} — «Reset».
+  | 'ambient_preview_played'
+  | 'ambient_rotation_reset';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

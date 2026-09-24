@@ -211,6 +211,26 @@ export function createAmbientController(
         onError(error);
       }
     },
+    /**
+     * «Reset rotation» (T49): if `theme` is the loaded one, swap to its
+     * `nextStart` (bed 1 @ 0 after the cursor was cleared) on the same player,
+     * keeping the play/pause intent. Other themes need nothing — their next
+     * start reads the cursor anyway.
+     */
+    restart(theme: AmbientThemeId) {
+      if (disposed || !player || currentTheme !== theme) return;
+      const start = nextStart(theme, deps.getCursor(theme));
+      try {
+        player.replace(start.bed.source);
+        currentBed = start.bed;
+        advancing = false;
+        if (start.positionMs > 0) void player.seekTo(start.positionMs / 1000);
+        if (wantPlaying) player.play();
+        lastSaveAt = now();
+      } catch (error) {
+        onError(error);
+      }
+    },
     dispose() {
       disposed = true;
       revision++;
