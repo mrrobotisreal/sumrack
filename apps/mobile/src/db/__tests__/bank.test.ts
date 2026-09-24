@@ -50,6 +50,10 @@ describe('bank repository — dedup rules', () => {
     expect(withYo.item.lemma).toBe('чёрный');
 
     expect((await bank.findWordByLemma('черный'))?.id).toBe(withYo.item.id);
+    // T54: the lesson → bank-item resolver (lessons outlive rows → null, never a throw)
+    expect((await bank.findByProfileKey('черный', 'word'))?.id).toBe(withYo.item.id);
+    expect(await bank.findByProfileKey('черный', 'phrase')).toBeNull();
+    expect(await bank.findByProfileKey('нет-такого', 'word')).toBeNull();
   });
 
   it('phrase dedup keys on normalized text (case, ё, whitespace)', async () => {

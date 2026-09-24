@@ -26,6 +26,7 @@ import { ExplainSheet } from '@/features/ai/explain-sheet';
 import { ChipRow } from '@/features/library/category-chips';
 import type { ChipItem } from '@/features/library/library-filter';
 import { FormsTab } from '@/features/word-forms/forms-tab';
+import { LessonsTab } from '@/features/word-forms/lessons-tab';
 import { DIRECTION_LABELS, formatDue, ratingName, stateName } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { speak } from '@/services/speech';
@@ -46,7 +47,7 @@ export type ItemDetailTab = 'overview' | 'forms' | 'lessons';
  * + review history (T06), edit and delete. Since M16 (T53) the headword card
  * is followed by an Overview · Forms · Lessons tab strip — Overview is the
  * pre-M16 content, Forms is the word profile (`features/word-forms`), and
- * Lessons is a placeholder until T54.
+ * Lessons (T54) lists the word's saved grammar lessons grouped by section.
  */
 export function ItemDetailScreen({
   id,
@@ -246,15 +247,7 @@ export function ItemDetailScreen({
         <FormsTab item={item} headword={headword} lessonCounts={lessonCounts.data} />
       )}
 
-      {tab === 'lessons' && (
-        <View className="mt-6 items-center gap-2 rounded-xl border border-border bg-surface px-6 py-10">
-          <Ionicons name="school-outline" size={24} color={theme.textMuted} />
-          <Text className="font-ui-medium">Lessons arrive with T54</Text>
-          <Text variant="caption" className="text-center">
-            Per-section grammar lessons will be listed here, newest first.
-          </Text>
-        </View>
-      )}
+      {tab === 'lessons' && <LessonsTab item={item} />}
 
       <EditItemSheet
         open={editOpen}

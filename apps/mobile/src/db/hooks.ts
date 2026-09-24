@@ -1,4 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as React from 'react';
 
 import { classifyPack, type Classified } from '@/features/library/categories';
@@ -59,6 +64,14 @@ export const queryKeys = {
     ['word-profile', lemmaNorm, kind, 'versions'] as const,
   lessonCounts: (lemmaNorm: string, kind: ProfileKind) =>
     ['lesson-counts', lemmaNorm, kind] as const,
+  // M16 grammar lessons (T54, WORD_FORMS §7.3): keyed by the profile key like
+  // profiles — lessons outlive bank rows. `['lessons']` is the invalidation root.
+  lessonsForSection: (lemmaNorm: string, kind: ProfileKind, sectionId: string) =>
+    ['lessons', 'key', lemmaNorm, kind, sectionId] as const,
+  lessonsForKey: (lemmaNorm: string, kind: ProfileKind) =>
+    ['lessons', 'key', lemmaNorm, kind] as const,
+  lessonsGlobal: (search: string) => ['lessons', 'global', search] as const,
+  lesson: (id: string) => ['lessons', 'one', id] as const,
 };
 
 export function usePacks() {
@@ -440,7 +453,7 @@ export function useLessonCounts(item: ProfileKeyItem | null | undefined) {
 
 /**
  * Invalidate everything the Forms tab reads for one key: the current
- * profile, its versions list, and the lesson counts (T54 placeholder) —
+ * profile, its versions list, and the lesson counts —
  * after generate and promote, so the badge and the tables never disagree
  * (ticket technical note). Also the batch entry's «N words without forms»
  * count (T55) which changes whenever a profile appears.
@@ -456,6 +469,77 @@ export function useInvalidateWordProfile() {
         queryKey: queryKeys.lessonCounts(key.lemmaNorm, key.kind),
       });
       void queryClient.invalidateQueries({ queryKey: ['profile-coverage'] });
+    },
+    [queryClient],
+  );
+}
+
+// --- M16 grammar lessons (T54) ------------------------------------------------
+
+/** Lessons about one word × one section, newest first (the «Lessons · N» sheet). */
+export function useLessonsForSection(item: ProfileKeyItem | null | undefined, sectionId: string) {
+  const key = item ? profileKeyFor(item) : null;
+  return useQuery({
+    queryKey: queryKeys.lessonsForSection(key?.lemmaNorm ?? '', key?.kind ?? 'word', sectionId),
+    queryFn: () => repos.wordForms.listLessonsForSection(key!.lemmaNorm, key!.kind, sectionId),
+    enabled: key !== null,
+  });
+}
+
+/** Every lesson for the item's key, newest first (the item's Lessons tab groups by section). */
+export function useLessonsForKey(item: ProfileKeyItem | null | undefined) {
+  const key = item ? profileKeyFor(item) : null;
+  return useQuery({
+    queryKey: queryKeys.lessonsForKey(key?.lemmaNorm ?? '', key?.kind ?? 'word'),
+    queryFn: () => repos.wordForms.listLessonsForKey(key!.lemmaNorm, key!.kind),
+    enabled: key !== null,
+  });
+}
+
+/** §7.3 pagination step of the global Lessons screen. */
+export const LESSONS_PAGE_SIZE = 50;
+
+/**
+ * The global list (ё/е-tolerant `search`), newest first, paged by
+ * `limit/offset` 50 through an infinite query — `fetchNextPage` is «Load
+ * more»; a short page ends the list.
+ */
+export function useLessons(search: string) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.lessonsGlobal(search),
+    queryFn: ({ pageParam }) =>
+      repos.wordForms.listLessons({
+        search,
+        limit: LESSONS_PAGE_SIZE,
+        offset: pageParam * LESSONS_PAGE_SIZE,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < LESSONS_PAGE_SIZE ? undefined : pages.length,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useLesson(id: string | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.lesson(id ?? ''),
+    queryFn: () => repos.wordForms.getLesson(id!),
+    enabled: !!id,
+  });
+}
+
+/**
+ * After a lesson is generated: every lessons list (section sheet, item tab,
+ * global screen) and the T53 tab count for the key.
+ */
+export function useInvalidateLessons() {
+  const queryClient = useQueryClient();
+  return React.useCallback(
+    (key: { lemmaNorm: string; kind: ProfileKind }) => {
+      void queryClient.invalidateQueries({ queryKey: ['lessons'] });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.lessonCounts(key.lemmaNorm, key.kind),
+      });
     },
     [queryClient],
   );

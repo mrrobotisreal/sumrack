@@ -93,6 +93,52 @@ export function formatReceiptLine(row: ReceiptLike): string {
   ].join(' · ');
 }
 
+/** «14:05» — the time part alone (rows under a day header, T54 global screen). */
+export function formatReceiptTime(ms: number): string {
+  const d = new Date(ms);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/**
+ * The §7.3 lesson-screen receipt line:
+ * «24 Sep 2026 14:05 · Anthropic · Claude Opus 5.5 (Normal) · High effort · $0.02 · 41 s»
+ * («effort n/a» replaces «{Effort} effort» when the param was rejected, §8).
+ */
+export function formatLessonReceipt(row: ReceiptLike): string {
+  return [
+    formatReceiptDate(row.createdAt),
+    PROVIDER_LABELS[row.provider],
+    `${modelHintFor(row.provider, row.quality, row.model)} (${QUALITY_LABELS[row.quality]})`,
+    row.effortApplied ? `${EFFORT_LABELS[row.effort]} effort` : 'effort n/a',
+    formatCost(row.costUsd),
+    formatDuration(row.durationMs),
+  ].join(' · ');
+}
+
+/**
+ * The §7.3 list-row line: «{when} · {Provider} · {Quality} · {Effort} · {MODEL_HINT}»;
+ * `when` is the full date in the section sheet and the time alone under a
+ * day header (`timeOnly`).
+ */
+export function formatLessonRow(row: ReceiptLike, opts: { timeOnly?: boolean } = {}): string {
+  return [
+    opts.timeOnly ? formatReceiptTime(row.createdAt) : formatReceiptDate(row.createdAt),
+    PROVIDER_LABELS[row.provider],
+    QUALITY_LABELS[row.quality],
+    row.effortApplied ? EFFORT_LABELS[row.effort] : 'effort n/a',
+    modelHintFor(row.provider, row.quality, row.model),
+  ].join(' · ');
+}
+
+/** Receipt badges for list rows: [Provider, Quality, Effort | «effort n/a»]. */
+export function receiptBadges(row: ReceiptLike): string[] {
+  return [
+    PROVIDER_LABELS[row.provider],
+    QUALITY_LABELS[row.quality],
+    row.effortApplied ? EFFORT_LABELS[row.effort] : 'effort n/a',
+  ];
+}
+
 // --- section order ------------------------------------------------------------
 
 const CATALOG_INDEX = new Map(SECTION_CATALOG.map((e, i) => [e.id, i]));
@@ -114,6 +160,26 @@ export function sectionOrder(profile: Pick<WordProfile, 'sections'>): ProfileSec
 /** Catalog title when the id is known (the model's own title otherwise). */
 export function sectionTitle(section: ProfileSection): { en: string; ru: string } {
   return getCatalogEntry(section.id)?.title ?? section.title;
+}
+
+/** Catalog rank of a section id (unknown / `x-` ids sort last) — `groupBySection`'s order. */
+export function sectionRank(sectionId: string): number {
+  return CATALOG_INDEX.get(sectionId) ?? Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Title for a section id alone (a lesson row knows only the id): the
+ * catalog title, else the stored profile's own title when the caller has
+ * it, else the id itself.
+ */
+export function sectionTitleById(
+  sectionId: string,
+  profile?: Pick<WordProfile, 'sections'> | null,
+): { en: string; ru: string } {
+  const entry = getCatalogEntry(sectionId);
+  if (entry) return entry.title;
+  const own = profile?.sections.find((s) => s.id === sectionId)?.title;
+  return own ?? { en: sectionId, ru: sectionId };
 }
 
 // --- tag pills ----------------------------------------------------------------

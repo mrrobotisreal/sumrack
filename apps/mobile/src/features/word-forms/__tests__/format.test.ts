@@ -3,13 +3,19 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   formatCost,
   formatDuration,
+  formatLessonReceipt,
+  formatLessonRow,
   formatReceiptDate,
   formatReceiptLine,
+  formatReceiptTime,
   gridScrollsHorizontally,
   initialExpanded,
   modelHintFor,
+  receiptBadges,
   sectionOrder,
+  sectionRank,
   sectionTitle,
+  sectionTitleById,
   tagStyle,
   toggleExpanded,
 } from '../format';
@@ -138,5 +144,51 @@ describe('gridScrollsHorizontally', () => {
     expect(gridScrollsHorizontally(['Singular', 'Plural'])).toBe(false);
     expect(gridScrollsHorizontally(['Masc.', 'Fem.', 'Neut.', 'Plural'])).toBe(true);
     expect(gridScrollsHorizontally(['Form'])).toBe(false);
+  });
+});
+
+describe('T54 lesson receipt helpers (§7.3)', () => {
+  it('formatLessonReceipt: date · Provider · MODEL (Quality) · Effort effort · $cost · s', () => {
+    expect(formatLessonReceipt({ ...receipt, costUsd: 0.0184, durationMs: 41_200 })).toBe(
+      '24 Sep 2026 14:05 · Anthropic · Claude Opus 5.5 (Normal) · High effort · $0.02 · 41 s',
+    );
+    expect(formatLessonReceipt({ ...receipt, effortApplied: false })).toContain(
+      '(Normal) · effort n/a ·',
+    );
+  });
+  it('formatLessonRow: when · Provider · Quality · Effort · MODEL_HINT (time-only under a day header)', () => {
+    expect(formatLessonRow(receipt)).toBe(
+      '24 Sep 2026 14:05 · Anthropic · Normal · High · Claude Opus 5.5',
+    );
+    expect(formatLessonRow(receipt, { timeOnly: true })).toBe(
+      '14:05 · Anthropic · Normal · High · Claude Opus 5.5',
+    );
+    expect(formatLessonRow({ ...receipt, effortApplied: false })).toContain('· effort n/a ·');
+    expect(formatReceiptTime(new Date(2026, 0, 3, 9, 7).getTime())).toBe('09:07');
+  });
+  it('receiptBadges = [Provider, Quality, Effort | effort n/a]', () => {
+    expect(receiptBadges(receipt)).toEqual(['Anthropic', 'Normal', 'High']);
+    expect(receiptBadges({ ...receipt, effortApplied: false })).toEqual([
+      'Anthropic',
+      'Normal',
+      'effort n/a',
+    ]);
+  });
+  it('sectionRank follows the catalog, unknown ids last; sectionTitleById falls back to the profile, then the id', () => {
+    expect(sectionRank('verb-nonpast')).toBeLessThan(sectionRank('verb-family'));
+    expect(sectionRank('x-custom')).toBe(Number.POSITIVE_INFINITY);
+    expect(sectionTitleById('verb-nonpast').en).toBe(
+      SECTION_CATALOG.find((e) => e.id === 'verb-nonpast')!.title.en,
+    );
+    const profile = verbProfile();
+    profile.sections.push({
+      id: 'x-custom',
+      title: { en: 'Custom', ru: 'Своё' },
+      layout: 'list',
+      rows: [],
+    });
+    expect(sectionTitleById('x-custom', profile)).toEqual({ en: 'Custom', ru: 'Своё' });
+    expect(sectionTitleById('x-none', profile)).toEqual({ en: 'x-none', ru: 'x-none' });
+    expect(sectionTitleById('x-none')).toEqual({ en: 'x-none', ru: 'x-none' });
   });
 });

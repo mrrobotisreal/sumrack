@@ -254,6 +254,15 @@ export function createWordFormsRepo(db: SumrakDB) {
         .orderBy(desc(grammarLessons.createdAt), desc(grammarLessons.id));
     },
 
+    /** Every lesson for one key, newest first (the item's Lessons tab groups them by section). */
+    async listLessonsForKey(lemmaNorm: string, kind: ProfileKind): Promise<GrammarLessonRow[]> {
+      return db
+        .select()
+        .from(grammarLessons)
+        .where(and(eq(grammarLessons.lemmaNorm, lemmaNorm), eq(grammarLessons.kind, kind)))
+        .orderBy(desc(grammarLessons.createdAt), desc(grammarLessons.id));
+    },
+
     /** Lesson counts per section id for one key (drives the per-section badges, T54). */
     async countLessonsForKey(
       lemmaNorm: string,

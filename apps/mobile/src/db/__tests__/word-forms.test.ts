@@ -196,6 +196,13 @@ describe('word-forms repo — lessons (§5.4, append-only)', () => {
     expect(await repo.countLessonsForKey('нет', 'word')).toEqual({});
     expect(await repo.countLessons()).toBe(4);
     expect(c.sectionId).toBe('verb-past');
+    // T54: every lesson of one key, newest first across sections
+    expect((await repo.listLessonsForKey('говорить', 'word')).map((l) => l.id)).toEqual([
+      c.id,
+      b.id,
+      a.id,
+    ]);
+    expect(await repo.listLessonsForKey('нет', 'word')).toEqual([]);
   });
 
   it('listLessons: global newest first, paginated, ё/е-tolerant search on the headword', async () => {

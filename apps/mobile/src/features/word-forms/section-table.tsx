@@ -1,34 +1,53 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { Pressable, ScrollView, Text as RNText, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text as RNText, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import type { BankItemRow } from '@/db/repositories/bank';
+import type { WordProfileRecord } from '@/db/repositories/word-forms';
+import { GenerateSheet } from '@/features/ai/generate-sheet';
+import { PROVIDER_LABELS } from '@/features/ai/run-profile';
 import { cn } from '@/lib/cn';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { gridScrollsHorizontally, sectionTitle, tagStyle } from './format';
+import { LessonsListSheet } from './lessons-list-sheet';
 import type { ProfileCell, ProfileRow, ProfileSection } from './profile-schema';
+import { useLearn } from './use-learn';
 
 /**
  * One collapsible section card of the Forms tab (WORD_FORMS §7.2): title
  * (en + ru caption), the grid or list renderer, the section note, and the
- * footer with **Learn** (rendered but disabled until T54 wires it — never
- * hidden) and «Lessons · N» when N > 0.
+ * footer with **Learn** (T54: Generate sheet `purpose:'lesson'` →
+ * `generateLesson` → `/lessons/[id]`; disabled offline with the reason —
+ * never hidden) and «Lessons · N» → the lessons list sheet when N > 0.
  */
 export function SectionCard({
+  item,
+  profileRow,
   section,
   expanded,
   onToggle,
   lessonCount,
+  online,
 }: {
+  item: BankItemRow;
+  /** The profile version on screen — the lesson is grounded in ITS stored section. */
+  profileRow: WordProfileRecord;
   section: ProfileSection;
   expanded: boolean;
   onToggle: () => void;
-  /** Lessons stored for this section (T54 writes them; 0 until then). */
+  /** Lessons stored for this section. */
   lessonCount: number;
+  online: boolean;
 }) {
   const { tokens: theme } = useAppTheme();
   const title = sectionTitle(section);
+  const { state: learn, learn: runLearn, dismiss } = useLearn('section');
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [listOpen, setListOpen] = React.useState(false);
+  const busy = learn.phase === 'loading';
+  const learnDisabled = !online || busy;
   return (
     <View className="overflow-hidden rounded-xl border border-border bg-surface">
       <Pressable
@@ -65,27 +84,89 @@ export function SectionCard({
             </Text>
           )}
 
-          {/* footer: Learn (disabled here — T54 flips the wiring) + lesson count */}
+          {/* footer: Learn + «Lessons · N» (T54, §7.3) */}
           <View className="flex-row items-center justify-between border-t border-border px-4 py-2.5">
             <View>
               <Pressable
-                disabled
+                onPress={() => setSheetOpen(true)}
+                disabled={learnDisabled}
                 accessibilityRole="button"
-                accessibilityLabel={`Learn ${title.en}`}
-                accessibilityState={{ disabled: true }}
-                className="flex-row items-center gap-1.5 opacity-40"
+                accessibilityLabel={online ? `Learn ${title.en}` : `Learn ${title.en}, offline`}
+                accessibilityState={{ disabled: learnDisabled, busy }}
+                className={cn('flex-row items-center gap-1.5', learnDisabled && 'opacity-40')}
               >
-                <Ionicons name="sparkles-outline" size={15} color={theme.accent} />
-                <Text className="font-ui-medium text-sm text-accent">Learn</Text>
+                {busy ? (
+                  <ActivityIndicator size="small" color={theme.accent} />
+                ) : (
+                  <Ionicons name="sparkles-outline" size={15} color={theme.accent} />
+                )}
+                <Text className="font-ui-medium text-sm text-accent">
+                  {busy ? `Asking ${PROVIDER_LABELS[learn.run.provider]}…` : 'Learn'}
+                </Text>
               </Pressable>
-              <Text variant="caption" className="text-xs">
-                Lessons arrive with T54
-              </Text>
+              {!online && !busy && (
+                <Text variant="caption" className="text-xs">
+                  Offline — connect to learn
+                </Text>
+              )}
             </View>
-            {lessonCount > 0 && <Text variant="caption">Lessons · {lessonCount}</Text>}
+            {lessonCount > 0 && (
+              <Pressable
+                onPress={() => setListOpen(true)}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`Lessons, ${lessonCount}`}
+                className="flex-row items-center gap-1 active:opacity-70"
+              >
+                <Ionicons name="school-outline" size={14} color={theme.textMuted} />
+                <Text variant="caption">Lessons · {lessonCount}</Text>
+              </Pressable>
+            )}
           </View>
+
+          {learn.phase === 'error' && (
+            <View className="flex-row items-center gap-3 border-t border-border bg-surface-2/60 px-4 py-2.5">
+              <Text variant="caption" className="flex-1 text-xs">
+                {learn.message}
+              </Text>
+              <Pressable
+                onPress={() => runLearn(item, profileRow, section, learn.run)}
+                accessibilityRole="button"
+                accessibilityLabel="Retry lesson"
+                className="rounded-lg bg-accent px-3 py-1.5 active:opacity-80"
+              >
+                <Text className="font-ui-medium text-xs">Retry</Text>
+              </Pressable>
+              <Pressable
+                onPress={dismiss}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss lesson error"
+              >
+                <Ionicons name="close" size={16} color={theme.textMuted} />
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
+
+      <GenerateSheet
+        open={sheetOpen}
+        purpose="lesson"
+        title={`Learn: ${title.en}`}
+        onClose={() => setSheetOpen(false)}
+        onGenerate={(run) => {
+          setSheetOpen(false);
+          runLearn(item, profileRow, section, run);
+        }}
+      />
+      <LessonsListSheet
+        open={listOpen}
+        item={item}
+        sectionId={section.id}
+        title={title.en}
+        onClose={() => setListOpen(false)}
+      />
     </View>
   );
 }

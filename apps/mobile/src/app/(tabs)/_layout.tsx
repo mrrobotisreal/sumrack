@@ -134,6 +134,14 @@ export default function TabsLayout() {
           headerRight: () => (
             <>
               <Pressable
+                onPress={() => router.push('/lessons')}
+                hitSlop={8}
+                accessibilityLabel="Lessons"
+                className="mr-4"
+              >
+                <Ionicons name="school-outline" size={24} color={tokens.textMuted} />
+              </Pressable>
+              <Pressable
                 onPress={() => router.push('/bookmarks')}
                 hitSlop={8}
                 accessibilityLabel="Bookmarks"

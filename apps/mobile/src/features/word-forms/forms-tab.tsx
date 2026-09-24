@@ -211,6 +211,8 @@ export function FormsTab({
 
   return (
     <ProfileView
+      item={item}
+      profileRow={current.data!}
       profile={profile}
       versionCount={versions.data?.length ?? 1}
       lessonCounts={lessonCounts}
@@ -232,6 +234,8 @@ export function FormsTab({
 
 /** The profiled render: header actions, overview strip, section cards (keyed by profile id via parent). */
 function ProfileView({
+  item,
+  profileRow,
   profile,
   versionCount,
   lessonCounts,
@@ -240,6 +244,8 @@ function ProfileView({
   onVersions,
   children,
 }: {
+  item: BankItemRow;
+  profileRow: NonNullable<ReturnType<typeof useCurrentProfile>['data']>;
   profile: NonNullable<ReturnType<typeof useCurrentProfile>['data']>['profile'];
   versionCount: number;
   lessonCounts: Record<string, number> | undefined;
@@ -313,10 +319,13 @@ function ProfileView({
       {sections.map((section) => (
         <SectionCard
           key={section.id}
+          item={item}
+          profileRow={profileRow}
           section={section}
           expanded={expanded.has(section.id)}
           onToggle={() => toggle(section.id)}
           lessonCount={lessonCounts?.[section.id] ?? 0}
+          online={online}
         />
       ))}
 

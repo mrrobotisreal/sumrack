@@ -4,7 +4,7 @@ import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN, type MasteryBand } from '@/l
 
 import { newId } from '../ids';
 import { normalizePhrase, normalizeRu } from '../normalize';
-import { bankItems, encounters } from '../schema';
+import { bankItems, encounters, type ProfileKind } from '../schema';
 import type { SumrakDB } from '../types';
 
 export type BankItemRow = typeof bankItems.$inferSelect;
@@ -321,6 +321,25 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
         .select()
         .from(bankItems)
         .where(and(eq(bankItems.kind, 'word'), eq(bankItems.lemmaNorm, normalizeRu(lemma))))
+        .limit(1);
+      return rows[0] ?? null;
+    },
+
+    /**
+     * The bank item behind a profile/lesson key (WORD_FORMS §5.4): words by
+     * `lemma_norm`, phrases by `normalized` — lessons outlive bank rows, so
+     * null means «Word not in bank» (§8), never an error.
+     */
+    async findByProfileKey(lemmaNorm: string, kind: ProfileKind): Promise<BankItemRow | null> {
+      const rows = await db
+        .select()
+        .from(bankItems)
+        .where(
+          kind === 'word'
+            ? and(eq(bankItems.kind, 'word'), eq(bankItems.lemmaNorm, lemmaNorm))
+            : and(eq(bankItems.kind, 'phrase'), eq(bankItems.normalized, lemmaNorm)),
+        )
+        .orderBy(asc(bankItems.createdAt))
         .limit(1);
       return rows[0] ?? null;
     },

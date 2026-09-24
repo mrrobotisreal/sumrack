@@ -379,7 +379,10 @@ describe('generateLesson (§6.2 service)', () => {
     );
     expect(second.id).not.toBe(first.id);
     const list = await repos.wordForms.listLessonsForSection('говорить', 'word', 'verb-nonpast');
-    expect(list.map((l) => l.id)).toEqual([second.id, first.id]);
+    // Same-millisecond inserts tie on created_at (the repo then orders by id) —
+    // assert the set + count here; newest-first ordering is the T52 repo test's.
+    expect(new Set(list.map((l) => l.id))).toEqual(new Set([second.id, first.id]));
+    expect(list.map((l) => l.provider).sort()).toEqual(['anthropic', 'openai']);
     expect(await repos.wordForms.countLessons()).toBe(2);
   });
 
