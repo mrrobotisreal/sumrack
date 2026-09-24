@@ -318,7 +318,16 @@ export type AnalyticsEvent =
   // M16 T50 Словарь sorting. bank_sort_changed {key, familiarity} — the sheet applied a sort.
   // No new per-grade event: review_graded / *_item_graded carry `gradeSource` (= review_log.source;
   // never `source`, which pron/listening items already use for other meanings).
-  | 'bank_sort_changed';
+  | 'bank_sort_changed'
+  // M16 run profile (T51). Props: provider/quality/effort/model slugs + scope only — never the key.
+  // ai_grammar_preset_changed {provider, quality, effort, scope: 'default'|'run'} — the Settings
+  // preset (default) or a Generate-sheet run that differs from it (run);
+  // ai_model_table_edited {provider, quality} — one slug in the Advanced table saved;
+  // ai_effort_param_rejected {provider, model} — the §4.4 fallback fired (retried without effort).
+  // ai_request_sent/succeeded/failed gain optional provider/quality/effort/model when a run profile is used.
+  | 'ai_grammar_preset_changed'
+  | 'ai_model_table_edited'
+  | 'ai_effort_param_rejected';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
