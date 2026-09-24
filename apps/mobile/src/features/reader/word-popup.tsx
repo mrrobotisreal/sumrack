@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { Modal, Pressable, Text as RNText, Vibration, View } from 'react-native';
 
@@ -8,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { queryKeys } from '@/db/hooks';
 import { normalizeRu } from '@/db/normalize';
+import type { AddResult } from '@/db/repositories/bank';
 import type { TokenRow } from '@/db/repositories/content';
 import type { ClassificationEventProps } from '@/features/library/categories';
 import { track } from '@/services/analytics';
@@ -74,6 +76,7 @@ function WordPopupSheet({
 }) {
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const encounterOnLookup = useLookupPrefs((s) => s.encounterOnLookup);
 
   const { token } = target;
@@ -122,12 +125,18 @@ function WordPopupSheet({
 
   const [justAdded, setJustAdded] = React.useState(false);
 
-  const addToBank = React.useCallback(() => {
+  /**
+   * Add the word to the bank and resolve with the repository's `AddResult`
+   * (T53 — was fire-and-forget). The Add button still ignores the promise
+   * and keeps its optimistic «In bank ✓»; only the «Формы» path awaits it
+   * to learn the new item's id.
+   */
+  const addToBank = React.useCallback((): Promise<AddResult> => {
     Vibration.vibrate(8);
     // The add itself records this lookup's encounter — the refetched bank
     // status must not trigger a second one for the same popup open.
     encounterLoggedRef.current = true;
-    void repos.bank
+    return repos.bank
       .addWord({
         lemma: effectiveLemma,
         surface: token.text,
@@ -149,10 +158,34 @@ function WordPopupSheet({
         });
         setJustAdded(true);
         invalidateBank();
+        return result;
       });
   }, [token, target, effectiveLemma, invalidateBank]);
 
   const inBank = !!bankStatus.data || justAdded;
+
+  // «Формы» (M16/T53, WORD_FORMS §7.4): deep-link into the item's Forms tab,
+  // banking the word first when it is not in the bank yet. Close the popup
+  // first so the reader is not left with a stale sheet under the pushed screen.
+  const [formsBusy, setFormsBusy] = React.useState(false);
+  const openForms = React.useCallback(() => {
+    if (formsBusy) return;
+    const banked = bankStatus.data;
+    if (banked) {
+      track('popup_forms_opened', { banked: true });
+      onClose();
+      router.push({ pathname: '/word-bank/[id]', params: { id: banked.id, tab: 'forms' } });
+      return;
+    }
+    setFormsBusy(true);
+    void addToBank()
+      .then((result) => {
+        track('popup_forms_opened', { banked: false });
+        onClose();
+        router.push({ pathname: '/word-bank/[id]', params: { id: result.item.id, tab: 'forms' } });
+      })
+      .finally(() => setFormsBusy(false));
+  }, [formsBusy, bankStatus.data, addToBank, onClose, router]);
   const showLemma = token.lemma && normalizeRu(token.lemma) !== normalizeRu(token.text);
 
   // Speaker: prefer the exact narration slice of THIS surface form (T10);
@@ -217,27 +250,41 @@ function WordPopupSheet({
           )}
         </View>
 
-        {/* add / in-bank */}
-        <Pressable
-          onPress={inBank ? undefined : addToBank}
-          disabled={inBank}
-          accessibilityRole="button"
-          accessibilityLabel={inBank ? 'Already in word bank' : 'Add to word bank'}
-          className={
-            inBank
-              ? 'mt-4 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 py-3'
-              : 'mt-4 flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3 active:opacity-80'
-          }
-        >
-          <Ionicons
-            name={inBank ? 'checkmark-circle' : 'bookmark-outline'}
-            size={18}
-            color={inBank ? theme.success : theme.bg}
-          />
-          <Text className={inBank ? 'font-ui-medium text-text-muted' : 'font-ui-medium text-bg'}>
-            {inBank ? 'In bank ✓' : 'Add to word bank'}
-          </Text>
-        </Pressable>
+        {/* footer: add / in-bank + «Формы» (T53) */}
+        <View className="mt-4 flex-row gap-2">
+          <Pressable
+            onPress={inBank ? undefined : () => void addToBank()}
+            disabled={inBank}
+            accessibilityRole="button"
+            accessibilityLabel={inBank ? 'Already in word bank' : 'Add to word bank'}
+            className={
+              inBank
+                ? 'flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 py-3'
+                : 'flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3 active:opacity-80'
+            }
+          >
+            <Ionicons
+              name={inBank ? 'checkmark-circle' : 'bookmark-outline'}
+              size={18}
+              color={inBank ? theme.success : theme.bg}
+            />
+            <Text className={inBank ? 'font-ui-medium text-text-muted' : 'font-ui-medium text-bg'}>
+              {inBank ? 'In bank ✓' : 'Add to word bank'}
+            </Text>
+          </Pressable>
+          {/* Russian label on purpose — the popup sits on the Russian reading surface */}
+          <Pressable
+            onPress={openForms}
+            disabled={formsBusy}
+            accessibilityRole="button"
+            accessibilityLabel="Word forms"
+            accessibilityState={{ disabled: formsBusy }}
+            className="flex-row items-center justify-center gap-2 rounded-xl border border-accent/40 px-4 py-3 active:bg-surface-2"
+          >
+            <Ionicons name="git-branch-outline" size={18} color={theme.accent} />
+            <Text className="font-ui-medium text-accent">Формы</Text>
+          </Pressable>
+        </View>
       </View>
     </Modal>
   );
