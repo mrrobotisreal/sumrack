@@ -151,7 +151,11 @@ The five study-ambience themes (`horror` default · `news` · `comedy` ·
 `action` · `education`) are Opus beds bundled in the APK under
 `apps/mobile/assets/audio/ambient/<theme>/` and listed in the hand-written
 registry `apps/mobile/src/features/ambient-audio/beds.ts` (design
-`docs/design/AMBIENT_SOUNDTRACKS.md`, ADR-0017). T49 finishes this section.
+`docs/design/AMBIENT_SOUNDTRACKS.md`, ADR-0017). Which theme a pack gets is
+`resolveAmbientTheme(classifyPack(pack))` in `theme.ts`: `news` /
+`education` by category, `comedy` / `action` by genre under `stories`,
+everything else (other genres, podcasts, travel, dialogues, games, review)
+→ `horror`.
 
 **Re-encode** (after replacing or adding a master):
 
@@ -173,3 +177,30 @@ pnpm --filter sumrak-mobile encode:ambient -- --force  # re-encode everything
   also needs its `require()` in `sources.ts` and a row in `beds.ts`
   (`beds.test.ts` fails until both agree with the ledger). Commit the `.opus`
   files as plain files (no LFS).
+
+**Add a bed** to an existing theme: drop the master into `../assets/audio/`,
+append its file name to that theme's list in `SOURCES` (a `{ file, slug,
+title }` object when the slug should differ from the file name), run
+`encode:ambient`, then add the `require()` to `sources.ts` and the
+`{ slug, title, durationMs, source }` row to `beds.ts` — `durationMs` is the
+ledger's value. `pnpm test` (`beds.test.ts`) fails until all three agree.
+Rotation order = array order; append at the end so nobody's cursor moves.
+
+**Add a theme**: a new `AmbientThemeId` member + `AMBIENT_THEMES` entry +
+`AMBIENT_THEME_ORDER` slot in `beds.ts`, a row in the script's `SOURCES`, a
+branch in `resolveAmbientTheme` (`theme.ts`), and its icon in
+`SOUNDTRACK_ICONS` (`soundtracks.ts`). Nothing else knows the theme list —
+the engine, cursors and the Settings list all iterate the registry.
+
+**Cursors.** Each theme's resume point lives in the `settings` table under
+`audio.ambientCursors` as `{ "<theme>": { "bed": "<slug>", "positionMs": N } }`.
+Themes absent from the blob start on bed 1 at 0; a cursor inside the last
+5 s of a bed starts the *next* bed. Clear one theme with Settings →
+Background music → Soundtracks → **Reset** (also restarts a live preview),
+or clear all with `DELETE FROM settings WHERE key = 'audio.ambientCursors'`
+from the dev DB screen / `run-as` sqlite. Listening in Settings (▶ preview)
+is a real activity — the cursor advances just as it would while reading.
+
+**Ducking (T41).** When per-story soundscapes arrive they play on a second
+player and must duck this bed to 0 for the story's duration (design §9).
+
