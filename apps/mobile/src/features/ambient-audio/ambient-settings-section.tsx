@@ -6,6 +6,8 @@ import { Text } from '@/components/ui/text';
 import { useAmbientPrefs } from '@/store/ambient-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { SoundtracksList } from './soundtracks-list';
+
 export function AmbientSettingsSection() {
   const { enabled, volume, playDuringNarration, setPrefs } = useAmbientPrefs();
   const { tokens } = useAppTheme();
@@ -93,6 +95,7 @@ export function AmbientSettingsSection() {
                 accessibilityLabel="Play background music during narration"
               />
             </View>
+            <SoundtracksList />
           </>
         )}
       </View>
