@@ -13,18 +13,35 @@ const LevelSchema = z.enum(CEFR_LEVELS);
 
 // --- OpenRouter envelope ----------------------------------------------------
 
-/** The slice of an OpenRouter chat completion we actually consume. */
+/**
+ * The slice of an OpenRouter chat completion we actually consume. Since T51:
+ * `content` is nullable (a reasoning-exhausted completion returns `null`
+ * content with `finish_reason: 'length'` — client.ts turns that into a
+ * specific `invalid-response`), `finish_reason` is read, and the loose
+ * `usage` block (present when the request carries `usage: { include: true }`;
+ * providers differ in which fields they fill) feeds the M16 receipts.
+ */
 export const OpenRouterResponseSchema = z.object({
   choices: z
     .array(
       z.object({
         message: z.object({
-          content: z.string(),
+          content: z.string().nullable().optional(),
         }),
+        finish_reason: z.string().nullable().optional(),
       }),
     )
     .min(1),
   model: z.string().optional(),
+  usage: z
+    .object({
+      prompt_tokens: z.number().optional(),
+      completion_tokens: z.number().optional(),
+      total_tokens: z.number().optional(),
+      cost: z.number().optional(),
+      completion_tokens_details: z.object({ reasoning_tokens: z.number().optional() }).optional(),
+    })
+    .optional(),
 });
 
 export type OpenRouterResponse = z.infer<typeof OpenRouterResponseSchema>;

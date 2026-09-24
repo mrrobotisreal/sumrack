@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { chatCompletion, type ChatDeps } from '../client';
+import { buildRequestBody, chatCompletion, type ChatDeps } from '../client';
 import { AiError } from '../errors';
 
 const MESSAGES = [{ role: 'user' as const, content: 'привет' }];
@@ -29,7 +29,12 @@ describe('chatCompletion', () => {
       }),
     );
     const result = await chatCompletion({ messages: MESSAGES }, deps({ fetchFn }));
-    expect(result).toEqual({ content: 'ответ', model: 'anthropic/claude-sonnet-5' });
+    expect(result).toEqual({
+      content: 'ответ',
+      model: 'anthropic/claude-sonnet-5',
+      usage: undefined,
+      finishReason: undefined,
+    });
 
     // The key travels ONLY in the Authorization header — never in the body.
     const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
@@ -112,5 +117,104 @@ describe('chatCompletion', () => {
         deps({ fetchFn: fetchFn as unknown as typeof fetch }),
       ),
     ).rejects.toMatchObject({ code: 'timeout' });
+  });
+
+  // --- T51: model / extras on the request, usage + finish_reason on the response ---
+
+  it('req.model overrides deps.getModel(); extras merge after the standard fields', async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'ok' } }] }));
+    await chatCompletion(
+      {
+        messages: MESSAGES,
+        model: 'openai/gpt-6-sol',
+        extras: { reasoning: { effort: 'low', exclude: true }, usage: { include: true } },
+      },
+      deps({ fetchFn }),
+    );
+    const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.model).toBe('openai/gpt-6-sol');
+    expect(body.reasoning).toEqual({ effort: 'low', exclude: true });
+    expect(body.usage).toEqual({ include: true });
+    expect(body.messages).toEqual(MESSAGES);
+  });
+
+  it('extras can never clobber messages / model / max_tokens / temperature', () => {
+    const body = buildRequestBody(
+      {
+        messages: MESSAGES,
+        maxTokens: 64,
+        model: 'anthropic/claude-opus-5.5',
+        extras: {
+          model: 'evil/model',
+          messages: [],
+          max_tokens: 1,
+          temperature: 2,
+          verbosity: 'xhigh',
+        },
+      },
+      'anthropic/claude-opus-5.5',
+    );
+    expect(body).toEqual({
+      model: 'anthropic/claude-opus-5.5',
+      messages: MESSAGES,
+      max_tokens: 64,
+      temperature: 0.3,
+      verbosity: 'xhigh',
+    });
+  });
+
+  it('a legacy request (no model, no extras) sends exactly the four standard fields', () => {
+    expect(
+      Object.keys(buildRequestBody({ messages: MESSAGES }, 'anthropic/claude-sonnet-5')),
+    ).toEqual(['model', 'messages', 'max_tokens', 'temperature']);
+  });
+
+  it('parses usage (incl. reasoning tokens + cost) and finish_reason into the result', async () => {
+    // Fixture shape: an OpenRouter response with `usage: { include: true }` accounting.
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        id: 'gen-123',
+        model: 'anthropic/claude-opus-5.5',
+        choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
+        usage: {
+          prompt_tokens: 12,
+          completion_tokens: 340,
+          total_tokens: 352,
+          cost: 0.0123,
+          completion_tokens_details: { reasoning_tokens: 300 },
+        },
+      }),
+    );
+    const result = await chatCompletion({ messages: MESSAGES }, deps({ fetchFn }));
+    expect(result).toEqual({
+      content: 'ok',
+      model: 'anthropic/claude-opus-5.5',
+      finishReason: 'stop',
+      usage: { promptTokens: 12, completionTokens: 340, reasoningTokens: 300, costUsd: 0.0123 },
+    });
+  });
+
+  it('finish_reason length + null content → the specific ran-out-of-room invalid-response', async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        model: 'openai/gpt-6-astra',
+        choices: [{ message: { role: 'assistant', content: null }, finish_reason: 'length' }],
+        usage: { prompt_tokens: 12, completion_tokens: 16384, cost: 0.5 },
+      }),
+    );
+    const err = await chatCompletion({ messages: MESSAGES }, deps({ fetchFn })).catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe('invalid-response');
+    expect(err.message).toMatch(/ran out of room/);
+  });
+
+  it('null content WITHOUT length keeps the legacy empty-completion error', async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ choices: [{ message: { content: null }, finish_reason: 'stop' }] }),
+    );
+    const err = await chatCompletion({ messages: MESSAGES }, deps({ fetchFn })).catch((e) => e);
+    expect(err.code).toBe('invalid-response');
+    expect(err.message).toBe('empty completion');
   });
 });

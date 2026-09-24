@@ -22,6 +22,14 @@ export interface ChatRequest {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  /** Overrides `deps.getModel()` when present (T51 run profile; legacy features omit it). */
+  model?: string;
+  /**
+   * Extra top-level OpenRouter body fields (T51: `verbosity`, `reasoning`,
+   * `usage`). Merged after the standard fields and filtered so they can
+   * never override `messages` / `model` / `max_tokens` / `temperature`.
+   */
+  extras?: Record<string, unknown>;
 }
 
 export interface ChatDeps {
@@ -34,17 +42,62 @@ export interface ChatDeps {
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_TIMEOUT_MS = 90_000;
 
+/** Token counts + cost from OpenRouter usage accounting (only with `usage.include`). */
+export interface ChatUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  reasoningTokens?: number;
+  costUsd?: number;
+}
+
 export interface ChatResult {
   /** The assistant message text. */
   content: string;
   /** The model that actually served the request (OpenRouter echoes it). */
   model: string;
+  /** Present when the response carried a `usage` block (T51). */
+  usage?: ChatUsage;
+  /** OpenRouter's `finish_reason` for the first choice, when given (T51). */
+  finishReason?: string;
+}
+
+/** Body keys the request builder owns — `extras` may never shadow them. */
+const RESERVED_BODY_KEYS = new Set(['model', 'messages', 'max_tokens', 'temperature']);
+
+/** Pure: the JSON body for a request (exported for the decision-6 / extras tests). */
+export function buildRequestBody(req: ChatRequest, model: string): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model,
+    messages: req.messages,
+    max_tokens: req.maxTokens ?? 4096,
+    temperature: req.temperature ?? 0.3,
+  };
+  for (const [key, value] of Object.entries(req.extras ?? {})) {
+    if (!RESERVED_BODY_KEYS.has(key)) body[key] = value;
+  }
+  return body;
+}
+
+/**
+ * `__DEV__`-only wire check for the run-profile extras (T51 acceptance):
+ * logs the body with `messages` REDACTED (journal text, prompts) and never
+ * touches headers (the key lives only in the Authorization header). Kept
+ * behind `AI_WIRE_LOG` so it is off by default even in dev builds.
+ */
+export const AI_WIRE_LOG = false;
+function logRequestBody(body: Record<string, unknown>): void {
+  if (!AI_WIRE_LOG || typeof __DEV__ === 'undefined' || !__DEV__) return;
+  const { messages, ...rest } = body;
+  const count = Array.isArray(messages) ? messages.length : 0;
+  console.log('[ai] request body', JSON.stringify({ ...rest, messages: `<${count} redacted>` }));
 }
 
 export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<ChatResult> {
   const key = await deps.getApiKey();
   if (!key) throw new AiError('no-key', 'no OpenRouter key configured');
-  const model = await deps.getModel();
+  const model = req.model ?? (await deps.getModel());
+  const body = buildRequestBody(req, model);
+  logRequestBody(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -58,12 +111,7 @@ export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: req.messages,
-        max_tokens: req.maxTokens ?? 4096,
-        temperature: req.temperature ?? 0.3,
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
   } catch (err) {
@@ -84,15 +132,39 @@ export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<
     throw detail ? new AiError(base.code, detail, response.status) : base;
   }
 
-  let body: unknown;
+  let payload: unknown;
   try {
-    body = await response.json();
+    payload = await response.json();
   } catch {
     throw new AiError('invalid-response', 'response was not JSON');
   }
-  const parsed = OpenRouterResponseSchema.safeParse(body);
+  const parsed = OpenRouterResponseSchema.safeParse(payload);
   if (!parsed.success) throw new AiError('invalid-response', 'unexpected response shape');
-  const content = parsed.data.choices[0]?.message.content;
-  if (!content?.trim()) throw new AiError('invalid-response', 'empty completion');
-  return { content, model: parsed.data.model ?? model };
+  const choice = parsed.data.choices[0];
+  const content = choice?.message.content;
+  const finishReason = choice?.finish_reason ?? undefined;
+  if (!content?.trim()) {
+    // Reasoning ate the whole budget (T51 §4.3): name it, before the generic throw.
+    if (finishReason === 'length') {
+      throw new AiError(
+        'invalid-response',
+        'the model ran out of room — reasoning consumed the token budget',
+      );
+    }
+    throw new AiError('invalid-response', 'empty completion');
+  }
+  const usage = parsed.data.usage;
+  return {
+    content,
+    model: parsed.data.model ?? model,
+    finishReason,
+    usage: usage
+      ? {
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+          reasoningTokens: usage.completion_tokens_details?.reasoning_tokens,
+          costUsd: usage.cost,
+        }
+      : undefined,
+  };
 }
