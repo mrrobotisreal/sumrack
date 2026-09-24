@@ -343,3 +343,18 @@ export async function estimateRun(
 ): Promise<RunEstimate | null> {
   return estimateFromStats(await getGrammarStats(), purpose, profile);
 }
+
+/**
+ * The Generate sheet's estimate line: «~$0.11 · ~45 s · from 6 runs» or
+ * «No data for this setting yet — the first run measures it». `multiplier`
+ * is the batch count. Never shows a number without receipts.
+ */
+export function formatEstimate(est: RunEstimate | null, multiplier = 1): string {
+  if (!est || est.n <= 0) return 'No data for this setting yet — the first run measures it';
+  const cost = est.costUsd * multiplier;
+  const seconds = (est.ms * multiplier) / 1000;
+  const costText = cost >= 0.005 ? `~$${cost.toFixed(2)}` : '< $0.01';
+  const timeText =
+    seconds >= 90 ? `~${Math.round(seconds / 60)} min` : `~${Math.max(1, Math.round(seconds))} s`;
+  return `${costText} · ${timeText} · from ${est.n} run${est.n === 1 ? '' : 's'}`;
+}

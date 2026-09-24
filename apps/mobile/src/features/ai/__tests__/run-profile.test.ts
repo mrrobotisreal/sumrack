@@ -11,6 +11,7 @@ import {
   EMPTY_GRAMMAR_STATS,
   estimateFromStats,
   estimateRun,
+  formatEstimate,
   getGrammarPreset,
   getModelTable,
   LESSON_MAX_TOKENS,
@@ -294,5 +295,17 @@ describe('receipts + estimate (§2.4 grammar.stats)', () => {
     expect(est?.costUsd).toBeCloseTo(0.1, 10);
     expect(await estimateRun('profile', DEFAULT_GRAMMAR_PRESET)).toBeNull();
     expect(sanitizeStats('junk')).toEqual({ v: 1, runs: {} });
+  });
+
+  it('formatEstimate renders the sheet line and never a number without receipts', () => {
+    expect(formatEstimate(null)).toBe('No data for this setting yet — the first run measures it');
+    expect(formatEstimate({ ms: 45_000, costUsd: 0.11, n: 6 })).toBe(
+      '~$0.11 · ~45 s · from 6 runs',
+    );
+    expect(formatEstimate({ ms: 4_000, costUsd: 0.002, n: 1 })).toBe('< $0.01 · ~4 s · from 1 run');
+    // Batch: multiplied by the count.
+    expect(formatEstimate({ ms: 45_000, costUsd: 0.11, n: 6 }, 37)).toBe(
+      '~$4.07 · ~28 min · from 6 runs',
+    );
   });
 });

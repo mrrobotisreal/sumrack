@@ -81,12 +81,19 @@ export function buildRequestBody(req: ChatRequest, model: string): Record<string
 /**
  * `__DEV__`-only wire check for the run-profile extras (T51 acceptance):
  * logs the body with `messages` REDACTED (journal text, prompts) and never
- * touches headers (the key lives only in the Authorization header). Kept
- * behind `AI_WIRE_LOG` so it is off by default even in dev builds.
+ * touches headers (the key lives only in the Authorization header). Off by
+ * default even in dev builds — the «Grammar & word forms» section exposes a
+ * dev-only switch that flips it for one session; a no-op in release builds.
  */
-export const AI_WIRE_LOG = false;
+let aiWireLog = false;
+export function setAiWireLog(on: boolean): void {
+  aiWireLog = on;
+}
+export function isAiWireLogOn(): boolean {
+  return aiWireLog;
+}
 function logRequestBody(body: Record<string, unknown>): void {
-  if (!AI_WIRE_LOG || typeof __DEV__ === 'undefined' || !__DEV__) return;
+  if (!aiWireLog || typeof __DEV__ === 'undefined' || !__DEV__) return;
   const { messages, ...rest } = body;
   const count = Array.isArray(messages) ? messages.length : 0;
   console.log('[ai] request body', JSON.stringify({ ...rest, messages: `<${count} redacted>` }));
