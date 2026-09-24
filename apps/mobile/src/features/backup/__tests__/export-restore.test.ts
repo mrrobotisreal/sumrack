@@ -17,6 +17,7 @@ import {
   encounters,
   frozenDays,
   gameSessions,
+  grammarLessons,
   importedPacks,
   importRequests,
   journalEntries,
@@ -27,6 +28,7 @@ import {
   storyProgress,
   syncState,
   unitProgress,
+  wordProfiles,
 } from '@/db/schema';
 import type { SumrakDB } from '@/db/types';
 import { bytesToBase64 } from '@/lib/base64';
@@ -270,6 +272,68 @@ async function seedSource(db: SumrakDB) {
     packJsonGz: 'H4sIAAAAAAAAA6tWKkktLlGyUlAqSy0qzszPU9JRUEreBQBhpN6RFgAAAA==',
     createdAt: NOW - 650,
   });
+  await db.insert(wordProfiles).values([
+    {
+      id: 'wp-old',
+      lemmaNorm: 'говорить',
+      kind: 'word',
+      headword: 'говорить',
+      pos: 'verb',
+      isCurrent: false,
+      payload: { v: 1, stub: 'old version' },
+      provider: 'anthropic',
+      model: 'anthropic/claude-opus-5.5',
+      quality: 'normal',
+      effort: 'high',
+      effortApplied: true,
+      promptTokens: 1200,
+      completionTokens: 3400,
+      reasoningTokens: 900,
+      costUsd: 0.0421,
+      durationMs: 41_000,
+      createdAt: NOW - 9000,
+    },
+    {
+      id: 'wp-cur',
+      lemmaNorm: 'говорить',
+      kind: 'word',
+      headword: 'говорить',
+      pos: 'verb',
+      isCurrent: true,
+      payload: { v: 1, stub: 'current version', nested: { ok: true } },
+      provider: 'openai',
+      model: 'openai/gpt-6-sol',
+      quality: 'fast',
+      effort: 'medium',
+      effortApplied: false,
+      promptTokens: null,
+      completionTokens: null,
+      reasoningTokens: null,
+      costUsd: null,
+      durationMs: 12_500,
+      createdAt: NOW - 8000,
+    },
+  ]);
+  await db.insert(grammarLessons).values({
+    id: 'gl-1',
+    lemmaNorm: 'говорить',
+    kind: 'word',
+    headword: 'говорить',
+    sectionId: 'verb-nonpast',
+    profileId: 'wp-cur',
+    markdown: '## What this is\n\nA stub lesson.',
+    provider: 'anthropic',
+    model: 'anthropic/claude-opus-5.5',
+    quality: 'normal',
+    effort: 'high',
+    effortApplied: true,
+    promptTokens: 800,
+    completionTokens: 1500,
+    reasoningTokens: 0,
+    costUsd: 0.0198,
+    durationMs: 22_000,
+    createdAt: NOW - 7000,
+  });
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -331,6 +395,8 @@ async function selectAllUserTables(db: SumrakDB) {
     dialogueEndingsSeen: await db.select().from(dialogueEndingsSeen),
     importRequests: await db.select().from(importRequests),
     importedPacks: await db.select().from(importedPacks),
+    wordProfiles: await db.select().from(wordProfiles),
+    grammarLessons: await db.select().from(grammarLessons),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -491,6 +557,43 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     const rows = await target.select().from(reviewLog);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.source).toBe('flashcard');
+  });
+
+  it('word_profiles + grammar_lessons round-trip through export → restore (T52)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    expect(payload.tables.wordProfiles.map((r) => r.id).sort()).toEqual(['wp-cur', 'wp-old']);
+    expect(payload.tables.grammarLessons).toHaveLength(1);
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    expect(result.rowCounts.wordProfiles).toBe(2);
+    expect(result.rowCounts.grammarLessons).toBe(1);
+    const profiles = await target.select().from(wordProfiles);
+    expect(profiles).toEqual(await source.select().from(wordProfiles));
+    const cur = profiles.find((p) => p.id === 'wp-cur')!;
+    expect(cur.isCurrent).toBe(true);
+    expect(cur.effortApplied).toBe(false);
+    expect(cur.payload).toEqual({ v: 1, stub: 'current version', nested: { ok: true } });
+    const lessons = await target.select().from(grammarLessons);
+    expect(lessons).toEqual(await source.select().from(grammarLessons));
+  });
+
+  it('a pre-T52 payload (no wordProfiles / grammarLessons keys) still parses + restores under version 1', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as { tables: Record<string, unknown> };
+    delete legacy.tables.wordProfiles;
+    delete legacy.tables.grammarLessons;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.wordProfiles).toBe(0);
+    expect(result.rowCounts.grammarLessons).toBe(0);
+    expect(await target.select().from(wordProfiles)).toHaveLength(0);
+    expect(result.rowCounts.bankItems).toBe(2);
   });
 
   it('an invalid payload is refused with ZERO writes (live DB untouched)', async () => {

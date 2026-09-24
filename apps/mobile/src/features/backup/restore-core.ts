@@ -15,6 +15,7 @@ import {
   encounters,
   frozenDays,
   gameSessions,
+  grammarLessons,
   importedPacks,
   importRequests,
   journalEntries,
@@ -25,6 +26,7 @@ import {
   storyProgress,
   syncState,
   unitProgress,
+  wordProfiles,
 } from '@/db/schema';
 import type { SumrakDB } from '@/db/types';
 
@@ -69,6 +71,8 @@ const INSERT_ORDER: [UserTableKey, SQLiteTable][] = [
   ['dialogueEndingsSeen', dialogueEndingsSeen],
   ['importRequests', importRequests],
   ['importedPacks', importedPacks],
+  ['wordProfiles', wordProfiles],
+  ['grammarLessons', grammarLessons],
   ['settings', settings],
   ['syncState', syncState],
   ['analyticsEvents', analyticsEvents],

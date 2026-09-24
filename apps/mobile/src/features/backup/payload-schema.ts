@@ -217,6 +217,44 @@ const importedPackRow = z.strictObject({
   createdAt: int,
 });
 
+/** Shared receipt columns of the two M16 generation tables (WORD_FORMS §2.2/§2.3). */
+const generationReceipt = {
+  provider: z.enum(['anthropic', 'openai']),
+  model: z.string(),
+  quality: z.enum(['fastest', 'fast', 'normal', 'best']),
+  effort: z.enum(['low', 'medium', 'high', 'ultra']),
+  effortApplied: z.boolean(),
+  promptTokens: int.nullable(),
+  completionTokens: int.nullable(),
+  reasoningTokens: int.nullable(),
+  costUsd: z.number().nullable(),
+  durationMs: int,
+  createdAt: int,
+};
+
+const wordProfileRow = z.strictObject({
+  id: z.string(),
+  lemmaNorm: z.string(),
+  kind: z.enum(['word', 'phrase']),
+  headword: z.string(),
+  pos: z.string(),
+  isCurrent: z.boolean(),
+  /** WordProfile JSON — opaque here (the repo Zod-parses on read; restore must not reject a future v2). */
+  payload: jsonRecord,
+  ...generationReceipt,
+});
+
+const grammarLessonRow = z.strictObject({
+  id: z.string(),
+  lemmaNorm: z.string(),
+  kind: z.enum(['word', 'phrase']),
+  headword: z.string(),
+  sectionId: z.string(),
+  profileId: z.string().nullable(),
+  markdown: z.string(),
+  ...generationReceipt,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -271,6 +309,9 @@ export const BackupPayloadSchema = z.strictObject({
     // T28: additive-with-default again — the version literal stays at 1.
     importRequests: z.array(importRequestRow).default([]),
     importedPacks: z.array(importedPackRow).default([]),
+    // T52 (M16): additive-with-default — pre-T52 snapshots restore under version 1.
+    wordProfiles: z.array(wordProfileRow).default([]),
+    grammarLessons: z.array(grammarLessonRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -302,6 +343,8 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   dialogueEndingsSeen: 'dialogue_endings_seen',
   importRequests: 'import_requests',
   importedPacks: 'imported_packs',
+  wordProfiles: 'word_profiles',
+  grammarLessons: 'grammar_lessons',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

@@ -16,6 +16,7 @@ import {
   encounters,
   frozenDays,
   gameSessions,
+  grammarLessons,
   journalEntries,
   notes,
   reviewLog,
@@ -23,6 +24,7 @@ import {
   storyProgress,
   syncState,
   unitProgress,
+  wordProfiles,
 } from '@/db/schema';
 import type { SumrakDB } from '@/db/types';
 
@@ -79,6 +81,8 @@ export async function exportUserData(
       dialogueEndingsSeen: await db.select().from(dialogueEndingsSeen),
       importRequests: await db.select().from(importRequests),
       importedPacks: await db.select().from(importedPacks),
+      wordProfiles: await db.select().from(wordProfiles),
+      grammarLessons: await db.select().from(grammarLessons),
       settings: await db.select().from(settings),
       syncState: await db.select().from(syncState),
       analyticsEvents: await db.select().from(analyticsEvents),
