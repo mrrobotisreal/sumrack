@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildRequestBody, chatCompletion, type ChatDeps } from '../client';
@@ -193,6 +197,42 @@ describe('chatCompletion', () => {
       finishReason: 'stop',
       usage: { promptTokens: 12, completionTokens: 340, reasoningTokens: 300, costUsd: 0.0123 },
     });
+  });
+
+  it('parses the usage block of a REAL captured word-profile response (T52 fixture)', async () => {
+    // word-profile-verb.json was captured by scripts/capture-ai-fixtures.ts with
+    // `usage: { include: true }` — the exact envelope OpenRouter returns to the app.
+    const fixture = JSON.parse(
+      readFileSync(
+        path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          '__fixtures__/word-profile-verb.json',
+        ),
+        'utf8',
+      ),
+    ) as {
+      model: string;
+      choices: { message: { content: string }; finish_reason: string | null }[];
+      usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        cost: number;
+        completion_tokens_details?: { reasoning_tokens?: number };
+      };
+    };
+    const fetchFn = vi.fn(async () => jsonResponse(fixture));
+    const result = await chatCompletion({ messages: MESSAGES }, deps({ fetchFn }));
+    expect(result.model).toBe(fixture.model);
+    expect(result.finishReason).toBe('stop');
+    expect(result.content).toBe(fixture.choices[0]!.message.content);
+    expect(result.usage).toEqual({
+      promptTokens: fixture.usage.prompt_tokens,
+      completionTokens: fixture.usage.completion_tokens,
+      reasoningTokens: fixture.usage.completion_tokens_details?.reasoning_tokens,
+      costUsd: fixture.usage.cost,
+    });
+    expect(result.usage!.costUsd).toBeGreaterThan(0);
+    expect(result.usage!.completionTokens).toBeGreaterThan(1000);
   });
 
   it('finish_reason length + null content → the specific ran-out-of-room invalid-response', async () => {

@@ -1,0 +1,46 @@
+{
+  "input": {
+    "language": "ru",
+    "kind": "word",
+    "headword": "окно",
+    "surface": "окна",
+    "translation": "window",
+    "pos": "noun",
+    "level": "A1",
+    "contexts": [
+      "Кто-то стучал в окно, но за окном никого не было."
+    ]
+  },
+  "model": "anthropic/claude-sonnet-5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"v\": 1,\n  \"language\": \"ru\",\n  \"kind\": \"word\",\n  \"pos\": \"noun\",\n  \"headword\": { \"ru\": \"окно́\", \"plain\": \"окно\" },\n  \"overview\": {\n    \"gloss\": \"window\",\n    \"facts\": [\n      { \"label\": \"Gender\", \"value\": \"neuter\" },\n      { \"label\": \"Animacy\", \"value\": \"inanimate\" },\n      { \"label\": \"Declension type\", \"value\": \"2nd declension (neuter -о)\" },\n      { \"label\": \"Stress pattern\", \"value\": \"mobile — ending-stressed in singular (окно́, окна́), stem-stressed in plural (о́кна, о́кон)\" },\n      { \"label\": \"Frequency\", \"value\": \"very common, core A1 vocabulary\" }\n    ],\n    \"notes\": [\n      \"The plural form «о́кна» that you first met has stem stress, unlike the singular which is stressed on the ending.\"\n    ]\n  },\n  \"sections\": [\n    {\n      \"id\": \"noun-declension\",\n      \"layout\": \"grid\",\n      \"title\": { \"en\": \"Declension\", \"ru\": \"Склонение\" },\n      \"grid\": {\n        \"rowLabels\": [\n          \"Nom. — именительный\",\n          \"Gen. — родительный\",\n          \"Dat. — дательный\",\n          \"Acc. — винительный\",\n          \"Ins. — творительный\",\n          \"Prep. — предложный\"\n        ],\n        \"colLabels\": [\"Singular\", \"Plural\"],\n        \"cells\": [\n          [ { \"ru\": \"окно́\", \"plain\": \"окно\" }, { \"ru\": \"о́кна\", \"plain\": \"окна\" } ],\n          [ { \"ru\": \"окна́\", \"plain\": \"окна\" }, { \"ru\": \"о́кон\", \"plain\": \"окон\" } ],\n          [ { \"ru\": \"окну́\", \"plain\": \"окну\" }, { \"ru\": \"о́кнам\", \"plain\": \"окнам\" } ],\n          [ { \"ru\": \"окно́\", \"plain\": \"окно\" }, { \"ru\": \"о́кна\", \"plain\": \"окна\" } ],\n          [ { \"ru\": \"окно́м\", \"plain\": \"окном\" }, { \"ru\": \"о́кнами\", \"plain\": \"окнами\" } ],\n          [ { \"ru\": \"окне́\", \"plain\": \"окне\" }, { \"ru\": \"о́кнах\", \"plain\": \"окнах\" } ]\n        ]\n      }\n    },\n    {\n      \"id\": \"noun-family\",\n      \"layout\": \"list\",\n      \"title\": { \"en\": \"Word family\", \"ru\": \"Семья слова\" },\n      \"rows\": [\n        {\n          \"ru\": \"око́шко\",\n          \"plain\": \"окошко\",\n          \"gloss\": \"little window (diminutive)\",\n          \"tags\": [\"dim\"],\n          \"example\": { \"ru\": \"В кассе есть небольшое око́шко для оплаты.\", \"en\": \"There's a small window at the ticket booth for payment.\" }\n        },\n        {\n          \"ru\": \"око́шечко\",\n          \"plain\": \"окошечко\",\n          \"gloss\": \"tiny window (affectionate diminutive)\",\n          \"tags\": [\"dim\"],\n          \"note\": \"More endearing/colloquial than окошко.\"\n        },\n        {\n          \"ru\": \"око́нный\",\n          \"plain\": \"оконный\",\n          \"gloss\": \"window (adjective), relating to windows\",\n          \"tags\": [\"adj\"],\n          \"example\": { \"ru\": \"Ме́няем око́нные ра́мы в кварти́ре.\", \"en\": \"We're changing the window frames in the apartment.\" }\n        },\n        {\n          \"ru\": \"подоко́нник\",\n          \"plain\": \"подоконник\",\n          \"gloss\": \"windowsill\",\n          \"tags\": [\"noun\"],\n          \"example\": { \"ru\": \"На подоко́ннике стои́т ва́за с цвета́ми.\", \"en\": \"There's a vase with flowers on the windowsill.\" }\n        }\n      ]\n    },\n    {\n      \"id\": \"noun-collocations\",\n      \"layout\": \"list\",\n      \"title\": { \"en\": \"Collocations & usage\", \"ru\": \"Сочетаемость\" },\n      \"rows\": [\n        {\n          \"ru\": \"смотре́ть в окно́\",\n          \"plain\": \"смотреть в окно\",\n          \"gloss\": \"to look out the window\",\n          \"example\": { \"ru\": \"Он лю́бит смотре́ть в окно́, когда е́дет в по́езде.\", \"en\": \"He likes to look out the window when riding a train.\" }\n        },\n        {\n          \"ru\": \"стуча́ть в окно́\",\n          \"plain\": \"стучать в окно\",\n          \"gloss\": \"to knock on the window\",\n          \"example\": { \"ru\": \"Кто́-то стуча́л в окно́, но за окно́м никого́ не бы́ло.\", \"en\": \"Someone was knocking on the window, but there was no one outside.\" }\n        },\n        {\n          \"ru\": \"откры́ть / закры́ть окно́\",\n          \"plain\": \"открыть / закрыть окно\",\n          \"gloss\": \"to open / close the window\",\n          \"example\": { \"ru\": \"Пожа́луйста, закро́й окно́, хо́лодно.\", \"en\": \"Please close the window, it's cold.\" }\n        },\n        {\n          \"ru\": \"разби́ть окно́\",\n          \"plain\": \"разбить окно\",\n          \"gloss\": \"to break a window\",\n          \"example\": { \"ru\": \"Мяч разби́л окно́ в гости́ной.\", \"en\": \"The ball broke the window in the living room.\" }\n        },\n        {\n          \"ru\": \"сиде́ть у окна́\",\n          \"plain\": \"сидеть у окна\",\n          \"gloss\": \"to sit by the window\",\n          \"example\": { \"ru\": \"Я люблю́ сиде́ть у окна́ в кафе́.\", \"en\": \"I like sitting by the window in a café.\" }\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3732,
+    "completion_tokens": 2244,
+    "total_tokens": 5976,
+    "cost": 0.029904,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.029904,
+      "upstream_inference_prompt_cost": 0.007464,
+      "upstream_inference_completions_cost": 0.02244
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 346,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

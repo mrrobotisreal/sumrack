@@ -20,6 +20,10 @@ import { buildEnrichmentMessages } from '../src/features/ai/prompts/enrichment';
 import { buildExplainMessages } from '../src/features/ai/prompts/explain';
 import { buildImportAnnotateMessages } from '../src/features/ai/prompts/import-annotate';
 import { buildJournalFeedbackMessages } from '../src/features/ai/prompts/journal-feedback';
+import {
+  buildWordProfileMessages,
+  type WordProfileInput,
+} from '../src/features/ai/prompts/word-profile';
 
 const MODEL = 'anthropic/claude-sonnet-5';
 const OUT_DIR = join(
@@ -101,11 +105,90 @@ const IMPORT_SENTENCES = [
   { id: 'c4', ru: 'Анна Ахматова писала: «Я научилась просто, мудро жить».' },
 ];
 
-async function chat(messages: unknown, maxTokens: number): Promise<unknown> {
+/**
+ * T52 word-profile inputs (WORD_FORMS §6.3): a verb, a noun, an adjective
+ * and a phrase — captured at Sonnet 5 / effort medium through the SAME
+ * request shape the app's run profile sends (`verbosity` + `reasoning`
+ * + `usage.include`, mirrored inline because run-profile.ts opens the
+ * native DB and cannot load under Node).
+ */
+const WORD_PROFILE_INPUTS: { name: string; input: WordProfileInput }[] = [
+  {
+    name: 'word-profile-verb',
+    input: {
+      language: 'ru',
+      kind: 'word',
+      headword: 'говорить',
+      surface: 'говорил',
+      translation: 'to speak, to talk',
+      grammar: 'past, masc.',
+      pos: 'verb',
+      level: 'A1',
+      contexts: ['Он говорил тихо, но я всё слышал.', 'Не говори никому.'],
+    },
+  },
+  {
+    name: 'word-profile-noun',
+    input: {
+      language: 'ru',
+      kind: 'word',
+      headword: 'окно',
+      surface: 'окна',
+      translation: 'window',
+      pos: 'noun',
+      level: 'A1',
+      contexts: ['Кто-то стучал в окно, но за окном никого не было.'],
+    },
+  },
+  {
+    name: 'word-profile-adj',
+    input: {
+      language: 'ru',
+      kind: 'word',
+      headword: 'страшный',
+      surface: 'страшно',
+      translation: 'scary, terrible',
+      grammar: 'short form / adverb',
+      pos: 'adj',
+      level: 'A2',
+      contexts: ['Мне было страшно идти по тёмному коридору.'],
+    },
+  },
+  {
+    name: 'word-profile-phrase',
+    input: {
+      language: 'ru',
+      kind: 'phrase',
+      headword: 'волосы встали дыбом',
+      translation: "one's hair stood on end",
+      level: 'B1',
+      contexts: ['Когда я услышал шаги наверху, у меня волосы встали дыбом.'],
+    },
+  },
+];
+/** The T52 capture notch: Sonnet 5 = Anthropic «Fast», effort medium. */
+const WORD_PROFILE_EXTRAS = {
+  verbosity: 'medium',
+  reasoning: { enabled: true, exclude: true },
+  usage: { include: true },
+};
+const WORD_PROFILE_MAX_TOKENS = 16_384;
+
+async function chat(
+  messages: unknown,
+  maxTokens: number,
+  opts: { temperature?: number; extras?: Record<string, unknown> } = {},
+): Promise<unknown> {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, max_tokens: maxTokens, temperature: 0.3 }),
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      max_tokens: maxTokens,
+      temperature: opts.temperature ?? 0.3,
+      ...(opts.extras ?? {}),
+    }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -115,6 +198,31 @@ function slim(raw: unknown): { model: string; content: string } {
   // Persist only the envelope slice the app consumes — no ids/usage/etc.
   const body = raw as { model?: string; choices: { message: { content: string } }[] };
   return { model: body.model ?? MODEL, content: body.choices[0]!.message.content };
+}
+
+/**
+ * T52 fixtures keep `usage` + `choices[0].finish_reason` too, so the T51
+ * usage parser is exercised by a real response (client.test.ts). Shape =
+ * the OpenRouter envelope slice `OpenRouterResponseSchema` reads.
+ */
+function slimWithUsage(raw: unknown): {
+  model: string;
+  choices: { message: { content: string }; finish_reason: string | null }[];
+  usage: unknown;
+} {
+  const body = raw as {
+    model?: string;
+    choices: { message: { content: string }; finish_reason?: string | null }[];
+    usage?: unknown;
+  };
+  const first = body.choices[0]!;
+  return {
+    model: body.model ?? MODEL,
+    choices: [
+      { message: { content: first.message.content }, finish_reason: first.finish_reason ?? null },
+    ],
+    usage: body.usage ?? null,
+  };
 }
 
 /** Optional filter: `npx tsx scripts/capture-ai-fixtures.ts assessment` recaptures one fixture. */
@@ -172,6 +280,19 @@ async function main() {
     writeFileSync(
       join(OUT_DIR, 'import-annotate.json'),
       JSON.stringify({ sentences: IMPORT_SENTENCES, ...annotate }, null, 2),
+    );
+  }
+
+  for (const { name, input } of WORD_PROFILE_INPUTS) {
+    if (!wants(name)) continue;
+    console.log(`capturing ${name} («${input.headword}», ${MODEL}, effort medium)…`);
+    const raw = await chat(buildWordProfileMessages(input), WORD_PROFILE_MAX_TOKENS, {
+      temperature: 0.2,
+      extras: WORD_PROFILE_EXTRAS,
+    });
+    writeFileSync(
+      join(OUT_DIR, `${name}.json`),
+      JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
     );
   }
 

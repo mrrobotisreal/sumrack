@@ -327,7 +327,17 @@ export type AnalyticsEvent =
   // ai_request_sent/succeeded/failed gain optional provider/quality/effort/model when a run profile is used.
   | 'ai_grammar_preset_changed'
   | 'ai_model_table_edited'
-  | 'ai_effort_param_rejected';
+  | 'ai_effort_param_rejected'
+  // M16 word profiles (T52, WORD_FORMS §2.5). Props: kind/pos/provider/quality/effort slugs,
+  // counts, ms, tokens, cost — never the headword or any Russian text.
+  // word_profile_requested {kind, provider, quality, effort, regenerate} — a generation starts;
+  // word_profile_generated {kind, pos, sections, ms, promptTokens, completionTokens, costUsd, corrected};
+  // word_profile_invalid_retry {issues} — the one correction round fired (n = validator issues);
+  // word_profile_failed {kind, code, ms} — AiError code (invalid-response after the failed retry).
+  | 'word_profile_requested'
+  | 'word_profile_generated'
+  | 'word_profile_invalid_retry'
+  | 'word_profile_failed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

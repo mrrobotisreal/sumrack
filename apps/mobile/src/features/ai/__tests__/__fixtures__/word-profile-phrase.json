@@ -1,0 +1,44 @@
+{
+  "input": {
+    "language": "ru",
+    "kind": "phrase",
+    "headword": "волосы встали дыбом",
+    "translation": "one's hair stood on end",
+    "level": "B1",
+    "contexts": [
+      "Когда я услышал шаги наверху, у меня волосы встали дыбом."
+    ]
+  },
+  "model": "anthropic/claude-sonnet-5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"v\": 1,\n  \"language\": \"ru\",\n  \"kind\": \"phrase\",\n  \"pos\": \"phrase\",\n  \"headword\": { \"ru\": \"во́лосы вста́ли ды́бом\", \"plain\": \"волосы встали дыбом\" },\n  \"overview\": {\n    \"gloss\": \"one's hair stood on end (from fear/shock)\",\n    \"facts\": [\n      { \"label\": \"Register\", \"value\": \"neutral to colloquial, very common in speech\" },\n      { \"label\": \"Structure\", \"value\": \"у + genitive (person) + волосы (subject) + встали дыбом (predicate)\" },\n      { \"label\": \"Literal meaning\", \"value\": \"hair rose up like a mane/crest\" }\n    ],\n    \"notes\": [\n      \"Almost always used with «у меня / у него / у неё» etc. to show whose hair it is: «у меня волосы встали дыбом».\",\n      \"«Дыбом» is an old adverbial form meaning 'rearing up, standing erect'; it survives mainly in this idiom and a few others (e.g. «шерсть встала дыбом» about animals).\",\n      \"Describes a strong reaction of fear, horror or shock, not literal hair movement.\"\n    ]\n  },\n  \"sections\": [\n    {\n      \"id\": \"phrase-structure\",\n      \"title\": { \"en\": \"Word by word\", \"ru\": \"Разбор по словам\" },\n      \"layout\": \"list\",\n      \"rows\": [\n        {\n          \"ru\": \"во́лосы\",\n          \"plain\": \"волосы\",\n          \"gloss\": \"nom. pl. of «во́лос» — hair(s)\",\n          \"note\": \"Subject of the sentence; plural form used collectively for 'hair on the head'.\"\n        },\n        {\n          \"ru\": \"вста́ли\",\n          \"plain\": \"встали\",\n          \"gloss\": \"past pl. of «встать» (pf.) — stood up, rose\",\n          \"note\": \"Perfective past, agrees with plural subject «волосы».\"\n        },\n        {\n          \"ru\": \"ды́бом\",\n          \"plain\": \"дыбом\",\n          \"gloss\": \"adverb — erect, rearing up, on end\",\n          \"note\": \"Archaic instrumental-type adverb, now used almost only in this and similar fixed expressions.\"\n        }\n      ]\n    },\n    {\n      \"id\": \"phrase-usage\",\n      \"title\": { \"en\": \"Usage & register\", \"ru\": \"Употребление и стиль\" },\n      \"layout\": \"list\",\n      \"rows\": [\n        {\n          \"ru\": \"у меня́ во́лосы вста́ли ды́бом\",\n          \"plain\": \"у меня волосы встали дыбом\",\n          \"gloss\": \"my hair stood on end\",\n          \"note\": \"Most common personal form, used in speech and writing to describe sudden fear or shock.\",\n          \"example\": {\n            \"ru\": \"Когда я услышал шаги наверху, у меня волосы встали дыбом.\",\n            \"en\": \"When I heard footsteps upstairs, my hair stood on end.\"\n          }\n        },\n        {\n          \"ru\": \"от э́того расска́за у всех во́лосы вста́ли ды́бом\",\n          \"plain\": \"от этого рассказа у всех волосы встали дыбом\",\n          \"gloss\": \"everyone's hair stood on end from that story\",\n          \"note\": \"Used for group reactions to something horrifying, often in narration or news style.\",\n          \"example\": {\n            \"ru\": \"От его рассказа о войне у всех волосы встали дыбом.\",\n            \"en\": \"Everyone's hair stood on end from his story about the war.\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"phrase-variants\",\n      \"title\": { \"en\": \"Variants & synonyms\", \"ru\": \"Варианты и синонимы\" },\n      \"layout\": \"list\",\n      \"rows\": [\n        {\n          \"ru\": \"волосы вста́ют ды́бом\",\n          \"plain\": \"волосы встают дыбом\",\n          \"gloss\": \"imperfective present — one's hair stands/rises on end\",\n          \"note\": \"Used for repeated or ongoing reactions, e.g. describing a habitual fear.\"\n        },\n        {\n          \"ru\": \"мура́шки по коже\",\n          \"plain\": \"мурашки по коже\",\n          \"gloss\": \"goosebumps (lit. 'little ants on the skin')\",\n          \"note\": \"Near-synonym describing chills of fear or excitement, often used interchangeably.\"\n        },\n        {\n          \"ru\": \"кровь в жи́лах засты́ла\",\n          \"plain\": \"кровь в жилах застыла\",\n          \"gloss\": \"one's blood froze (in the veins)\",\n          \"note\": \"More dramatic/literary synonym for extreme fear or shock.\"\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3733,
+    "completion_tokens": 1738,
+    "total_tokens": 5471,
+    "cost": 0.024846,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.024846,
+      "upstream_inference_prompt_cost": 0.007466,
+      "upstream_inference_completions_cost": 0.01738
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 198,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

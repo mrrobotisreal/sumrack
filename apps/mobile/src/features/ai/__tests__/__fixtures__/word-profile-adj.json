@@ -1,0 +1,47 @@
+{
+  "input": {
+    "language": "ru",
+    "kind": "word",
+    "headword": "страшный",
+    "surface": "страшно",
+    "translation": "scary, terrible",
+    "grammar": "short form / adverb",
+    "pos": "adj",
+    "level": "A2",
+    "contexts": [
+      "Мне было страшно идти по тёмному коридору."
+    ]
+  },
+  "model": "anthropic/claude-sonnet-5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\"v\":1,\"language\":\"ru\",\"kind\":\"word\",\"pos\":\"adj\",\"headword\":{\"ru\":\"стра́шный\",\"plain\":\"страшный\"},\"overview\":{\"gloss\":\"scary, terrible, frightening\",\"facts\":[{\"label\":\"Declension type\",\"value\":\"hard-stem adjective, regular\"},{\"label\":\"Stress pattern\",\"value\":\"fixed on stem: стра́ш- in all forms\"},{\"label\":\"Short form\",\"value\":\"available: страшен / страшна / страшно / страшны\"},{\"label\":\"Register\",\"value\":\"neutral, very common in speech and writing\"},{\"label\":\"Frequency\",\"value\":\"high-frequency word, used constantly in everyday Russian\"}],\"notes\":[\"The neuter short form «стра́шно» is also used as an impersonal predicative adverb meaning 'it is scary/frightening', as in the learner's example «Мне было страшно идти по тёмному коридору» (lit. 'It was scary for me to go...').\",\"Not to be confused with «стра́шно» used colloquially as an intensifier meaning 'terribly, awfully' (стра́шно уста́л – 'terribly tired').\"]},\"sections\":[{\"id\":\"adj-long\",\"title\":{\"en\":\"Long-form declension\",\"ru\":\"Полная форма\"},\"layout\":\"grid\",\"grid\":{\"rowLabels\":[\"Nom. — именительный\",\"Gen. — родительный\",\"Dat. — дательный\",\"Acc. — винительный\",\"Ins. — творительный\",\"Prep. — предложный\"],\"colLabels\":[\"Masc.\",\"Fem.\",\"Neut.\",\"Plural\"],\"cells\":[[{\"ru\":\"стра́шный\",\"plain\":\"страшный\",\"gloss\":\"scary (m.)\"},{\"ru\":\"стра́шная\",\"plain\":\"страшная\",\"gloss\":\"scary (f.)\"},{\"ru\":\"стра́шное\",\"plain\":\"страшное\",\"gloss\":\"scary (n.)\"},{\"ru\":\"стра́шные\",\"plain\":\"страшные\",\"gloss\":\"scary (pl.)\"}],[{\"ru\":\"стра́шного\",\"plain\":\"страшного\",\"gloss\":\"gen. scary (m.)\"},{\"ru\":\"стра́шной\",\"plain\":\"страшной\",\"gloss\":\"gen. scary (f.)\"},{\"ru\":\"стра́шного\",\"plain\":\"страшного\",\"gloss\":\"gen. scary (n.)\"},{\"ru\":\"стра́шных\",\"plain\":\"страшных\",\"gloss\":\"gen. scary (pl.)\"}],[{\"ru\":\"стра́шному\",\"plain\":\"страшному\",\"gloss\":\"dat. scary (m.)\"},{\"ru\":\"стра́шной\",\"plain\":\"страшной\",\"gloss\":\"dat. scary (f.)\"},{\"ru\":\"стра́шному\",\"plain\":\"страшному\",\"gloss\":\"dat. scary (n.)\"},{\"ru\":\"стра́шным\",\"plain\":\"страшным\",\"gloss\":\"dat. scary (pl.)\"}],[{\"ru\":\"стра́шный / стра́шного\",\"plain\":\"страшный / страшного\",\"gloss\":\"acc. scary (m., inanim./anim.)\",\"note\":\"inanimate = страшный, animate = страшного\"},{\"ru\":\"стра́шную\",\"plain\":\"страшную\",\"gloss\":\"acc. scary (f.)\"},{\"ru\":\"стра́шное\",\"plain\":\"страшное\",\"gloss\":\"acc. scary (n.)\"},{\"ru\":\"стра́шные / стра́шных\",\"plain\":\"страшные / страшных\",\"gloss\":\"acc. scary (pl., inanim./anim.)\"}],[{\"ru\":\"стра́шным\",\"plain\":\"страшным\",\"gloss\":\"ins. scary (m.)\"},{\"ru\":\"стра́шной\",\"plain\":\"страшной\",\"gloss\":\"ins. scary (f.)\"},{\"ru\":\"стра́шным\",\"plain\":\"страшным\",\"gloss\":\"ins. scary (n.)\"},{\"ru\":\"стра́шными\",\"plain\":\"страшными\",\"gloss\":\"ins. scary (pl.)\"}],[{\"ru\":\"стра́шном\",\"plain\":\"страшном\",\"gloss\":\"prep. scary (m.)\"},{\"ru\":\"стра́шной\",\"plain\":\"страшной\",\"gloss\":\"prep. scary (f.)\"},{\"ru\":\"стра́шном\",\"plain\":\"страшном\",\"gloss\":\"prep. scary (n.)\"},{\"ru\":\"стра́шных\",\"plain\":\"страшных\",\"gloss\":\"prep. scary (pl.)\"}]]}},{\"id\":\"adj-short\",\"title\":{\"en\":\"Short forms\",\"ru\":\"Краткие формы\"},\"layout\":\"list\",\"rows\":[{\"ru\":\"стра́шен\",\"plain\":\"страшен\",\"gloss\":\"is scary/terrible (m.)\",\"example\":{\"ru\":\"Он стра́шен в гне́ве.\",\"en\":\"He is terrifying in anger.\"}},{\"ru\":\"стра́шна\",\"plain\":\"страшна\",\"gloss\":\"is scary/terrible (f.)\",\"example\":{\"ru\":\"Пра́вда быва́ет стра́шна.\",\"en\":\"The truth can be terrible.\"}},{\"ru\":\"стра́шно\",\"plain\":\"страшно\",\"gloss\":\"is scary/terrible (n.); also 'it is scary' (impersonal)\",\"example\":{\"ru\":\"Мне бы́ло стра́шно идти́ по тёмному коридо́ру.\",\"en\":\"It was scary for me to walk down the dark corridor.\"}},{\"ru\":\"стра́шны\",\"plain\":\"страшны\",\"gloss\":\"are scary/terrible (pl.)\",\"example\":{\"ru\":\"Э́ти карти́ны действи́тельно стра́шны.\",\"en\":\"These paintings are really frightening.\"}}]},{\"id\":\"adj-comparison\",\"title\":{\"en\":\"Comparative & superlative\",\"ru\":\"Степени сравнения\"},\"layout\":\"list\",\"rows\":[{\"ru\":\"страшне́е\",\"plain\":\"страшнее\",\"gloss\":\"scarier (simple comparative)\",\"example\":{\"ru\":\"Э́тот фи́льм страшне́е предыду́щего.\",\"en\":\"This film is scarier than the previous one.\"}},{\"ru\":\"бо́лее стра́шный\",\"plain\":\"более страшный\",\"gloss\":\"more scary (compound comparative)\",\"note\":\"less common than the simple form, used for emphasis or before a noun\"},{\"ru\":\"стра́шнейший\",\"plain\":\"страшнейший\",\"gloss\":\"the scariest (simple superlative)\",\"note\":\"bookish, somewhat rare in speech\"},{\"ru\":\"са́мый стра́шный\",\"plain\":\"самый страшный\",\"gloss\":\"the scariest (compound superlative, most common)\",\"example\":{\"ru\":\"Э́то са́мый стра́шный моме́нт в кни́ге.\",\"en\":\"This is the scariest moment in the book.\"}}]},{\"id\":\"adj-adverb\",\"title\":{\"en\":\"Adverb\",\"ru\":\"Наречие\"},\"layout\":\"list\",\"rows\":[{\"ru\":\"стра́шно\",\"plain\":\"страшно\",\"gloss\":\"scarily; terribly, awfully (intensifier, colloquial)\",\"tags\":[\"colloquial\"],\"example\":{\"ru\":\"Я стра́шно рад тебя́ ви́деть.\",\"en\":\"I'm terribly glad to see you.\"}}]},{\"id\":\"adj-family\",\"title\":{\"en\":\"Word family\",\"ru\":\"Семья слова\"},\"layout\":\"list\",\"rows\":[{\"ru\":\"страх\",\"plain\":\"страх\",\"gloss\":\"fear (noun)\",\"tags\":[\"noun\"],\"example\":{\"ru\":\"Он не пока́зывал сво́его стра́ха.\",\"en\":\"He didn't show his fear.\"}},{\"ru\":\"боя́ться\",\"plain\":\"бояться\",\"gloss\":\"to be afraid (verb)\",\"tags\":[\"verb\"],\"example\":{\"ru\":\"Я бою́сь темноты́.\",\"en\":\"I'm afraid of the dark.\"}},{\"ru\":\"пуга́ть / испуга́ть\",\"plain\":\"пугать / испугать\",\"gloss\":\"to scare / to frighten (someone) (impf./pf.)\",\"tags\":[\"verb\"],\"example\":{\"ru\":\"Не пуга́й меня́ так!\",\"en\":\"Don't scare me like that!\"}},{\"ru\":\"устраша́ющий\",\"plain\":\"устрашающий\",\"gloss\":\"intimidating, daunting (bookish adj.)\",\"tags\":[\"adj\"],\"example\":{\"ru\":\"Устраша́ющие после́дствия войны́.\",\"en\":\"The terrifying consequences of war.\"}},{\"ru\":\"бесстра́шный\",\"plain\":\"бесстрашный\",\"gloss\":\"fearless (adj.)\",\"tags\":[\"adj\"],\"example\":{\"ru\":\"Он был бесстра́шным во́ином.\",\"en\":\"He was a fearless warrior.\"}},{\"ru\":\"страши́лка\",\"plain\":\"страшилка\",\"gloss\":\"scary story, spooky tale (colloquial)\",\"tags\":[\"noun\",\"colloquial\"],\"example\":{\"ru\":\"Де́ти расска́зывали страши́лки у костра́.\",\"en\":\"The kids told scary stories by the campfire.\"}}]}]}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3754,
+    "completion_tokens": 3143,
+    "total_tokens": 6897,
+    "cost": 0.038938,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.038938,
+      "upstream_inference_prompt_cost": 0.007508,
+      "upstream_inference_completions_cost": 0.03143
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 185,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}
