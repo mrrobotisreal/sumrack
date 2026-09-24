@@ -314,7 +314,11 @@ export type AnalyticsEvent =
   // T49 Settings «Soundtracks» panel. Props: the theme slug only.
   // ambient_preview_played {theme} — ▶ on a row; ambient_rotation_reset {theme} — «Reset».
   | 'ambient_preview_played'
-  | 'ambient_rotation_reset';
+  | 'ambient_rotation_reset'
+  // M16 T50 Словарь sorting. bank_sort_changed {key, familiarity} — the sheet applied a sort.
+  // No new per-grade event: review_graded / *_item_graded carry `gradeSource` (= review_log.source;
+  // never `source`, which pron/listening items already use for other meanings).
+  | 'bank_sort_changed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

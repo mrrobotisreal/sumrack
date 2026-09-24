@@ -126,7 +126,7 @@ export function PronunciationSessionScreen() {
       // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak;
       // a perfect best score also feeds the pron-perfect achievement (T19).
       void repos.reviews
-        .gradeCard(entry.card.id, rating)
+        .gradeCard(entry.card.id, rating, { source: 'pronunciation' })
         .then(() => recordReviewOutcome(rating))
         .then(() => recordPronunciationScore(bestScore))
         .catch((err) => console.error('[pron] grade failed', err));
@@ -136,6 +136,7 @@ export function PronunciationSessionScreen() {
         attempts,
         source: entry.source,
         bankItemId: entry.item.id,
+        gradeSource: 'pronunciation',
       });
 
       const next = index + 1;

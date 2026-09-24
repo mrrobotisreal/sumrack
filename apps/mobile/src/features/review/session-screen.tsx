@@ -7,6 +7,7 @@ import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { Grade } from '@/db/repositories/reviews';
+import type { ReviewSource } from '@/db/schema';
 import { onSessionEnded, recordReviewOutcome } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
@@ -23,9 +24,16 @@ export interface SessionResult {
   cardId: string;
   rating: Grade;
   correct: boolean;
-  /** T06 modes plus 'pronunciation' (T12), the T13 games, and 'listening' (T14) — SummaryView is mode-agnostic. */
+  /**
+   * T06 modes plus 'pronunciation' (T12), the T13 games, and 'listening' (T14) — SummaryView is mode-agnostic.
+   * Every value is also a `ReviewSource` (T50): the mode is written to `review_log.source` verbatim.
+   */
   mode: SessionItem['mode'] | 'pronunciation' | 'cloze' | 'sentence-builder' | 'listening';
 }
+
+// T50 compile-time guard: a mode that is not a ReviewSource must be mapped, not passed through.
+const _sessionModeIsReviewSource: SessionResult['mode'] extends ReviewSource ? true : never = true;
+void _sessionModeIsReviewSource;
 
 type Phase = 'loading' | 'empty' | 'playing' | 'summary' | 'error';
 
@@ -113,7 +121,7 @@ export function SessionScreen() {
       // Fire-and-forget: grading must never stall the flow (offline, local DB).
       // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak (T19).
       void repos.reviews
-        .gradeCard(entry.card.id, rating, { durationMs })
+        .gradeCard(entry.card.id, rating, { durationMs, source: entry.mode })
         .then(() => recordReviewOutcome(rating))
         .catch((err) => console.error('[review] grade failed', err));
       track('review_graded', {
@@ -121,6 +129,8 @@ export function SessionScreen() {
         mode: entry.mode,
         rating,
         durationMs,
+        // T50: the activity that produced the grade (= review_log.source).
+        gradeSource: entry.mode,
       });
 
       const next = index + 1;

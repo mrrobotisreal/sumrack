@@ -117,10 +117,12 @@ export function useGameSession<T>(opts: {
       resultsRef.current.push({ cardId: card.id, rating, correct, mode: itemMode });
       // recordReviewOutcome bumps reviewsDone + XP and evaluates goal/streak (T19).
       void repos.reviews
-        .gradeCard(card.id, rating)
+        .gradeCard(card.id, rating, { source: itemMode })
         .then(() => recordReviewOutcome(rating))
         .catch((err) => console.error(`[${mode}] grade failed`, err));
-      track(`${trackPrefix}_item_graded`, { rating, ...extraProps });
+      // T50: `gradeSource` (never `source` — the listening/pron items use that
+      // key for other meanings and extraProps are spread last).
+      track(`${trackPrefix}_item_graded`, { rating, gradeSource: itemMode, ...extraProps });
 
       const next = index + 1;
       if (next < items.length) {
