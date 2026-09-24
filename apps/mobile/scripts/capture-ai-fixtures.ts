@@ -11,13 +11,17 @@
  * study content — nothing personal, no secrets — and are safe to commit.
  * Tests never hit the network; this script is the only live caller.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildAssessmentMessages } from '../src/features/ai/prompts/assessment';
 import { buildEnrichmentMessages } from '../src/features/ai/prompts/enrichment';
 import { buildExplainMessages } from '../src/features/ai/prompts/explain';
+import {
+  buildGrammarLessonMessages,
+  type GrammarLessonInput,
+} from '../src/features/ai/prompts/grammar-lesson';
 import { buildImportAnnotateMessages } from '../src/features/ai/prompts/import-annotate';
 import { buildJournalFeedbackMessages } from '../src/features/ai/prompts/journal-feedback';
 import {
@@ -174,6 +178,42 @@ const WORD_PROFILE_EXTRAS = {
 };
 const WORD_PROFILE_MAX_TOKENS = 16_384;
 
+/**
+ * T54 grammar-lesson input (WORD_FORMS §6.2 + §6.3): «говорить» ×
+ * `verb-nonpast`, grounded in the STORED section of the captured verb
+ * profile (`word-profile-verb.json`) so the fixture teaches from exactly
+ * what the app would pass. Same notch as the profiles (Sonnet 5, medium).
+ */
+function grammarLessonInput(): GrammarLessonInput {
+  const verb = JSON.parse(readFileSync(join(OUT_DIR, 'word-profile-verb.json'), 'utf8')) as {
+    choices: { message: { content: string } }[];
+  };
+  const raw = verb.choices[0]!.message.content;
+  const profile = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) as {
+    pos: string;
+    headword: { plain: string };
+    overview: { gloss: string; facts: { label: string; value: string }[] };
+    sections: GrammarLessonInput['section'][];
+  };
+  const section = profile.sections.find((s) => s.id === 'verb-nonpast');
+  if (!section) throw new Error('word-profile-verb.json has no verb-nonpast section');
+  return {
+    language: 'ru',
+    headword: profile.headword.plain,
+    pos: profile.pos,
+    gloss: profile.overview.gloss,
+    section,
+    sectionTitleEn: 'Present & future',
+    facts: profile.overview.facts,
+    encounters: [
+      { ru: 'Он говорил тихо, но я всё слышал.', storyTitle: 'Высокий Пёс' },
+      { ru: 'Не говори никому.', storyTitle: 'Ужасная правда' },
+    ],
+    learnerLevel: 'A1',
+  };
+}
+const GRAMMAR_LESSON_MAX_TOKENS = 12_288;
+
 async function chat(
   messages: unknown,
   maxTokens: number,
@@ -292,6 +332,19 @@ async function main() {
     });
     writeFileSync(
       join(OUT_DIR, `${name}.json`),
+      JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
+    );
+  }
+
+  if (wants('grammar-lesson')) {
+    const input = grammarLessonInput();
+    console.log(`capturing grammar-lesson («${input.headword}» × ${input.section.id}, ${MODEL})…`);
+    const raw = await chat(buildGrammarLessonMessages(input), GRAMMAR_LESSON_MAX_TOKENS, {
+      temperature: 0.4,
+      extras: WORD_PROFILE_EXTRAS,
+    });
+    writeFileSync(
+      join(OUT_DIR, 'grammar-lesson.json'),
       JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
     );
   }

@@ -347,7 +347,19 @@ export type AnalyticsEvent =
   | 'forms_tab_viewed'
   | 'forms_section_expanded'
   | 'word_profile_version_promoted'
-  | 'popup_forms_opened';
+  | 'popup_forms_opened'
+  // M16 grammar lessons (T54, WORD_FORMS §2.5). Props: a catalog section id, run-profile slugs,
+  // ms/cost/chars counts, an AiError code — never the headword or lesson text.
+  // lesson_requested {sectionId, provider, quality, effort} — Learn / Learn again started;
+  // lesson_generated {sectionId, ms, costUsd, chars} — stored (append-only);
+  // lesson_failed {sectionId, code} — the run failed (invalid-response = out of §6.2 bounds, no auto-retry);
+  // lesson_opened {from: 'section'|'global'|'item'|'sheet'} — a saved lesson screen opened (the T17 path
+  // event of the same name carries {packId} — the `from` prop tells the two apart);
+  // lessons_screen_opened — the global Lessons screen (dictionary-tab header icon).
+  | 'lesson_requested'
+  | 'lesson_generated'
+  | 'lesson_failed'
+  | 'lessons_screen_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

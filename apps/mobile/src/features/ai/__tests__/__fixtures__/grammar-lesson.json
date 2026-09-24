@@ -1,0 +1,166 @@
+{
+  "input": {
+    "language": "ru",
+    "headword": "говорить",
+    "pos": "verb",
+    "gloss": "to speak, to talk, to say",
+    "section": {
+      "id": "verb-nonpast",
+      "layout": "grid",
+      "title": {
+        "en": "Present & future",
+        "ru": "Настоящее и будущее"
+      },
+      "grid": {
+        "rowLabels": [
+          "я",
+          "ты",
+          "он / она / оно",
+          "мы",
+          "вы",
+          "они"
+        ],
+        "colLabels": [
+          "Present",
+          "Future"
+        ],
+        "cells": [
+          [
+            {
+              "ru": "говорю́",
+              "plain": "говорю"
+            },
+            {
+              "ru": "бу́ду говори́ть",
+              "plain": "буду говорить"
+            }
+          ],
+          [
+            {
+              "ru": "говори́шь",
+              "plain": "говоришь"
+            },
+            {
+              "ru": "бу́дешь говори́ть",
+              "plain": "будешь говорить"
+            }
+          ],
+          [
+            {
+              "ru": "говори́т",
+              "plain": "говорит"
+            },
+            {
+              "ru": "бу́дет говори́ть",
+              "plain": "будет говорить"
+            }
+          ],
+          [
+            {
+              "ru": "говори́м",
+              "plain": "говорим"
+            },
+            {
+              "ru": "бу́дем говори́ть",
+              "plain": "будем говорить"
+            }
+          ],
+          [
+            {
+              "ru": "говори́те",
+              "plain": "говорите"
+            },
+            {
+              "ru": "бу́дете говори́ть",
+              "plain": "будете говорить"
+            }
+          ],
+          [
+            {
+              "ru": "говоря́т",
+              "plain": "говорят"
+            },
+            {
+              "ru": "бу́дут говори́ть",
+              "plain": "будут говорить"
+            }
+          ]
+        ]
+      }
+    },
+    "sectionTitleEn": "Present & future",
+    "facts": [
+      {
+        "label": "Aspect",
+        "value": "imperfective"
+      },
+      {
+        "label": "Aspect partner",
+        "value": "поговори́ть (pf, to have a talk) / сказа́ть (pf, to say)"
+      },
+      {
+        "label": "Conjugation class",
+        "value": "II"
+      },
+      {
+        "label": "Stress pattern",
+        "value": "fixed on the ending in most forms; shifts to stem in some imperative/short forms — see tables"
+      },
+      {
+        "label": "Transitivity",
+        "value": "transitive/intransitive (both: говори́ть что / говори́ть с кем)"
+      },
+      {
+        "label": "Register",
+        "value": "neutral, extremely common"
+      },
+      {
+        "label": "Frequency",
+        "value": "one of the most frequent Russian verbs"
+      }
+    ],
+    "encounters": [
+      {
+        "ru": "Он говорил тихо, но я всё слышал.",
+        "storyTitle": "Высокий Пёс"
+      },
+      {
+        "ru": "Не говори никому.",
+        "storyTitle": "Ужасная правда"
+      }
+    ],
+    "learnerLevel": "A1"
+  },
+  "model": "anthropic/claude-sonnet-5",
+  "choices": [
+    {
+      "message": {
+        "content": "## What this is and why it matters for «говорить»\n\n«Говорить» is an imperfective verb, so its present tense actually covers two jobs at once: describing what happens *now* (I speak) and what happens *habitually/generally* (I speak Russian). Since it's imperfective, it has no simple future — the future must be built with «быть» + infinitive. This pattern is extremely common, so mastering it here pays off for hundreds of other imperfective verbs.\n\n## The pattern\n\n«Говорить» is a Class II (second-conjugation) verb. Take the stem **говор-** and add the second-conjugation endings: **-ю́, -и́шь, -и́т, -и́м, -и́те, -я́т**. Note the spelling rule: after a consonant, the 1st person plural/3rd plural ending is written with **-я** instead of **-а** because the stress falls on it (this is just how -ать/-ить verbs with stressed endings behave in this class — compare «люби́ть» → «лю́бят» with unstressed ending vs. «говоря́т» with stressed ending).\n\nStress in the present tense sits **on the ending in every form**, never retreating to the stem — this is a fixed, end-stressed pattern typical of many -ить verbs of this type.\n\nSince «говорить» is imperfective, the future is **periphrastic**: conjugate «быть» in the future (бу́ду, бу́дешь, бу́дет, бу́дем, бу́дете, бу́дут) and add the imperfective infinitive «говори́ть» unchanged. The stress on «бу́ду/бу́дешь/etc.» falls on the stem of «быть», while «говори́ть» keeps its own infinitive stress on the final syllable.\n\n## The forms\n\n| | Present | Future |\n|---|---|---|\n| я | говорю́ *(I speak/am speaking)* | бу́ду говори́ть *(I will speak/be speaking)* |\n| ты | говори́шь *(you speak)* | бу́дешь говори́ть *(you will speak)* |\n| он / она́ / оно́ | говори́т *(he/she/it speaks)* | бу́дет говори́ть *(he/she/it will speak)* |\n| мы | говори́м *(we speak)* | бу́дем говори́ть *(we will speak)* |\n| вы | говори́те *(you [pl./formal] speak)* | бу́дете говори́ть *(you will speak)* |\n| они́ | говоря́т *(they speak)* | бу́дут говори́ть *(they will speak)* |\n\n## In the wild\n\n- «Он говори́л ти́хо, но я всё слы́шал.» → \"He spoke quietly, but I heard everything.\" — past tense here for context, but note the same stem; present would be «Он говори́т ти́хо» (he speaks quietly — a habitual trait).\n- «Не говори́ никому́.» → \"Don't tell anyone.\" — this is actually the imperative («не говори́»), included here only to flag it's *not* present tense despite looking similar; present tense «ты говори́шь» would mean \"you speak/are speaking.\"\n- «Ты говори́шь по-ру́сски?» → \"Do you speak Russian?\" — present tense, ты-form, classic A1 question.\n- «Я бу́ду говори́ть с ним за́втра.» → \"I will speak with him tomorrow.\" — future tense, periphrastic construction with «бу́ду» + infinitive.\n\n## Watch out\n\n- Don't confuse the imperative «говори́!/говори́те!» (Speak!) with the 2nd person present «говори́шь/говори́те» — they look alike but the imperative drops the personal ending pattern differently in stress/context.\n- Learners often forget the future needs **two words**: «бу́ду говори́ть», not a single conjugated form — «говори́ть» itself never changes in the future, only «быть» does.\n- Watch the -я́т (not -а́т) ending in «они́ говоря́т» — a common spelling slip.\n- Memory hook: \"Bu-du + infinitive\" — think of «бу́ду» as a helper who always brings the infinitive along unchanged, like a passport that never expires.\n\n## Check yourself\n\n1. How do you say \"We will speak\" in Russian?\n2. Why is «говоря́т» spelled with я instead of а?\n3. What's wrong with saying *«Я говорю́ бу́ду с тобо́й»* for \"I will speak with you\"?\n\n---\n1. «Мы бу́дем говори́ть».\n2. Because the ending is stressed, and stressed endings after a consonant in this class use я, not а.\n3. Word order/construction is wrong — it should be «Я бу́ду говори́ть с тобо́й»; «бу́ду» must come before the infinitive «говори́ть»."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1283,
+    "completion_tokens": 1585,
+    "total_tokens": 2868,
+    "cost": 0.018416,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.018416,
+      "upstream_inference_prompt_cost": 0.002566,
+      "upstream_inference_completions_cost": 0.01585
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}
