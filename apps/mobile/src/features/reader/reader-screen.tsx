@@ -32,6 +32,7 @@ import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
 import { resolveRestoreTarget, type RestoreTarget } from './restore';
 import { useNarrationActivity, useStudyAmbience } from '@/features/ambient-audio/activity';
+import { resolveAmbientTheme } from '@/features/ambient-audio/theme';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
 
@@ -173,6 +174,10 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
       !phraseTarget &&
       !explainTarget &&
       !typeSheetOpen,
+    // M15 (T48): the bed follows the one M14 classification. While `cls` is
+    // still PENDING_CLASSIFICATION the condition above is false (no detail
+    // row yet), so the wrong theme never flashes.
+    resolveAmbientTheme(cls),
   );
   const trackLoaded = narration.currentTrack != null;
 

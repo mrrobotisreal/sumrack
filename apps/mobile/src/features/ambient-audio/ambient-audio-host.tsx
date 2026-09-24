@@ -3,10 +3,12 @@ import * as React from 'react';
 import { AppState } from 'react-native';
 
 import { useTtsStore } from '@/features/tts/store';
+import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
+import { useAmbientCursors } from '@/store/ambient-cursors';
 import { useAmbientPrefs } from '@/store/ambient-prefs';
 
-import { useAmbientActivity } from './activity';
+import { effectiveTheme, useAmbientActivity } from './activity';
 import { AMBIENT_THEMES } from './beds';
 import { createAmbientController } from './controller';
 import { shouldPlayAmbience } from './playback-policy';
@@ -18,14 +20,21 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
     const controller = createAmbientController(
       // Background narration owns its own policy. Do not change that global flag.
       () => setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'doNotMix' }),
-      () =>
-        // T47: the registry's horror bed (same master, re-encoded to Opus at
-        // its own level). T48 walks the per-theme rotation from here.
-        createAudioPlayer(AMBIENT_THEMES.horror.beds[0]!.source, {
+      // T48: the ONE ambient player; the controller swaps its source per theme.
+      (source) =>
+        createAudioPlayer(source, {
           updateInterval: 1000,
           keepAudioSessionActive: true,
         }),
       (error) => logError('manual', error),
+      {
+        themes: AMBIENT_THEMES,
+        // Cursors are read on start/switch and written by the controller —
+        // the host never needs to subscribe to the cursor store.
+        getCursor: (theme) => useAmbientCursors.getState().cursors[theme],
+        saveCursor: (theme, cursor) => useAmbientCursors.getState().setCursor(theme, cursor),
+        onEvent: (event, props) => track(event, props),
+      },
     );
     const update = () => {
       const prefs = useAmbientPrefs.getState();
@@ -40,10 +49,11 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
         speaking: speech.speaking || speech.systemSpeaking,
         narrating: narrations.size > 0,
       });
-      const target = `${active}:${volume}`;
+      const theme = effectiveTheme(activities);
+      const target = `${active}:${volume}:${theme}`;
       if (target === previousTarget) return;
       previousTarget = target;
-      void controller.update(active, volume);
+      void controller.update(active, volume, theme);
     };
     const prefsSub = useAmbientPrefs.subscribe(update);
     const activitySub = useAmbientActivity.subscribe(update);
