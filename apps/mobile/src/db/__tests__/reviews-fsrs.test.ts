@@ -109,6 +109,34 @@ describe('gradeCard (ts-fsrs pipeline)', () => {
     expect(final.lastReviewAt).toBe(after.dueAt);
   });
 
+  it('records review_log.source when given, NULL otherwise (T50)', async () => {
+    const repos = createRepositories(createTestDb());
+    const { item } = await repos.bank.addWord({
+      lemma: 'путь',
+      surface: 'путь',
+      translation: 'path',
+    });
+    const card = (await repos.reviews.getCard(item.id, 'ru-en'))!;
+    const now = Date.now();
+    const first = await repos.reviews.gradeCard(card.id, Rating.Good, { now });
+    expect(first.log.source).toBeNull();
+    const second = await repos.reviews.gradeCard(card.id, Rating.Again, {
+      now: now + 1000,
+      source: 'flashcard',
+    });
+    expect(second.log.source).toBe('flashcard');
+
+    const log = await repos.reviews.listReviewLog(card.id);
+    expect(log.map((r) => r.source)).toEqual([null, 'flashcard']);
+
+    // appendReviewLog (tests/tooling) defaults the same way.
+    const { id: _id, ...bare } = second.log;
+    const appended = await repos.reviews.appendReviewLog({ ...bare, source: undefined });
+    expect(appended.source).toBeNull();
+    const withMc = await repos.reviews.appendReviewLog({ ...bare, source: 'mc' });
+    expect(withMc.source).toBe('mc');
+  });
+
   it('listReviewLogForItem aggregates across directions, newest first', async () => {
     const repos = createRepositories(createTestDb());
     const { item } = await repos.bank.addWord({

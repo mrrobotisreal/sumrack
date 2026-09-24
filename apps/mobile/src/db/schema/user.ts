@@ -21,6 +21,9 @@ import { sql } from 'drizzle-orm';
 export type BankItemKind = 'word' | 'phrase';
 export type CardDirection = 'ru-en' | 'en-ru' | 'listening' | 'production';
 export type FeedbackStatus = 'none' | 'queued' | 'done';
+/** Which activity produced a grade (T50). NULL = pre-T50 row (unattributable). */
+export type ReviewSource =
+  'flashcard' | 'mc' | 'cloze' | 'sentence-builder' | 'listening' | 'pronunciation' | 'dialogue';
 
 export const bankItems = sqliteTable(
   'bank_items',
@@ -129,9 +132,17 @@ export const reviewLog = sqliteTable(
     reviewedAt: integer('reviewed_at').notNull(),
     /** How long the answer took, when the game measured it (analytics/rating mapping). */
     durationMs: integer('duration_ms'),
+    /**
+     * Which activity produced the grade (T50, WORD_FORMS §2.1). Nullable, no
+     * default: NULL = pre-T50 row (unattributable) — familiarity counts those
+     * best-effort (decision 4). Every grading site passes its mode.
+     */
+    source: text('source').$type<ReviewSource>(),
   },
   (t) => [
     index('review_log_card_idx').on(t.cardId, t.reviewedAt),
+    // T50: the familiarity subqueries filter on (card, source, time).
+    index('review_log_source_idx').on(t.cardId, t.source, t.reviewedAt),
     // T22 perf: the backup activity probe filters on reviewed_at alone —
     // without this it full-scans the append-only history on every
     // significant-session check.

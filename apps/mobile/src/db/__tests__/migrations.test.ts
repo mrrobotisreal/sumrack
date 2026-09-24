@@ -141,6 +141,53 @@ describe('migrations from empty DB', () => {
     for (const c of M14_STORY_COLUMNS) expect(storyCols).toContain(c);
     expect(await indexNames(db, 'stories')).toContain('stories_source_date_idx');
   });
+
+  it('0012_review-source: fresh DB has review_log.source + its index', async () => {
+    const db = createTestDb();
+    expect(await columnNames(db, 'review_log')).toContain('source');
+    expect(await indexNames(db, 'review_log')).toContain('review_log_source_idx');
+  });
+});
+
+describe('0012_review-source upgrade from 0011', () => {
+  it('adds the nullable column + index; pre-existing grades read NULL', async () => {
+    const { sqlite, db } = createDbUpTo('0011_library-categories');
+    expect(await columnNames(db, 'review_log')).not.toContain('source');
+    expect(await indexNames(db, 'review_log')).not.toContain('review_log_source_idx');
+
+    // A bank item + card + grade written by the previous release.
+    sqlite
+      .prepare(
+        `INSERT INTO bank_items (id, kind, lemma, lemma_norm, surface, normalized, translation, needs_enrichment, created_at)
+         VALUES ('bi-old', 'word', 'дом', 'дом', 'дом', 'дом', 'house', 0, 0)`,
+      )
+      .run();
+    sqlite
+      .prepare(
+        `INSERT INTO cards (id, bank_item_id, direction, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review_at, created_at)
+         VALUES ('c-old', 'bi-old', 'ru-en', 0, 1, 5, 0, 0, 0, 1, 0, 1, 0, 0)`,
+      )
+      .run();
+    sqlite
+      .prepare(
+        `INSERT INTO review_log (id, card_id, rating, state, due_at, stability, difficulty, elapsed_days, last_elapsed_days, scheduled_days, learning_steps, reviewed_at)
+         VALUES ('rl-old', 'c-old', 3, 1, 0, 1, 5, 0, 0, 0, 0, 0)`,
+      )
+      .run();
+
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+
+    expect(await columnNames(db, 'review_log')).toContain('source');
+    expect(await indexNames(db, 'review_log')).toContain('review_log_source_idx');
+    const rows = await db.all<{ source: string | null }>(
+      sql`SELECT source FROM review_log WHERE id = 'rl-old'`,
+    );
+    expect(rows[0]).toEqual({ source: null });
+    const applied = sqlite.prepare('SELECT COUNT(*) AS n FROM "__drizzle_migrations"').get() as {
+      n: number;
+    };
+    expect(applied.n).toBe(journal.entries.length);
+  });
 });
 
 describe('0011_library-categories upgrade from 0010', () => {

@@ -9,7 +9,7 @@ import {
 } from 'ts-fsrs';
 
 import { newId } from '../ids';
-import { bankItems, cards, reviewLog, type CardDirection } from '../schema';
+import { bankItems, cards, reviewLog, type CardDirection, type ReviewSource } from '../schema';
 import type { SumrakDB } from '../types';
 
 export type CardRow = typeof cards.$inferSelect;
@@ -268,11 +268,13 @@ export function createReviewsRepo(db: SumrakDB) {
      * The review pipeline's single write path: run ts-fsrs on the card for
      * `rating`, persist the rescheduled card, and append the full
      * ts-fsrs-native log entry (design §5 — never a lossy summary).
+     * `source` (T50) records which activity produced the grade; omitted →
+     * NULL, the same shape as every pre-T50 row.
      */
     async gradeCard(
       cardId: string,
       rating: Grade,
-      opts: { now?: number; durationMs?: number } = {},
+      opts: { now?: number; durationMs?: number; source?: ReviewSource } = {},
     ): Promise<GradeResult> {
       const rows = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
       const row = rows[0];
@@ -311,6 +313,7 @@ export function createReviewsRepo(db: SumrakDB) {
         learningSteps: log.learning_steps,
         reviewedAt: log.review.getTime(),
         durationMs: opts.durationMs ?? null,
+        source: opts.source ?? null,
       };
       await db.insert(reviewLog).values(logRow);
 
@@ -323,8 +326,11 @@ export function createReviewsRepo(db: SumrakDB) {
       await db.update(cards).set(rest).where(eq(cards.id, id));
     },
 
-    async appendReviewLog(entry: Omit<ReviewLogRow, 'id'>): Promise<ReviewLogRow> {
-      const row = { id: newId(), ...entry };
+    /** Tests/tooling; `source` defaults to NULL like a pre-T50 row. */
+    async appendReviewLog(
+      entry: Omit<ReviewLogRow, 'id' | 'source'> & { source?: ReviewSource | null },
+    ): Promise<ReviewLogRow> {
+      const row: ReviewLogRow = { id: newId(), ...entry, source: entry.source ?? null };
       await db.insert(reviewLog).values(row);
       return row;
     },
