@@ -135,6 +135,22 @@ On a fresh install (or after data loss):
   and a comedy story — so the category chips, reader header source line and
   badges can be exercised without a content sync (idempotent; re-tap shows
   `unchanged`). Remove them via the packs screen like any installed pack.
+- **`review_log.source`** (T50): every grade records the activity that
+  produced it (`flashcard` · `mc` · `cloze` · `sentence-builder` ·
+  `listening` · `pronunciation` · `dialogue`; NULL = pre-T50 row). The DB
+  debug screen has no review-log readout, so read it straight from the
+  device DB on a debuggable build:
+
+  ```sh
+  adb shell run-as io.winapps.sumrak sqlite3 files/SQLite/sumrak.db \
+    "SELECT source, COUNT(*) FROM review_log GROUP BY source"
+  ```
+
+  or pull `sumrak.db` **plus** its `-wal` and `-shm` sidecars (the T44
+  trap — the WAL holds the newest rows) and open the three locally. The
+  Словарь's familiarity sort counts only `flashcard` and NULL rows on
+  ru-en / en-ru cards.
+
 - All analytics are local (SQLite `analytics_events`); nothing reports to any
   third party, ever.
 
@@ -195,7 +211,7 @@ the engine, cursors and the Settings list all iterate the registry.
 **Cursors.** Each theme's resume point lives in the `settings` table under
 `audio.ambientCursors` as `{ "<theme>": { "bed": "<slug>", "positionMs": N } }`.
 Themes absent from the blob start on bed 1 at 0; a cursor inside the last
-5 s of a bed starts the *next* bed. Clear one theme with Settings →
+5 s of a bed starts the _next_ bed. Clear one theme with Settings →
 Background music → Soundtracks → **Reset** (also restarts a live preview),
 or clear all with `DELETE FROM settings WHERE key = 'audio.ambientCursors'`
 from the dev DB screen / `run-as` sqlite. Listening in Settings (▶ preview)
