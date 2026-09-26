@@ -9,6 +9,8 @@ import {
   diffManifest,
   formatBytes,
   isAudioFile,
+  isLargeAsset,
+  isSceneFile,
   planPackFiles,
   verifyFileSha256,
   type Hasher,
@@ -146,6 +148,40 @@ describe('planPackFiles', () => {
     expect(plan.deferredAudio).toEqual([]);
   });
 
+  const scenarioPack = entry('a1-scenario-fixture', 1, [
+    { path: 'pack.json', sha256: 'a'.repeat(64) },
+    { path: 'audio/radio-a1/radio-a1-t01.opus', sha256: 'b'.repeat(64) },
+    { path: 'scene/backdrop.png', sha256: 'c'.repeat(64) },
+    { path: 'scene/host/body.png', sha256: 'd'.repeat(64) },
+    { path: 'scene/host/eyelids.png', sha256: 'e'.repeat(64) },
+  ]);
+
+  it('T58: scene PNG layers ride the same Wi-Fi gate as audio, in their own bucket', () => {
+    const onWifi = planPackFiles(scenarioPack, { wifiOnlyAudio: true, onWifi: true });
+    expect(onWifi.audio.map((f) => f.path)).toEqual(['audio/radio-a1/radio-a1-t01.opus']);
+    expect(onWifi.scene.map((f) => f.path)).toEqual([
+      'scene/backdrop.png',
+      'scene/host/body.png',
+      'scene/host/eyelids.png',
+    ]);
+    expect(onWifi.deferredScene).toEqual([]);
+
+    const cellular = planPackFiles(scenarioPack, { wifiOnlyAudio: true, onWifi: false });
+    expect(cellular.packJson.path).toBe('pack.json');
+    expect(cellular.audio).toEqual([]);
+    expect(cellular.scene).toEqual([]);
+    expect(cellular.deferredAudio).toHaveLength(1);
+    expect(cellular.deferredScene.map((f) => f.path)).toEqual([
+      'scene/backdrop.png',
+      'scene/host/body.png',
+      'scene/host/eyelids.png',
+    ]);
+
+    const toggleOff = planPackFiles(scenarioPack, { wifiOnlyAudio: false, onWifi: false });
+    expect(toggleOff.scene).toHaveLength(3);
+    expect(toggleOff.deferredScene).toEqual([]);
+  });
+
   it('throws invalid-manifest when pack.json is missing from the entry', () => {
     const broken = {
       ...entry('pack-a', 1),
@@ -183,6 +219,20 @@ describe('verifyFileSha256', () => {
     expect(err).toBeInstanceOf(SyncError);
     expect((err as SyncError).code).toBe('sha256-mismatch');
     expect((err as SyncError).path).toBe('audio/story1.opus');
+  });
+});
+
+describe('isSceneFile / isLargeAsset (T58)', () => {
+  it.each([
+    ['scene/backdrop.png', true, true],
+    ['scene/host/body.png', true, true],
+    ['cover.PNG', true, true],
+    ['audio/story1.opus', false, true],
+    ['pack.json', false, false],
+    ['cover.webp', false, false],
+  ])('%s → scene %s / large %s', (path, scene, large) => {
+    expect(isSceneFile(path)).toBe(scene);
+    expect(isLargeAsset(path)).toBe(large);
   });
 });
 

@@ -76,9 +76,23 @@ export function diffManifest(manifest: Manifest, installed: SyncStateRow[]): Man
   return diff;
 }
 
-/** Narration audio is the only large file class and the only Wi-Fi-gated one. */
+/** Narration / dialogue / scenario audio — a large file class, Wi-Fi-gated. */
 export function isAudioFile(path: string): boolean {
   return path.startsWith('audio/') || /\.(opus|ogg|mp3|m4a|wav)$/i.test(path);
+}
+
+/**
+ * T58 (SPEAKING_SCENARIOS §3/§4.1): scenario scene art — `scene/**` PNG
+ * layers (backdrop, body, eyelids) — is the second large file class. It is
+ * staged and Wi-Fi-gated exactly like audio and lands in `scenario_assets`.
+ */
+export function isSceneFile(path: string): boolean {
+  return path.startsWith('scene/') || /\.png$/i.test(path);
+}
+
+/** Every Wi-Fi-gated file class (the `isLargeAsset` check the design names). */
+export function isLargeAsset(path: string): boolean {
+  return isAudioFile(path) || isSceneFile(path);
 }
 
 export interface PackFilePlan {
@@ -87,14 +101,19 @@ export interface PackFilePlan {
   audio: ManifestFile[];
   /** Audio files deferred by the Wi-Fi-only setting (downloaded on a later Wi-Fi sync). */
   deferredAudio: ManifestFile[];
+  /** Scene PNG layers to download this run (T58). */
+  scene: ManifestFile[];
+  /** Scene layers deferred by the Wi-Fi-only setting (backfilled on a later Wi-Fi sync). */
+  deferredScene: ManifestFile[];
 }
 
 /**
- * Decide which of a pack's files to download. Audio is deferred — never the
- * pack itself — when the Wi-Fi-only-audio setting is on and the device is
- * not on Wi-Fi (design §9: "Wi-Fi-only toggle for audio"). Unknown file
- * types are ignored: the app only understands pack.json + audio, and a
- * newer manifest listing extra files must not break older app builds.
+ * Decide which of a pack's files to download. Large assets (audio and, since
+ * T58, scene PNG layers) are deferred — never the pack itself — when the
+ * Wi-Fi-only-audio setting is on and the device is not on Wi-Fi (design §9:
+ * "Wi-Fi-only toggle for audio"). Unknown file types are ignored: the app
+ * only understands pack.json + audio + scene, and a newer manifest listing
+ * extra files must not break older app builds.
  */
 export function planPackFiles(
   entry: ManifestEntry,
@@ -105,12 +124,16 @@ export function planPackFiles(
     // The manifest schema enforces pack.json's presence; guard for safety.
     throw new SyncError('invalid-manifest', `manifest entry "${entry.id}" lists no pack.json`);
   }
-  const audioAll = entry.files.filter((f) => f.path !== 'pack.json' && isAudioFile(f.path));
+  const rest = entry.files.filter((f) => f.path !== 'pack.json');
+  const audioAll = rest.filter((f) => isAudioFile(f.path));
+  const sceneAll = rest.filter((f) => !isAudioFile(f.path) && isSceneFile(f.path));
   const defer = opts.wifiOnlyAudio && !opts.onWifi;
   return {
     packJson,
     audio: defer ? [] : audioAll,
     deferredAudio: defer ? audioAll : [],
+    scene: defer ? [] : sceneAll,
+    deferredScene: defer ? sceneAll : [],
   };
 }
 
