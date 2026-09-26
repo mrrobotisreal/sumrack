@@ -15,6 +15,7 @@ import m0010 from './0010_path-theme-track.sql';
 import m0011 from './0011_library-categories.sql';
 import m0012 from './0012_review-source.sql';
 import m0013 from './0013_word-profiles.sql';
+import m0014 from './0014_scenarios.sql';
 
 export default {
   journal,
@@ -33,5 +34,6 @@ export default {
     m0011,
     m0012,
     m0013,
+    m0014,
   },
 };

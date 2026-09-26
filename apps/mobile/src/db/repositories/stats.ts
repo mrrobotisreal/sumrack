@@ -9,6 +9,8 @@ import {
   dailyActivity,
   frozenDays,
   gameSessions,
+  scenarioRuns,
+  scenarios,
 } from '../schema';
 import type { SumrakDB } from '../types';
 
@@ -135,7 +137,12 @@ export function createStatsRepo(db: SumrakDB) {
     },
 
     async startGameSession(
-      mode: string,
+      /**
+       * `game_sessions.mode`. The known values are the `GameSessionMode`
+       * union below (T58 declares 'scenario' there — the one place the
+       * games-mode set is written down); the column stays a plain string.
+       */
+      mode: GameSessionMode | (string & {}),
       // T27: dialogue runs survive force-close and must find their open row
       // again on resume — an identifying detail (e.g. { runId }) enables that.
       detail?: Record<string, unknown>,
@@ -229,7 +236,78 @@ export function createStatsRepo(db: SumrakDB) {
     async listRecentEvents(limit = 100) {
       return db.select().from(analyticsEvents).orderBy(desc(analyticsEvents.id)).limit(limit);
     },
+
+    /**
+     * T58 (SPEAKING_SCENARIOS §9.1 achievements, for T62): finished runs,
+     * clean runs (a finished run whose stats say every turn was clean), and
+     * how many families have every INSTALLED rung finished at least once —
+     * sweep-friendly counts, like the T27 dialogue stats. An uninstalled
+     * family can't qualify (its runs survive but prove nothing about "all").
+     */
+    async getScenarioStats(): Promise<{
+      finishedRunCount: number;
+      cleanRunCount: number;
+      familiesCompleted: number;
+    }> {
+      const finished = await db
+        .select({
+          scenarioId: scenarioRuns.scenarioId,
+          familyId: scenarioRuns.familyId,
+          statsJson: scenarioRuns.statsJson,
+        })
+        .from(scenarioRuns)
+        .where(isNotNull(scenarioRuns.finishedAt));
+      let cleanRunCount = 0;
+      const finishedScenarioIds = new Set<string>();
+      for (const run of finished) {
+        finishedScenarioIds.add(run.scenarioId);
+        if (!run.statsJson) continue;
+        try {
+          const stats = JSON.parse(run.statsJson) as { turns?: number; cleanTurns?: number };
+          if (
+            typeof stats.turns === 'number' &&
+            stats.turns > 0 &&
+            stats.cleanTurns === stats.turns
+          ) {
+            cleanRunCount += 1;
+          }
+        } catch {
+          // Unreadable stats never count as clean (the repo reports the parse error).
+        }
+      }
+      const installed = await db
+        .select({ familyId: scenarios.familyId, id: scenarios.id })
+        .from(scenarios);
+      const rungsByFamily = new Map<string, string[]>();
+      for (const s of installed) {
+        const list = rungsByFamily.get(s.familyId) ?? [];
+        list.push(s.id);
+        rungsByFamily.set(s.familyId, list);
+      }
+      let familiesCompleted = 0;
+      for (const rungs of rungsByFamily.values()) {
+        if (rungs.every((id) => finishedScenarioIds.has(id))) familiesCompleted += 1;
+      }
+      return { finishedRunCount: finished.length, cleanRunCount, familiesCompleted };
+    },
   };
 }
+
+/**
+ * The known `game_sessions.mode` values (T58 records this union — the
+ * previous convention was "by string"): the T06 review modes, the T12–T14
+ * games, the T17 unit quiz, the T27 dialogue run and the M17 scenario run.
+ */
+export type GameSessionMode =
+  | 'flashcards'
+  | 'review-mixed'
+  | 'review-daily'
+  | 'pronunciation'
+  | 'cloze'
+  | 'sentence-builder'
+  | 'listening'
+  | 'unit-quiz'
+  | 'dialogue'
+  | 'scenario';
 
 export type StatsRepo = ReturnType<typeof createStatsRepo>;

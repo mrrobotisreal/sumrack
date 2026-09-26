@@ -23,7 +23,14 @@ export type CardDirection = 'ru-en' | 'en-ru' | 'listening' | 'production';
 export type FeedbackStatus = 'none' | 'queued' | 'done';
 /** Which activity produced a grade (T50). NULL = pre-T50 row (unattributable). */
 export type ReviewSource =
-  'flashcard' | 'mc' | 'cloze' | 'sentence-builder' | 'listening' | 'pronunciation' | 'dialogue';
+  | 'flashcard'
+  | 'mc'
+  | 'cloze'
+  | 'sentence-builder'
+  | 'listening'
+  | 'pronunciation'
+  | 'dialogue'
+  | 'scenario';
 
 export const bankItems = sqliteTable(
   'bank_items',
@@ -498,6 +505,66 @@ export const grammarLessons = sqliteTable(
     index('grammar_lessons_key_idx').on(t.lemmaNorm, t.kind, t.sectionId, t.createdAt),
     index('grammar_lessons_created_idx').on(t.createdAt),
   ],
+);
+
+/**
+ * Scenario runs (T58, SPEAKING_SCENARIOS §4.2 — verbatim) — one row per
+ * playthrough of a scenario. `packId`/`scenarioId`/`endingId` are
+ * unenforced content refs (old runs still resolve after pack removal /
+ * update). `pathJson`'s shape is owned by the scenarios repo's Zod schema
+ * (`ScenarioRunPathSchema`) and is replayable like T27 (resume-in-place).
+ */
+export const scenarioRuns = sqliteTable(
+  'scenario_runs',
+  {
+    id: text('id').primaryKey(),
+    packId: text('pack_id').notNull(),
+    scenarioId: text('scenario_id').notNull(),
+    familyId: text('family_id').notNull(),
+    level: text('level').notNull(),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at'),
+    endingId: text('ending_id'),
+    /** { v:1, steps:[{ turnId, branchKey?, misses, assisted, skipped, rescued, meta: number }] } — Zod-parsed on read; replayable like T27 (resume-in-place). */
+    pathJson: text('path_json').notNull(),
+    /** { turns, cleanTurns, misses, lifelines, skips, metaAsks, rescues, avgScore } — written at finish. */
+    statsJson: text('stats_json'),
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+    /** Local recordings present? Pruning flips this; the debrief offers a bundle download when false. */
+    mediaLocal: integer('media_local', { mode: 'boolean' }).notNull().default(true),
+    /** null = not bundled yet · 'pending' · 'uploaded' · 'failed' — per §10. */
+    mediaBundleState: text('media_bundle_state'),
+    mediaBundleName: text('media_bundle_name'),
+    gameSessionId: text('game_session_id'),
+  },
+  (t) => [
+    index('scenario_runs_scenario_idx').on(t.scenarioId, t.startedAt),
+    index('scenario_runs_finished_idx').on(t.finishedAt),
+  ],
+);
+
+/** One spoken attempt (answer or meta-intent) inside a run (§4.2 verbatim); cascades with its run. */
+export const scenarioAttempts = sqliteTable(
+  'scenario_attempts',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id')
+      .notNull()
+      .references(() => scenarioRuns.id, { onDelete: 'cascade' }),
+    turnId: text('turn_id').notNull(),
+    attemptNo: integer('attempt_no').notNull(),
+    kind: text('kind').$type<'answer' | 'meta'>().notNull(),
+    /** answer: 'matched' | 'rescued' | 'miss' | 'skipped' · meta: 'explain' | 'howtosay' | 'repeat' | 'slower' | 'dont-understand' | 'unknown' */
+    outcome: text('outcome').notNull(),
+    transcript: text('transcript').notNull(),
+    /** answer: { target, words:[{display,target,heard,matched}], score, slots:{[id]: key|null} } · meta: { query, hit: entryId|null, source: 'glossary'|'whisper'|'online'|'none' } */
+    detailJson: text('detail_json').notNull(),
+    /** Relative to the recordings root; null once pruned. */
+    audioFile: text('audio_file'),
+    audioDurationMs: integer('audio_duration_ms'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('scenario_attempts_run_idx').on(t.runId, t.turnId, t.attemptNo)],
 );
 
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */

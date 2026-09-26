@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Directory, File, Paths } from 'expo-file-system';
 import { useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -7,8 +8,11 @@ import { Text } from '@/components/ui/text';
 import { db, repos } from '@/db';
 import { queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
 import { importPack, type ImportResult } from '@/db/importer';
+import type { ScenarioFamily, ScenarioRunRow } from '@/db/repositories/scenarios';
 import type { WordProfileRow } from '@/db/repositories/word-forms';
 import { friendlyAiMessage } from '@/features/ai/errors';
+import { exportUserData } from '@/features/backup/export-core';
+import { restoreUserData } from '@/features/backup/restore-core';
 import {
   getGrammarPreset,
   PROVIDER_LABELS,
@@ -32,6 +36,9 @@ const FIXTURE_PACKS = [
   { id: 'a2-news-090', note: 'news · 2 stories with subtitle + source' },
   { id: 'a2-podcast-090', note: 'podcast · 1 episode' },
   { id: 'a1-comedy-090', note: 'stories/comedy · 1 story, no source' },
+  // T58 (M17): the T56 «Проверка связи» scenario — audio-less here (the
+  // readout shows localUri null); T57's rendered copy lands via sync.
+  { id: 'a1-scenario-fixture', note: 'scenario · radio-a1 · 6 turns · 15 glossary' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -39,6 +46,8 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
   'a2-news-090': () => require('@sumrak/schema/fixtures/packs/a2-news-090/pack.json'),
   'a2-podcast-090': () => require('@sumrak/schema/fixtures/packs/a2-podcast-090/pack.json'),
   'a1-comedy-090': () => require('@sumrak/schema/fixtures/packs/a1-comedy-090/pack.json'),
+  'a1-scenario-fixture': () =>
+    require('@sumrak/schema/fixtures/packs/a1-scenario-fixture/pack.json'),
 };
 
 /**
@@ -53,6 +62,85 @@ interface WordProfileReadout {
   lessons: number;
   withoutProfile: number;
   recent: WordProfileRow[];
+}
+
+/** T58 dev readout: installed scenarios (per rung: turns / glossary / audio staged / mouth) + the last 5 runs. */
+interface ScenarioReadout {
+  families: ScenarioFamily[];
+  /** Per `packId/scenarioId`: audio rows, staged rows, rows with a mouth track, stamp rows, asset rows (staged). */
+  perRung: Record<
+    string,
+    {
+      audio: number;
+      staged: number;
+      mouth: number;
+      stamps: number;
+      assets: number;
+      assetsStaged: number;
+    }
+  >;
+  runs: ScenarioRunRow[];
+}
+
+/**
+ * T58 dev-only: the on-device pack dir `documentDirectory/packs/<id>/` is
+ * the same layout sync stages into. When a `pack.json` was planted there
+ * (T57's rendered fixture pushed over adb) it is imported INSTEAD of the
+ * bundled schema fixture; afterwards every audio row / scene layer whose
+ * file exists in that dir gets its `localUri` set (a local "backfill" —
+ * exactly what the Wi-Fi backfill does after a github download) and every
+ * `scene/**` PNG on disk gets a `scenario_assets` row. Verification only.
+ */
+function packDir(packId: string): Directory {
+  return new Directory(Paths.document, 'packs', packId);
+}
+
+function plantedPackJson(packId: string): unknown | null {
+  const file = new File(packDir(packId), 'pack.json');
+  if (!file.exists) return null;
+  return JSON.parse(file.textSync()) as unknown;
+}
+
+async function backfillFromPackDir(packId: string): Promise<{ audio: number; scene: number }> {
+  let audio = 0;
+  for (const row of await repos.scenarios.listAudioForPack(packId)) {
+    const f = new File(packDir(packId), ...row.file.split('/'));
+    if (f.exists) {
+      await repos.scenarios.setAudioLocalUri(packId, row.file, f.uri);
+      audio += 1;
+    }
+  }
+  let scene = 0;
+  const sceneDir = new Directory(packDir(packId), 'scene');
+  if (sceneDir.exists) {
+    const walk = (dir: Directory, rel: string) => {
+      for (const entry of dir.list()) {
+        const name = entry.name;
+        if (entry instanceof Directory) walk(entry, `${rel}${name}/`);
+        else if (/\.png$/i.test(name)) {
+          void repos.scenarios.setAssetLocalUri(packId, `${rel}${name}`, entry.uri, entry.size);
+          scene += 1;
+        }
+      }
+    };
+    walk(sceneDir, 'scene/');
+  }
+  return { audio, scene };
+}
+
+function formatRun(r: ScenarioRunRow): string {
+  const when = new Date(r.startedAt).toISOString().slice(0, 16).replace('T', ' ');
+  const state = r.finishedAt ? `finished → ${r.endingId ?? '?'}` : 'open';
+  let stats = '';
+  if (r.statsJson) {
+    try {
+      const s = JSON.parse(r.statsJson) as Record<string, unknown>;
+      stats = ` · ${String(s.cleanTurns)}/${String(s.turns)} clean · ${String(s.misses)} misses · avg ${String(s.avgScore ?? '—')}`;
+    } catch {
+      stats = ' · stats unreadable';
+    }
+  }
+  return `${when} · ${r.scenarioId} · ${state}${stats}${r.pinned ? ' · pinned' : ''}${r.mediaLocal ? '' : ' · media pruned'}${r.mediaBundleState ? ` · bundle ${r.mediaBundleState}` : ''}`;
 }
 
 function formatReceipt(r: WordProfileRow): string {
@@ -115,6 +203,50 @@ export default function DevDbScreen() {
       setProfileBusy(false);
     }
   }, [profileBusy, refreshReadout]);
+  // --- T58 «Scenarios» readout ---------------------------------------------
+  const [scenarioReadout, setScenarioReadout] = React.useState<ScenarioReadout | null>(null);
+  const refreshScenarios = React.useCallback(async () => {
+    const families = await repos.scenarios.listScenarios();
+    const perRung: ScenarioReadout['perRung'] = {};
+    for (const family of families) {
+      for (const rung of family.rungs) {
+        const detail = await repos.scenarios.getScenario(rung.packId, rung.id);
+        const audioRows = Object.values(detail?.lines ?? {})
+          .map((l) => l.audio)
+          .filter((a): a is NonNullable<typeof a> => a !== null);
+        let stamps = 0;
+        for (const a of audioRows) {
+          stamps += (await repos.scenarios.getStampsForSentence(rung.packId, a.sentenceId)).length;
+        }
+        perRung[`${rung.packId}/${rung.id}`] = {
+          audio: audioRows.length,
+          staged: audioRows.filter((a) => a.localUri !== null).length,
+          mouth: audioRows.filter((a) => a.mouth !== null && a.mouth.length > 0).length,
+          stamps,
+          assets: detail?.assets.length ?? 0,
+          assetsStaged: detail?.assets.filter((a) => a.localUri !== null).length ?? 0,
+        };
+      }
+    }
+    const runs = await repos.scenarios.listRuns(undefined, { limit: 5 });
+    setScenarioReadout({ families, perRung, runs });
+  }, []);
+  // --- T58 backup self-check (dev only): export → restore the same payload.
+  const [backupLog, setBackupLog] = React.useState<string | null>(null);
+  const backupSelfCheck = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const { payload } = await exportUserData(db);
+      const before = `export: scenarioRuns ${payload.tables.scenarioRuns.length} · scenarioAttempts ${payload.tables.scenarioAttempts.length} · keys ${Object.keys(payload.tables).length}`;
+      const result = await restoreUserData(db, JSON.parse(JSON.stringify(payload)));
+      setBackupLog(
+        `${before} → restore: scenarioRuns ${result.rowCounts.scenarioRuns} · scenarioAttempts ${result.rowCounts.scenarioAttempts} · total ${result.totalRows}`,
+      );
+      await refreshScenarios();
+    } catch (err) {
+      setBackupLog(`failed: ${String(err)}`);
+    }
+  }, [refreshScenarios]);
   const packs = usePacks();
   const stories = useStories();
   const [query, setQuery] = React.useState('');
@@ -130,24 +262,44 @@ export default function DevDbScreen() {
         // source 'bundled' (a legal PackSource, same as boot fixtures);
         // origin 'remote' is deliberate — the fixtures must go through the
         // T45 chip filter, not the «Импортировано» shelf.
-        const result: ImportResult = await importPack(db, FIXTURE_JSON[id](), {
+        const planted = plantedPackJson(id);
+        const result: ImportResult = await importPack(db, planted ?? FIXTURE_JSON[id](), {
           source: 'bundled',
           origin: 'remote',
         });
-        setFixtureStatus((s) => ({ ...s, [id]: `${result.action} · v${result.version}` }));
+        let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
+        if (result.counts.scenarios > 0) {
+          const filled = await backfillFromPackDir(id);
+          status += ` · backfilled ${filled.audio} audio / ${filled.scene} scene`;
+        }
+        setFixtureStatus((s) => ({ ...s, [id]: status }));
         track('debug_fixture_imported', { packId: id });
+        if (result.counts.scenarios > 0 && result.action !== 'unchanged') {
+          // §4.5 T58 event — one per scenario; slugs/numbers only.
+          for (const family of await repos.scenarios.listScenarios()) {
+            for (const rung of family.rungs.filter((r) => r.packId === id)) {
+              track('scenario_pack_imported', {
+                scenarioId: rung.id,
+                turns: rung.turnCount,
+                glossary: rung.glossaryCount,
+              });
+            }
+          }
+        }
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
           queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.scenarios }),
           queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
         ]);
+        await refreshScenarios();
       } catch (err) {
         setFixtureStatus((s) => ({ ...s, [id]: `failed: ${String(err)}` }));
       } finally {
         setBusy(null);
       }
     },
-    [busy, queryClient],
+    [busy, queryClient, refreshScenarios],
   );
   // Built-in FTS smoke test: known fixture lemma «стена» queried as "стена"
   // and ё-folded «чёрный» queried as "черный" — proves FTS5 MATCH works
@@ -159,7 +311,8 @@ export default function DevDbScreen() {
     React.useCallback(() => {
       track('debug_db_opened');
       void refreshReadout();
-    }, [refreshReadout]),
+      void refreshScenarios();
+    }, [refreshReadout, refreshScenarios]),
   );
 
   return (
@@ -255,6 +408,80 @@ export default function DevDbScreen() {
           ))}
           {readout && readout.recent.length === 0 && (
             <Text variant="caption">No profiles yet.</Text>
+          )}
+        </View>
+      </View>
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Scenarios (M17 · T58)
+        </Text>
+        <View className="gap-2">
+          {scenarioReadout?.families.flatMap((family) =>
+            family.rungs.map((rung) => {
+              const c = scenarioReadout.perRung[`${rung.packId}/${rung.id}`];
+              return (
+                <View
+                  key={`${rung.packId}/${rung.id}`}
+                  className="rounded-xl border border-border bg-surface p-3"
+                >
+                  <Text className="font-ui-medium">
+                    {family.familyId} · {rung.level} · {rung.titleRu} · {rung.titleEn}
+                  </Text>
+                  <Text variant="caption" selectable>
+                    {rung.packId}/{rung.id} · {rung.turnCount} turns · {rung.glossaryCount} glossary
+                    · audio {c?.audio ?? '…'} rows / {c?.staged ?? '…'} staged (localUri) /{' '}
+                    {c?.mouth ?? '…'} with mouth · {c?.stamps ?? '…'} stamps · assets{' '}
+                    {c?.assets ?? '…'} rows / {c?.assetsStaged ?? '…'} staged ·{' '}
+                    {rung.audioReady ? 'audio READY' : 'audio not ready'}
+                  </Text>
+                  <Text variant="caption">
+                    runs: {rung.runCount} · last:{' '}
+                    {rung.lastRun ? (rung.lastRun.finishedAt ? 'finished' : 'open') : '—'} · best:{' '}
+                    {rung.bestStats
+                      ? `${rung.bestStats.cleanTurns}/${rung.bestStats.turns} clean`
+                      : '—'}
+                  </Text>
+                </View>
+              );
+            }),
+          )}
+          {scenarioReadout && scenarioReadout.families.length === 0 && (
+            <Text variant="caption">
+              No scenarios installed — import a1-scenario-fixture above.
+            </Text>
+          )}
+        </View>
+        {__DEV__ && (
+          <Pressable
+            onPress={() => void backupSelfCheck()}
+            accessibilityRole="button"
+            accessibilityLabel="Backup payload self-check"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Backup payload self-check</Text>
+            <Text variant="caption" selectable>
+              {backupLog ??
+                'exportUserData → restoreUserData on this DB; prints the two M17 table counts.'}
+            </Text>
+          </Pressable>
+        )}
+        <Text variant="caption" className="mt-2">
+          Last 5 runs
+        </Text>
+        <View className="mt-1 gap-1">
+          {scenarioReadout?.runs.map((r) => (
+            <Text
+              key={r.id}
+              variant="caption"
+              selectable
+              className="rounded-lg bg-surface px-3 py-2"
+            >
+              {formatRun(r)}
+            </Text>
+          ))}
+          {scenarioReadout && scenarioReadout.runs.length === 0 && (
+            <Text variant="caption">No runs yet.</Text>
           )}
         </View>
       </View>

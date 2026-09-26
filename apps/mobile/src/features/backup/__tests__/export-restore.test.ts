@@ -24,6 +24,8 @@ import {
   notes,
   packs,
   reviewLog,
+  scenarioAttempts,
+  scenarioRuns,
   settings,
   storyProgress,
   syncState,
@@ -334,6 +336,111 @@ async function seedSource(db: SumrakDB) {
     durationMs: 22_000,
     createdAt: NOW - 7000,
   });
+  // T58: a finished scenario run with two attempts (one pruned) + an open one.
+  await db.insert(scenarioRuns).values([
+    {
+      id: 'srun-1',
+      packId: 'a1-scenario-fixture',
+      scenarioId: 'radio-a1',
+      familyId: 'radio',
+      level: 'A1',
+      startedAt: NOW - 6500,
+      finishedAt: NOW - 6000,
+      endingId: 'end-ok',
+      pathJson: JSON.stringify({
+        v: 1,
+        steps: [
+          {
+            turnId: 'radio-a1-t01',
+            misses: 0,
+            assisted: false,
+            skipped: false,
+            rescued: false,
+            meta: 0,
+          },
+          {
+            turnId: 'radio-a1-t02',
+            misses: 1,
+            assisted: false,
+            skipped: false,
+            rescued: false,
+            meta: 1,
+          },
+        ],
+      }),
+      statsJson: JSON.stringify({
+        turns: 2,
+        cleanTurns: 1,
+        misses: 1,
+        lifelines: 0,
+        skips: 0,
+        metaAsks: 1,
+        rescues: 0,
+        avgScore: 61.5,
+      }),
+      pinned: true,
+      mediaLocal: false,
+      mediaBundleState: 'uploaded',
+      mediaBundleName: 'srun-1.bundle.enc',
+      gameSessionId: 'gs-1',
+    },
+    {
+      id: 'srun-2',
+      packId: 'a1-scenario-fixture',
+      scenarioId: 'radio-a1',
+      familyId: 'radio',
+      level: 'A1',
+      startedAt: NOW - 5900,
+      finishedAt: null,
+      endingId: null,
+      pathJson: JSON.stringify({ v: 1, steps: [] }),
+      statsJson: null,
+      pinned: false,
+      mediaLocal: true,
+      mediaBundleState: null,
+      mediaBundleName: null,
+      gameSessionId: null,
+    },
+  ]);
+  await db.insert(scenarioAttempts).values([
+    {
+      id: 'satt-1',
+      runId: 'srun-1',
+      turnId: 'radio-a1-t02',
+      attemptNo: 1,
+      kind: 'answer',
+      outcome: 'miss',
+      transcript: 'э… меня',
+      detailJson: JSON.stringify({
+        kind: 'answer',
+        target: 'Меня зовут Митч.',
+        words: [],
+        score: 31,
+        slots: { name: null },
+      }),
+      audioFile: null,
+      audioDurationMs: 700,
+      createdAt: NOW - 6400,
+    },
+    {
+      id: 'satt-2',
+      runId: 'srun-1',
+      turnId: 'radio-a1-t02',
+      attemptNo: 2,
+      kind: 'meta',
+      outcome: 'explain',
+      transcript: 'что значит проверка',
+      detailJson: JSON.stringify({
+        kind: 'meta',
+        query: 'проверка',
+        hit: 'radio-a1-gl-check',
+        source: 'glossary',
+      }),
+      audioFile: 'srun-1/satt-2.ogg',
+      audioDurationMs: 1400,
+      createdAt: NOW - 6300,
+    },
+  ]);
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -397,6 +504,8 @@ async function selectAllUserTables(db: SumrakDB) {
     importedPacks: await db.select().from(importedPacks),
     wordProfiles: await db.select().from(wordProfiles),
     grammarLessons: await db.select().from(grammarLessons),
+    scenarioRuns: await db.select().from(scenarioRuns),
+    scenarioAttempts: await db.select().from(scenarioAttempts),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -596,6 +705,54 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(result.rowCounts.bankItems).toBe(2);
   });
 
+  it('scenario_runs + scenario_attempts round-trip through export → restore (T58)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    expect(payload.tables.scenarioRuns.map((r) => r.id).sort()).toEqual(['srun-1', 'srun-2']);
+    expect(payload.tables.scenarioAttempts.map((a) => a.id).sort()).toEqual(['satt-1', 'satt-2']);
+    // JSON columns travel as strings, audioFile as-is (bundle-relative).
+    expect(typeof payload.tables.scenarioRuns[0]!.pathJson).toBe('string');
+    expect(payload.tables.scenarioAttempts.find((a) => a.id === 'satt-2')!.audioFile).toBe(
+      'srun-1/satt-2.ogg',
+    );
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    expect(result.rowCounts.scenarioRuns).toBe(2);
+    expect(result.rowCounts.scenarioAttempts).toBe(2);
+    expect(await target.select().from(scenarioRuns)).toEqual(
+      await source.select().from(scenarioRuns),
+    );
+    expect(await target.select().from(scenarioAttempts)).toEqual(
+      await source.select().from(scenarioAttempts),
+    );
+    const run1 = (await target.select().from(scenarioRuns)).find((r) => r.id === 'srun-1')!;
+    expect(run1).toMatchObject({ pinned: true, mediaLocal: false, mediaBundleState: 'uploaded' });
+    expect(JSON.parse(run1.statsJson!)).toMatchObject({ turns: 2, avgScore: 61.5 });
+    // The attempts' FK survived the ordered insert (runs before attempts).
+    const fk = await target.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM scenario_attempts a LEFT JOIN scenario_runs r ON r.id = a.run_id WHERE r.id IS NULL`,
+    );
+    expect(fk[0]!.n).toBe(0);
+  });
+
+  it('a pre-M17 payload (no scenarioRuns / scenarioAttempts keys) still parses + restores under version 1', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as { tables: Record<string, unknown> };
+    delete legacy.tables.scenarioRuns;
+    delete legacy.tables.scenarioAttempts;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.scenarioRuns).toBe(0);
+    expect(result.rowCounts.scenarioAttempts).toBe(0);
+    expect(await target.select().from(scenarioRuns)).toHaveLength(0);
+    expect(result.rowCounts.wordProfiles).toBe(2);
+  });
+
   it('an invalid payload is refused with ZERO writes (live DB untouched)', async () => {
     const target = createTestDb();
     await target.insert(notes).values({
@@ -671,6 +828,13 @@ describe('user-table drift guard', () => {
       'dialogue_endings',
       'dialogue_node_audio',
       'dialogue_node_stamps',
+      // T58 scenario content group (rebuilt from packs, never backed up).
+      'scenarios',
+      'scenario_turns',
+      'scenario_glossary',
+      'scenario_line_audio',
+      'scenario_line_stamps',
+      'scenario_assets',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');

@@ -17,6 +17,7 @@ import { GithubContentClient } from './github-client';
 import {
   diffManifest,
   isAudioFile,
+  isSceneFile,
   planPackFiles,
   verifyFileSha256,
   type Hasher,
@@ -145,7 +146,7 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
   for (const [i, entry] of changed.entries()) {
     try {
       const plan = planPackFiles(entry, { wifiOnlyAudio, onWifi });
-      const fileCount = 1 + plan.audio.length;
+      const fileCount = 1 + plan.audio.length + plan.scene.length;
       const progress = {
         packId: entry.id,
         titleEn: entry.title.en,
@@ -175,9 +176,31 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
         track('audio_deferred_wifi', { packId: entry.id, files: plan.deferredAudio.length });
       }
 
+      // 2b. Scene PNG layers (T58): same download → verify → stage path;
+      //     deferred layers still get a `scenario_assets` row (localUri
+      //     null, manifest size) so the backfill knows what is missing.
+      const sceneFiles: Record<string, { localUri: string | null; bytes: number | null }> = {};
+      for (const [j, file] of plan.scene.entries()) {
+        const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
+        await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
+        sceneFiles[file.path] = {
+          localUri: stageAudioFile(entry.id, file.path, bytes),
+          bytes: bytes.byteLength,
+        };
+        useSyncStatus.getState().setProgress({
+          ...progress,
+          filesDone: 2 + plan.audio.length + j,
+        });
+      }
+      for (const file of plan.deferredScene)
+        sceneFiles[file.path] = { localUri: null, bytes: null };
+      if (plan.deferredScene.length > 0) {
+        track('scene_deferred_wifi', { packId: entry.id, files: plan.deferredScene.length });
+      }
+
       // 3. Import through T03 (validates again with Zod, upserts by stable
       //    ids, replaces content rows on version bump, preserves user refs).
-      const result = await importPack(db, rawPack, { source: 'github', audioFiles });
+      const result = await importPack(db, rawPack, { source: 'github', audioFiles, sceneFiles });
       await repos.syncState.setBytes(entry.id, entry.bytes);
 
       if (result.action === 'installed') summary.installed.push(entry.id);
@@ -276,9 +299,10 @@ function decodeUtf8(bytes: Uint8Array): string {
 }
 
 /**
- * Write verified audio bytes to documentDirectory/packs/<packId>/<relPath>
- * (same layout the T03 bootstrap stages bundled audio into) and return the
- * file URI for audio_tracks.localUri.
+ * Write verified audio (or, since T58, scene PNG) bytes to
+ * documentDirectory/packs/<packId>/<relPath> (same layout the T03 bootstrap
+ * stages bundled audio into) and return the file URI for the `localUri`
+ * column of the owning row.
  */
 function stageAudioFile(packId: string, relPath: string, bytes: Uint8Array): string {
   const parts = relPath.split('/');
@@ -292,35 +316,56 @@ function stageAudioFile(packId: string, relPath: string, bytes: Uint8Array): str
 
 /**
  * For an installed, up-to-date pack: download any manifest audio file whose
- * audio_track (or dialogue_node_audio row, T26) has no localUri yet
- * (deferred on cellular earlier), verify, stage, and record the uri.
+ * audio_track (or dialogue_node_audio row, T26, or scenario_line_audio row,
+ * T58) has no localUri yet (deferred on cellular earlier), verify, stage,
+ * and record the uri. T58 also walks the pack's `scene/**` layers the same
+ * way (`scenario_assets`).
  */
 async function backfillMissingAudio(client: GithubContentClient, entry: ManifestEntry) {
-  const [tracks, dialogueAudio] = await Promise.all([
+  const [tracks, dialogueAudio, scenarioAudio] = await Promise.all([
     repos.content.listAudioTracksForPack(entry.id),
     repos.dialogues.listAudioForPack(entry.id),
+    repos.scenarios.listAudioForPack(entry.id),
   ]);
-  const missing = [...tracks, ...dialogueAudio].filter(
+  const missing = [...tracks, ...dialogueAudio, ...scenarioAudio].filter(
     (t) => !t.localUri || !new File(t.localUri).exists,
   );
-  if (missing.length === 0) return;
 
   const manifestByPath = new Map(
     entry.files.filter((f) => isAudioFile(f.path)).map((f) => [f.path, f]),
   );
   const isDialogueFile = new Set(dialogueAudio.map((a) => a.file));
+  const isScenarioFile = new Set(scenarioAudio.map((a) => a.file));
   for (const audioRow of missing) {
     const file = manifestByPath.get(audioRow.file);
     if (!file) continue; // manifest no longer ships this file
     const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
     await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
     const uri = stageAudioFile(entry.id, file.path, bytes);
-    if (isDialogueFile.has(audioRow.file)) {
+    if (isScenarioFile.has(audioRow.file)) {
+      await repos.scenarios.setAudioLocalUri(entry.id, audioRow.file, uri);
+    } else if (isDialogueFile.has(audioRow.file)) {
       await repos.dialogues.setAudioLocalUri(entry.id, audioRow.file, uri);
     } else {
       await repos.content.setAudioLocalUri(entry.id, audioRow.file, uri);
     }
     track('audio_backfilled', { packId: entry.id, file: file.path });
+  }
+
+  // T58: scene layers — every manifest `scene/**` file with no staged row.
+  const sceneManifest = entry.files.filter((f) => !isAudioFile(f.path) && isSceneFile(f.path));
+  if (sceneManifest.length === 0) return;
+  const assets = new Map(
+    (await repos.scenarios.listAssetsForPack(entry.id)).map((a) => [a.file, a]),
+  );
+  for (const file of sceneManifest) {
+    const row = assets.get(file.path);
+    if (row?.localUri && new File(row.localUri).exists) continue;
+    const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
+    await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
+    const uri = stageAudioFile(entry.id, file.path, bytes);
+    await repos.scenarios.setAssetLocalUri(entry.id, file.path, uri, bytes.byteLength);
+    track('scene_backfilled', { packId: entry.id, file: file.path });
   }
 }
 
