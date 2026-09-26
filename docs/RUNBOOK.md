@@ -391,3 +391,9 @@ end (≈ 75 s · $0.21–0.26) — a verb profile is ~25 sections of forms.
 | Anthropic · Fast · Medium (host capture) | Claude Sonnet 5 | —         | $0.018    | 1   | 2026-09-24 (T54 fixture) |
 
 <!-- T55 appends the 2026-09-25 matrix rows below this line -->
+
+---
+
+## 8. Speaking scenarios (M17 — filled by T63)
+
+Stub. «Сценарии» — blind speaking scenarios with a talking cast: design `../../docs/design/SPEAKING_SCENARIOS.md`, scripts `../../docs/design/SCENARIO_SCRIPTS_BATCH_1.md`, ADR-0019. T63 writes this section (adding a family, the assist model, recordings & pruning, media bundles & lazy restore, the judge lab + scene gallery, endpointing presets, cost expectations).
