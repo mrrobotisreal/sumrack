@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Directory, File, Paths } from 'expo-file-system';
 import { useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -10,6 +11,8 @@ import { importPack, type ImportResult } from '@/db/importer';
 import type { ScenarioFamily, ScenarioRunRow } from '@/db/repositories/scenarios';
 import type { WordProfileRow } from '@/db/repositories/word-forms';
 import { friendlyAiMessage } from '@/features/ai/errors';
+import { exportUserData } from '@/features/backup/export-core';
+import { restoreUserData } from '@/features/backup/restore-core';
 import {
   getGrammarPreset,
   PROVIDER_LABELS,
@@ -77,6 +80,52 @@ interface ScenarioReadout {
     }
   >;
   runs: ScenarioRunRow[];
+}
+
+/**
+ * T58 dev-only: the on-device pack dir `documentDirectory/packs/<id>/` is
+ * the same layout sync stages into. When a `pack.json` was planted there
+ * (T57's rendered fixture pushed over adb) it is imported INSTEAD of the
+ * bundled schema fixture; afterwards every audio row / scene layer whose
+ * file exists in that dir gets its `localUri` set (a local "backfill" —
+ * exactly what the Wi-Fi backfill does after a github download) and every
+ * `scene/**` PNG on disk gets a `scenario_assets` row. Verification only.
+ */
+function packDir(packId: string): Directory {
+  return new Directory(Paths.document, 'packs', packId);
+}
+
+function plantedPackJson(packId: string): unknown | null {
+  const file = new File(packDir(packId), 'pack.json');
+  if (!file.exists) return null;
+  return JSON.parse(file.textSync()) as unknown;
+}
+
+async function backfillFromPackDir(packId: string): Promise<{ audio: number; scene: number }> {
+  let audio = 0;
+  for (const row of await repos.scenarios.listAudioForPack(packId)) {
+    const f = new File(packDir(packId), ...row.file.split('/'));
+    if (f.exists) {
+      await repos.scenarios.setAudioLocalUri(packId, row.file, f.uri);
+      audio += 1;
+    }
+  }
+  let scene = 0;
+  const sceneDir = new Directory(packDir(packId), 'scene');
+  if (sceneDir.exists) {
+    const walk = (dir: Directory, rel: string) => {
+      for (const entry of dir.list()) {
+        const name = entry.name;
+        if (entry instanceof Directory) walk(entry, `${rel}${name}/`);
+        else if (/\.png$/i.test(name)) {
+          void repos.scenarios.setAssetLocalUri(packId, `${rel}${name}`, entry.uri, entry.size);
+          scene += 1;
+        }
+      }
+    };
+    walk(sceneDir, 'scene/');
+  }
+  return { audio, scene };
 }
 
 function formatRun(r: ScenarioRunRow): string {
@@ -182,6 +231,22 @@ export default function DevDbScreen() {
     const runs = await repos.scenarios.listRuns(undefined, { limit: 5 });
     setScenarioReadout({ families, perRung, runs });
   }, []);
+  // --- T58 backup self-check (dev only): export → restore the same payload.
+  const [backupLog, setBackupLog] = React.useState<string | null>(null);
+  const backupSelfCheck = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const { payload } = await exportUserData(db);
+      const before = `export: scenarioRuns ${payload.tables.scenarioRuns.length} · scenarioAttempts ${payload.tables.scenarioAttempts.length} · keys ${Object.keys(payload.tables).length}`;
+      const result = await restoreUserData(db, JSON.parse(JSON.stringify(payload)));
+      setBackupLog(
+        `${before} → restore: scenarioRuns ${result.rowCounts.scenarioRuns} · scenarioAttempts ${result.rowCounts.scenarioAttempts} · total ${result.totalRows}`,
+      );
+      await refreshScenarios();
+    } catch (err) {
+      setBackupLog(`failed: ${String(err)}`);
+    }
+  }, [refreshScenarios]);
   const packs = usePacks();
   const stories = useStories();
   const [query, setQuery] = React.useState('');
@@ -197,11 +262,17 @@ export default function DevDbScreen() {
         // source 'bundled' (a legal PackSource, same as boot fixtures);
         // origin 'remote' is deliberate — the fixtures must go through the
         // T45 chip filter, not the «Импортировано» shelf.
-        const result: ImportResult = await importPack(db, FIXTURE_JSON[id](), {
+        const planted = plantedPackJson(id);
+        const result: ImportResult = await importPack(db, planted ?? FIXTURE_JSON[id](), {
           source: 'bundled',
           origin: 'remote',
         });
-        setFixtureStatus((s) => ({ ...s, [id]: `${result.action} · v${result.version}` }));
+        let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
+        if (result.counts.scenarios > 0) {
+          const filled = await backfillFromPackDir(id);
+          status += ` · backfilled ${filled.audio} audio / ${filled.scene} scene`;
+        }
+        setFixtureStatus((s) => ({ ...s, [id]: status }));
         track('debug_fixture_imported', { packId: id });
         if (result.counts.scenarios > 0 && result.action !== 'unchanged') {
           // §4.5 T58 event — one per scenario; slugs/numbers only.
@@ -381,6 +452,20 @@ export default function DevDbScreen() {
             </Text>
           )}
         </View>
+        {__DEV__ && (
+          <Pressable
+            onPress={() => void backupSelfCheck()}
+            accessibilityRole="button"
+            accessibilityLabel="Backup payload self-check"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Backup payload self-check</Text>
+            <Text variant="caption" selectable>
+              {backupLog ??
+                'exportUserData → restoreUserData on this DB; prints the two M17 table counts.'}
+            </Text>
+          </Pressable>
+        )}
         <Text variant="caption" className="mt-2">
           Last 5 runs
         </Text>
