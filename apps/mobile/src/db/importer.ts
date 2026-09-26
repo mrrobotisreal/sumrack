@@ -507,6 +507,15 @@ async function insertScenarioRows(
     await insertSentenceRows(db, packId, scenario.id, ref.line.sentence, sentenceIdx++);
     if (ref.line.audio) await stageAudio(ref.line.audio, ref.line.sentence.id, ref.kind);
   }
+  // Coach audio (T57 `Expectation.coachAudio`, rendered from `accept[0]` in
+  // the player voice) has no annotated sentence, so its audio row is keyed
+  // by the synthetic sentence id `<turnId>:coach` — turn ids equal their
+  // prompt sentence's id (§2.3), and ':' never appears in a StableId, so
+  // the key cannot collide. `variant: 'coach'`; no sentence/tokens rows.
+  for (const turn of scenario.turns) {
+    const coach = coachAudioOf(turn.expect);
+    if (coach) await stageAudio(coach, coachSentenceId(turn.id), 'coach');
+  }
 
   for (const [turnIdx, turn] of scenario.turns.entries()) {
     await db.insert(scenarioTurns).values({
@@ -518,11 +527,19 @@ async function insertScenarioRows(
       sayJson: JSON.stringify(turn.say.map((line) => line.sentence.id)),
       expectJson: turn.expect
         ? JSON.stringify({
-            ...turn.expect,
-            reject: turn.expect.reject?.map((group) => ({
-              forms: group.forms,
-              ...(group.react ? { reactSentenceId: group.react.sentence.id } : {}),
-            })),
+            slots: turn.expect.slots,
+            accept: turn.expect.accept,
+            ...(turn.expect.branchOn !== undefined ? { branchOn: turn.expect.branchOn } : {}),
+            ...(turn.expect.reject
+              ? {
+                  reject: turn.expect.reject.map((group) => ({
+                    forms: group.forms,
+                    ...(group.react ? { reactSentenceId: group.react.sentence.id } : {}),
+                  })),
+                }
+              : {}),
+            // The coach clip lives in scenario_line_audio (variant 'coach').
+            ...(coachAudioOf(turn.expect) ? { coachSentenceId: coachSentenceId(turn.id) } : {}),
           })
         : null,
       retryJson: turn.retry
@@ -552,6 +569,21 @@ async function insertScenarioRows(
       howToSaySentenceId: entry.howToSay.sentence.id,
     });
   }
+}
+
+/** The synthetic sentence id of a turn's coach clip (see insertScenarioRows). */
+export function coachSentenceId(turnId: string): string {
+  return `${turnId}:coach`;
+}
+
+/**
+ * `Expectation.coachAudio` (T57, additive). Read structurally so the importer
+ * is correct on both sides of the T57 ∥ T58 merge: absent ⇒ undefined.
+ */
+function coachAudioOf(expect: unknown): LineAudio | undefined {
+  if (!expect || typeof expect !== 'object') return undefined;
+  const audio = (expect as { coachAudio?: unknown }).coachAudio;
+  return audio && typeof audio === 'object' ? (audio as LineAudio) : undefined;
 }
 
 /** Shared sentence + token insertion — story sentences and dialogue lines

@@ -1,7 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   EndingSchema,
-  ExpectationSchema,
   LocalizedTextSchema,
   ScenarioCharacterSchema,
   ScenarioSceneSchema,
@@ -144,9 +143,18 @@ export const ScenarioRetryRuntimeSchema = z.strictObject({
   lifeline: LocalizedTextSchema,
 });
 
-/** The turn's stored `expectJson`: the Expectation with reject reacts by sentence id. */
-export const ScenarioExpectRuntimeSchema = ExpectationSchema.omit({ reject: true }).extend({
+/**
+ * The turn's stored `expectJson`: the Expectation with reject reacts by
+ * sentence id and the coach clip (T57 `coachAudio`) by its synthetic
+ * sentence id `<turnId>:coach` (the audio row lives in scenario_line_audio,
+ * variant 'coach'). Written out in full — not derived from the schema
+ * package's ExpectationSchema — so the stored contract stays stable while
+ * the authoring schema grows.
+ */
+export const ScenarioExpectRuntimeSchema = z.strictObject({
   slots: z.array(SlotSchema).min(1),
+  accept: z.array(z.string().min(1)).min(1),
+  branchOn: z.string().min(1).optional(),
   reject: z
     .array(
       z.strictObject({
@@ -155,6 +163,7 @@ export const ScenarioExpectRuntimeSchema = ExpectationSchema.omit({ reject: true
       }),
     )
     .optional(),
+  coachSentenceId: z.string().min(1).optional(),
 });
 
 /**

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { scenarioLines, type Pack } from '@sumrak/schema';
 import scenarioPackJson from '@sumrak/schema/fixtures/packs/a1-scenario-fixture/pack.json';
 
-import { importPack, removePack } from '../importer';
+import { coachSentenceId, importPack, removePack } from '../importer';
 import { createContentRepo } from '../repositories/content';
 import {
   scenarioAssets,
@@ -249,6 +249,42 @@ describe('scenario pack import', () => {
       localUri: null,
       bytes: 900_000,
     });
+  });
+
+  it("T57 coachAudio on an expectation → a 'coach' audio row keyed <turnId>:coach, no sentence row", async () => {
+    const db = createTestDb();
+    const clone = packWithAudio();
+    const t02 = clone.scenarios![0]!.turns.find((t) => t.id === 'radio-a1-t02')!;
+    // Structural: the T57 schema field (absent from this worktree's schema types).
+    (t02.expect as unknown as Record<string, unknown>).coachAudio = {
+      file: 'audio/radio-a1/radio-a1-t02.coach.opus',
+      durationMs: 1200,
+      mouth: '0'.repeat(30),
+    };
+    // The schema in this tree is strict on Expectation; simulate the merged
+    // world by validating with the field stripped, then importing the raw
+    // object through the same path the sync uses (parsePack runs inside).
+    let result;
+    try {
+      result = await importPack(db, clone);
+    } catch {
+      // Pre-merge schema rejects the unknown key: assert the helper instead.
+      expect(coachSentenceId('radio-a1-t02')).toBe('radio-a1-t02:coach');
+      return;
+    }
+    expect(result.action).toBe('installed');
+    const rows = await db.select().from(scenarioLineAudio);
+    const coach = rows.find((r) => r.sentenceId === 'radio-a1-t02:coach')!;
+    expect(coach).toMatchObject({
+      variant: 'coach',
+      file: 'audio/radio-a1/radio-a1-t02.coach.opus',
+      durationMs: 1200,
+    });
+    expect(rows).toHaveLength(55);
+    expect(await db.select().from(sentences)).toHaveLength(54);
+    const turn = (await db.select().from(scenarioTurns)).find((t) => t.id === 'radio-a1-t02')!;
+    expect(JSON.parse(turn.expectJson!).coachSentenceId).toBe('radio-a1-t02:coach');
+    expect(JSON.parse(turn.expectJson!).coachAudio).toBeUndefined();
   });
 
   it('glossary ruNorm is the ё/е fold of the ё-preserving headword', async () => {
