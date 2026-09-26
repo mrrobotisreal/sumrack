@@ -1,0 +1,3529 @@
+{
+  "id": "broken-scn-005",
+  "version": 1,
+  "type": "scenario",
+  "title": {
+    "ru": "Проверка связи",
+    "en": "Sound Check"
+  },
+  "level": "A1",
+  "tags": [
+    "scenario",
+    "fixture",
+    "radio"
+  ],
+  "stories": [],
+  "scenarios": [
+    {
+      "id": "radio-a1",
+      "familyId": "radio",
+      "title": {
+        "ru": "Проверка связи",
+        "en": "Sound Check"
+      },
+      "level": "A1",
+      "language": "ru",
+      "brief": {
+        "ru": "Короткая проверка связи перед эфиром.",
+        "en": "A short sound check before going on air."
+      },
+      "cast": [
+        {
+          "id": "host",
+          "name": {
+            "ru": "Ведущий",
+            "en": "Host"
+          },
+          "voice": "elevenlabs:Maxim",
+          "style": "radio-host",
+          "role": "host",
+          "portrait": {
+            "mouthStyle": "default",
+            "placeholder": {
+              "kind": "man",
+              "hue": 25
+            }
+          }
+        },
+        {
+          "id": "player",
+          "name": {
+            "ru": "Вы",
+            "en": "You"
+          },
+          "voice": "elevenlabs:Ivan",
+          "style": "neutral",
+          "role": "player"
+        }
+      ],
+      "scene": {
+        "accent": "#c26a3a",
+        "bed": "studio",
+        "layout": "center"
+      },
+      "startTurnId": "radio-a1-t01",
+      "turns": [
+        {
+          "id": "radio-a1-t01",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t01-a",
+                "ru": "Проверка связи.",
+                "en": "Sound check.",
+                "tokens": [
+                  {
+                    "text": "Проверка",
+                    "lemma": "проверка",
+                    "translation": "check",
+                    "pos": "noun",
+                    "grammar": "f.sg. nom.",
+                    "level": "A2"
+                  },
+                  {
+                    "text": "связи",
+                    "lemma": "связь",
+                    "translation": "of the connection",
+                    "pos": "noun",
+                    "grammar": "f.sg. gen.",
+                    "level": "B1",
+                    "note": "проверка связи = \"sound check\", literally \"connection check\""
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t01-a.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t01-a",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t01-b",
+                "ru": "Раз, два, три.",
+                "en": "One, two, three.",
+                "tokens": [
+                  {
+                    "text": "Раз",
+                    "lemma": "раз",
+                    "translation": "one",
+                    "pos": "num",
+                    "grammar": "counting form of «один»",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ",",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "два",
+                    "lemma": "два",
+                    "translation": "two",
+                    "pos": "num",
+                    "grammar": "nom.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ",",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "три",
+                    "lemma": "три",
+                    "translation": "three",
+                    "pos": "num",
+                    "grammar": "nom.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t01-b.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t01-b",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t01",
+                "ru": "Вы меня слышите?",
+                "en": "Can you hear me?",
+                "tokens": [
+                  {
+                    "text": "Вы",
+                    "lemma": "вы",
+                    "translation": "you",
+                    "pos": "pron",
+                    "grammar": "formal nom.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "меня",
+                    "lemma": "я",
+                    "translation": "me",
+                    "pos": "pron",
+                    "grammar": "acc.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "слышите",
+                    "lemma": "слышать",
+                    "translation": "hear",
+                    "pos": "verb",
+                    "grammar": "2pl. pres. (impf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "?",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t01.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t01",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            }
+          ],
+          "next": "radio-a1-t02"
+        },
+        {
+          "id": "radio-a1-t02",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t02-a",
+                "ru": "Отлично.",
+                "en": "Great.",
+                "tokens": [
+                  {
+                    "text": "Отлично",
+                    "lemma": "отлично",
+                    "translation": "great",
+                    "pos": "adv",
+                    "grammar": "predicative",
+                    "level": "A2"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t02-a.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t02-a",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t02",
+                "ru": "Как вас зовут?",
+                "en": "What's your name?",
+                "tokens": [
+                  {
+                    "text": "Как",
+                    "lemma": "как",
+                    "translation": "how",
+                    "pos": "adv",
+                    "grammar": "interrogative",
+                    "level": "A1",
+                    "note": "как вас зовут = literally \"how do they call you\""
+                  },
+                  {
+                    "text": "вас",
+                    "lemma": "вы",
+                    "translation": "you",
+                    "pos": "pron",
+                    "grammar": "acc.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "зовут",
+                    "lemma": "звать",
+                    "translation": "(they) call",
+                    "pos": "verb",
+                    "grammar": "3pl. pres. (impf., indefinite-personal)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "?",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t02.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t02",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "2222222222222222222222222222222222222222"
+              }
+            }
+          ],
+          "expect": {
+            "slots": [
+              {
+                "kind": "free",
+                "id": "name",
+                "required": true,
+                "minTokens": 1
+              }
+            ],
+            "accept": [
+              "Меня зовут Митч.",
+              "Я Митч."
+            ],
+            "reject": [
+              {
+                "forms": [
+                  "хорошо",
+                  "спасибо"
+                ],
+                "react": {
+                  "sentence": {
+                    "id": "radio-a1-t02-react",
+                    "ru": "Нет, имя.",
+                    "en": "No, your name.",
+                    "tokens": [
+                      {
+                        "text": "Нет",
+                        "lemma": "нет",
+                        "translation": "no",
+                        "pos": "part",
+                        "level": "A1"
+                      },
+                      {
+                        "text": ",",
+                        "isPunct": true
+                      },
+                      {
+                        "text": "имя",
+                        "lemma": "имя",
+                        "translation": "name",
+                        "pos": "noun",
+                        "grammar": "n.sg. nom.",
+                        "level": "A1"
+                      },
+                      {
+                        "text": ".",
+                        "isPunct": true
+                      }
+                    ]
+                  },
+                  "audio": {
+                    "file": "audio/radio-a1/radio-a1-t02-react.opus",
+                    "durationMs": 2000,
+                    "timestamps": [
+                      {
+                        "sentenceId": "radio-a1-t02-react",
+                        "tokenIndex": 0,
+                        "startMs": 0,
+                        "endMs": 400
+                      }
+                    ],
+                    "mouth": "00000000000000000000000000000000000000000000000000"
+                  }
+                }
+              }
+            ]
+          },
+          "retry": {
+            "confused": {
+              "sentence": {
+                "id": "radio-a1-t02-conf",
+                "ru": "Не расслышал.",
+                "en": "Didn't catch that.",
+                "tokens": [
+                  {
+                    "text": "Не",
+                    "lemma": "не",
+                    "translation": "not",
+                    "pos": "part",
+                    "grammar": "negation",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "расслышал",
+                    "lemma": "расслышать",
+                    "translation": "caught (heard clearly)",
+                    "pos": "verb",
+                    "grammar": "m.sg. past (pf.)",
+                    "level": "B1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t02-conf.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t02-conf",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            "hint": {
+              "sentence": {
+                "id": "radio-a1-t02-hint",
+                "ru": "Скажите: «Меня зовут…».",
+                "en": "Say: \"My name is…\".",
+                "tokens": [
+                  {
+                    "text": "Скажите",
+                    "lemma": "сказать",
+                    "translation": "say",
+                    "pos": "verb",
+                    "grammar": "2pl. imper. (pf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ":",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "«",
+                    "isPunct": true,
+                    "spaceBefore": true
+                  },
+                  {
+                    "text": "Меня",
+                    "spaceBefore": false,
+                    "lemma": "я",
+                    "translation": "me",
+                    "pos": "pron",
+                    "grammar": "acc.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "зовут",
+                    "lemma": "звать",
+                    "translation": "(they) call",
+                    "pos": "verb",
+                    "grammar": "3pl. pres. (impf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "…",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "»",
+                    "isPunct": true
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t02-hint.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t02-hint",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            "second": {
+              "sentence": {
+                "id": "radio-a1-t02-sec",
+                "ru": "Например: «Меня зовут Митч».",
+                "en": "For example: \"My name is Mitch.\"",
+                "tokens": [
+                  {
+                    "text": "Например",
+                    "lemma": "например",
+                    "translation": "for example",
+                    "pos": "adv",
+                    "grammar": "parenthetical",
+                    "level": "A2"
+                  },
+                  {
+                    "text": ":",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "«",
+                    "isPunct": true,
+                    "spaceBefore": true
+                  },
+                  {
+                    "text": "Меня",
+                    "spaceBefore": false,
+                    "lemma": "я",
+                    "translation": "me",
+                    "pos": "pron",
+                    "grammar": "acc.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "зовут",
+                    "lemma": "звать",
+                    "translation": "(they) call",
+                    "pos": "verb",
+                    "grammar": "3pl. pres. (impf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "Митч",
+                    "lemma": "Митч",
+                    "translation": "Mitch",
+                    "pos": "name",
+                    "grammar": "m. indecl."
+                  },
+                  {
+                    "text": "»",
+                    "isPunct": true
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t02-sec.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t02-sec",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            "lifeline": {
+              "ru": "«Меня зовут …».",
+              "en": "\"Меня зовут …\" (My name is …)."
+            }
+          },
+          "next": "radio-a1-t03"
+        },
+        {
+          "id": "radio-a1-t03",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t03",
+                "ru": "Как у вас дела?",
+                "en": "How are you?",
+                "tokens": [
+                  {
+                    "text": "Как",
+                    "lemma": "как",
+                    "translation": "how",
+                    "pos": "adv",
+                    "grammar": "interrogative",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "у",
+                    "lemma": "у",
+                    "translation": "at",
+                    "pos": "prep",
+                    "grammar": "+ gen. (у вас = with you / yours)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "вас",
+                    "lemma": "вы",
+                    "translation": "you",
+                    "pos": "pron",
+                    "grammar": "gen.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "дела",
+                    "lemma": "дело",
+                    "translation": "things",
+                    "pos": "noun",
+                    "grammar": "n.pl. nom.",
+                    "level": "A1",
+                    "note": "как дела = \"how are things?\""
+                  },
+                  {
+                    "text": "?",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t03.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t03",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            }
+          ],
+          "expect": {
+            "slots": [
+              {
+                "kind": "forms",
+                "id": "mood",
+                "required": true,
+                "options": [
+                  {
+                    "key": "good",
+                    "lemma": "хорошо",
+                    "forms": [
+                      "хорошо",
+                      "отлично",
+                      "нормально",
+                      "прекрасно",
+                      "неплохо"
+                    ]
+                  },
+                  {
+                    "key": "bad",
+                    "lemma": "плохо",
+                    "forms": [
+                      "плохо",
+                      "устал*",
+                      "так себе",
+                      "не очень"
+                    ]
+                  },
+                  {
+                    "key": "ok",
+                    "lemma": "ничего",
+                    "forms": [
+                      "ничего",
+                      "нормально"
+                    ]
+                  }
+                ],
+                "acceptsNumber": false
+              }
+            ],
+            "accept": [
+              "Хорошо, спасибо.",
+              "Плохо, я устал.",
+              "Ничего."
+            ],
+            "branchOn": "mood"
+          },
+          "retry": {
+            "confused": {
+              "sentence": {
+                "id": "radio-a1-t03-conf",
+                "ru": "Как дела? Не понял.",
+                "en": "How are you? Didn't get it.",
+                "tokens": [
+                  {
+                    "text": "Как",
+                    "lemma": "как",
+                    "translation": "how",
+                    "pos": "adv",
+                    "grammar": "interrogative",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "дела",
+                    "lemma": "дело",
+                    "translation": "things",
+                    "pos": "noun",
+                    "grammar": "n.pl. nom.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "?",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "Не",
+                    "lemma": "не",
+                    "translation": "not",
+                    "pos": "part",
+                    "grammar": "negation",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "понял",
+                    "lemma": "понять",
+                    "translation": "understood",
+                    "pos": "verb",
+                    "grammar": "m.sg. past (pf. of понимать)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t03-conf.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t03-conf",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            "hint": {
+              "sentence": {
+                "id": "radio-a1-t03-hint",
+                "ru": "Скажите «хорошо» или «плохо».",
+                "en": "Say \"good\" or \"bad\".",
+                "tokens": [
+                  {
+                    "text": "Скажите",
+                    "lemma": "сказать",
+                    "translation": "say",
+                    "pos": "verb",
+                    "grammar": "2pl. imper. (pf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "«",
+                    "isPunct": true,
+                    "spaceBefore": true
+                  },
+                  {
+                    "text": "хорошо",
+                    "spaceBefore": false,
+                    "lemma": "хорошо",
+                    "translation": "good",
+                    "pos": "adv",
+                    "grammar": "predicative",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "»",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "или",
+                    "lemma": "или",
+                    "translation": "or",
+                    "pos": "conj",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "«",
+                    "isPunct": true,
+                    "spaceBefore": true
+                  },
+                  {
+                    "text": "плохо",
+                    "spaceBefore": false,
+                    "lemma": "плохо",
+                    "translation": "bad",
+                    "pos": "adv",
+                    "grammar": "predicative",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "»",
+                    "isPunct": true
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t03-hint.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t03-hint",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            "lifeline": {
+              "ru": "«Хорошо, спасибо» / «Плохо, я устал».",
+              "en": "\"Хорошо, спасибо\" (Good, thanks) / \"Плохо, я устал\" (Bad, I'm tired)."
+            }
+          },
+          "next": {
+            "on": {
+              "good": "radio-a1-t04g",
+              "bad": "radio-a1-t04b"
+            },
+            "default": "radio-a1-t04d"
+          }
+        },
+        {
+          "id": "radio-a1-t04g",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t04g-a",
+                "ru": "Рад слышать.",
+                "en": "Glad to hear it.",
+                "tokens": [
+                  {
+                    "text": "Рад",
+                    "lemma": "рад",
+                    "translation": "glad",
+                    "pos": "adj",
+                    "grammar": "m.sg. short form",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "слышать",
+                    "lemma": "слышать",
+                    "translation": "to hear",
+                    "pos": "verb",
+                    "grammar": "inf. (impf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04g-a.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04g-a",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04g-b",
+                "ru": "Связь есть.",
+                "en": "We have a connection.",
+                "tokens": [
+                  {
+                    "text": "Связь",
+                    "lemma": "связь",
+                    "translation": "connection",
+                    "pos": "noun",
+                    "grammar": "f.sg. nom.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "есть",
+                    "lemma": "есть",
+                    "translation": "there is",
+                    "pos": "pred",
+                    "grammar": "existential",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04g-b.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04g-b",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04g",
+                "ru": "До эфира!",
+                "en": "See you on air!",
+                "tokens": [
+                  {
+                    "text": "До",
+                    "lemma": "до",
+                    "translation": "until",
+                    "pos": "prep",
+                    "grammar": "+ gen.",
+                    "level": "A1",
+                    "note": "до эфира = \"until we're on air\" — a broadcaster's goodbye"
+                  },
+                  {
+                    "text": "эфира",
+                    "lemma": "эфир",
+                    "translation": "air (broadcast)",
+                    "pos": "noun",
+                    "grammar": "m.sg. gen.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "!",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04g.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04g",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            }
+          ],
+          "endingId": "end-ok"
+        },
+        {
+          "id": "radio-a1-t04b",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t04b-a",
+                "ru": "Понимаю.",
+                "en": "I understand.",
+                "tokens": [
+                  {
+                    "text": "Понимаю",
+                    "lemma": "понимать",
+                    "translation": "(I) understand",
+                    "pos": "verb",
+                    "grammar": "1sg. pres. (impf.)",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04b-a.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04b-a",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04b-b",
+                "ru": "Отдохните.",
+                "en": "Get some rest.",
+                "tokens": [
+                  {
+                    "text": "Отдохните",
+                    "lemma": "отдохнуть",
+                    "translation": "rest",
+                    "pos": "verb",
+                    "grammar": "2pl. imper. (pf.)",
+                    "level": "A2"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04b-b.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04b-b",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04b",
+                "ru": "Связь есть, до эфира!",
+                "en": "We have a connection, see you on air!",
+                "tokens": [
+                  {
+                    "text": "Связь",
+                    "lemma": "связь",
+                    "translation": "connection",
+                    "pos": "noun",
+                    "grammar": "f.sg. nom.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "есть",
+                    "lemma": "есть",
+                    "translation": "there is",
+                    "pos": "pred",
+                    "grammar": "existential",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ",",
+                    "isPunct": true
+                  },
+                  {
+                    "text": "до",
+                    "lemma": "до",
+                    "translation": "until",
+                    "pos": "prep",
+                    "grammar": "+ gen.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "эфира",
+                    "lemma": "эфир",
+                    "translation": "air (broadcast)",
+                    "pos": "noun",
+                    "grammar": "m.sg. gen.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "!",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04b.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04b",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            }
+          ],
+          "endingId": "end-ok"
+        },
+        {
+          "id": "radio-a1-t04d",
+          "speakerId": "host",
+          "say": [
+            {
+              "sentence": {
+                "id": "radio-a1-t04d-a",
+                "ru": "Ясно.",
+                "en": "I see.",
+                "tokens": [
+                  {
+                    "text": "Ясно",
+                    "lemma": "ясно",
+                    "translation": "clear (I see)",
+                    "pos": "adv",
+                    "grammar": "predicative",
+                    "level": "A2"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04d-a.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04d-a",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04d-b",
+                "ru": "Связь есть.",
+                "en": "We have a connection.",
+                "tokens": [
+                  {
+                    "text": "Связь",
+                    "lemma": "связь",
+                    "translation": "connection",
+                    "pos": "noun",
+                    "grammar": "f.sg. nom.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "есть",
+                    "lemma": "есть",
+                    "translation": "there is",
+                    "pos": "pred",
+                    "grammar": "existential",
+                    "level": "A1"
+                  },
+                  {
+                    "text": ".",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04d-b.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04d-b",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            },
+            {
+              "sentence": {
+                "id": "radio-a1-t04d",
+                "ru": "До эфира!",
+                "en": "See you on air!",
+                "tokens": [
+                  {
+                    "text": "До",
+                    "lemma": "до",
+                    "translation": "until",
+                    "pos": "prep",
+                    "grammar": "+ gen.",
+                    "level": "A1"
+                  },
+                  {
+                    "text": "эфира",
+                    "lemma": "эфир",
+                    "translation": "air (broadcast)",
+                    "pos": "noun",
+                    "grammar": "m.sg. gen.",
+                    "level": "B1"
+                  },
+                  {
+                    "text": "!",
+                    "isPunct": true
+                  }
+                ]
+              },
+              "audio": {
+                "file": "audio/radio-a1/radio-a1-t04d.opus",
+                "durationMs": 2000,
+                "timestamps": [
+                  {
+                    "sentenceId": "radio-a1-t04d",
+                    "tokenIndex": 0,
+                    "startMs": 0,
+                    "endMs": 400
+                  }
+                ],
+                "mouth": "00000000000000000000000000000000000000000000000000"
+              }
+            }
+          ],
+          "endingId": "end-ok"
+        }
+      ],
+      "endings": [
+        {
+          "id": "end-ok",
+          "title": {
+            "ru": "Связь есть",
+            "en": "Connected"
+          },
+          "recap": {
+            "ru": "Проверка пройдена.",
+            "en": "Sound check passed."
+          },
+          "tone": "good"
+        }
+      ],
+      "glossary": [
+        {
+          "id": "radio-a1-gl-check",
+          "ru": "проверка",
+          "en": "check",
+          "forms": [
+            "проверка",
+            "проверк*"
+          ],
+          "translit": [
+            "чек",
+            "чик",
+            "кек",
+            "кик"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-check-ex",
+              "ru": "Проверка — это check.",
+              "en": "«Проверка» means check.",
+              "tokens": [
+                {
+                  "text": "Проверка",
+                  "lemma": "проверка",
+                  "translation": "check",
+                  "pos": "noun",
+                  "grammar": "f.sg. nom.",
+                  "level": "A2"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "check",
+                  "lemma": "check",
+                  "translation": "check",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-check-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-check-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-check-how",
+              "ru": "Check — по-русски «проверка».",
+              "en": "Check is «проверка» in Russian.",
+              "tokens": [
+                {
+                  "text": "Check",
+                  "lemma": "check",
+                  "translation": "check",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "проверка",
+                  "spaceBefore": false,
+                  "lemma": "проверка",
+                  "translation": "check",
+                  "pos": "noun",
+                  "grammar": "f.sg. nom.",
+                  "level": "A2"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-check-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-check-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-connection",
+          "ru": "связь",
+          "en": "connection",
+          "forms": [
+            "связь",
+            "связи",
+            "связ*"
+          ],
+          "translit": [
+            "конекшн",
+            "канекшен",
+            "конекшен",
+            "коникшн",
+            "коникшен",
+            "канекшн",
+            "каникшн",
+            "каникшен"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-connection-ex",
+              "ru": "Связь — это connection.",
+              "en": "«Связь» means connection.",
+              "tokens": [
+                {
+                  "text": "Связь",
+                  "lemma": "связь",
+                  "translation": "connection",
+                  "pos": "noun",
+                  "grammar": "f.sg. nom.",
+                  "level": "B1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "connection",
+                  "lemma": "connection",
+                  "translation": "connection",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-connection-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-connection-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-connection-how",
+              "ru": "Connection — по-русски «связь».",
+              "en": "Connection is «связь» in Russian.",
+              "tokens": [
+                {
+                  "text": "Connection",
+                  "lemma": "connection",
+                  "translation": "connection",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "связь",
+                  "spaceBefore": false,
+                  "lemma": "связь",
+                  "translation": "connection",
+                  "pos": "noun",
+                  "grammar": "f.sg. nom.",
+                  "level": "B1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-connection-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-connection-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-to-hear",
+          "ru": "слышать",
+          "en": "to hear",
+          "forms": [
+            "слышать",
+            "слыш*",
+            "расслыш*"
+          ],
+          "translit": [
+            "хир",
+            "то хир",
+            "то хэр",
+            "то хер",
+            "та хир",
+            "та хэр",
+            "та хер"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-to-hear-ex",
+              "ru": "Слышать — это to hear.",
+              "en": "«Слышать» means to hear.",
+              "tokens": [
+                {
+                  "text": "Слышать",
+                  "lemma": "слышать",
+                  "translation": "to hear",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "to",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "hear",
+                  "lemma": "hear",
+                  "translation": "hear",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-hear-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-hear-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-to-hear-how",
+              "ru": "To hear — по-русски «слышать».",
+              "en": "To hear is «слышать» in Russian.",
+              "tokens": [
+                {
+                  "text": "To",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "hear",
+                  "lemma": "hear",
+                  "translation": "hear",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "слышать",
+                  "spaceBefore": false,
+                  "lemma": "слышать",
+                  "translation": "to hear",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-hear-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-hear-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-name",
+          "ru": "зовут",
+          "en": "name",
+          "forms": [
+            "зовут",
+            "звать",
+            "имя"
+          ],
+          "translit": [
+            "нэйм",
+            "нейм"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-name-ex",
+              "ru": "Зовут — это name.",
+              "en": "«Зовут» means name (as in \"my name is\").",
+              "tokens": [
+                {
+                  "text": "Зовут",
+                  "lemma": "звать",
+                  "translation": "(they) call",
+                  "pos": "verb",
+                  "grammar": "3pl. pres. (impf.)",
+                  "level": "A1",
+                  "note": "меня зовут = \"my name is\" (they call me …)"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "name",
+                  "lemma": "name",
+                  "translation": "name",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-name-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-name-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-name-how",
+              "ru": "Name — по-русски «зовут»: «Меня зовут…».",
+              "en": "Name is «зовут» in Russian: \"Меня зовут…\".",
+              "tokens": [
+                {
+                  "text": "Name",
+                  "lemma": "name",
+                  "translation": "name",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "зовут",
+                  "spaceBefore": false,
+                  "lemma": "звать",
+                  "translation": "(they) call",
+                  "pos": "verb",
+                  "grammar": "3pl. pres. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ":",
+                  "isPunct": true
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "Меня",
+                  "spaceBefore": false,
+                  "lemma": "я",
+                  "translation": "me",
+                  "pos": "pron",
+                  "grammar": "acc.",
+                  "level": "A1"
+                },
+                {
+                  "text": "зовут",
+                  "lemma": "звать",
+                  "translation": "(they) call",
+                  "pos": "verb",
+                  "grammar": "3pl. pres. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "…",
+                  "isPunct": true
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-name-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-name-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-things",
+          "ru": "дела",
+          "en": "things",
+          "forms": [
+            "дела",
+            "дело"
+          ],
+          "translit": [
+            "сингз",
+            "тингс",
+            "тайнгс",
+            "сингс",
+            "сайнгс",
+            "фингс",
+            "файнгс",
+            "зингс",
+            "зайнгс"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-things-ex",
+              "ru": "Дела — это things.",
+              "en": "«Дела» means things (how are things?).",
+              "tokens": [
+                {
+                  "text": "Дела",
+                  "lemma": "дело",
+                  "translation": "things",
+                  "pos": "noun",
+                  "grammar": "n.pl. nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "things",
+                  "lemma": "things",
+                  "translation": "things",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-things-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-things-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-things-how",
+              "ru": "Things — по-русски «дела».",
+              "en": "Things is «дела» in Russian.",
+              "tokens": [
+                {
+                  "text": "Things",
+                  "lemma": "things",
+                  "translation": "things",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "дела",
+                  "spaceBefore": false,
+                  "lemma": "дело",
+                  "translation": "things",
+                  "pos": "noun",
+                  "grammar": "n.pl. nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-things-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-things-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-good",
+          "ru": "хорошо",
+          "en": "good",
+          "forms": [
+            "хорошо",
+            "хорош*"
+          ],
+          "translit": [
+            "гуд"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-good-ex",
+              "ru": "Хорошо — это good.",
+              "en": "«Хорошо» means good.",
+              "tokens": [
+                {
+                  "text": "Хорошо",
+                  "lemma": "хорошо",
+                  "translation": "good",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "good",
+                  "lemma": "good",
+                  "translation": "good",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-good-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-good-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-good-how",
+              "ru": "Good — по-русски «хорошо».",
+              "en": "Good is «хорошо» in Russian.",
+              "tokens": [
+                {
+                  "text": "Good",
+                  "lemma": "good",
+                  "translation": "good",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "хорошо",
+                  "spaceBefore": false,
+                  "lemma": "хорошо",
+                  "translation": "good",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-good-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-good-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-glad",
+          "ru": "рад",
+          "en": "glad",
+          "forms": [
+            "рад",
+            "рада",
+            "рады"
+          ],
+          "translit": [
+            "глэд",
+            "глад"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-glad-ex",
+              "ru": "Рад — это glad.",
+              "en": "«Рад» means glad.",
+              "tokens": [
+                {
+                  "text": "Рад",
+                  "lemma": "рад",
+                  "translation": "glad",
+                  "pos": "adj",
+                  "grammar": "m.sg. short form",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "glad",
+                  "lemma": "glad",
+                  "translation": "glad",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-glad-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-glad-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-glad-how",
+              "ru": "Glad — по-русски «рад».",
+              "en": "Glad is «рад» in Russian.",
+              "tokens": [
+                {
+                  "text": "Glad",
+                  "lemma": "glad",
+                  "translation": "glad",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "рад",
+                  "spaceBefore": false,
+                  "lemma": "рад",
+                  "translation": "glad",
+                  "pos": "adj",
+                  "grammar": "m.sg. short form",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-glad-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-glad-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-to-understand",
+          "ru": "понимать",
+          "en": "to understand",
+          "forms": [
+            "понимать",
+            "понима*",
+            "поня*"
+          ],
+          "translit": [
+            "андерстэнд",
+            "андэстэнд",
+            "то ундерстанд",
+            "то ундерстэнд",
+            "то ундирстанд",
+            "то ундирстэнд",
+            "то андерстанд",
+            "то андерстэнд",
+            "то андирстанд",
+            "то андирстэнд",
+            "та ундерстанд",
+            "та ундерстэнд",
+            "та ундирстанд",
+            "та ундирстэнд",
+            "та андерстанд",
+            "та андерстэнд",
+            "та андирстанд",
+            "та андирстэнд"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-to-understand-ex",
+              "ru": "Понимать — это to understand.",
+              "en": "«Понимать» means to understand.",
+              "tokens": [
+                {
+                  "text": "Понимать",
+                  "lemma": "понимать",
+                  "translation": "to understand",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "to",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "understand",
+                  "lemma": "understand",
+                  "translation": "understand",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-understand-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-understand-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-to-understand-how",
+              "ru": "To understand — по-русски «понимать».",
+              "en": "To understand is «понимать» in Russian.",
+              "tokens": [
+                {
+                  "text": "To",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "understand",
+                  "lemma": "understand",
+                  "translation": "understand",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "понимать",
+                  "spaceBefore": false,
+                  "lemma": "понимать",
+                  "translation": "to understand",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-understand-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-understand-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-to-rest",
+          "ru": "отдохнуть",
+          "en": "to rest",
+          "forms": [
+            "отдохнуть",
+            "отдохн*",
+            "отдыха*"
+          ],
+          "translit": [
+            "рест",
+            "то рест",
+            "то рист",
+            "та рест",
+            "та рист"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-to-rest-ex",
+              "ru": "Отдохнуть — это to rest.",
+              "en": "«Отдохнуть» means to rest.",
+              "tokens": [
+                {
+                  "text": "Отдохнуть",
+                  "lemma": "отдохнуть",
+                  "translation": "to rest",
+                  "pos": "verb",
+                  "grammar": "inf. (pf.)",
+                  "level": "A2"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "to",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "rest",
+                  "lemma": "rest",
+                  "translation": "rest",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-rest-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-rest-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-to-rest-how",
+              "ru": "To rest — по-русски «отдохнуть».",
+              "en": "To rest is «отдохнуть» in Russian.",
+              "tokens": [
+                {
+                  "text": "To",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "rest",
+                  "lemma": "rest",
+                  "translation": "rest",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "отдохнуть",
+                  "spaceBefore": false,
+                  "lemma": "отдохнуть",
+                  "translation": "to rest",
+                  "pos": "verb",
+                  "grammar": "inf. (pf.)",
+                  "level": "A2"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-rest-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-rest-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-clear",
+          "ru": "ясно",
+          "en": "clear",
+          "forms": [
+            "ясно",
+            "ясн*"
+          ],
+          "translit": [
+            "клир",
+            "клиа",
+            "клэр",
+            "клер"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-clear-ex",
+              "ru": "Ясно — это clear.",
+              "en": "«Ясно» means clear (as in \"I see\").",
+              "tokens": [
+                {
+                  "text": "Ясно",
+                  "lemma": "ясно",
+                  "translation": "clear",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A2"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "clear",
+                  "lemma": "clear",
+                  "translation": "clear",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-clear-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-clear-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-clear-how",
+              "ru": "Clear — по-русски «ясно».",
+              "en": "Clear is «ясно» in Russian.",
+              "tokens": [
+                {
+                  "text": "Clear",
+                  "lemma": "clear",
+                  "translation": "clear",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "ясно",
+                  "spaceBefore": false,
+                  "lemma": "ясно",
+                  "translation": "clear",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A2"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-clear-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-clear-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-to-say",
+          "ru": "сказать",
+          "en": "to say",
+          "forms": [
+            "сказать",
+            "скажи*",
+            "сказ*"
+          ],
+          "translit": [
+            "сэй",
+            "сей",
+            "то сэй",
+            "та сэй"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-to-say-ex",
+              "ru": "Сказать — это to say.",
+              "en": "«Сказать» means to say.",
+              "tokens": [
+                {
+                  "text": "Сказать",
+                  "lemma": "сказать",
+                  "translation": "to say",
+                  "pos": "verb",
+                  "grammar": "inf. (pf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "to",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "say",
+                  "lemma": "say",
+                  "translation": "say",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-say-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-say-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-to-say-how",
+              "ru": "To say — по-русски «сказать».",
+              "en": "To say is «сказать» in Russian.",
+              "tokens": [
+                {
+                  "text": "To",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "say",
+                  "lemma": "say",
+                  "translation": "say",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "сказать",
+                  "spaceBefore": false,
+                  "lemma": "сказать",
+                  "translation": "to say",
+                  "pos": "verb",
+                  "grammar": "inf. (pf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-say-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-say-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-for-example",
+          "ru": "например",
+          "en": "for example",
+          "forms": [
+            "например"
+          ],
+          "translit": [
+            "фор экзампл",
+            "экзампл",
+            "фор эксампл",
+            "фор эксэмпл",
+            "фор иксампл",
+            "фор иксэмпл"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-for-example-ex",
+              "ru": "Например — это for example.",
+              "en": "«Например» means for example.",
+              "tokens": [
+                {
+                  "text": "Например",
+                  "lemma": "например",
+                  "translation": "for example",
+                  "pos": "adv",
+                  "grammar": "parenthetical",
+                  "level": "A2"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "for",
+                  "lemma": "for",
+                  "translation": "for",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "example",
+                  "lemma": "example",
+                  "translation": "example",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-for-example-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-for-example-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-for-example-how",
+              "ru": "For example — по-русски «например».",
+              "en": "For example is «например» in Russian.",
+              "tokens": [
+                {
+                  "text": "For",
+                  "lemma": "for",
+                  "translation": "for",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "example",
+                  "lemma": "example",
+                  "translation": "example",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "например",
+                  "spaceBefore": false,
+                  "lemma": "например",
+                  "translation": "for example",
+                  "pos": "adv",
+                  "grammar": "parenthetical",
+                  "level": "A2"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-for-example-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-for-example-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-word",
+          "ru": "слово",
+          "en": "word",
+          "forms": [
+            "слово",
+            "слова",
+            "слов*"
+          ],
+          "translit": [
+            "уорд",
+            "ворд"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-word-ex",
+              "ru": "Слово — это word.",
+              "en": "«Слово» means word.",
+              "tokens": [
+                {
+                  "text": "Слово",
+                  "lemma": "слово",
+                  "translation": "word",
+                  "pos": "noun",
+                  "grammar": "n.sg. nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "word",
+                  "lemma": "word",
+                  "translation": "word",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-word-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-word-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-word-how",
+              "ru": "Word — по-русски «слово».",
+              "en": "Word is «слово» in Russian.",
+              "tokens": [
+                {
+                  "text": "Word",
+                  "lemma": "word",
+                  "translation": "word",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "слово",
+                  "spaceBefore": false,
+                  "lemma": "слово",
+                  "translation": "word",
+                  "pos": "noun",
+                  "grammar": "n.sg. nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-word-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-word-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-to-know",
+          "ru": "знать",
+          "en": "to know",
+          "forms": [
+            "знать",
+            "зна*"
+          ],
+          "translit": [
+            "ноу",
+            "то нау",
+            "то ноу",
+            "та нау",
+            "та ноу"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-to-know-ex",
+              "ru": "Знать — это to know.",
+              "en": "«Знать» means to know.",
+              "tokens": [
+                {
+                  "text": "Знать",
+                  "lemma": "знать",
+                  "translation": "to know",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "to",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "know",
+                  "lemma": "know",
+                  "translation": "know",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-know-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-know-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-to-know-how",
+              "ru": "To know — по-русски «знать».",
+              "en": "To know is «знать» in Russian.",
+              "tokens": [
+                {
+                  "text": "To",
+                  "lemma": "to",
+                  "translation": "to",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "know",
+                  "lemma": "know",
+                  "translation": "know",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "знать",
+                  "spaceBefore": false,
+                  "lemma": "знать",
+                  "translation": "to know",
+                  "pos": "verb",
+                  "grammar": "inf. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-to-know-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-to-know-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "radio-a1-gl-bad",
+          "ru": "плохо",
+          "en": "bad",
+          "forms": [
+            "плохо",
+            "плох*"
+          ],
+          "translit": [
+            "бэд",
+            "бад"
+          ],
+          "explain": {
+            "sentence": {
+              "id": "radio-a1-gl-bad-ex",
+              "ru": "Плохо — это bad.",
+              "en": "«Плохо» means bad.",
+              "tokens": [
+                {
+                  "text": "Плохо",
+                  "lemma": "плохо",
+                  "translation": "bad",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A1"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "это",
+                  "lemma": "это",
+                  "translation": "is",
+                  "pos": "pron",
+                  "grammar": "demonstrative (gloss marker)",
+                  "level": "A1"
+                },
+                {
+                  "text": "bad",
+                  "lemma": "bad",
+                  "translation": "bad",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-bad-ex.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-bad-ex",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          },
+          "howToSay": {
+            "sentence": {
+              "id": "radio-a1-gl-bad-how",
+              "ru": "Bad — по-русски «плохо».",
+              "en": "Bad is «плохо» in Russian.",
+              "tokens": [
+                {
+                  "text": "Bad",
+                  "lemma": "bad",
+                  "translation": "bad",
+                  "pos": "foreign",
+                  "grammar": "English"
+                },
+                {
+                  "text": "—",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "по-русски",
+                  "lemma": "по-русски",
+                  "translation": "in Russian",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "«",
+                  "isPunct": true,
+                  "spaceBefore": true
+                },
+                {
+                  "text": "плохо",
+                  "spaceBefore": false,
+                  "lemma": "плохо",
+                  "translation": "bad",
+                  "pos": "adv",
+                  "grammar": "predicative",
+                  "level": "A1"
+                },
+                {
+                  "text": "»",
+                  "isPunct": true
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-gl-bad-how.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-gl-bad-how",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      ],
+      "nudges": [
+        {
+          "kind": "silence",
+          "speakerId": "host",
+          "line": {
+            "sentence": {
+              "id": "radio-a1-nudge-silence",
+              "ru": "Вы там?",
+              "en": "Are you there?",
+              "tokens": [
+                {
+                  "text": "Вы",
+                  "lemma": "вы",
+                  "translation": "you",
+                  "pos": "pron",
+                  "grammar": "formal nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "там",
+                  "lemma": "там",
+                  "translation": "there",
+                  "pos": "adv",
+                  "level": "A1"
+                },
+                {
+                  "text": "?",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-nudge-silence.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-nudge-silence",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "kind": "which-word",
+          "speakerId": "host",
+          "line": {
+            "sentence": {
+              "id": "radio-a1-nudge-which-word",
+              "ru": "Какое слово?",
+              "en": "Which word?",
+              "tokens": [
+                {
+                  "text": "Какое",
+                  "lemma": "какой",
+                  "translation": "which",
+                  "pos": "pron",
+                  "grammar": "n.sg. nom. (interrogative)",
+                  "level": "A1"
+                },
+                {
+                  "text": "слово",
+                  "lemma": "слово",
+                  "translation": "word",
+                  "pos": "noun",
+                  "grammar": "n.sg. nom.",
+                  "level": "A1"
+                },
+                {
+                  "text": "?",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-nudge-which-word.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-nudge-which-word",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "kind": "dont-know",
+          "speakerId": "host",
+          "line": {
+            "sentence": {
+              "id": "radio-a1-nudge-dont-know",
+              "ru": "Не знаю этого слова.",
+              "en": "I don't know that word.",
+              "tokens": [
+                {
+                  "text": "Не",
+                  "lemma": "не",
+                  "translation": "not",
+                  "pos": "part",
+                  "grammar": "negation",
+                  "level": "A1"
+                },
+                {
+                  "text": "знаю",
+                  "lemma": "знать",
+                  "translation": "know",
+                  "pos": "verb",
+                  "grammar": "1sg. pres. (impf.)",
+                  "level": "A1"
+                },
+                {
+                  "text": "этого",
+                  "lemma": "этот",
+                  "translation": "that",
+                  "pos": "pron",
+                  "grammar": "n.sg. gen.",
+                  "level": "A1"
+                },
+                {
+                  "text": "слова",
+                  "lemma": "слово",
+                  "translation": "word",
+                  "pos": "noun",
+                  "grammar": "n.sg. gen. (object of negated verb)",
+                  "level": "A1"
+                },
+                {
+                  "text": ".",
+                  "isPunct": true
+                }
+              ]
+            },
+            "audio": {
+              "file": "audio/radio-a1/radio-a1-nudge-dont-know.opus",
+              "durationMs": 2000,
+              "timestamps": [
+                {
+                  "sentenceId": "radio-a1-nudge-dont-know",
+                  "tokenIndex": 0,
+                  "startMs": 0,
+                  "endMs": 400
+                }
+              ],
+              "mouth": "00000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

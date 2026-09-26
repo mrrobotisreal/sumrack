@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`scenario branch map + glossary coverage > renders the fixture scenario deterministically (snapshot) 1`] = `
+"Branch map — «Проверка связи» (radio-a1, A1, family radio)
+  6 turns · 2 prompting · 1 branch point · 1 ending (1 reachable) · 15 glossary
+
+radio-a1-t01 host: (3 lines) «Вы меня слышите?» [monologue]
+└─ radio-a1-t02 host: (2 lines) «Как вас зовут?» [name: free≥1 ✗1]
+   └─ radio-a1-t03 host: «Как у вас дела?» [mood: good|bad|ok ⇢mood]
+      ├─ mood: good → radio-a1-t04g
+      │  └─ radio-a1-t04g host: (3 lines) «До эфира!» [monologue]  ⇒ end-ok
+      ├─ mood: bad → radio-a1-t04b
+      │  └─ radio-a1-t04b host: (3 lines) «Связь есть, до эфира!» [monologue]  ⇒ end-ok
+      └─ mood: default → radio-a1-t04d
+         └─ radio-a1-t04d host: (3 lines) «До эфира!» [monologue]  ⇒ end-ok
+
+paths: shortest 4 turns · longest 4 turns
+endings: end-ok (good) ✓"
+`;
