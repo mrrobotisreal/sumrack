@@ -110,6 +110,11 @@ describe('scenario pack import', () => {
     expect(JSON.parse(scenarioRows[0]!.endingsJson).map((e: { id: string }) => e.id)).toEqual([
       'end-ok',
     ]);
+    expect(JSON.parse(scenarioRows[0]!.nudgesJson)).toEqual([
+      { kind: 'silence', speakerId: 'host', sentenceId: 'radio-a1-nudge-silence' },
+      { kind: 'which-word', speakerId: 'host', sentenceId: 'radio-a1-nudge-which-word' },
+      { kind: 'dont-know', speakerId: 'host', sentenceId: 'radio-a1-nudge-dont-know' },
+    ]);
 
     expect(turnRows).toHaveLength(6);
     const t01 = turnRows.find((t) => t.id === 'radio-a1-t01')!;

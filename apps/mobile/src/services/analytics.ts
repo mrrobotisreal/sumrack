@@ -54,6 +54,9 @@ export type AnalyticsEvent =
   | 'sync_pack_failed'
   | 'audio_deferred_wifi'
   | 'audio_backfilled'
+  // T58 scenario scene layers ride the same Wi-Fi gate (SPEAKING_SCENARIOS §3).
+  | 'scene_deferred_wifi'
+  | 'scene_backfilled'
   | 'sync_config_saved'
   | 'sync_pat_saved'
   | 'sync_pat_cleared'
@@ -368,7 +371,9 @@ export type AnalyticsEvent =
   | 'profile_batch_started'
   | 'profile_batch_progress'
   | 'profile_batch_finished'
-  | 'profile_batch_cancelled';
+  | 'profile_batch_cancelled'
+  // M17 «Сценарии» — T58 data layer (SPEAKING_SCENARIOS §4.5: slugs/numbers only).
+  | 'scenario_pack_imported';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

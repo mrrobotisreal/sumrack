@@ -186,6 +186,7 @@ async function expectScenarioTables(db: SumrakDB) {
     'scene_json',
     'start_turn_id',
     'endings_json',
+    'nudges_json',
     'glossary_count',
   ]);
   expect(await columnNames(db, 'scenario_turns')).toEqual([

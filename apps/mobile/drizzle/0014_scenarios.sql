@@ -79,6 +79,7 @@ CREATE TABLE `scenarios` (
 	`scene_json` text NOT NULL,
 	`start_turn_id` text NOT NULL,
 	`endings_json` text NOT NULL,
+	`nudges_json` text NOT NULL,
 	`glossary_count` integer NOT NULL,
 	PRIMARY KEY(`pack_id`, `id`),
 	FOREIGN KEY (`pack_id`) REFERENCES `packs`(`id`) ON UPDATE no action ON DELETE cascade

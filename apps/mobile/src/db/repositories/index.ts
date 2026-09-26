@@ -11,6 +11,7 @@ import { createJournalRepo } from './journal';
 import { createPathRepo } from './path';
 import { createReadingRepo } from './reading';
 import { createReviewsRepo } from './reviews';
+import { createScenariosRepo } from './scenarios';
 import { createSettingsRepo } from './settings';
 import { createStatsRepo } from './stats';
 import { createSyncStateRepo } from './sync-state';
@@ -45,6 +46,7 @@ export function createRepositories(db: SumrakDB) {
     journal: createJournalRepo(db),
     path: createPathRepo(db),
     reading: createReadingRepo(db),
+    scenarios: createScenariosRepo(db),
     stats: createStatsRepo(db),
     settings: createSettingsRepo(db),
     syncState: createSyncStateRepo(db),
@@ -64,6 +66,7 @@ export * from './journal';
 export * from './path';
 export * from './reading';
 export * from './reviews';
+export * from './scenarios';
 export * from './settings';
 export * from './stats';
 export * from './sync-state';

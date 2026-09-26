@@ -456,6 +456,8 @@ export const scenarios = sqliteTable(
     startTurnId: text('start_turn_id').notNull(),
     /** Endings verbatim (`Ending[]`, T25's shape) — the run's `endingId` resolves here. */
     endingsJson: text('endings_json').notNull(),
+    /** `[{ kind, speakerId, sentenceId }]` — the three service lines (§2.1 nudges), sentences in `sentences`. */
+    nudgesJson: text('nudges_json').notNull(),
     glossaryCount: integer('glossary_count').notNull(),
   },
   (t) => [primaryKey({ columns: [t.packId, t.id] }), index('scenarios_id_idx').on(t.id)],

@@ -57,6 +57,14 @@ export const queryKeys = {
   dialogueRuns: (dialogueId?: string) => ['dialogue-runs', dialogueId ?? 'all'] as const,
   dialogueStamps: (packId: string, sentenceId: string) =>
     ['dialogue-stamps', packId, sentenceId] as const,
+  // M17 scenarios (T58, SPEAKING_SCENARIOS §4.3). `['scenarios']` is the
+  // invalidation root for content; runs/debriefs key off their ids.
+  scenarios: ['scenarios'] as const,
+  scenario: (packId: string, scenarioId: string) => ['scenarios', packId, scenarioId] as const,
+  scenarioRuns: (scenarioId?: string) => ['scenario-runs', scenarioId ?? 'all'] as const,
+  scenarioRunDebrief: (runId: string) => ['scenario-runs', 'debrief', runId] as const,
+  scenarioStamps: (packId: string, sentenceId: string) =>
+    ['scenario-stamps', packId, sentenceId] as const,
   // M16 word profiles (T53, WORD_FORMS §5.4 key): keyed by the profile key,
   // not the bank item id — profiles outlive items and are shared by lemma.
   wordProfile: (lemmaNorm: string, kind: ProfileKind) => ['word-profile', lemmaNorm, kind] as const,
@@ -409,6 +417,55 @@ export function useDialogueStamps(packId: string | undefined, sentenceId: string
   return useQuery({
     queryKey: queryKeys.dialogueStamps(packId ?? '', sentenceId ?? ''),
     queryFn: () => repos.dialogues.getStampsForSentence(packId!, sentenceId!),
+    enabled: !!packId && !!sentenceId,
+  });
+}
+
+// --- M17 scenarios (T58) ----------------------------------------------------
+
+/** Installed scenarios grouped by family with run summaries (the hub's input, T62). */
+export function useScenarios() {
+  return useQuery({
+    queryKey: queryKeys.scenarios,
+    queryFn: () => repos.scenarios.listScenarios(),
+  });
+}
+
+/** The full runtime object the engine walks (cast, scene, turns, glossary, lines + audio + mouth). */
+export function useScenario(packId: string | undefined, scenarioId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.scenario(packId ?? '', scenarioId ?? ''),
+    queryFn: () => repos.scenarios.getScenario(packId!, scenarioId!),
+    enabled: !!packId && !!scenarioId,
+  });
+}
+
+/** Runs of one scenario (or all), newest first (T63 runs list). */
+export function useScenarioRuns(scenarioId?: string, opts?: { limit?: number; offset?: number }) {
+  return useQuery({
+    queryKey: [
+      ...queryKeys.scenarioRuns(scenarioId),
+      opts?.limit ?? 50,
+      opts?.offset ?? 0,
+    ] as const,
+    queryFn: () => repos.scenarios.listRuns(scenarioId, opts),
+  });
+}
+
+/** One run's turns × attempts with details parsed (the debrief, T63). */
+export function useRunDebrief(runId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.scenarioRunDebrief(runId ?? ''),
+    queryFn: () => repos.scenarios.getRunDebrief(runId!),
+    enabled: !!runId,
+  });
+}
+
+/** Stamps for one scenario line (mouth sync / karaoke in the debrief). */
+export function useScenarioStamps(packId: string | undefined, sentenceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.scenarioStamps(packId ?? '', sentenceId ?? ''),
+    queryFn: () => repos.scenarios.getStampsForSentence(packId!, sentenceId!),
     enabled: !!packId && !!sentenceId,
   });
 }

@@ -468,6 +468,13 @@ async function insertScenarioRows(
     sceneJson: JSON.stringify(scenario.scene),
     startTurnId: scenario.startTurnId,
     endingsJson: JSON.stringify(scenario.endings),
+    nudgesJson: JSON.stringify(
+      scenario.nudges.map((n) => ({
+        kind: n.kind,
+        speakerId: n.speakerId,
+        sentenceId: n.line.sentence.id,
+      })),
+    ),
     glossaryCount: scenario.glossary.length,
   });
 
