@@ -7,7 +7,9 @@ export {
   planAudioRun,
   runAudition,
   runFinalize,
+  runMouthOnly,
   type AudioRunPlan,
+  type MouthOnlySummary,
   type AudioSummary,
   type AuditionOptions,
   type AuditionResult,
@@ -74,8 +76,51 @@ export {
   type LineRenderSpec,
   type RenderedLine,
 } from './line-audio.ts';
+export {
+  MOUTH_HYSTERESIS_DB,
+  MOUTH_LADDER_DB,
+  ROUND_VOWELS,
+  isRoundVowelWord,
+  mouthTrackForFile,
+  mouthTrackFromPcm,
+  mouthTrackLength,
+  parseWav16,
+  visemesFromLevels,
+  type MouthTrackInput,
+} from './mouth-track.ts';
 export { encodeOpus, probeDurationMs, OPUS_BITRATE } from './opus.ts';
-export { packFileList, runPublish, type PublishOptions, type PublishSummary } from './publish.ts';
+export {
+  SCENE_DIR,
+  packFileList,
+  runPublish,
+  sceneFiles,
+  type PublishOptions,
+  type PublishSummary,
+} from './publish.ts';
+export {
+  CONFUSED_STABILITY_DELTA,
+  CONFUSED_STYLE_DELTA,
+  DEFAULT_CUES,
+  HINT_SPEED,
+  SCENARIO_BASE_SETTINGS,
+  attachLineAudio,
+  auditionRepresentatives,
+  carriedScenarioAudio,
+  coachFile,
+  planScenarioItems,
+  recomputeMouthTracks,
+  runScenarioAudition,
+  runScenarioFinalize,
+  steerVariant,
+  type CuesByCharacter,
+  type MouthOnlyReport,
+  type ScenarioAuditionTake,
+  type ScenarioFinalizeOptions,
+  type ScenarioPlanOptions,
+  type ScenarioRenderItem,
+  type ScenarioTrackReport,
+  type ScenarioVariant,
+} from './scenario-audio.ts';
 export {
   alignCharacters,
   mapAlignmentToStamps,

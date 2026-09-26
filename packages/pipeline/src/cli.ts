@@ -2,7 +2,13 @@ import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
 import { renderBranchMap, renderScenarioBranchMap } from './branch-map.ts';
 import { glossaryCoverage, renderCoverageReport } from './coverage.ts';
-import { planAudioRun, runAudition, runFinalize, type AudioRunPlan } from './audio.ts';
+import {
+  planAudioRun,
+  runAudition,
+  runFinalize,
+  runMouthOnly,
+  type AudioRunPlan,
+} from './audio.ts';
 import type { StampResult } from './stamps.ts';
 import { DEFAULT_MODEL_ID, ElevenLabsClient } from './elevenlabs.ts';
 import { resolveEnvVar } from './env.ts';
@@ -55,8 +61,15 @@ Usage:
       --stories <id,id>     only these story ids
       --tracks <id,id>      only these track ids
       --dialogues <id,id>   only these dialogue ids (T26)
+      --scenarios <id,id>   only these scenario ids (T57)
       --player-audio        also render coach audio (the "player" character's
                             voice) for every choice + scripted player line
+                            (dialogues) and for accept[0] of every
+                            expectation (scenarios, → expect.coachAudio)
+      --mouth-only          no rendering: recompute the mouth track of every
+                            already-rendered scenario line in <pack-dir>/
+                            pack.json from the Opus on disk (T57 tuning);
+                            drafts are optional, zero provider calls
       --model <id>          ElevenLabs model (default ${DEFAULT_MODEL_ID};
                             eleven_v3 opt-in — a draft's per-direction
                             "model:" always wins over this flag)
@@ -64,9 +77,11 @@ Usage:
                             the written pack.json, same as annotate
       --yes                 confirm the pre-render summary without prompting
       Without --audition, renders final takes: Opus into <pack-dir>/audio/
-      (dialogues: audio/<dialogue-id>/<sentence-id>.opus per node/choice),
+      (dialogues: audio/<dialogue-id>/<sentence-id>.opus per node/choice;
+      scenarios: audio/<scenario-id>/<sentence-id>.opus per line with a
+      per-variant v2 steering + a mouth track, coach files <turn-id>-coach),
       word stamps mapped + checked, pack.json written (merges with a previous
-      run, so tracks/nodes can be finalized in batches).
+      run, so tracks/nodes/lines can be finalized in batches).
 
   pipeline publish <pack-dir> --content <sumrak-content-dir> [--push] [-m msg]
       Copy the pack into the content repo, recompute hashes, update
@@ -204,6 +219,8 @@ async function confirmAudioRun(plan: AudioRunPlan, yes: boolean): Promise<void> 
     plan.storyTracks > 0 ? `${plan.storyTracks} story track(s)` : null,
     plan.dialogueNodes > 0 ? `${plan.dialogueNodes} dialogue node(s)` : null,
     plan.dialogueChoices > 0 ? `${plan.dialogueChoices} choice coach render(s)` : null,
+    plan.scenarioLines > 0 ? `${plan.scenarioLines} scenario line(s)` : null,
+    plan.scenarioCoach > 0 ? `${plan.scenarioCoach} scenario coach render(s)` : null,
   ].filter((p): p is string => p !== null);
   console.log(
     `Pre-render summary: ${parts.join(', ') || 'nothing'} — ` +
@@ -239,7 +256,9 @@ async function audioCommand(args: string[]): Promise<void> {
   let stories: string[] | undefined;
   let tracks: string[] | undefined;
   let dialogues: string[] | undefined;
+  let scenarios: string[] | undefined;
   let playerAudio = false;
+  let mouthOnly = false;
   let yes = false;
   let extras: string | undefined;
   const seeds: Record<string, number> = {};
@@ -271,17 +290,39 @@ async function audioCommand(args: string[]): Promise<void> {
     } else if (arg === '--stories') stories = next().split(',').filter(Boolean);
     else if (arg === '--tracks') tracks = next().split(',').filter(Boolean);
     else if (arg === '--dialogues') dialogues = next().split(',').filter(Boolean);
+    else if (arg === '--scenarios') scenarios = next().split(',').filter(Boolean);
     else if (arg === '--player-audio') playerAudio = true;
+    else if (arg === '--mouth-only') mouthOnly = true;
     else if (arg === '--yes' || arg === '-y') yes = true;
     else if (arg === '--model') model = next();
     else if (arg === '--extras') extras = next();
     else if (arg.startsWith('-')) fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
     else drafts.push(arg);
   }
-  if (drafts.length === 0) fail(`audio needs at least one draft file\n\n${USAGE}`, 2);
   if (out === undefined) fail(`audio needs -o <pack-dir>\n\n${USAGE}`, 2);
+  if (mouthOnly) {
+    // No drafts, no client, no cost gate: the pack on disk is the input.
+    try {
+      const summary = runMouthOnly(out, { scenarios });
+      const changed = summary.reports.filter((r) => r.changed).length;
+      console.log(
+        `✓ ${summary.pack.id} v${summary.pack.version} → ${summary.outFile} — ` +
+          `${summary.reports.length} mouth track(s) recomputed, ${changed} changed`,
+      );
+      for (const r of summary.reports) {
+        console.log(
+          `  ${r.scenarioId}/${r.sentenceId ?? r.file.split('/').pop()}: ` +
+            `${(r.durationMs / 1000).toFixed(2)}s → ${r.mouthLength} steps${r.changed ? ' (changed)' : ''}`,
+        );
+      }
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e), 1);
+    }
+    return;
+  }
+  if (drafts.length === 0) fail(`audio needs at least one draft file\n\n${USAGE}`, 2);
 
-  const filters = { stories, tracks, dialogues, playerAudio };
+  const filters = { stories, tracks, dialogues, scenarios, playerAudio };
   try {
     // Cost gate BEFORE the client exists — an unconfirmed run fires nothing.
     const plan = planAudioRun(drafts, {
@@ -306,7 +347,7 @@ async function audioCommand(args: string[]): Promise<void> {
         modelId: model,
         extrasPath: extras,
       });
-      const total = result.story.length + result.dialogue.length;
+      const total = result.story.length + result.dialogue.length + result.scenario.length;
       console.log(`Rendered ${total} audition take(s) into ${out}/audition/:`);
       for (const t of result.story) {
         console.log(`  ${t.trackId} take ${t.take} (seed ${t.seed}) → ${t.file}`);
@@ -318,9 +359,16 @@ async function audioCommand(args: string[]): Promise<void> {
         );
         console.log(`      alignment: ${describeStamps(t.stampResult)}`);
       }
+      for (const t of result.scenario) {
+        console.log(
+          `  ${t.scenarioId}/${t.characterId} ${t.variant} take ${t.take} (${t.label}, seed ${t.seed}) → ${t.file}`,
+        );
+        console.log(`      alignment: ${describeStamps(t.stampResult)}`);
+      }
       console.log(
         '\nListen, pick a take per track/character, then finalize with ' +
-          '--seed <track-id>=<seed> / --seed <dialogueId>/<characterId>=<seed>.',
+          '--seed <track-id>=<seed> / --seed <dialogueId>/<characterId>=<seed> / ' +
+          '--seed <scenarioId>/<characterId>=<seed>.',
       );
     } else {
       const summary = await runFinalize(drafts, out, client, {
@@ -344,6 +392,14 @@ async function audioCommand(args: string[]): Promise<void> {
         console.log(
           `  ${r.dialogueId}/${r.label} (${r.characterId}: ${r.voice}, seed ${r.seed}): ` +
             `${(r.durationMs / 1000).toFixed(1)}s, ${kb} KiB opus`,
+        );
+        console.log(`      stamps: ${describeStamps(r.stampResult)}`);
+      }
+      for (const r of summary.scenarioReports) {
+        const kb = (r.opusBytes / 1024).toFixed(0);
+        console.log(
+          `  ${r.scenarioId}/${r.label} ${r.variant} (${r.characterId}: ${r.voice}, seed ${r.seed}): ` +
+            `${(r.durationMs / 1000).toFixed(1)}s, ${kb} KiB opus, mouth ${r.mouthLength} steps`,
         );
         console.log(`      stamps: ${describeStamps(r.stampResult)}`);
       }
@@ -383,8 +439,14 @@ function publishCommand(args: string[]): void {
       return;
     }
     const mb = (summary.totalBytes / (1024 * 1024)).toFixed(2);
+    // scene/ PNG layers are the bulk of a scenario pack (≈ 4–5 MB per family)
+    // and the reason the app's sync gate is Wi-Fi-only for them (T58).
+    const scene =
+      summary.sceneBytes > 0
+        ? `, of which scene/ ${(summary.sceneBytes / (1024 * 1024)).toFixed(2)} MB (Wi-Fi-gated PNG layers)`
+        : '';
     console.log(
-      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
+      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB${scene}) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
     );
     for (const f of summary.files) console.log(`  ${f.path} (${f.bytes} bytes) ${f.sha256}`);
   } catch (e) {
