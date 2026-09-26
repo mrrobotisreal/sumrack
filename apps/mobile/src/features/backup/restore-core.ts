@@ -22,6 +22,8 @@ import {
   notes,
   packs,
   reviewLog,
+  scenarioAttempts,
+  scenarioRuns,
   settings,
   storyProgress,
   syncState,
@@ -73,6 +75,9 @@ const INSERT_ORDER: [UserTableKey, SQLiteTable][] = [
   ['importedPacks', importedPacks],
   ['wordProfiles', wordProfiles],
   ['grammarLessons', grammarLessons],
+  // T58: runs before attempts (FK); after grammarLessons, before settings.
+  ['scenarioRuns', scenarioRuns],
+  ['scenarioAttempts', scenarioAttempts],
   ['settings', settings],
   ['syncState', syncState],
   ['analyticsEvents', analyticsEvents],

@@ -255,6 +255,45 @@ const grammarLessonRow = z.strictObject({
   ...generationReceipt,
 });
 
+/**
+ * T58 (SPEAKING_SCENARIOS §4.2): the two M17 user tables. `pathJson` /
+ * `statsJson` / `detailJson` are TEXT columns holding JSON strings — carried
+ * verbatim as strings (opaque here; the scenarios repo Zod-parses on read,
+ * so restore never rejects a future shape). `audioFile` is carried as-is: it
+ * names a file inside the run's media bundle (T63), not a local path.
+ */
+const scenarioRunRow = z.strictObject({
+  id: z.string(),
+  packId: z.string(),
+  scenarioId: z.string(),
+  familyId: z.string(),
+  level: z.string(),
+  startedAt: int,
+  finishedAt: int.nullable(),
+  endingId: z.string().nullable(),
+  pathJson: z.string(),
+  statsJson: z.string().nullable(),
+  pinned: z.boolean(),
+  mediaLocal: z.boolean(),
+  mediaBundleState: z.string().nullable(),
+  mediaBundleName: z.string().nullable(),
+  gameSessionId: z.string().nullable(),
+});
+
+const scenarioAttemptRow = z.strictObject({
+  id: z.string(),
+  runId: z.string(),
+  turnId: z.string(),
+  attemptNo: int,
+  kind: z.enum(['answer', 'meta']),
+  outcome: z.string(),
+  transcript: z.string(),
+  detailJson: z.string(),
+  audioFile: z.string().nullable(),
+  audioDurationMs: int.nullable(),
+  createdAt: int,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -312,6 +351,9 @@ export const BackupPayloadSchema = z.strictObject({
     // T52 (M16): additive-with-default — pre-T52 snapshots restore under version 1.
     wordProfiles: z.array(wordProfileRow).default([]),
     grammarLessons: z.array(grammarLessonRow).default([]),
+    // T58 (M17): additive-with-default — pre-M17 snapshots restore under version 1.
+    scenarioRuns: z.array(scenarioRunRow).default([]),
+    scenarioAttempts: z.array(scenarioAttemptRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -345,6 +387,8 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   importedPacks: 'imported_packs',
   wordProfiles: 'word_profiles',
   grammarLessons: 'grammar_lessons',
+  scenarioRuns: 'scenario_runs',
+  scenarioAttempts: 'scenario_attempts',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',
