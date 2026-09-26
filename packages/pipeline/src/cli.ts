@@ -1,6 +1,7 @@
 import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
-import { renderBranchMap } from './branch-map.ts';
+import { renderBranchMap, renderScenarioBranchMap } from './branch-map.ts';
+import { glossaryCoverage, renderCoverageReport } from './coverage.ts';
 import { planAudioRun, runAudition, runFinalize, type AudioRunPlan } from './audio.ts';
 import type { StampResult } from './stamps.ts';
 import { DEFAULT_MODEL_ID, ElevenLabsClient } from './elevenlabs.ts';
@@ -8,6 +9,7 @@ import { resolveEnvVar } from './env.ts';
 import { runModelsMirror } from './models.ts';
 import { runPublish } from './publish.ts';
 import { runValidate } from './validate.ts';
+import type { Pack } from '@sumrak/schema';
 
 /**
  * CLI entrypoint. annotate/validate are offline (T08); audio is explicitly
@@ -20,8 +22,12 @@ const USAGE = `Sumrak authoring pipeline
 Usage:
   pipeline annotate [draft.md ...] [--extras <extras.md>] [-o <pack.json>]
       Turn draft file(s) into a schema-valid pack.json.
-      One draft = one story; multi-story packs pass several drafts (identical
+      One draft = one story (or one dialogue / one scenario, told apart by
+      the frontmatter); multi-story packs pass several drafts (identical
       "pack" frontmatter) in reading order. Default output: ./pack.json
+      Dialogues and scenarios also print their branch map; scenarios print
+      the glossary coverage report (content lemmas the cast says that are
+      not glossary headwords)
       --extras <file>       pack extras (T17): lesson (frontmatter meta +
                             markdown body), journal prompts, authored
                             exercises. Required sections for course-unit /
@@ -115,6 +121,9 @@ function annotateCommand(args: string[]): void {
       summary.dialogues > 0
         ? `${summary.dialogues} dialogue${summary.dialogues === 1 ? '' : 's'}`
         : null,
+      summary.scenarios > 0
+        ? `${summary.scenarios} scenario${summary.scenarios === 1 ? '' : 's'}`
+        : null,
       summary.pack.lesson ? 'lesson' : null,
       summary.pack.prompts ? `${summary.pack.prompts.length} prompts` : null,
       summary.pack.exercises ? `${summary.pack.exercises.length} exercises` : null,
@@ -128,11 +137,20 @@ function annotateCommand(args: string[]): void {
     for (const dialogue of summary.pack.dialogues ?? []) {
       console.log(`\n${renderBranchMap(dialogue)}`);
     }
+    printScenarioReports(summary.pack);
   } catch (e) {
     if (e instanceof DraftError) {
       fail(e.issues.map(formatIssue).join('\n'), 1);
     }
     throw e;
+  }
+}
+
+/** T56: branch map + glossary coverage report for every scenario of a pack. */
+function printScenarioReports(pack: Pack): void {
+  for (const scenario of pack.scenarios ?? []) {
+    console.log(`\n${renderScenarioBranchMap(scenario)}`);
+    console.log(`\n${renderCoverageReport(glossaryCoverage(scenario))}`);
   }
 }
 
@@ -148,6 +166,7 @@ function validateCommand(args: string[]): void {
       for (const dialogue of result.pack.dialogues ?? []) {
         console.log(`\n${renderBranchMap(dialogue)}`);
       }
+      printScenarioReports(result.pack);
     } else {
       failed = true;
       console.error(`✗ ${file}: invalid pack`);

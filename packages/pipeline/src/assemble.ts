@@ -10,6 +10,7 @@ import {
   type Dialogue,
   type DialogueNode,
   type Pack,
+  type Scenario,
   type Sentence,
   type Story,
   type Token,
@@ -19,6 +20,8 @@ import { DraftError, type DraftIssue } from './errors.ts';
 import type { DraftSentence, DraftTokenRow, ParsedDraft } from './draft.ts';
 import type { DraftDialogueNode, ParsedDialogueDraft } from './dialogue-draft.ts';
 import type { PackExtras } from './extras.ts';
+import { assembleScenario } from './scenario-assemble.ts';
+import { draftScenarioSentences, type ParsedScenarioDraft } from './scenario-draft.ts';
 
 /**
  * Assembly: parsed drafts (one per story) → a schema-valid Pack.
@@ -291,9 +294,9 @@ function assembleDialogue(draft: ParsedDialogueDraft, issues: DraftIssue[]): Dia
 }
 
 /**
- * Assemble parsed drafts (story drafts + dialogue drafts, plus optional pack
- * extras — lesson / prompts / exercises, T17) into a Pack. Story/dialogue
- * order = argument order. A pack with no drafts at all (checkpoint / prompts
+ * Assemble parsed drafts (story drafts + dialogue drafts + scenario drafts,
+ * plus optional pack extras — lesson / prompts / exercises, T17) into a Pack.
+ * Story/dialogue/scenario order = argument order. A pack with no drafts at all (checkpoint / prompts
  * types) assembles from extras alone, which must then carry the `pack:` meta.
  * Throws {@link DraftError} with every issue found if the inputs cannot
  * produce a valid pack.
@@ -302,11 +305,14 @@ export function assemblePack(
   drafts: readonly ParsedDraft[],
   extras?: PackExtras,
   dialogueDrafts: readonly ParsedDialogueDraft[] = [],
+  scenarioDrafts: readonly ParsedScenarioDraft[] = [],
 ): Pack {
-  if (drafts.length === 0 && dialogueDrafts.length === 0 && !extras) {
+  const noDrafts =
+    drafts.length === 0 && dialogueDrafts.length === 0 && scenarioDrafts.length === 0;
+  if (noDrafts && !extras) {
     throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
   }
-  if (drafts.length === 0 && dialogueDrafts.length === 0 && extras && !extras.pack) {
+  if (noDrafts && extras && !extras.pack) {
     throw new DraftError([
       {
         file: extras.file,
@@ -322,6 +328,7 @@ export function assemblePack(
   const metas: { file: string; pack: ParsedDraft['frontmatter']['pack'] }[] = [
     ...drafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
     ...dialogueDrafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
+    ...scenarioDrafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
   ];
   const first = metas[0];
   const packMetaJson = JSON.stringify(first ? first.pack : extras!.pack);
@@ -343,8 +350,9 @@ export function assemblePack(
     });
   }
 
-  // Unique story/dialogue ids per pack, unique sentence ids pack-wide
-  // (dialogue node and choice ids double as their sentence ids).
+  // Unique story/dialogue/scenario ids per pack, unique sentence ids
+  // pack-wide (dialogue node and choice ids double as their sentence ids;
+  // scenario lines follow the convention documented in scenario-draft.ts).
   const storyIds = new Map<string, string>();
   const sentenceIds = new Map<string, { file: string; line: number }>();
   const claimSentenceId = (file: string, id: string, line: number) => {
@@ -391,6 +399,21 @@ export function assemblePack(
     }
   }
 
+  const scenarioIds = new Map<string, string>();
+  for (const d of scenarioDrafts) {
+    const sid = d.frontmatter.scenario.id;
+    const seenIn = scenarioIds.get(sid);
+    if (seenIn !== undefined) {
+      issues.push({
+        file: d.file,
+        line: 2,
+        message: `duplicate scenario id "${sid}" (already used in ${seenIn})`,
+      });
+    }
+    scenarioIds.set(sid, d.file);
+    for (const s of draftScenarioSentences(d)) claimSentenceId(d.file, s.id, s.line);
+  }
+
   const stories: Story[] = drafts.map((d) => {
     const { subtitle, source } = d.frontmatter.story;
     return {
@@ -406,6 +429,9 @@ export function assemblePack(
     };
   });
   const dialogues: Dialogue[] = dialogueDrafts.map((d) => assembleDialogue(d, issues));
+  const scenarios: Scenario[] = scenarioDrafts.map((d) =>
+    assembleScenario(d, issues, assembleSentence),
+  );
 
   const meta = first ? first.pack : extras!.pack!;
   const pack: Pack = {
@@ -418,6 +444,7 @@ export function assemblePack(
     stories,
   };
   if (dialogues.length > 0) pack.dialogues = dialogues;
+  if (scenarios.length > 0) pack.scenarios = scenarios;
   if (extras?.lesson) pack.lesson = extras.lesson;
   if (extras?.prompts) pack.prompts = extras.prompts;
   if (extras?.exercises) pack.exercises = extras.exercises;

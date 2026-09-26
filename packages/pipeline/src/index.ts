@@ -73,13 +73,54 @@ export {
   type StampResult,
 } from './stamps.ts';
 export { assemblePack, isPunctText } from './assemble.ts';
-export { renderBranchMap } from './branch-map.ts';
+export { expectColumn, renderBranchMap, renderScenarioBranchMap } from './branch-map.ts';
+export {
+  CONTENT_POS,
+  COVERAGE_STOP_LEMMAS,
+  glossaryCoverage,
+  lemmaKey,
+  renderCoverageReport,
+  type CoverageGap,
+  type CoverageReport,
+} from './coverage.ts';
+export { assembleScenario, type SentenceAssembler } from './scenario-assemble.ts';
+export {
+  CharacterCuesSchema,
+  ScenarioDraftCharacterSchema,
+  ScenarioFrontmatterSchema,
+  ScenarioMetaSchema,
+  draftScenarioSentences,
+  parseScenarioDraft,
+  slugifyEn,
+  type CharacterCues,
+  type DraftExpect,
+  type DraftGlossaryEntry,
+  type DraftNudge,
+  type DraftReject,
+  type DraftRetry,
+  type DraftScenarioTurn,
+  type DraftSlot,
+  type DraftSlotOption,
+  type DraftTurnTerminator,
+  type ParsedScenarioDraft,
+  type ScenarioDraftCharacter,
+  type ScenarioFrontmatter,
+  type ScenarioMeta,
+} from './scenario-draft.ts';
+export {
+  TRANSLIT_MAX_CANDIDATES,
+  TRANSLIT_RULES,
+  mergeTranslit,
+  transliterate,
+  type TranslitRule,
+} from './translit.ts';
 export {
   DialogueFrontmatterSchema,
   DialogueMetaSchema,
   parseDialogueDraft,
   sniffDraftKind,
   type DialogueFrontmatter,
+  type DraftKind,
   type DialogueMeta,
   type DraftChoiceAlt,
   type DraftDialogueChoice,

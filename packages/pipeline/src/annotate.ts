@@ -5,11 +5,14 @@ import { assemblePack } from './assemble.ts';
 import { parseDialogueDraft, sniffDraftKind, type ParsedDialogueDraft } from './dialogue-draft.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras, type PackExtras } from './extras.ts';
+import { parseScenarioDraft, type ParsedScenarioDraft } from './scenario-draft.ts';
+import { scenarioLines } from '@sumrak/schema';
 
 /**
  * `pipeline annotate`: draft file(s) → validated pack.json.
  * One draft file = one story (or, since T25, one dialogue — recognized by the
- * `dialogue:` frontmatter section, not the filename); a multi-story pack is
+ * `dialogue:` frontmatter section, not the filename — or, since T56, one
+ * scenario, recognized by `scenario:`); a multi-story pack is
  * several drafts with identical `pack` frontmatter, given in reading order.
  * `course-unit` / `checkpoint` / `prompts` packs add (or consist entirely of)
  * an extras file (`--extras`, T17) carrying lesson / prompts / exercises.
@@ -22,14 +25,14 @@ export function annotateDrafts(
 ): Pack {
   const storyDrafts: ParsedDraft[] = [];
   const dialogueDrafts: ParsedDialogueDraft[] = [];
+  const scenarioDrafts: ParsedScenarioDraft[] = [];
   for (const f of files) {
-    if (sniffDraftKind(f.path, f.source) === 'dialogue') {
-      dialogueDrafts.push(parseDialogueDraft(f.path, f.source));
-    } else {
-      storyDrafts.push(parseDraft(f.path, f.source));
-    }
+    const kind = sniffDraftKind(f.path, f.source);
+    if (kind === 'dialogue') dialogueDrafts.push(parseDialogueDraft(f.path, f.source));
+    else if (kind === 'scenario') scenarioDrafts.push(parseScenarioDraft(f.path, f.source));
+    else storyDrafts.push(parseDraft(f.path, f.source));
   }
-  return assemblePack(storyDrafts, extras, dialogueDrafts);
+  return assemblePack(storyDrafts, extras, dialogueDrafts, scenarioDrafts);
 }
 
 export interface AnnotateSummary {
@@ -37,17 +40,19 @@ export interface AnnotateSummary {
   outFile: string;
   stories: number;
   dialogues: number;
+  scenarios: number;
   sentences: number;
   tokens: number;
 }
 
-/** Every sentence of a pack — story sentences plus dialogue node/choice lines. */
+/** Every sentence of a pack — story sentences, dialogue node/choice lines, scenario lines. */
 function allSentences(pack: Pack) {
   return [
     ...pack.stories.flatMap((s) => s.sentences),
     ...(pack.dialogues ?? []).flatMap((d) =>
       d.nodes.flatMap((n) => [n.sentence, ...(n.choices?.map((c) => c.sentence) ?? [])]),
     ),
+    ...(pack.scenarios ?? []).flatMap((s) => scenarioLines(s).map((ref) => ref.line.sentence)),
   ];
 }
 
@@ -69,6 +74,7 @@ export function runAnnotate(
     outFile,
     stories: pack.stories.length,
     dialogues: pack.dialogues?.length ?? 0,
+    scenarios: pack.scenarios?.length ?? 0,
     sentences: sentences.length,
     tokens: sentences.reduce((n, s) => n + s.tokens.length, 0),
   };
