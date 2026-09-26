@@ -376,6 +376,30 @@ describe('scenario audio', () => {
     expectIssue(pack, 'scenarios[0].nudges[0].line.audio', 'nudge line "nudge-silence"');
   });
 
+  it('accepts coach audio on an expectation (free text: duration + mouth, no stamps)', () => {
+    const pack = makeValidScenarioPack() as any;
+    voiceAll(pack);
+    scn(pack).turns[1].expect.coachAudio = {
+      file: 'audio/scn/scn-t2-coach.opus',
+      durationMs: 1200,
+      mouth: '0'.repeat(30),
+    };
+    expectValid(pack);
+  });
+
+  it('rejects coach audio that carries word stamps or a mismatched mouth track', () => {
+    const pack = makeValidScenarioPack() as any;
+    voiceAll(pack);
+    scn(pack).turns[1].expect.coachAudio = {
+      file: 'audio/scn/scn-t2-coach.opus',
+      durationMs: 1200,
+      timestamps: [{ sentenceId: 'scn-t2', tokenIndex: 0, startMs: 0, endMs: 500 }],
+      mouth: '0'.repeat(10),
+    };
+    expectIssue(pack, 'scenarios[0].turns[1].expect.coachAudio.timestamps', 'no word stamps');
+    expectIssue(pack, 'scenarios[0].turns[1].expect.coachAudio.mouth', '10 steps');
+  });
+
   it('rejects stamps pointing at a foreign sentence, out of range, or past the duration', () => {
     const pack = makeValidScenarioPack() as any;
     voiceAll(pack);
