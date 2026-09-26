@@ -1,4 +1,13 @@
-import { parsePack, type NodeAudio, type Pack, type Sentence, type Token } from '@sumrak/schema';
+import {
+  parsePack,
+  scenarioLines,
+  type LineAudio,
+  type NodeAudio,
+  type Pack,
+  type Scenario,
+  type Sentence,
+  type Token,
+} from '@sumrak/schema';
 import { eq, sql } from 'drizzle-orm';
 
 import { normalizeRu } from './normalize';
@@ -14,6 +23,12 @@ import {
   journalPrompts,
   lessons,
   packs,
+  scenarioAssets,
+  scenarioGlossary,
+  scenarioLineAudio,
+  scenarioLineStamps,
+  scenarioTurns,
+  scenarios,
   sentences,
   stories,
   tokens,
@@ -30,8 +45,14 @@ export interface ImportResult {
   packId: string;
   version: number;
   action: ImportAction;
-  /** Sentence/token counts include dialogue node + choice lines (T26). */
-  counts: { stories: number; dialogues: number; sentences: number; tokens: number };
+  /** Sentence/token counts include dialogue node + choice lines (T26) and every scenario line (T58). */
+  counts: {
+    stories: number;
+    dialogues: number;
+    scenarios: number;
+    sentences: number;
+    tokens: number;
+  };
 }
 
 export interface ImportOptions {
@@ -51,6 +72,14 @@ export interface ImportOptions {
    * downloaded — fine until T10).
    */
   audioFiles?: Record<string, string>;
+  /**
+   * T58: every `scene/**` file the pack ships (PNG layers), keyed by the
+   * pack-relative path → `{ localUri, bytes }` (either may be null: sync
+   * lists manifest files it deferred with a size and no uri; the dev
+   * fixture import lists nothing). Rows are written for every listed path
+   * so the Wi-Fi backfill knows what is still missing.
+   */
+  sceneFiles?: Record<string, { localUri: string | null; bytes: number | null }>;
 }
 
 /** Effective space-before per the schema's reconstruction defaults. */
@@ -184,9 +213,16 @@ function countContent(pack: Pack) {
       tokenCount += s.tokens.length;
     }
   }
+  for (const scenario of pack.scenarios ?? []) {
+    for (const ref of scenarioLines(scenario)) {
+      sentenceCount += 1;
+      tokenCount += ref.line.sentence.tokens.length;
+    }
+  }
   return {
     stories: pack.stories.length,
     dialogues: pack.dialogues?.length ?? 0,
+    scenarios: pack.scenarios?.length ?? 0,
     sentences: sentenceCount,
     tokens: tokenCount,
   };
@@ -355,6 +391,18 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     }
   }
 
+  for (const [scenarioIdx, scenario] of (pack.scenarios ?? []).entries()) {
+    await insertScenarioRows(db, pack.id, scenario, scenarioIdx, opts);
+  }
+  for (const [file, info] of Object.entries(opts.sceneFiles ?? {})) {
+    await db.insert(scenarioAssets).values({
+      packId: pack.id,
+      file,
+      localUri: info.localUri,
+      bytes: info.bytes,
+    });
+  }
+
   if (pack.lesson) {
     await db.insert(lessons).values({
       packId: pack.id,
@@ -384,6 +432,117 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       kind: spec.kind,
       orderIdx,
       spec: spec as unknown as Record<string, unknown>,
+    });
+  }
+}
+
+/**
+ * T58: one scenario → the five content tables. Every spoken line (turn say
+ * lines, retry lines, reject reactions, glossary clips, nudges — the
+ * `scenarioLines` enumeration order) goes into `sentences`/`tokens` with
+ * `storyId = scenarioId` (the T26 dialogue convention: tap-word, lemma
+ * stats and the FTS triggers all fire on them like story sentences). Audio
+ * rows carry the line's variant + the pipeline mouth track; stamps mirror
+ * `dialogue_node_stamps`. The turn's expectation/retry/next are stored as
+ * JSON strings the scenarios repo Zod-parses on read.
+ */
+async function insertScenarioRows(
+  db: SumrakDB,
+  packId: string,
+  scenario: Scenario,
+  orderIdx: number,
+  opts: ImportOptions,
+): Promise<void> {
+  await db.insert(scenarios).values({
+    packId,
+    id: scenario.id,
+    orderIdx,
+    familyId: scenario.familyId,
+    titleRu: scenario.title.ru,
+    titleEn: scenario.title.en,
+    level: scenario.level,
+    language: scenario.language,
+    briefRu: scenario.brief.ru,
+    briefEn: scenario.brief.en,
+    castJson: JSON.stringify(scenario.cast),
+    sceneJson: JSON.stringify(scenario.scene),
+    startTurnId: scenario.startTurnId,
+    endingsJson: JSON.stringify(scenario.endings),
+    glossaryCount: scenario.glossary.length,
+  });
+
+  const stageAudio = async (audio: LineAudio, sentenceId: string, variant: string) => {
+    await db.insert(scenarioLineAudio).values({
+      packId,
+      sentenceId,
+      scenarioId: scenario.id,
+      variant: variant as typeof scenarioLineAudio.$inferInsert.variant,
+      file: audio.file,
+      localUri: opts.audioFiles?.[audio.file] ?? null,
+      durationMs: audio.durationMs,
+      mouth: audio.mouth ?? null,
+    });
+    const stampRows = (audio.timestamps ?? []).map((stamp, stampIndex) => ({
+      packId,
+      sentenceId,
+      stampIndex,
+      tokenIndex: stamp.tokenIndex,
+      startMs: stamp.startMs,
+      endMs: stamp.endMs,
+    }));
+    for (let i = 0; i < stampRows.length; i += 100) {
+      await db.insert(scenarioLineStamps).values(stampRows.slice(i, i + 100));
+    }
+  };
+
+  let sentenceIdx = 0;
+  for (const ref of scenarioLines(scenario)) {
+    await insertSentenceRows(db, packId, scenario.id, ref.line.sentence, sentenceIdx++);
+    if (ref.line.audio) await stageAudio(ref.line.audio, ref.line.sentence.id, ref.kind);
+  }
+
+  for (const [turnIdx, turn] of scenario.turns.entries()) {
+    await db.insert(scenarioTurns).values({
+      packId,
+      scenarioId: scenario.id,
+      id: turn.id,
+      orderIdx: turnIdx,
+      speakerId: turn.speakerId,
+      sayJson: JSON.stringify(turn.say.map((line) => line.sentence.id)),
+      expectJson: turn.expect
+        ? JSON.stringify({
+            ...turn.expect,
+            reject: turn.expect.reject?.map((group) => ({
+              forms: group.forms,
+              ...(group.react ? { reactSentenceId: group.react.sentence.id } : {}),
+            })),
+          })
+        : null,
+      retryJson: turn.retry
+        ? JSON.stringify({
+            confused: turn.retry.confused.sentence.id,
+            hint: turn.retry.hint.sentence.id,
+            ...(turn.retry.second ? { second: turn.retry.second.sentence.id } : {}),
+            lifeline: turn.retry.lifeline,
+          })
+        : null,
+      nextJson: turn.next !== undefined ? JSON.stringify(turn.next) : null,
+      endingId: turn.endingId ?? null,
+    });
+  }
+
+  for (const entry of scenario.glossary) {
+    await db.insert(scenarioGlossary).values({
+      packId,
+      scenarioId: scenario.id,
+      id: entry.id,
+      ru: entry.ru,
+      ruNorm: normalizeRu(entry.ru),
+      en: entry.en,
+      formsJson: JSON.stringify(entry.forms),
+      translitJson: JSON.stringify(entry.translit),
+      explainSentenceId: entry.explain.sentence.id,
+      howToSaySentenceId: entry.howToSay.sentence.id,
     });
   }
 }

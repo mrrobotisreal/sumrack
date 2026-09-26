@@ -61,7 +61,13 @@ describe('dialogue pack import', () => {
     const db = createTestDb();
     const result = await importPack(db, dialoguePackJson);
     expect(result.action).toBe('installed');
-    expect(result.counts).toEqual({ stories: 0, dialogues: 1, sentences: 17, tokens: 91 });
+    expect(result.counts).toEqual({
+      stories: 0,
+      dialogues: 1,
+      scenarios: 0,
+      sentences: 17,
+      tokens: 91,
+    });
 
     const [dialogueRows, nodeRows, choiceRows, endingRows] = await Promise.all([
       db.select().from(dialogues),
