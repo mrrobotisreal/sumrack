@@ -417,3 +417,171 @@ export const exerciseSpecs = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.packId, t.id] })],
 );
+
+/**
+ * Scenario content tables (T58, SPEAKING_SCENARIOS §4.1). Denormalized from
+ * `Pack.scenarios`; every spoken line's SENTENCE (turn lines, retry lines,
+ * reject reactions, glossary clips, nudges) lives in the shared
+ * `sentences`/`tokens` tables with `storyId` = the scenario id — the T26
+ * dialogue convention, so tap-word lookup, the lemma universe and (later)
+ * FTS work unchanged, and story-scoped queries (which join `stories`)
+ * never see them. Cast + scene are JSON on the `scenarios` row (small,
+ * loaded whole, never queried per character); the turn's expectation /
+ * retry / next are JSON columns Zod-parsed on read by the scenarios repo
+ * (`ScenarioTurnRuntimeSchema` — the T27 `pathJson` precedent). User data
+ * (`scenario_runs` / `scenario_attempts`, ./user.ts) references scenario,
+ * turn and ending ids as plain strings and survives reimport/removal.
+ */
+export const scenarios = sqliteTable(
+  'scenarios',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    /** Stable scenario id, unique within its pack. */
+    id: text('id').notNull(),
+    orderIdx: integer('order_idx').notNull(),
+    /** The situation shared by the scenario's rungs (like a story family). */
+    familyId: text('family_id').notNull(),
+    titleRu: text('title_ru').notNull(),
+    titleEn: text('title_en').notNull(),
+    level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
+    language: text('language').$type<'ru' | 'uk'>().notNull(),
+    briefRu: text('brief_ru').notNull(),
+    briefEn: text('brief_en').notNull(),
+    /** `ScenarioCharacter[]` verbatim (role + portrait included) — Zod-parsed on read. */
+    castJson: text('cast_json').notNull(),
+    /** `ScenarioScene` verbatim — Zod-parsed on read. */
+    sceneJson: text('scene_json').notNull(),
+    startTurnId: text('start_turn_id').notNull(),
+    /** Endings verbatim (`Ending[]`, T25's shape) — the run's `endingId` resolves here. */
+    endingsJson: text('endings_json').notNull(),
+    glossaryCount: integer('glossary_count').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.id] }), index('scenarios_id_idx').on(t.id)],
+);
+
+export const scenarioTurns = sqliteTable(
+  'scenario_turns',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    scenarioId: text('scenario_id').notNull(),
+    /** Stable turn id, unique within its scenario. */
+    id: text('id').notNull(),
+    /** Declaration order (authoring order, not walk order). */
+    orderIdx: integer('order_idx').notNull(),
+    speakerId: text('speaker_id').notNull(),
+    /** The turn's say-line sentence ids in order (JSON string[]); the last is the prompt. */
+    sayJson: text('say_json').notNull(),
+    /** The `Expectation` verbatim, or NULL for a monologue turn. */
+    expectJson: text('expect_json'),
+    /** `{ confused, hint, second?, lifeline }` with sentence ids in place of lines, or NULL. */
+    retryJson: text('retry_json'),
+    /** The `TurnNext` verbatim (string or `{ on, default }`), or NULL when `endingId` is set. */
+    nextJson: text('next_json'),
+    endingId: text('ending_id'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.scenarioId, t.id] }),
+    index('scenario_turns_scenario_idx').on(t.packId, t.scenarioId, t.orderIdx),
+  ],
+);
+
+export const scenarioGlossary = sqliteTable(
+  'scenario_glossary',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    scenarioId: text('scenario_id').notNull(),
+    /** Stable entry id, unique within its scenario. */
+    id: text('id').notNull(),
+    /** Headword exactly as authored (NFC, ё preserved). */
+    ru: text('ru').notNull(),
+    /** ё/е-folded, lowercased shadow of `ru` — the «Что значит…» lookup key. */
+    ruNorm: text('ru_norm').notNull(),
+    en: text('en').notNull(),
+    /** Recognizable surface forms/globs of the headword (JSON string[]). */
+    formsJson: text('forms_json').notNull(),
+    /** Cyrillic renderings of `en` as the RU ASR hears it (JSON string[]). */
+    translitJson: text('translit_json').notNull(),
+    explainSentenceId: text('explain_sentence_id').notNull(),
+    howToSaySentenceId: text('how_to_say_sentence_id').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.scenarioId, t.id] }),
+    index('scenario_glossary_norm_idx').on(t.packId, t.scenarioId, t.ruNorm),
+  ],
+);
+
+/** Which spoken line a rendered file is (SCENARIOS §4.1; `coach` = the player-voice model answer). */
+export type ScenarioLineVariant =
+  'say' | 'confused' | 'hint' | 'second' | 'react' | 'explain' | 'howtosay' | 'nudge' | 'coach';
+
+/**
+ * Per-line scenario audio — the T26 parallel-tables decision applies (no
+ * `audio_tracks` reuse): keyed by SENTENCE id, one row per rendered file,
+ * with the pipeline's mouth track (one viseme digit per 40 ms, §8.2)
+ * alongside so the T61 renderer reads it with the audio row.
+ */
+export const scenarioLineAudio = sqliteTable(
+  'scenario_line_audio',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    sentenceId: text('sentence_id').notNull(),
+    scenarioId: text('scenario_id').notNull(),
+    variant: text('variant').$type<ScenarioLineVariant>().notNull(),
+    /** Pack-relative path, e.g. "audio/radio-a1/radio-a1-t01.opus". */
+    file: text('file').notNull(),
+    /** Absolute local URI once staged in app storage (null until then). */
+    localUri: text('local_uri'),
+    durationMs: integer('duration_ms').notNull(),
+    /** Viseme track '0'–'4' per 40 ms; NULL when the pipeline did not compute one. */
+    mouth: text('mouth'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.sentenceId] }),
+    index('scenario_line_audio_scenario_idx').on(t.packId, t.scenarioId),
+  ],
+);
+
+/** Word stamps for scenario line audio; mirrors `dialogue_node_stamps`. */
+export const scenarioLineStamps = sqliteTable(
+  'scenario_line_stamps',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    sentenceId: text('sentence_id').notNull(),
+    /** Position in the audio's timestamps array. */
+    stampIndex: integer('stamp_index').notNull(),
+    tokenIndex: integer('token_index').notNull(),
+    startMs: integer('start_ms').notNull(),
+    endMs: integer('end_ms').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.sentenceId, t.stampIndex] })],
+);
+
+/**
+ * Scene assets (`scene/**` PNG layers: backdrop, body, eyelids) staged by
+ * sync exactly like audio (Wi-Fi-gated). `localUri` NULL ⇒ the renderer
+ * draws its placeholder (§12) — never an error.
+ */
+export const scenarioAssets = sqliteTable(
+  'scenario_assets',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    /** Pack-relative path, e.g. "scene/host/body.png". */
+    file: text('file').notNull(),
+    localUri: text('local_uri'),
+    /** Size from the manifest when known (NULL for bundled/dev imports). */
+    bytes: integer('bytes'),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.file] })],
+);

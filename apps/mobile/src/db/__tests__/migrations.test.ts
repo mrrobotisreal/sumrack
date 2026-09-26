@@ -86,6 +86,12 @@ describe('migrations from empty DB', () => {
       'lessons',
       'journal_prompts',
       'exercise_specs',
+      'scenarios',
+      'scenario_turns',
+      'scenario_glossary',
+      'scenario_line_audio',
+      'scenario_line_stamps',
+      'scenario_assets',
     ];
     const userTables = [
       'bank_items',
@@ -103,6 +109,8 @@ describe('migrations from empty DB', () => {
       'imported_packs',
       'word_profiles',
       'grammar_lessons',
+      'scenario_runs',
+      'scenario_attempts',
       'settings',
       'sync_state',
       'analytics_events',
@@ -153,6 +161,179 @@ describe('migrations from empty DB', () => {
   it('0013_word-profiles: fresh DB has both M16 tables, all indexes, and the partial unique index', async () => {
     const db = createTestDb();
     await expectWordProfileTables(db);
+  });
+
+  it('0014_scenarios: fresh DB has the five content + two user tables with their indexes', async () => {
+    const db = createTestDb();
+    await expectScenarioTables(db);
+  });
+});
+
+/** T58 shape assertions shared by the fresh + upgrade cases (SPEAKING_SCENARIOS §4.1/§4.2). */
+async function expectScenarioTables(db: SumrakDB) {
+  expect(await columnNames(db, 'scenarios')).toEqual([
+    'pack_id',
+    'id',
+    'order_idx',
+    'family_id',
+    'title_ru',
+    'title_en',
+    'level',
+    'language',
+    'brief_ru',
+    'brief_en',
+    'cast_json',
+    'scene_json',
+    'start_turn_id',
+    'endings_json',
+    'glossary_count',
+  ]);
+  expect(await columnNames(db, 'scenario_turns')).toEqual([
+    'pack_id',
+    'scenario_id',
+    'id',
+    'order_idx',
+    'speaker_id',
+    'say_json',
+    'expect_json',
+    'retry_json',
+    'next_json',
+    'ending_id',
+  ]);
+  expect(await columnNames(db, 'scenario_glossary')).toEqual([
+    'pack_id',
+    'scenario_id',
+    'id',
+    'ru',
+    'ru_norm',
+    'en',
+    'forms_json',
+    'translit_json',
+    'explain_sentence_id',
+    'how_to_say_sentence_id',
+  ]);
+  expect(await columnNames(db, 'scenario_line_audio')).toEqual([
+    'pack_id',
+    'sentence_id',
+    'scenario_id',
+    'variant',
+    'file',
+    'local_uri',
+    'duration_ms',
+    'mouth',
+  ]);
+  expect(await columnNames(db, 'scenario_line_stamps')).toEqual([
+    'pack_id',
+    'sentence_id',
+    'stamp_index',
+    'token_index',
+    'start_ms',
+    'end_ms',
+  ]);
+  expect(await columnNames(db, 'scenario_assets')).toEqual([
+    'pack_id',
+    'file',
+    'local_uri',
+    'bytes',
+  ]);
+  // §4.2 verbatim.
+  expect(await columnNames(db, 'scenario_runs')).toEqual([
+    'id',
+    'pack_id',
+    'scenario_id',
+    'family_id',
+    'level',
+    'started_at',
+    'finished_at',
+    'ending_id',
+    'path_json',
+    'stats_json',
+    'pinned',
+    'media_local',
+    'media_bundle_state',
+    'media_bundle_name',
+    'game_session_id',
+  ]);
+  expect(await columnNames(db, 'scenario_attempts')).toEqual([
+    'id',
+    'run_id',
+    'turn_id',
+    'attempt_no',
+    'kind',
+    'outcome',
+    'transcript',
+    'detail_json',
+    'audio_file',
+    'audio_duration_ms',
+    'created_at',
+  ]);
+  expect(await indexNames(db, 'scenario_glossary')).toContain('scenario_glossary_norm_idx');
+  expect(await indexNames(db, 'scenario_turns')).toContain('scenario_turns_scenario_idx');
+  expect(await indexNames(db, 'scenario_line_audio')).toContain('scenario_line_audio_scenario_idx');
+  expect(await indexNames(db, 'scenario_runs')).toEqual(
+    expect.arrayContaining(['scenario_runs_scenario_idx', 'scenario_runs_finished_idx']),
+  );
+  expect(await indexNames(db, 'scenario_attempts')).toContain('scenario_attempts_run_idx');
+  // Cascades: content tables hang off packs; attempts hang off their run.
+  const fks = await db.all<{ table: string; on_delete: string }>(
+    sql.raw('PRAGMA foreign_key_list(scenario_attempts)'),
+  );
+  expect(fks).toEqual([expect.objectContaining({ table: 'scenario_runs', on_delete: 'CASCADE' })]);
+  for (const t of [
+    'scenarios',
+    'scenario_turns',
+    'scenario_glossary',
+    'scenario_line_audio',
+    'scenario_line_stamps',
+    'scenario_assets',
+  ]) {
+    const rows = await db.all<{ table: string; on_delete: string }>(
+      sql.raw(`PRAGMA foreign_key_list(${t})`),
+    );
+    expect(rows, t).toEqual([expect.objectContaining({ table: 'packs', on_delete: 'CASCADE' })]);
+  }
+}
+
+describe('0014_scenarios upgrade from 0013', () => {
+  it('creates the seven tables on a device that ran 0013; pre-existing rows untouched; attempts cascade with their run', async () => {
+    const { sqlite, db } = createDbUpTo('0013_word-profiles');
+    sqlite
+      .prepare(
+        `INSERT INTO bank_items (id, kind, lemma, lemma_norm, surface, normalized, translation, needs_enrichment, created_at)
+         VALUES ('bi-1', 'word', 'тёмный', 'темный', 'тёмный', 'темный', 'dark', 0, 1)`,
+      )
+      .run();
+    const before = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'scenario%'`,
+    );
+    expect(before).toEqual([]);
+
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+
+    await expectScenarioTables(db);
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM bank_items').get()).toEqual({ n: 1 });
+    sqlite
+      .prepare(
+        `INSERT INTO scenario_runs (id, pack_id, scenario_id, family_id, level, started_at, path_json)
+         VALUES ('run-1', 'p', 'radio-a1', 'radio', 'A1', 1, '{"v":1,"steps":[]}')`,
+      )
+      .run();
+    sqlite
+      .prepare(
+        `INSERT INTO scenario_attempts (id, run_id, turn_id, attempt_no, kind, outcome, transcript, detail_json, created_at)
+         VALUES ('att-1', 'run-1', 't01', 1, 'answer', 'matched', 'привет', '{}', 2)`,
+      )
+      .run();
+    // §4.2 defaults: pinned false, media_local true.
+    expect(
+      sqlite.prepare('SELECT pinned, media_local FROM scenario_runs WHERE id = ?').get('run-1'),
+    ).toEqual({ pinned: 0, media_local: 1 });
+    sqlite.prepare("DELETE FROM scenario_runs WHERE id = 'run-1'").run();
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM scenario_attempts').get()).toEqual({ n: 0 });
+    const applied = sqlite.prepare('SELECT COUNT(*) AS n FROM "__drizzle_migrations"').get() as {
+      n: number;
+    };
+    expect(applied.n).toBe(journal.entries.length);
   });
 });
 
