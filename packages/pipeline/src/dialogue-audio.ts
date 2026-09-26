@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   PLAYER_CHARACTER_ID,
@@ -8,10 +8,17 @@ import {
   type Pack,
   type Sentence,
 } from '@sumrak/schema';
-import { DEFAULT_MODEL_ID, isV3Model, type ElevenLabsClient } from './elevenlabs.ts';
-import { buildNarrationFromSentences, type NarrationText } from './narration.ts';
-import { encodeOpus, probeDurationMs } from './opus.ts';
-import { mapAlignmentToStamps, type StampResult } from './stamps.ts';
+import type { ElevenLabsClient } from './elevenlabs.ts';
+import {
+  finalizeLine,
+  renderLine,
+  RequestPacer,
+  type LineRenderSpec,
+  type RenderedLine,
+} from './line-audio.ts';
+import { buildNarrationFromSentences } from './narration.ts';
+import { probeDurationMs } from './opus.ts';
+import type { StampResult } from './stamps.ts';
 
 /**
  * Per-node dialogue rendering (T26, design V2 §3.2). Where T09 renders one
@@ -21,11 +28,13 @@ import { mapAlignmentToStamps, type StampResult } from './stamps.ts';
  * spoken by the reserved `player` character's voice (the T25 decision: the
  * player entry in `characters` names the coach voice).
  *
- * Reuses T09's machinery wholesale at node granularity: exact-char-span
- * narration text (single sentence), v3 audioTag steering (per character),
- * the tolerant aligner with the ≥95% matched-char gate, monotonicity
- * clamp/drop rules, and Opus encoding. Requests run serially with a small
- * politeness delay and one retry on rate-limit — dialogue = many small calls.
+ * The per-line core (request → align → monotonic stamps → Opus → sidecar)
+ * lives in `line-audio.ts` since T57 and is shared with the scenario
+ * renderer: exact-char-span narration text (single sentence), v3 audioTag
+ * steering (per character), the tolerant aligner with the ≥95% matched-char
+ * gate, monotonicity clamp/drop rules, Opus encoding. Requests run serially
+ * with a small politeness delay and one retry on rate-limit — dialogue =
+ * many small calls.
  *
  * Audition/seed grouping is **per (dialogue, character)**: every node a
  * character speaks renders with that group's seed, so one audition take per
@@ -132,79 +141,23 @@ export interface DialogueAuditionTake {
   stampResult: StampResult;
 }
 
-interface RenderOne {
-  audio: Buffer;
-  stampResultFor: (durationMs: number) => StampResult;
+/** The line-audio spec for one dialogue item (v3 tag from the character; no v2 steering). */
+function specOf(item: DialogueRenderItem): LineRenderSpec {
+  return {
+    voice: item.character.voice,
+    characterId: item.character.id,
+    narration: buildNarrationFromSentences([item.sentence]),
+    ...(item.character.audioTag !== undefined && { audioTag: item.character.audioTag }),
+  };
 }
 
-/** Delay between consecutive ElevenLabs requests (politeness, many small calls). */
-const REQUEST_GAP_MS = 400;
-/** One retry after this wait when the provider rate-limits a request. */
-const RATE_LIMIT_RETRY_MS = 5_000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function renderItem(
+function renderItem(
   client: ElevenLabsClient,
   item: DialogueRenderItem,
   seed: number,
   modelId: string | undefined,
-): Promise<RenderOne> {
-  const base = buildNarrationFromSentences([item.sentence]);
-  const model = modelId ?? DEFAULT_MODEL_ID;
-  const v3 = isV3Model(model);
-  // Same v3 audioTag mechanics as story tracks: the tag becomes part of the
-  // rendered text, so shift every span by the prefix length.
-  const prefix = v3 && item.character.audioTag ? `${item.character.audioTag} ` : '';
-  const narration: NarrationText = prefix
-    ? {
-        text: prefix + base.text,
-        spans: base.spans.map((s) => ({
-          ...s,
-          start: s.start + prefix.length,
-          end: s.end + prefix.length,
-        })),
-      }
-    : base;
-  const voiceName = item.character.voice.split(':').slice(1).join(':');
-  if (voiceName === '' || !item.character.voice.startsWith('elevenlabs:')) {
-    throw new Error(
-      `character "${item.character.id}": unsupported voice "${item.character.voice}" — only "elevenlabs:<name>" is implemented`,
-    );
-  }
-  const voiceId = await client.resolveVoiceId(voiceName);
-  const render = async () =>
-    client.renderWithTimestamps({ voiceId, text: narration.text, modelId: model, seed });
-  let result;
-  try {
-    result = await render();
-  } catch (e) {
-    // One retry on rate limiting — serial small calls occasionally trip 429.
-    if (e instanceof Error && /\b429\b/.test(e.message)) {
-      await sleep(RATE_LIMIT_RETRY_MS);
-      result = await render();
-    } else {
-      throw e;
-    }
-  }
-  const { audio, alignment } = result;
-  return {
-    audio,
-    stampResultFor: (durationMs: number) =>
-      alignment
-        ? mapAlignmentToStamps(narration, alignment, durationMs)
-        : {
-            stamps: [],
-            trusted: false,
-            wordTokens: narration.spans.filter((s) => !s.isPunct).length,
-            stampedTokens: 0,
-            coverage: 0,
-            matchedCharRatio: 0,
-            issues: ['provider returned no character alignment'],
-          },
-  };
+): Promise<RenderedLine> {
+  return renderLine(client, specOf(item), seed, modelId);
 }
 
 /**
@@ -230,11 +183,10 @@ export async function runDialogueAudition(
   const auditionDir = join(outDir, 'audition');
   mkdirSync(auditionDir, { recursive: true });
   const takes: DialogueAuditionTake[] = [];
-  let first = true;
+  const pacer = new RequestPacer();
   for (const item of representatives.values()) {
     for (let take = 1; take <= opts.takes; take++) {
-      if (!first) await sleep(REQUEST_GAP_MS);
-      first = false;
+      await pacer.next();
       const seed = opts.newSeed();
       const rendered = await renderItem(client, item, seed, opts.modelId);
       const file = join(
@@ -267,7 +219,8 @@ export interface DialogueFinalizeOptions {
 /**
  * Finalize: render every planned item, encode Opus into
  * `<outDir>/audio/<dialogueId>/`, map word stamps (per-node ≥95% gate +
- * monotonicity — an untrusted alignment ships NO stamps for that file), and
+ * monotonicity — an untrusted alignment ships NO stamps for that file; a
+ * `<mp3>.stamps.json` sidecar lands next to each render), and
  * return the pack with `NodeAudio` attached to the rendered nodes/choices.
  * Previously attached audio on nodes that were not re-rendered is preserved
  * by the caller's carry-over (audio.ts merges pack.json runs).
@@ -300,25 +253,14 @@ export async function runDialogueFinalize(
   const reports: DialogueTrackReport[] = [];
   const audioBySentenceId = new Map<string, NodeAudio>();
 
-  let first = true;
+  const pacer = new RequestPacer();
   for (const item of items) {
-    if (!first) await sleep(REQUEST_GAP_MS);
-    first = false;
+    await pacer.next();
     const seed = seedFor(item.group);
     const rendered = await renderItem(client, item, seed, opts.modelId);
     const mp3File = join(renderDir, `${item.dialogueId}--${item.sentence.id}.mp3`);
-    writeFileSync(mp3File, rendered.audio);
-    const opusFile = join(outDir, item.file);
-    mkdirSync(join(opusFile, '..'), { recursive: true });
-    encodeOpus(mp3File, opusFile);
-    const durationMs = probeDurationMs(opusFile);
-    const stampResult = rendered.stampResultFor(durationMs);
-    const nodeAudio: NodeAudio = { file: item.file, durationMs };
-    // Untrusted alignment → no timestamps (sentence-level highlight fallback).
-    if (stampResult.trusted && stampResult.stamps.length > 0) {
-      nodeAudio.timestamps = stampResult.stamps;
-    }
-    audioBySentenceId.set(item.sentence.id, nodeAudio);
+    const done = finalizeLine(rendered, outDir, item.file, mp3File);
+    audioBySentenceId.set(item.sentence.id, done.audio);
     reports.push({
       dialogueId: item.dialogueId,
       kind: item.kind,
@@ -326,9 +268,9 @@ export async function runDialogueFinalize(
       characterId: item.character.id,
       voice: item.character.voice,
       seed,
-      durationMs,
-      opusBytes: readFileSync(opusFile).byteLength,
-      stampResult,
+      durationMs: done.durationMs,
+      opusBytes: done.opusBytes,
+      stampResult: done.stampResult,
     });
   }
 

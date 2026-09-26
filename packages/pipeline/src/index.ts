@@ -64,6 +64,16 @@ export {
   type MirrorOptions,
   type MirrorSummary,
 } from './models.ts';
+export {
+  finalizeLine,
+  providerVoiceOf,
+  renderLine,
+  RequestPacer,
+  REQUEST_GAP_MS,
+  type FinalizedLine,
+  type LineRenderSpec,
+  type RenderedLine,
+} from './line-audio.ts';
 export { encodeOpus, probeDurationMs, OPUS_BITRATE } from './opus.ts';
 export { packFileList, runPublish, type PublishOptions, type PublishSummary } from './publish.ts';
 export {
