@@ -279,9 +279,19 @@ export interface DialogueGraphAnalysis {
   hasCycle: boolean;
 }
 
-/** The subset of a Dialogue the graph analysis needs (assembly can pass a pre-validation shape). */
+/**
+ * The subset of a Dialogue the graph analysis needs (assembly can pass a
+ * pre-validation shape). Choices only need their `next` target here, so the
+ * scenario adapter (T56, `scenario.ts` `scenarioGraphInput`) can feed
+ * branch targets as pseudo-choices — the algorithm itself is unchanged.
+ */
 export interface DialogueGraphInput {
-  nodes: readonly Pick<DialogueNode, 'id' | 'choices' | 'next' | 'endingId'>[];
+  nodes: readonly {
+    id: string;
+    choices?: readonly Pick<Choice, 'next'>[];
+    next?: string;
+    endingId?: string;
+  }[];
   startNodeId: string;
   endings: readonly Pick<Ending, 'id'>[];
 }

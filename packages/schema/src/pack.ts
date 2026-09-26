@@ -7,6 +7,7 @@ import {
   StableIdSchema,
 } from './common';
 import { DialogueSchema } from './dialogue';
+import { ScenarioSchema, scenarioLines } from './scenario';
 import { SentenceSchema, WordStampSchema, type Sentence } from './sentence';
 
 // Token/Sentence/WordStamp live in ./sentence since T25 (shared with the
@@ -222,14 +223,15 @@ export type PackTheme = z.infer<typeof PackThemeSchema>;
  * versioning. Everything the app knows about Russian arrives in a pack.
  *
  * Cross-cutting invariants enforced here:
- * - story ids and dialogue ids unique within the pack; sentence ids unique
- *   across the pack — spanning stories AND dialogues (nodes + choices), since
- *   user data references sentence ids pack-wide;
+ * - story, dialogue and scenario ids unique within the pack; sentence ids
+ *   unique across the pack — spanning stories, dialogues (nodes + choices) AND
+ *   scenarios (every turn/retry/react/nudge line + glossary clips), since user
+ *   data references sentence ids pack-wide;
  * - every WordStamp resolves to a real sentence + token index in its story,
  *   and ends within the track duration (dialogue node audio is checked on the
  *   node itself — see DialogueNodeSchema);
  * - pack `type` implies required sections (stories / lesson / exercises /
- *   prompts / dialogues).
+ *   prompts / dialogues / scenarios).
  */
 export const PackSchema = z
   .strictObject({
@@ -249,6 +251,8 @@ export const PackSchema = z
     stories: z.array(StorySchema),
     /** Branching dialogues (T25). Required ≥1 for `dialogue` packs. */
     dialogues: z.array(DialogueSchema).optional(),
+    /** Blind speaking scenarios (T56, M17). Required ≥1 for `scenario` packs. */
+    scenarios: z.array(ScenarioSchema).optional(),
     /** Markdown grammar mini-lesson (course-unit packs). */
     lesson: LessonSchema.optional(),
     /** Authored exercise overrides (checkpoints mainly). */
@@ -327,6 +331,13 @@ export const PackSchema = z
         message: 'a "dialogue" pack must contain at least one dialogue',
       });
     }
+    if (pack.type === 'scenario' && (pack.scenarios?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scenarios'],
+        message: 'a "scenario" pack must contain at least one scenario',
+      });
+    }
 
     // id uniqueness
     const storyIds = new Set<string>();
@@ -351,9 +362,21 @@ export const PackSchema = z
       }
       dialogueIds.add(dialogue.id);
     });
+    const scenarioIds = new Set<string>();
+    (pack.scenarios ?? []).forEach((scenario, si) => {
+      if (scenarioIds.has(scenario.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['scenarios', si, 'id'],
+          message: `duplicate scenario id "${scenario.id}"`,
+        });
+      }
+      scenarioIds.add(scenario.id);
+    });
 
-    // Sentence ids are unique pack-wide, across stories AND dialogues
-    // (dialogue node lines and choice lines are sentences too).
+    // Sentence ids are unique pack-wide, across stories, dialogues AND
+    // scenarios (dialogue node/choice lines and every scenario line — turn,
+    // retry, react, nudge, glossary clip — are sentences too).
     const sentenceIds = new Map<string, Sentence>();
     const claimSentenceId = (sentence: Sentence, path: (string | number)[]) => {
       if (sentenceIds.has(sentence.id)) {
@@ -386,6 +409,11 @@ export const PackSchema = z
           ]);
         });
       });
+    });
+    (pack.scenarios ?? []).forEach((scenario, si) => {
+      for (const ref of scenarioLines(scenario)) {
+        claimSentenceId(ref.line.sentence, ['scenarios', si, ...ref.path, 'sentence', 'id']);
+      }
     });
 
     // word stamps resolve

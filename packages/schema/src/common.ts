@@ -15,6 +15,8 @@ export type CefrLevel = z.infer<typeof CefrLevelSchema>;
  * - `checkpoint` — a level checkpoint test (e.g., "A1 → A2 Checkpoint")
  * - `prompts` — journal prompt collections
  * - `dialogue` — branching speak-your-choice dialogues (T25, V2 §3)
+ * - `scenario` — blind speaking scenarios with a talking cast (T56, M17,
+ *   SPEAKING_SCENARIOS §2)
  */
 export const PackTypeSchema = z.enum([
   'stories',
@@ -22,6 +24,7 @@ export const PackTypeSchema = z.enum([
   'checkpoint',
   'prompts',
   'dialogue',
+  'scenario',
 ]);
 export type PackType = z.infer<typeof PackTypeSchema>;
 
