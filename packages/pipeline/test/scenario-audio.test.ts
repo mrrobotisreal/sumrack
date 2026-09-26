@@ -50,15 +50,15 @@ interface Captured {
   voice_settings?: Record<string, number | boolean>;
 }
 
-/** Fake ElevenLabs backend with the fixture's voice roster (Maxim host, Ivan coach). */
+/** Fake ElevenLabs backend with the fixture's voice roster (Daniel host, River coach). */
 function fakeFetch(mp3: Buffer, captured: Captured[] = []): typeof fetch {
   return (async (url: string | URL | Request, init?: RequestInit) => {
     const u = String(url);
     if (u.includes('/v1/voices')) {
       return Response.json({
         voices: [
-          { voice_id: 'x'.repeat(20), name: 'Maxim - Radio Host' },
-          { voice_id: 'i'.repeat(20), name: 'Ivan - Neutral Reader' },
+          { voice_id: 'x'.repeat(20), name: 'Daniel - Steady Broadcaster' },
+          { voice_id: 'i'.repeat(20), name: 'River - Relaxed, Neutral, Informative' },
         ],
       });
     }

@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { scenarioLines } from '@sumrak/schema';
 import {
   isRoundVowelWord,
   ladderLevel,
@@ -190,5 +191,38 @@ describe('parseWav16 + mouthTrackForFile (real ffmpeg)', () => {
     expect(track.slice(0, 9)).toBe('0'.repeat(9));
     expect(track.slice(11, 19)).toBe('4'.repeat(8));
     expect(track.slice(21)).toBe('0'.repeat(9));
+  });
+});
+
+describe('fixture snapshot (Stories/_build/a1-scenario-fixture — the T57 real render)', () => {
+  // The real render lives outside the repo (Stories/ is a file drop at the
+  // workspace root); when it is present, the track lengths are the contract:
+  // every line's mouth is ceil(durationMs/40) ± 1 and the snapshot pins them.
+  // Worktree-safe: the WORKSPACE root is the parent of the repo (or of
+  // `.worktrees/<name>`), so walk up until a `Stories/` sibling appears.
+  const built = (() => {
+    let dir = join(import.meta.dirname, '..', '..', '..');
+    for (let i = 0; i < 4; i++) {
+      const candidate = join(dir, 'Stories', '_build', 'a1-scenario-fixture', 'pack.json');
+      if (existsSync(candidate)) return candidate;
+      dir = join(dir, '..');
+    }
+    return '';
+  })();
+  it.skipIf(!existsSync(built))('pins the rendered fixture’s per-line mouth track lengths', () => {
+    const pack = JSON.parse(readFileSync(built, 'utf8')) as {
+      scenarios: {
+        turns: { id: string; expect?: { coachAudio?: { durationMs: number; mouth: string } } }[];
+      }[];
+    };
+    const lines = scenarioLines(pack.scenarios[0] as never).map((ref) => {
+      const audio = ref.line.audio!;
+      return `${ref.line.sentence.id}:${audio.durationMs}:${audio.mouth!.length}`;
+    });
+    for (const l of lines) {
+      const [, ms, len] = l.split(':').map(Number);
+      expect(Math.abs(len! - Math.ceil(ms! / 40))).toBeLessThanOrEqual(1);
+    }
+    expect(lines).toMatchSnapshot();
   });
 });
