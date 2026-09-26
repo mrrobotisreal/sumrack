@@ -34,7 +34,7 @@
             "ru": "Ведущий",
             "en": "Host"
           },
-          "voice": "elevenlabs:Maxim",
+          "voice": "elevenlabs:Daniel",
           "style": "radio-host",
           "role": "host",
           "portrait": {
@@ -51,7 +51,7 @@
             "ru": "Вы",
             "en": "You"
           },
-          "voice": "elevenlabs:Ivan",
+          "voice": "elevenlabs:River",
           "style": "neutral",
           "role": "player"
         }

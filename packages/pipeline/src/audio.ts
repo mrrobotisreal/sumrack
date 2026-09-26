@@ -23,6 +23,20 @@ import {
 } from './dialogue-audio.ts';
 import { sniffDraftKind } from './dialogue-draft.ts';
 import {
+  attachLineAudio,
+  auditionRepresentatives,
+  carriedScenarioAudio,
+  planScenarioItems,
+  recomputeMouthTracks,
+  runScenarioAudition,
+  runScenarioFinalize,
+  type CuesByCharacter,
+  type MouthOnlyReport,
+  type ScenarioAuditionTake,
+  type ScenarioTrackReport,
+} from './scenario-audio.ts';
+import { parseScenarioDraft } from './scenario-draft.ts';
+import {
   DEFAULT_LANGUAGE_CODE,
   DEFAULT_MODEL_ID,
   ElevenLabsClient,
@@ -69,8 +83,10 @@ export interface AudioFilters {
   tracks?: string[];
   /** Only render these dialogue ids (all when absent) — T26. */
   dialogues?: string[];
-  /** Render coach audio for choices + scripted player lines — T26. */
+  /** Render coach audio for choices + scripted player lines — T26 (scenarios: accept[0] model answers — T57). */
   playerAudio?: boolean;
+  /** Only render these scenario ids (all when absent) — T57. */
+  scenarios?: string[];
 }
 
 export interface AuditionOptions extends AudioFilters {
@@ -156,15 +172,25 @@ function planStories(
 function parseAll(
   draftPaths: readonly string[],
   extrasPath?: string,
-): { drafts: ParsedDraft[]; pack: Pack } {
+): { drafts: ParsedDraft[]; pack: Pack; cues: CuesByCharacter } {
   const files = draftPaths.map((path) => ({ path, source: readFileSync(path, 'utf8') }));
   // Voice directions live on STORY drafts only; dialogue drafts (T26) carry
   // their voices on characters and are handled by planDialogueItems.
   const drafts = files
     .filter((f) => sniffDraftKind(f.path, f.source) === 'story')
     .map((f) => parseDraft(f.path, f.source));
+  // Scenario drafts (T57) carry render-time `characters[].cues` that never
+  // reach pack.json — collect them here, keyed like the seed groups.
+  const cues: CuesByCharacter = {};
+  for (const f of files) {
+    if (sniffDraftKind(f.path, f.source) !== 'scenario') continue;
+    const parsed = parseScenarioDraft(f.path, f.source);
+    for (const c of parsed.frontmatter.characters) {
+      if (c.cues) cues[`${parsed.frontmatter.scenario.id}/${c.id}`] = c.cues;
+    }
+  }
   const pack = annotateDrafts(files, extrasPath === undefined ? undefined : loadExtras(extrasPath));
-  return { drafts, pack };
+  return { drafts, pack, cues };
 }
 
 function providerVoiceName(direction: ResolvedVoiceDirection, voice = direction.voice): string {
@@ -719,6 +745,7 @@ function newSeed(): number {
 export interface AuditionResult {
   story: AuditionTake[];
   dialogue: DialogueAuditionTake[];
+  scenario: ScenarioAuditionTake[];
 }
 
 /** Render candidate takes for review. Writes MP3s, never touches pack.json. */
@@ -728,11 +755,14 @@ export async function runAudition(
   client: ElevenLabsClient,
   opts: AuditionOptions,
 ): Promise<AuditionResult> {
-  const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
+  const { drafts, pack, cues } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
   const dialogueItems = planDialogueItems(pack, opts);
-  if (plans.length === 0 && dialogueItems.length === 0) {
-    throw new Error('no stories with voice directions (and no dialogues) matched the filters');
+  const scenarioItems = planScenarioItems(pack, opts);
+  if (plans.length === 0 && dialogueItems.length === 0 && scenarioItems.length === 0) {
+    throw new Error(
+      'no stories with voice directions (and no dialogues or scenarios) matched the filters',
+    );
   }
 
   const auditionDir = join(outDir, 'audition');
@@ -769,7 +799,16 @@ export async function runAudition(
           newSeed,
         })
       : [];
-  return { story: takes, dialogue: dialogueTakes };
+  const scenarioTakes =
+    scenarioItems.length > 0
+      ? await runScenarioAudition(client, scenarioItems, outDir, {
+          takes: opts.takes,
+          modelId: opts.modelId,
+          newSeed,
+          cues,
+        })
+      : [];
+  return { story: takes, dialogue: dialogueTakes, scenario: scenarioTakes };
 }
 
 export interface AudioSummary {
@@ -777,6 +816,7 @@ export interface AudioSummary {
   outFile: string;
   reports: TrackReport[];
   dialogueReports: DialogueTrackReport[];
+  scenarioReports: ScenarioTrackReport[];
 }
 
 /**
@@ -828,22 +868,27 @@ export async function runFinalize(
   client: ElevenLabsClient,
   opts: FinalizeOptions,
 ): Promise<AudioSummary> {
-  const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
+  const { drafts, pack, cues } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
   const dialogueItems = planDialogueItems(pack, opts);
-  if (plans.length === 0 && dialogueItems.length === 0) {
-    throw new Error('no stories with voice directions (and no dialogues) matched the filters');
+  const scenarioItems = planScenarioItems(pack, opts);
+  if (plans.length === 0 && dialogueItems.length === 0 && scenarioItems.length === 0) {
+    throw new Error(
+      'no stories with voice directions (and no dialogues or scenarios) matched the filters',
+    );
   }
 
   // Carry over previously rendered tracks (story-by-story workflow).
   const packFile = join(outDir, 'pack.json');
   const existingAudio = new Map<string, AudioTrack[]>();
   let carriedNodeAudio = new Map<string, NodeAudio>();
+  let carriedScenario = carriedScenarioAudio({ scenarios: [] } as unknown as Pack, outDir);
   if (existsSync(packFile)) {
     const prev = safeParsePack(JSON.parse(readFileSync(packFile, 'utf8')));
     if (prev.success) {
       for (const story of prev.data.stories) existingAudio.set(story.id, story.audio);
       carriedNodeAudio = carriedDialogueAudio(prev.data, outDir);
+      carriedScenario = carriedScenarioAudio(prev.data, outDir);
     }
   }
 
@@ -926,14 +971,63 @@ export async function runFinalize(
     dialogueReports = result.reports;
   }
 
-  const validated = safeParsePack(withAudio);
+  // Scenarios: carried line/coach audio first, fresh renders on top (T57).
+  withAudio = attachLineAudio(withAudio, carriedScenario.lines, carriedScenario.coach);
+  let scenarioReports: ScenarioTrackReport[] = [];
+  if (scenarioItems.length > 0) {
+    const result = await runScenarioFinalize(client, withAudio, scenarioItems, outDir, {
+      seeds: opts.seeds,
+      defaultSeed: opts.defaultSeed,
+      modelId: opts.modelId,
+      newSeed,
+      cues,
+    });
+    withAudio = result.pack;
+    scenarioReports = result.reports;
+  }
+
+  const validated = validatePackWithAudio(withAudio);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(packFile, `${JSON.stringify(validated, null, 2)}\n`, 'utf8');
+  return { pack: validated, outFile: packFile, reports, dialogueReports, scenarioReports };
+}
+
+function validatePackWithAudio(pack: Pack): Pack {
+  const validated = safeParsePack(pack);
   if (!validated.success) {
     const details = validated.issues.map((i) => `  ${i.path}: ${i.message}`).join('\n');
     throw new Error(`assembled pack with audio failed schema validation:\n${details}`);
   }
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(packFile, `${JSON.stringify(validated.data, null, 2)}\n`, 'utf8');
-  return { pack: validated.data, outFile: packFile, reports, dialogueReports };
+  return validated.data;
+}
+
+export interface MouthOnlySummary {
+  pack: Pack;
+  outFile: string;
+  reports: MouthOnlyReport[];
+}
+
+/**
+ * `pipeline audio --mouth-only` (T57): recompute every scenario mouth track
+ * of an already-rendered `<outDir>/pack.json` from the Opus files on disk and
+ * rewrite pack.json. Zero provider calls; the drafts are not needed.
+ */
+export function runMouthOnly(
+  outDir: string,
+  opts: { scenarios?: string[] } = {},
+): MouthOnlySummary {
+  const packFile = join(outDir, 'pack.json');
+  if (!existsSync(packFile)) throw new Error(`${packFile} does not exist — render first`);
+  const prev = safeParsePack(JSON.parse(readFileSync(packFile, 'utf8')));
+  if (!prev.success) {
+    const details = prev.issues.map((i) => `  ${i.path}: ${i.message}`).join('\n');
+    throw new Error(`${packFile} is not a valid pack:\n${details}`);
+  }
+  const { pack, reports } = recomputeMouthTracks(prev.data, outDir, opts);
+  if (reports.length === 0) throw new Error('no rendered scenario lines found in pack.json');
+  const validated = validatePackWithAudio(pack);
+  writeFileSync(packFile, `${JSON.stringify(validated, null, 2)}\n`, 'utf8');
+  return { pack: validated, outFile: packFile, reports };
 }
 
 export interface PlannedTrack {
@@ -960,6 +1054,10 @@ export interface AudioRunPlan {
   dialogueNodes: number;
   /** Choice coach renders that would render (only with --player-audio). */
   dialogueChoices: number;
+  /** Scenario lines that would render (every kind; T57). */
+  scenarioLines: number;
+  /** Scenario coach renders (accept[0] model answers, only with --player-audio). */
+  scenarioCoach: number;
   /** ElevenLabs requests the run would fire. */
   requests: number;
   /** Total characters of narration text across those requests. */
@@ -984,6 +1082,7 @@ export function planAudioRun(
   const { drafts, pack } = parseAll(draftPaths, opts.extrasPath);
   const plans = planStories(pack, drafts, opts);
   const dialogueItems = planDialogueItems(pack, opts);
+  const scenarioItems = planScenarioItems(pack, opts);
 
   let storyRequests = 0;
   let storyChars = 0;
@@ -1032,13 +1131,23 @@ export function planAudioRun(
     dialogueChars = dialogueItems.reduce((n, i) => n + i.sentence.ru.length, 0);
   }
 
+  // Scenarios (T57): audition renders the representatives (longest line per
+  // group + longest confused line per group); finalize renders every item.
+  const scenarioTextOf = (i: { sentence?: { ru: string }; text?: string }) =>
+    i.sentence?.ru ?? i.text ?? '';
+  const scenarioPlanned = opts.audition ? auditionRepresentatives(scenarioItems) : scenarioItems;
+  const scenarioRequests = scenarioPlanned.length;
+  const scenarioChars = scenarioPlanned.reduce((n, i) => n + scenarioTextOf(i).length, 0);
+
   const takes = opts.audition ? (opts.takes ?? 3) : 1;
   return {
     storyTracks: storyRequests,
     tracks,
     dialogueNodes: dialogueItems.filter((i) => i.kind === 'node').length,
     dialogueChoices: dialogueItems.filter((i) => i.kind === 'choice').length,
-    requests: (storyRequests + dialogueRequests) * takes,
-    chars: (storyChars + dialogueChars) * takes,
+    scenarioLines: scenarioItems.filter((i) => i.variant !== 'coach').length,
+    scenarioCoach: scenarioItems.filter((i) => i.variant === 'coach').length,
+    requests: (storyRequests + dialogueRequests + scenarioRequests) * takes,
+    chars: (storyChars + dialogueChars + scenarioChars) * takes,
   };
 }

@@ -1,10 +1,19 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import {
   ManifestSchema,
   safeParsePack,
+  scenarioLines,
   type Manifest,
   type ManifestEntry,
   type Pack,
@@ -31,6 +40,8 @@ export interface PublishSummary {
   version: number;
   files: { path: string; bytes: number; sha256: string }[];
   totalBytes: number;
+  /** Bytes under `scene/` (PNG layers, T57) — reported separately: they are the Wi-Fi-gated bulk. */
+  sceneBytes: number;
   /** "published" | "unchanged" (no-op at the same version and hashes). */
   outcome: 'published' | 'unchanged';
   committed?: string;
@@ -49,8 +60,15 @@ function git(repoDir: string, args: string[]): string {
   return res.stdout;
 }
 
-/** The relative paths a pack ships: pack.json + every referenced audio file. */
-export function packFileList(pack: Pack): string[] {
+/** Directory of PNG layers a scenario pack may ship (any depth). */
+export const SCENE_DIR = 'scene';
+
+/**
+ * The relative paths a pack ships: pack.json + every referenced audio file
+ * (+ for scenario packs, every line's audio, every coach file and — when
+ * `packDir` is given — every file under `scene/`, T57).
+ */
+export function packFileList(pack: Pack, packDir?: string): string[] {
   const files = ['pack.json'];
   for (const story of pack.stories) {
     for (const track of story.audio) files.push(track.file);
@@ -64,7 +82,39 @@ export function packFileList(pack: Pack): string[] {
       }
     }
   }
+  // Scenario line audio + coach audio (T57).
+  for (const scenario of pack.scenarios ?? []) {
+    for (const ref of scenarioLines(scenario)) {
+      if (ref.line.audio) files.push(ref.line.audio.file);
+    }
+    for (const turn of scenario.turns) {
+      if (turn.expect?.coachAudio) files.push(turn.expect.coachAudio.file);
+    }
+  }
+  // scene/** — PNG layers referenced by portraits/backdrop; shipped wholesale
+  // (the pack dir is the source of truth for what art exists).
+  if (packDir !== undefined && (pack.scenarios?.length ?? 0) > 0) {
+    files.push(...sceneFiles(packDir));
+  }
   return files;
+}
+
+/** Every regular file under `<packDir>/scene/`, as pack-relative POSIX paths, sorted. */
+export function sceneFiles(packDir: string): string[] {
+  const root = join(packDir, SCENE_DIR);
+  if (!existsSync(root)) return [];
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) walk(abs);
+      else if (entry.isFile() && !entry.name.startsWith('.')) {
+        out.push(relative(packDir, abs).split(sep).join('/'));
+      }
+    }
+  };
+  walk(root);
+  return out.sort();
 }
 
 export function runPublish(
@@ -84,7 +134,7 @@ export function runPublish(
   const pack = parsed.data;
 
   // 2. Collect + hash the pack's files from the source dir.
-  const relPaths = packFileList(pack);
+  const relPaths = packFileList(pack, packDir);
   const files = relPaths.map((rel) => {
     const abs = join(packDir, rel);
     if (!existsSync(abs))
@@ -93,6 +143,9 @@ export function runPublish(
     return { path: rel, bytes: buf.byteLength, sha256: sha256Hex(buf) };
   });
   const totalBytes = files.reduce((n, f) => n + f.bytes, 0);
+  const sceneBytes = files
+    .filter((f) => f.path.startsWith(`${SCENE_DIR}/`))
+    .reduce((n, f) => n + f.bytes, 0);
 
   // 3. Manifest + version discipline.
   const manifestFile = join(contentRepoDir, 'manifest.json');
@@ -118,6 +171,7 @@ export function runPublish(
           version: pack.version,
           files,
           totalBytes,
+          sceneBytes,
           outcome: 'unchanged',
           pushed: false,
         };
@@ -177,6 +231,7 @@ export function runPublish(
     version: pack.version,
     files,
     totalBytes,
+    sceneBytes,
     outcome: 'published',
     committed,
     pushed: opts.push === true,

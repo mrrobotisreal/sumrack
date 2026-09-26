@@ -209,23 +209,53 @@ export const SlotSchema = z.discriminatedUnion('kind', [
 ]);
 export type Slot = z.infer<typeof SlotSchema>;
 
-export const ExpectationSchema = z.strictObject({
-  slots: z.array(SlotSchema).min(1).max(6),
-  /** Whole-utterance paraphrases (natural text) accepted via the T27 scorer at ≥ 60 — the first one is the debrief's model answer and gets coach audio. */
-  accept: z.array(z.string().min(1)).min(1),
-  /** Which slot's matched option key drives `next.on`. Required when next has `on`. */
-  branchOn: StableIdSchema.optional(),
-  /** Confusables: forms that mean the answer was of the wrong type; `react` (optional) is a targeted line played instead of the generic confused line. */
-  reject: z
-    .array(
-      z.strictObject({
-        forms: z.array(z.string().min(1)).min(1),
-        react: ScenarioLineSchema.optional(),
-      }),
-    )
-    .max(4)
-    .optional(),
-});
+export const ExpectationSchema = z
+  .strictObject({
+    slots: z.array(SlotSchema).min(1).max(6),
+    /** Whole-utterance paraphrases (natural text) accepted via the T27 scorer at ≥ 60 — the first one is the debrief's model answer and gets coach audio. */
+    accept: z.array(z.string().min(1)).min(1),
+    /** Which slot's matched option key drives `next.on`. Required when next has `on`. */
+    branchOn: StableIdSchema.optional(),
+    /** Confusables: forms that mean the answer was of the wrong type; `react` (optional) is a targeted line played instead of the generic confused line. */
+    reject: z
+      .array(
+        z.strictObject({
+          forms: z.array(z.string().min(1)).min(1),
+          react: ScenarioLineSchema.optional(),
+        }),
+      )
+      .max(4)
+      .optional(),
+    /**
+     * Optional coach audio for `accept[0]` («hear how to say it» in the
+     * debrief), rendered by `pipeline audio --player-audio` in the reserved
+     * `player` character's voice (T57; the T26 `Choice.audio` precedent).
+     * `accept[0]` is free text with no annotated sentence, so coach audio
+     * carries a duration + mouth track but never word stamps.
+     */
+    coachAudio: LineAudioSchema.optional(),
+  })
+  .superRefine((expectation, ctx) => {
+    const audio = expectation.coachAudio;
+    if (audio === undefined) return;
+    if (audio.timestamps !== undefined && audio.timestamps.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['coachAudio', 'timestamps'],
+        message: 'coach audio speaks free text (accept[0]) and carries no word stamps',
+      });
+    }
+    if (audio.mouth !== undefined) {
+      const expected = Math.ceil(audio.durationMs / MOUTH_TRACK_STEP_MS);
+      if (Math.abs(audio.mouth.length - expected) > 1) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['coachAudio', 'mouth'],
+          message: `mouth track has ${audio.mouth.length} steps but the audio lasts ${audio.durationMs}ms = ${expected} steps of ${MOUTH_TRACK_STEP_MS}ms (±1 allowed)`,
+        });
+      }
+    }
+  });
 export type Expectation = z.infer<typeof ExpectationSchema>;
 
 export const RetrySchema = z.strictObject({

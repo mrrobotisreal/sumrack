@@ -20,7 +20,7 @@ scenario:
 characters:
   - id: host
     name: { ru: 'Ведущий', en: 'Host' }
-    voice: elevenlabs:Maxim
+    voice: elevenlabs:Daniel
     style: radio-host
     role: host
     portrait:
@@ -30,7 +30,7 @@ characters:
       hint: 'Warmer and slower — the host is helping, not testing.'
   - id: player
     name: { ru: 'Вы', en: 'You' }
-    voice: elevenlabs:Ivan
+    voice: elevenlabs:River
     style: neutral
     role: player
 scene:
