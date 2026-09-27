@@ -25,7 +25,11 @@ export type AiFeature =
   | 'import-annotate'
   | 'word-profile'
   | 'grammar-lesson'
-  | 'grammar-key-test';
+  | 'grammar-key-test'
+  // M17 scenarios (T60): the rescue judge + the two суфлёр one-liners.
+  | 'scenario-rescue'
+  | 'scenario-explain'
+  | 'scenario-howtosay';
 
 export interface RunChatResult extends ChatResult {
   /**

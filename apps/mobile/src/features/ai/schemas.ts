@@ -216,6 +216,16 @@ export type ImportAnnotateResponse = z.infer<typeof ImportAnnotateResponseSchema
 /** Explain-this returns prose (markdown), not JSON — just bound it. */
 export const ExplainResponseSchema = z.string().min(1).max(20_000);
 
+// --- Scenario rescue (T60, SPEAKING_SCENARIOS §5.3) --------------------------
+
+/** The fast model's one-object reply; `branchKey` is validated against the turn's keys by the caller. */
+export const RescueVerdictSchema = z.object({
+  verdict: z.enum(['accept', 'reject']),
+  branchKey: z.string().min(1).max(64).nullable().optional(),
+  reason: z.string().max(1000).optional(),
+});
+export type RescueVerdict = z.infer<typeof RescueVerdictSchema>;
+
 // --- JSON extraction --------------------------------------------------------
 
 /**

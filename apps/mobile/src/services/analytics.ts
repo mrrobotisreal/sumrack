@@ -387,7 +387,15 @@ export type AnalyticsEvent =
   | 'assist_model_install_finished'
   | 'assist_model_install_failed'
   | 'assist_model_deleted'
-  | 'dev_assist_bench';
+  | 'dev_assist_bench'
+  // M17 «Сценарии» — T60 judge/engine (§4.5 T60; slugs/numbers/booleans only — never a
+  // transcript). scenario_endpoint {reason:'silence'|'cap'|'manual'|'hold'|'no-speech', speechMs}
+  // · scenario_judge {outcome, slotsHit, slotsRequired, score, margin, ms} · scenario_rescue
+  // {verdict:'accept'|'reject'|'error', ms, model, code?} · scenario_meta {intent, source, hit}.
+  | 'scenario_endpoint'
+  | 'scenario_judge'
+  | 'scenario_rescue'
+  | 'scenario_meta';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

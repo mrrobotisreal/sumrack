@@ -28,6 +28,7 @@ import {
   buildWordProfileMessages,
   type WordProfileInput,
 } from '../src/features/ai/prompts/word-profile';
+import { buildRescueMessages, type RescueInput } from '../src/features/ai/prompts/scenario-rescue';
 
 const MODEL = 'anthropic/claude-sonnet-5';
 const OUT_DIR = join(
@@ -214,7 +215,57 @@ function grammarLessonInput(): GrammarLessonInput {
 }
 const GRAMMAR_LESSON_MAX_TOKENS = 12_288;
 
+/**
+ * T60 scenario-rescue fixtures (SPEAKING_SCENARIOS §5.3): the SAME turn
+ * («Откуда ты?», podcast A1 t03) with an off-script-but-valid answer the
+ * offline judge misses (⇒ accept) and a wrong speech act (⇒ reject).
+ * Captured at the Anthropic `fastest` notch the app uses (Haiku 4.5, effort
+ * low, temperature 0, 200 tokens) — `RESCUE_MODEL` below mirrors
+ * `DEFAULT_MODEL_TABLE.anthropic.fastest`.
+ */
+const RESCUE_MODEL = 'anthropic/claude-haiku-4.5';
+const RESCUE_TURN: Omit<RescueInput, 'transcript'> = {
+  language: 'ru',
+  questionRu: 'Очень приятно! Откуда ты?',
+  questionEn: 'Nice to meet you! Where are you from?',
+  slots: [
+    {
+      kind: 'forms',
+      id: 'origin',
+      required: true,
+      acceptsNumber: false,
+      options: [
+        { key: 'usa', lemma: 'Америка', forms: ['америк*', 'сша', 'штат*'] },
+        { key: 'colorado', lemma: 'Колорадо', forms: ['колорадо'] },
+        { key: 'elsewhere', lemma: 'из', forms: ['из'] },
+      ],
+    },
+  ],
+  accept: ['Я из Америки.', 'Из Колорадо.', 'Я из США.'],
+  allowedKeys: ['usa', 'colorado', 'elsewhere'],
+};
+const RESCUE_CASES: { name: string; transcript: string }[] = [
+  // Valid, off-script: names the city only — no «из», no authored form (a real offline miss).
+  { name: 'scenario-rescue-accept', transcript: 'я родился в денвере и живу там всю жизнь' },
+  // Wrong speech act: a thank-you instead of an answer.
+  { name: 'scenario-rescue-reject', transcript: 'спасибо большое очень приятно' },
+];
+const RESCUE_EXTRAS = {
+  verbosity: 'low',
+  reasoning: { enabled: true, exclude: true },
+  usage: { include: true },
+};
+
 async function chat(
+  messages: unknown,
+  maxTokens: number,
+  opts: { temperature?: number; extras?: Record<string, unknown> } = {},
+): Promise<unknown> {
+  return chatWith(MODEL, messages, maxTokens, opts);
+}
+
+async function chatWith(
+  model: string,
   messages: unknown,
   maxTokens: number,
   opts: { temperature?: number; extras?: Record<string, unknown> } = {},
@@ -223,7 +274,7 @@ async function chat(
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages,
       max_tokens: maxTokens,
       temperature: opts.temperature ?? 0.3,
@@ -345,6 +396,20 @@ async function main() {
     });
     writeFileSync(
       join(OUT_DIR, 'grammar-lesson.json'),
+      JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
+    );
+  }
+
+  for (const { name, transcript } of RESCUE_CASES) {
+    if (!wants(name)) continue;
+    console.log(`capturing ${name} (${RESCUE_MODEL}, fastest/low)…`);
+    const input: RescueInput = { ...RESCUE_TURN, transcript };
+    const raw = await chatWith(RESCUE_MODEL, buildRescueMessages(input), 200, {
+      temperature: 0,
+      extras: RESCUE_EXTRAS,
+    });
+    writeFileSync(
+      join(OUT_DIR, `${name}.json`),
       JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
     );
   }

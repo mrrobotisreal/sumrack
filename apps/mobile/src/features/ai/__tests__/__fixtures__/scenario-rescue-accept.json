@@ -1,0 +1,83 @@
+{
+  "input": {
+    "language": "ru",
+    "questionRu": "Очень приятно! Откуда ты?",
+    "questionEn": "Nice to meet you! Where are you from?",
+    "slots": [
+      {
+        "kind": "forms",
+        "id": "origin",
+        "required": true,
+        "acceptsNumber": false,
+        "options": [
+          {
+            "key": "usa",
+            "lemma": "Америка",
+            "forms": [
+              "америк*",
+              "сша",
+              "штат*"
+            ]
+          },
+          {
+            "key": "colorado",
+            "lemma": "Колорадо",
+            "forms": [
+              "колорадо"
+            ]
+          },
+          {
+            "key": "elsewhere",
+            "lemma": "из",
+            "forms": [
+              "из"
+            ]
+          }
+        ]
+      }
+    ],
+    "accept": [
+      "Я из Америки.",
+      "Из Колорадо.",
+      "Я из США."
+    ],
+    "allowedKeys": [
+      "usa",
+      "colorado",
+      "elsewhere"
+    ],
+    "transcript": "я родился в денвере и живу там всю жизнь"
+  },
+  "model": "anthropic/claude-haiku-4.5",
+  "choices": [
+    {
+      "message": {
+        "content": "```json\n{\"verdict\":\"accept\",\"branchKey\":\"colorado\",\"reason\":\"The learner states they were born in Denver and have lived there their whole life. Denver is in Colorado, so this clearly indicates Colorado as the origin. While more elaborate than the minimal accepted paraphrases, it directly and unambiguously answers where they are from.\"}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 313,
+    "completion_tokens": 78,
+    "total_tokens": 391,
+    "cost": 0.000703,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000703,
+      "upstream_inference_prompt_cost": 0.000313,
+      "upstream_inference_completions_cost": 0.00039
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}
