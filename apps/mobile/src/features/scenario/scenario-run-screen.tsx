@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QueryError } from '@/components/query-error';
@@ -50,6 +50,9 @@ import { useScenarioRun } from './use-scenario-run';
 
 /** «(принято)» badge hold after a rescued answer (§9.3). */
 const RESCUED_BADGE_MS = 1000;
+
+/** Stable style objects — a fresh `{flex:1}` per render would defeat the scene's memo (T61 probe). */
+const FILL = { flex: 1 } as const;
 
 export function ScenarioRunScreen() {
   const router = useRouter();
@@ -188,6 +191,20 @@ export function ScenarioRunScreen() {
     ]);
   }, [inRun, router, run]);
 
+  // Hardware BACK mid-run goes through the same leave dialog (never a silent pop).
+  const confirmLeaveRef = React.useRef(confirmLeave);
+  React.useEffect(() => {
+    confirmLeaveRef.current = confirmLeave;
+  }, [confirmLeave]);
+  React.useEffect(() => {
+    if (!inRun) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      confirmLeaveRef.current();
+      return true;
+    });
+    return () => sub.remove();
+  }, [inRun]);
+
   const micState: MicVisualState =
     phase.kind === 'listening'
       ? phase.recording === 'idle'
@@ -283,7 +300,7 @@ export function ScenarioRunScreen() {
           pose={pose}
           shape={shape}
           active={phase.kind !== 'paused'}
-          style={{ flex: 1 }}
+          style={FILL}
         />
         <View
           className="absolute left-0 right-0 flex-row items-center gap-2 px-3"

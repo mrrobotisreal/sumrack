@@ -618,7 +618,13 @@ export function reduce(graph: EngineGraph, state: TurnState, event: TurnEvent): 
           lifelineRevealed: true,
           counters: { ...state.counters, assisted: true },
         },
-        effects: [trackEffect('scenario_lifeline_revealed', { turnId: state.turnId })],
+        effects: [
+          trackEffect('scenario_lifeline_revealed', { turnId: state.turnId }),
+          {
+            type: 'PERSIST_STEP',
+            leaving: stepCounters({ ...state.counters, assisted: true }),
+          },
+        ],
       };
     }
 
@@ -712,6 +718,9 @@ function miss(
     skipAvailable: state.skipAvailable || misses >= 3,
   };
   const persisted = persistAnswer(next, 'miss', transcript, judge);
+  // T62 (§7.3 / §12 "app killed mid-run"): the open step carries the miss
+  // count so a resume restores the ladder (lifeline/skip) — not just attempts.
+  const stepSync: TurnEffect = { type: 'PERSIST_STEP', leaving: stepCounters(next.counters) };
   let reaction: ReactionKind;
   let first: string;
   if (misses === 1) {
@@ -736,7 +745,12 @@ function miss(
     reaction = retry.second ? 'second' : 'hint';
     first = retry.second ?? retry.hint;
   }
-  return react(next, reaction, [item(first), prompt], [{ type: 'DISARM_SILENCE' }, persisted]);
+  return react(
+    next,
+    reaction,
+    [item(first), prompt],
+    [{ type: 'DISARM_SILENCE' }, persisted, stepSync],
+  );
 }
 
 /** Meta-intents (§6): none counts as a miss; every one persists a `meta` attempt. */
@@ -780,7 +794,12 @@ function handleMeta(
     source,
     hit: hit !== null || source === 'played' || source === 'online',
   });
-  const common: TurnEffect[] = [{ type: 'DISARM_SILENCE' }, persisted, track];
+  const common: TurnEffect[] = [
+    { type: 'DISARM_SILENCE' },
+    persisted,
+    track,
+    { type: 'PERSIST_STEP', leaving: stepCounters(counters) },
+  ];
 
   switch (resolution.intent) {
     case 'repeat':

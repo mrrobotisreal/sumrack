@@ -356,16 +356,8 @@ export function useScenarioRun(
         });
         return;
       }
-      const startedAt = Date.now();
+      // The reducer's own TRACK effect reports scenario_judge (one event per verdict).
       const result = judgeAnswer(transcript, turn.expect);
-      track('scenario_judge', {
-        outcome: result.verdict,
-        slotsHit: result.slotResults.filter((s) => s.required && s.hit !== null).length,
-        slotsRequired: result.slotResults.filter((s) => s.required).length,
-        score: result.score,
-        margin: result.score - 60,
-        ms: Date.now() - startedAt,
-      });
       dispatchRef.current({ type: 'JUDGED', result });
     },
     [],
@@ -514,14 +506,15 @@ export function useScenarioRun(
           const row = await ensureRun();
           if (!row || finishedRef.current) return;
           finishedRef.current = true;
-          const totals = stateRef.current?.totals ?? { answered: 0, clean: 0 };
           const { stats, newEnding } = await repos.scenarios.finishRun(row.id, {
             endingId: effect.endingId,
           });
+          // §5.4: itemCount = answered turns, correctCount = clean turns — from
+          // the persisted stats so a resumed run counts its earlier turns too.
           if (sessionIdRef.current) {
             await repos.stats.finishGameSession(sessionIdRef.current, {
-              itemCount: totals.answered,
-              correctCount: totals.clean,
+              itemCount: stats.turns,
+              correctCount: stats.cleanTurns,
               detail: { runId: row.id, endingId: effect.endingId, ...stats },
             });
           }
@@ -587,6 +580,12 @@ export function useScenarioRun(
       const { state: next, effects } = reduce(g, s, event);
       stateRef.current = next;
       setState(next);
+      if (__DEV__) {
+        // A one-line trace an adb/Metro session can follow (never a transcript).
+        console.log(
+          `[scenario-run] ${event.type} → ${next.turnId} ${JSON.stringify(next.phase)} misses=${next.counters.misses} lifeline=${next.lifelineAvailable}/${next.lifelineRevealed} skip=${next.skipAvailable} fx=${effects.map((e) => e.type).join(',')}`,
+        );
+      }
       // Effects run in order, serialized across dispatches; a failure is logged, never fatal.
       queueRef.current = queueRef.current.then(async () => {
         for (const effect of effects) {
@@ -723,6 +722,7 @@ export function useScenarioRun(
     runRef.current = null;
     sessionIdRef.current = null;
     playedRef.current = [];
+    finishedRef.current = false;
     const fresh = initialState(g);
     stateRef.current = fresh;
     setRun(null);
@@ -730,7 +730,10 @@ export function useScenarioRun(
     setVisited([g.startTurnId]);
     setFinish(null);
     setState(fresh);
-  }, [disarmSilence, stopAudio]);
+    // The T27 precedent: the fresh run row starts NOW, so it — not the
+    // abandoned one — is the newest unfinished run the hub's Continue finds.
+    await ensureRun();
+  }, [disarmSilence, ensureRun, stopAudio]);
 
   const lineDone = React.useCallback(() => dispatch({ type: 'LINE_DONE' }), [dispatch]);
 

@@ -5,47 +5,13 @@ import { Text } from '@/components/ui/text';
 
 import type { TurnState } from '../engine/turn-machine';
 
-/**
- * The stage's state line (T62 §9.3): what is happening, never a transcript.
- * «{Host} говорит…» · «Слушаю…» · «Думаю…» · «{Host} переспрашивает…» ·
- * «(принято)» for a second after an online rescue.
- */
-export function stateLineText(state: TurnState, host: string): string {
-  const p = state.phase;
-  switch (p.kind) {
-    case 'intro':
-      return '';
-    case 'saying':
-      return `${host} говорит…`;
-    case 'listening':
-      return p.recording === 'idle' ? 'Твоя очередь — нажми и говори' : 'Слушаю…';
-    case 'deciding':
-      return 'Думаю…';
-    case 'reacting':
-      switch (p.reaction) {
-        case 'confused':
-        case 'react':
-          return `${host} переспрашивает…`;
-        case 'hint':
-        case 'second':
-        case 'dont-understand':
-          return `${host} подсказывает…`;
-        case 'repeat':
-        case 'slower':
-          return `${host} повторяет…`;
-        case 'explain':
-        case 'howtosay':
-          return `${host} объясняет…`;
-        default:
-          return `${host} говорит…`;
-      }
-    case 'ending':
-      return '';
-    case 'paused':
-      return 'Пауза';
-  }
-}
+import { stateLineText } from './state-line-text';
 
+/**
+ * The stage's state line (T62 §9.3): «{Host} говорит…» · «Слушаю…» ·
+ * «Думаю…» · «{Host} переспрашивает…» · «(принято)» for a second after an
+ * online rescue. Text from `state-line-text.ts`.
+ */
 export function StateLine({
   state,
   host,

@@ -18,6 +18,8 @@ import { ScenarioScene, type SceneSpec } from './scene';
  * «What you can say» (the five meta-intents RU + EN) and «Начать» /
  * «Продолжить» for a resumed run. The screen owns the haptic + bed fade.
  */
+const FILL = { flex: 1 } as const;
+
 export function IntroCard({
   detail,
   spec,
@@ -43,7 +45,7 @@ export function IntroCard({
   return (
     <View className="flex-1 bg-bg">
       <View style={{ flex: 1 }}>
-        <ScenarioScene spec={spec} pose="idle" shape={shape} active style={{ flex: 1 }} />
+        <ScenarioScene spec={spec} pose="idle" shape={shape} active style={FILL} />
         <View
           className="absolute left-0 right-0 flex-row items-center justify-between px-3"
           style={{ top: insets.top + 6 }}
@@ -61,76 +63,86 @@ export function IntroCard({
         </View>
       </View>
 
-      <ScrollView
-        className="max-h-[52%] rounded-t-3xl border-t border-border bg-surface"
-        contentContainerClassName="gap-4 px-5 pb-4 pt-5"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+      <View
+        className="rounded-t-3xl border-t border-border bg-surface"
+        style={{ maxHeight: '58%', paddingBottom: insets.bottom + 12 }}
       >
-        <View className="gap-1">
-          <RNText className="font-reading text-2xl text-text">{s.titleRu}</RNText>
-          <Text variant="caption">{s.titleEn}</Text>
-        </View>
-
-        <Pressable
-          onPress={() => setShowEn((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel={showEn ? 'Hide translation' : 'Show translation'}
-          accessibilityState={{ expanded: showEn }}
-          className="rounded-xl border border-border bg-bg p-4"
+        <ScrollView
+          style={{ flexGrow: 0 }}
+          contentContainerClassName="gap-4 px-5 pb-2 pt-5"
+          showsVerticalScrollIndicator={false}
         >
-          <View className="flex-row items-start gap-2">
-            <RNText className="flex-1 font-reading text-lg leading-7 text-text">{s.briefRu}</RNText>
-            <Ionicons
-              name={showEn ? 'language' : 'language-outline'}
-              size={16}
-              color={showEn ? theme.accent : theme.border}
-            />
+          <View className="gap-1">
+            <RNText className="font-reading text-2xl text-text">{s.titleRu}</RNText>
+            <Text variant="caption">{s.titleEn}</Text>
           </View>
-          {showEn && (
-            <RNText className="mt-2 border-l-2 border-accent/40 pl-3 font-reading-italic text-base text-text-muted">
-              {s.briefEn}
-            </RNText>
-          )}
-        </Pressable>
 
-        <View className="gap-1.5">
-          <Text variant="caption" className="uppercase tracking-wider">
-            Что можно сказать
-          </Text>
-          <View className="flex-row flex-wrap gap-1.5">
-            {SPOKEN_COMMANDS.map((c) => (
-              <View
-                key={c.intent}
-                className="flex-row items-baseline gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1"
-              >
-                <RNText className="font-reading text-sm text-text">{c.ru}</RNText>
-                <Text className="text-xs text-text-muted">{c.en}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <Pressable
-          onPress={onStart}
-          accessibilityRole="button"
-          accessibilityLabel={resumed ? 'Continue the scenario' : 'Start the scenario'}
-          className="flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3.5 active:opacity-80"
-        >
-          <Ionicons name={resumed ? 'play' : 'mic'} size={16} color={theme.bg} />
-          <Text className="font-ui-medium text-bg">{resumed ? 'Продолжить' : 'Начать'}</Text>
-        </Pressable>
-        {resumed && (
           <Pressable
-            onPress={onRestart}
+            onPress={() => setShowEn((v) => !v)}
             accessibilityRole="button"
-            className="items-center py-1 active:opacity-70"
+            accessibilityLabel={showEn ? 'Hide translation' : 'Show translation'}
+            accessibilityState={{ expanded: showEn }}
+            className="rounded-xl border border-border bg-bg p-4"
           >
-            <Text variant="caption" className="text-accent">
-              Начать заново
-            </Text>
+            <View className="flex-row items-start gap-2">
+              <RNText className="flex-1 font-reading text-lg leading-7 text-text">
+                {s.briefRu}
+              </RNText>
+              <Ionicons
+                name={showEn ? 'language' : 'language-outline'}
+                size={16}
+                color={showEn ? theme.accent : theme.border}
+              />
+            </View>
+            {showEn && (
+              <RNText className="mt-2 border-l-2 border-accent/40 pl-3 font-reading-italic text-base text-text-muted">
+                {s.briefEn}
+              </RNText>
+            )}
           </Pressable>
-        )}
-      </ScrollView>
+
+          <View className="gap-1.5">
+            <Text variant="caption" className="uppercase tracking-wider">
+              Что можно сказать
+            </Text>
+            <View className="flex-row flex-wrap gap-1.5">
+              {SPOKEN_COMMANDS.map((c) => (
+                <View
+                  key={c.intent}
+                  className="flex-row items-baseline gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1"
+                >
+                  <RNText className="font-reading text-sm text-text">{c.ru}</RNText>
+                  <Text className="text-xs text-text-muted">{c.en}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* pinned: never scrolls off */}
+        <View className="gap-2 px-5 pt-2">
+          <Pressable
+            onPress={onStart}
+            accessibilityRole="button"
+            accessibilityLabel={resumed ? 'Continue the scenario' : 'Start the scenario'}
+            className="flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3.5 active:opacity-80"
+          >
+            <Ionicons name={resumed ? 'play' : 'mic'} size={16} color={theme.bg} />
+            <Text className="font-ui-medium text-bg">{resumed ? 'Продолжить' : 'Начать'}</Text>
+          </Pressable>
+          {resumed && (
+            <Pressable
+              onPress={onRestart}
+              accessibilityRole="button"
+              className="items-center py-1 active:opacity-70"
+            >
+              <Text variant="caption" className="text-accent">
+                Начать заново
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
     </View>
   );
 }

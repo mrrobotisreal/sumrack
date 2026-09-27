@@ -346,6 +346,11 @@ describe('the miss ladder', () => {
     expect(r.state.counters.assisted).toBe(true);
     expect(r.effects).toEqual([
       { type: 'TRACK', event: 'scenario_lifeline_revealed', props: { turnId: 'radio-a1-t02' } },
+      // T62: the reveal syncs `assisted` onto the open step (resume fidelity).
+      {
+        type: 'PERSIST_STEP',
+        leaving: { misses: 2, assisted: true, skipped: false, rescued: false, meta: 0 },
+      },
     ]);
     expect(reduce(graph, r.state, { type: 'LIFELINE_TAP' }).effects).toEqual([]);
     const m = reduce(graph, speak(r.state, 'меня зовут митч').state, {
@@ -747,5 +752,43 @@ describe('REPLAY_TAP slower (T62: long-press ⟳)', () => {
     const plain = reduce(graph, s, { type: 'REPLAY_TAP' });
     expect(plain.state.phase).toMatchObject({ kind: 'reacting', reaction: 'repeat' });
     expect(plays(plain.effects)).toEqual(['radio-a1-t02']);
+  });
+});
+
+describe('mid-turn counters persist on the open step (T62 §7.3 resume fidelity)', () => {
+  it('a miss syncs misses onto the open step; the lifeline reveal syncs assisted; a meta ask syncs meta', () => {
+    const missOnce = (state: TurnState) => {
+      const j = reduce(graph, speak(state, 'бла бла').state, {
+        type: 'JUDGED',
+        result: missResult(),
+      });
+      const r = reduce(graph, j.state, { type: 'RESCUED', outcome: null });
+      return { state: r.state, effects: [...j.effects, ...r.effects] };
+    };
+    const s = toT02Listening();
+    const m1 = missOnce(s);
+    expect(m1.effects).toContainEqual({
+      type: 'PERSIST_STEP',
+      leaving: { misses: 1, assisted: false, skipped: false, rescued: false, meta: 0 },
+    });
+    // A step sync never carries nextTurnId (the turn is still open).
+    for (const e of m1.effects) if (e.type === 'PERSIST_STEP') expect(e.nextTurnId).toBeUndefined();
+    const l1 = run(m1.state, [{ type: 'LINE_DONE' }, { type: 'LINE_DONE' }]).state;
+    const l2 = run(missOnce(l1).state, [{ type: 'LINE_DONE' }, { type: 'LINE_DONE' }]).state;
+    const lifeline = reduce(graph, l2, { type: 'LIFELINE_TAP' });
+    expect(lifeline.effects).toContainEqual({
+      type: 'PERSIST_STEP',
+      leaving: { misses: 2, assisted: true, skipped: false, rescued: false, meta: 0 },
+    });
+    const asked = run(lifeline.state, [
+      { type: 'MIC_TAP' },
+      ENDPOINT,
+      { type: 'TRANSCRIPT', text: 'повтори' },
+      meta('repeat'),
+    ]);
+    expect(asked.effects).toContainEqual({
+      type: 'PERSIST_STEP',
+      leaving: { misses: 2, assisted: true, skipped: false, rescued: false, meta: 1 },
+    });
   });
 });
