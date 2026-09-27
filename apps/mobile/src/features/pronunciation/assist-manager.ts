@@ -167,7 +167,7 @@ async function doInstall(): Promise<void> {
 }
 
 /** Delete everything in the model dir except the three files the module loads. */
-function pruneUnusedModelFiles(model: AssistModel = ASSIST_MODEL): void {
+export function pruneUnusedModelFiles(model: AssistModel = ASSIST_MODEL): void {
   const keep = new Set(Object.values(model.files));
   const dir = assistModelDir(model);
   for (const entry of dir.list()) {

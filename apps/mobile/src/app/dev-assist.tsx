@@ -7,12 +7,20 @@ import { Text } from '@/components/ui/text';
 import SherpaSpeech from '../../modules/sherpa-speech';
 import { transcriptResultSchema } from '@/features/pronunciation/asr-catalog';
 import { transcribeWav } from '@/features/pronunciation/asr-service';
-import { ASSIST_CANDIDATES, type AssistModel } from '@/features/pronunciation/assist-catalog';
+import { downloadModelArchive, resolveModelDownloadSpecs } from '@/features/models/install-source';
+import {
+  ASSIST_CANDIDATES,
+  ASSIST_MODEL,
+  type AssistModel,
+} from '@/features/pronunciation/assist-catalog';
 import {
   assistModelPaths,
   assistRootDir,
   isAssistInstalled,
+  pruneUnusedModelFiles,
+  refreshInstalledAssist,
 } from '@/features/pronunciation/assist-manager';
+import { transcribeEnglish } from '@/features/pronunciation/assist-service';
 import { encodeWavToOpus } from '@/features/pronunciation/opus-encoder';
 import {
   attemptWavPath,
@@ -75,7 +83,9 @@ export default function DevAssistScreen() {
       if (recording) {
         const res = await stopAttemptRecording();
         setRecording(false);
-        setWavPath(res.path);
+        // The native module returns an absolute path; expo-file-system's
+        // File wants a file:// URI.
+        setWavPath(res.path.startsWith('file://') ? res.path : `file://${res.path}`);
         log(JSON.stringify({ op: 'recorded', durationMs: res.durationMs }));
         return;
       }
@@ -238,6 +248,77 @@ export default function DevAssistScreen() {
     [guard, log],
   );
 
+  /**
+   * The pinned model through the REAL resolver + downloader (manifest →
+   * Release asset → sha256), skipping only the Wi-Fi/online gate — for
+   * proving the T59 release path on a device whose only link is a reverse
+   * tether the gate does not count as internet. Settings → Get is the
+   * production path (gate included).
+   */
+  const fetchViaResolver = React.useCallback(() => {
+    guard('resolver-fetch', async () => {
+      const t0 = Date.now();
+      const specs = await resolveModelDownloadSpecs({
+        id: ASSIST_MODEL.id,
+        fallbackUrl: ASSIST_MODEL.archiveUrl,
+        sha256: ASSIST_MODEL.archiveSha256,
+        bytes: ASSIST_MODEL.archiveBytes,
+      });
+      log(JSON.stringify({ op: 'resolver', order: specs.map((s) => s.source) }));
+      const root = assistRootDir();
+      if (!root.exists) root.create({ intermediates: true });
+      const archive = new File(root, `${ASSIST_MODEL.dirName}.tar.bz2`);
+      let lastPct = -1;
+      const got = await downloadModelArchive(specs, archive, (phase, progress) => {
+        const pct = Math.round(progress * 100);
+        if (phase !== 'downloading' || pct - lastPct >= 20) {
+          lastPct = pct;
+          log(JSON.stringify({ op: 'download', phase, pct }));
+        }
+      });
+      const extracted = await SherpaSpeech.extractTarBz2(archive.uri, root.uri);
+      archive.delete();
+      pruneUnusedModelFiles();
+      const installed = await refreshInstalledAssist();
+      log(
+        JSON.stringify({
+          op: 'resolver-fetch-done',
+          source: got.source,
+          rootDir: extracted.rootDir,
+          extractedBytes: extracted.bytes,
+          installed,
+          ms: Date.now() - t0,
+        }),
+      );
+    });
+  }, [guard, log]);
+
+  /** The production service path (ensure-loaded + Zod + events) on the current clip. */
+  const serviceEnglish = React.useCallback(() => {
+    guard('service', async () => {
+      const t0 = Date.now();
+      const r = await transcribeEnglish(wavPath);
+      log(
+        JSON.stringify({
+          op: 'service-transcribeEnglish',
+          text: r.text,
+          decodeMs: r.decodeMs,
+          audioMs: r.audioMs,
+          totalMs: Date.now() - t0,
+          whisper: SherpaSpeech.getLoadedWhisperId(),
+        }),
+      );
+    });
+  }, [guard, log, wavPath]);
+
+  const prune = React.useCallback(() => {
+    guard('prune', async () => {
+      pruneUnusedModelFiles();
+      const installed = await refreshInstalledAssist();
+      log(JSON.stringify({ op: 'pruned', installed }));
+    });
+  }, [guard, log]);
+
   const unloadAll = React.useCallback(() => {
     guard('unload', async () => {
       await SherpaSpeech.unloadWhisper();
@@ -299,6 +380,15 @@ export default function DevAssistScreen() {
       </Text>
       <View className="flex-row flex-wrap gap-2">
         {ASSIST_CANDIDATES.map((c) => button(`Load ${c.size}`, () => loadOnly(c)))}
+      </View>
+
+      <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
+        Resolver
+      </Text>
+      <View className="flex-row flex-wrap gap-2">
+        {button(`Fetch ${ASSIST_MODEL.size} via resolver (no gate)`, fetchViaResolver)}
+        {button('Prune fp32 twins', prune)}
+        {button('Service: transcribeEnglish', serviceEnglish)}
       </View>
 
       <Text variant="caption" className="mb-2 mt-6 uppercase tracking-wider">
