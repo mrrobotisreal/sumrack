@@ -20,7 +20,7 @@ import { earnsFreeze, parseFreezeState, type FreezeState } from './freeze';
 import { goalIsMet } from './goal-prefs';
 import { replanReminders } from './notifications';
 import { useAchievementToasts } from './toast-store';
-import { levelForXp, XP_TABLE, xpForRating, xpForReading } from './xp';
+import { levelForXp, XP_TABLE, xpForRating, xpForReading, xpForScenarioRun } from './xp';
 
 /**
  * The motivation orchestrator (T19): every existing write path calls one
@@ -106,7 +106,15 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   if (stateChanged) void replanReminders();
 }
 
-/** Count-based achievement sweep (bank size, mastery, XP level, dialogues). */
+/** The three scenario unlocks (T62 §9.4) from `getScenarioStats` — sweep + finish share it. */
+async function unlockScenarioAchievements(): Promise<void> {
+  const s = await repos.stats.getScenarioStats();
+  if (s.finishedRunCount >= 1) await unlock('first-scenario-finished');
+  if (s.cleanRunCount >= 1) await unlock('scenario-clean-run');
+  if (s.familiesCompleted >= 1) await unlock('scenario-family-all-rungs');
+}
+
+/** Count-based achievement sweep (bank size, mastery, XP level, dialogues, scenarios). */
 export async function sweepAchievements(): Promise<void> {
   const [bankCount, mastered, totalXp, dialogueStats] = await Promise.all([
     repos.bank.countItems(),
@@ -122,6 +130,8 @@ export async function sweepAchievements(): Promise<void> {
   // without touching the one-time flag).
   if (dialogueStats.finishedRunCount >= 1) await unlock('first-dialogue-finished');
   if (dialogueStats.anyDialogueAllEndingsSeen) await unlock('all-endings-one-dialogue');
+  // M17 scenario unlocks ride the same sweep (backfill for free, like T27's).
+  await unlockScenarioAchievements();
   const { level } = levelForXp(totalXp);
   for (const { id, level: threshold } of LEVEL_ACHIEVEMENTS) {
     if (level >= threshold) await unlock(id);
@@ -231,6 +241,22 @@ export async function recordDialogueFinished(newEnding: boolean): Promise<void> 
   const stats = await repos.dialogues.getAchievementStats();
   if (stats.anyDialogueAllEndingsSeen) await unlock('all-endings-one-dialogue');
   await evaluateMotivation();
+}
+
+/**
+ * A scenario run reached its ending (T62, SPEAKING_SCENARIOS §9.4): 25 XP,
+ * +15 when clean, +2 per clean turn; the three scenario achievements are
+ * re-evaluated from the stats repo. Returns the XP awarded (the toast).
+ */
+export async function recordScenarioFinished(stats: {
+  turns: number;
+  cleanTurns: number;
+}): Promise<number> {
+  const xp = xpForScenarioRun(stats);
+  await repos.stats.bumpDailyActivity({ xp });
+  await unlockScenarioAchievements();
+  await evaluateMotivation();
+  return xp;
 }
 
 /** Session summary reached — count sweeps + a due-count-fresh replan. */

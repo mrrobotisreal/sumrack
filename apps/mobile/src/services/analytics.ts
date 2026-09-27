@@ -422,7 +422,8 @@ export type AnalyticsEvent =
   | 'scenario_pref_changed'
   | 'scenario_hub_opened'
   | 'scenario_gate_shown'
-  | 'scenario_assist_banner';
+  | 'scenario_assist_banner'
+  | 'scenario_runs_list_opened';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

@@ -91,6 +91,24 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: 'git-branch-outline',
   },
   {
+    id: 'first-scenario-finished',
+    title: 'В эфире',
+    description: 'Finish your first blind speaking scenario',
+    icon: 'radio-outline',
+  },
+  {
+    id: 'scenario-clean-run',
+    title: 'Без запинки',
+    description: 'Finish a scenario with every turn clean — no misses, hints, skips or rescues',
+    icon: 'sparkles-outline',
+  },
+  {
+    id: 'scenario-family-all-rungs',
+    title: 'Все уровни',
+    description: 'Finish every installed level of one scenario',
+    icon: 'layers-outline',
+  },
+  {
     id: 'pron-perfect',
     title: 'Чистое произношение',
     description: 'Score a perfect 100 in pronunciation practice',

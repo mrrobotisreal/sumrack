@@ -31,6 +31,12 @@ export const XP_TABLE = {
   dialogueFinished: 20,
   /** First time a dialogue ending is collected (T27). */
   dialogueNewEnding: 10,
+  /** Finishing a scenario run (M17/T62, SPEAKING_SCENARIOS §9.4). */
+  scenarioFinished: 25,
+  /** A clean scenario run: zero misses, lifelines, skips and rescues (T62). */
+  scenarioCleanBonus: 15,
+  /** Per clean turn inside a scenario run (T62). */
+  scenarioCleanTurn: 2,
   /** Bonus for unlocking any achievement. */
   achievementUnlocked: 20,
 } as const;
@@ -71,4 +77,19 @@ export function levelForXp(totalXp: number): LevelInfo {
     // Absurdity guard — nobody outgrinds this, but never loop unbounded.
     if (level >= 999) return { level, intoLevel: remaining, levelSpan: xpToNextLevel(level) };
   }
+}
+
+/**
+ * XP for a finished scenario run (T62 §9.4): 25 for finishing, +15 when the
+ * run was clean (zero lifelines/skips/rescues/misses), +2 per clean turn —
+ * so a 4-turn clean run = 25 + 15 + 8 = 48, a dirty run with 2 clean turns
+ * = 25 + 4 = 29.
+ */
+export function xpForScenarioRun(stats: { turns: number; cleanTurns: number }): number {
+  const clean = stats.turns > 0 && stats.cleanTurns === stats.turns;
+  return (
+    XP_TABLE.scenarioFinished +
+    (clean ? XP_TABLE.scenarioCleanBonus : 0) +
+    XP_TABLE.scenarioCleanTurn * Math.max(0, stats.cleanTurns)
+  );
 }

@@ -167,6 +167,8 @@ export const SETTING_KEYS = {
    * heals field-by-field to the defaults.
    */
   scenarioPrefs: 'scenario.prefs',
+  /** boolean (T62, §9.1): the one-time hub banner offering the Whisper assist model was dismissed. */
+  scenarioAssistBannerDismissed: 'scenario.assistBannerDismissed',
   /**
    * Recording retention (M17 §4.4; declared in T58, owned by T63): { v: 1,
    * pruneDays: 30, capBytes: 300_000_000, lastPruneAt } — the local prune

@@ -678,3 +678,74 @@ describe('path replay + resume (§7.3, T27 resume-in-place)', () => {
     expect(resumeState(graph, replayPath(graph, path([])))).toBeNull();
   });
 });
+
+describe('RESUME (T62: continue from the intro card)', () => {
+  const step = (turnId: string, over: Partial<ScenarioRunPath['steps'][number]> = {}) => ({
+    turnId,
+    misses: 0,
+    assisted: false,
+    skipped: false,
+    rescued: false,
+    meta: 0,
+    ...over,
+  });
+
+  it('an expecting turn keeps its counters, replays the prompt, then listens', () => {
+    const replay = replayPath(graph, {
+      v: 1,
+      steps: [step('radio-a1-t01'), step('radio-a1-t02', { misses: 2, assisted: true })],
+    });
+    const restored = resumeState(graph, replay)!;
+    const a = reduce(graph, restored, { type: 'RESUME' });
+    expect(a.state.phase).toEqual({
+      kind: 'reacting',
+      reaction: 'repeat',
+      queue: [{ sentenceId: 'radio-a1-t02', rate: 1, mouthScale: 1 }],
+      idx: 0,
+    });
+    expect(plays(a.effects)).toEqual(['radio-a1-t02']);
+    expect(a.state.counters).toMatchObject({ misses: 2, assisted: true });
+    expect(a.state.lifelineAvailable).toBe(true);
+    expect(a.state.lifelineRevealed).toBe(true);
+    const b = reduce(graph, a.state, { type: 'LINE_DONE' });
+    expect(b.state.phase).toEqual({ kind: 'listening', recording: 'idle' });
+    expect(b.state.counters.misses).toBe(2); // BEGIN would have wiped these
+    expect(types(b.effects)).toEqual(['ARM_SILENCE']);
+  });
+
+  it('a monologue turn plays from its first line', () => {
+    const restored = resumeState(
+      graph,
+      replayPath(graph, { v: 1, steps: [step('radio-a1-t01')] }),
+    )!;
+    const a = reduce(graph, restored, { type: 'RESUME' });
+    expect(a.state.phase).toEqual({ kind: 'saying', lineIdx: 0 });
+    expect(plays(a.effects)).toEqual(['radio-a1-t01-a']);
+  });
+
+  it('is ignored outside the intro', () => {
+    const s = toT02Listening();
+    expect(reduce(graph, s, { type: 'RESUME' })).toEqual({ state: s, effects: [] });
+  });
+});
+
+describe('REPLAY_TAP slower (T62: long-press ⟳)', () => {
+  it('replays the prompt at 0.8× with the mouth scaled 1.25', () => {
+    const s = toT02Listening();
+    const r = reduce(graph, s, { type: 'REPLAY_TAP', slower: true });
+    expect(r.state.phase).toMatchObject({ kind: 'reacting', reaction: 'slower' });
+    expect(r.effects).toContainEqual({
+      type: 'PLAY',
+      item: { sentenceId: 'radio-a1-t02', rate: 0.8, mouthScale: 1.25 },
+    });
+    expect(r.effects).toContainEqual({
+      type: 'TRACK',
+      event: 'scenario_line_replayed',
+      props: { slower: true },
+    });
+    // The plain tap is unchanged.
+    const plain = reduce(graph, s, { type: 'REPLAY_TAP' });
+    expect(plain.state.phase).toMatchObject({ kind: 'reacting', reaction: 'repeat' });
+    expect(plays(plain.effects)).toEqual(['radio-a1-t02']);
+  });
+});

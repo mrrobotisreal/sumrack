@@ -10,6 +10,7 @@ import type {
   MetaOutcome,
   ScenarioDetail,
   ScenarioRunRow,
+  ScenarioRunStats,
 } from '@/db/repositories/scenarios';
 import { transcribeWav } from '@/features/pronunciation/asr-service';
 import { isAssistInstalled, transcribeEnglish } from '@/features/pronunciation/assist-service';
@@ -19,6 +20,9 @@ import {
   startAttemptRecording,
   stopAttemptRecording,
 } from '@/features/pronunciation/recorder';
+import { recordScenarioFinished } from '@/features/motivation/service';
+import { useAchievementToasts } from '@/features/motivation/toast-store';
+import { queryClient } from '@/lib/query-client';
 import { track, type AnalyticsEvent, type AnalyticsProps } from '@/services/analytics';
 import { getSpeechService, speak } from '@/services/speech';
 import { logError } from '@/services/error-log';
@@ -94,11 +98,27 @@ export interface PlaybackInfo {
   rendered: boolean;
 }
 
+/** What the ending card needs once FINISH has been executed (T62 §9.4). */
+export interface FinishInfo {
+  runId: string;
+  endingId: string;
+  stats: ScenarioRunStats;
+  newEnding: boolean;
+  /** XP awarded through the T19 host (the toast's number). */
+  xp: number;
+}
+
 export interface UseScenarioRunResult {
   state: TurnState;
   run: ScenarioRunRow | null;
   resumed: boolean;
+  /** Turn ids visited so far in walk order (the progress dots — T62 §9.3). */
+  visited: string[];
   playback: PlaybackInfo | null;
+  /** The live expo-audio player of the current pre-rendered line (the mouth-track clock), else null. */
+  player: AudioPlayer | null;
+  /** Set once the run's FINISH effect has completed; the screen renders the ending card from it. */
+  finish: FinishInfo | null;
   /** Live endpointing readout (the lab's meter + the run screen's ring). */
   endpoint: EndpointState;
   level: number;
@@ -137,7 +157,10 @@ export function useScenarioRun(
   const [state, setState] = React.useState<TurnState | null>(null);
   const [run, setRun] = React.useState<ScenarioRunRow | null>(null);
   const [resumed, setResumed] = React.useState(false);
+  const [visited, setVisited] = React.useState<string[]>([]);
   const [playback, setPlayback] = React.useState<PlaybackInfo | null>(null);
+  const [player, setPlayer] = React.useState<AudioPlayer | null>(null);
+  const [finish, setFinish] = React.useState<FinishInfo | null>(null);
   const [endpoint, setEndpoint] = React.useState<EndpointState>(INITIAL_ENDPOINT);
   const [level, setLevel] = React.useState(0);
   const [overrides, setOverrides] = React.useState<Partial<EndpointConfig>>({});
@@ -201,6 +224,8 @@ export function useScenarioRun(
   const releasePlayer = React.useCallback(() => {
     const p = playerRef.current;
     playerRef.current = null;
+    // Consumers (the mouth tick) drop the player BEFORE release (T61 rule).
+    setPlayer(null);
     if (p) {
       try {
         p.pause();
@@ -259,6 +284,7 @@ export function useScenarioRun(
             }
           });
           player.play();
+          setPlayer(player);
           setPlayback({
             sentenceId: item.sentenceId,
             rate: item.rate,
@@ -478,6 +504,10 @@ export function useScenarioRun(
             leaving: effect.leaving,
             nextTurnId: effect.nextTurnId,
           });
+          if (effect.nextTurnId) {
+            const next = effect.nextTurnId;
+            setVisited((prev) => (prev[prev.length - 1] === next ? prev : [...prev, next]));
+          }
           return;
         }
         case 'FINISH': {
@@ -485,7 +515,9 @@ export function useScenarioRun(
           if (!row || finishedRef.current) return;
           finishedRef.current = true;
           const totals = stateRef.current?.totals ?? { answered: 0, clean: 0 };
-          const { stats } = await repos.scenarios.finishRun(row.id, { endingId: effect.endingId });
+          const { stats, newEnding } = await repos.scenarios.finishRun(row.id, {
+            endingId: effect.endingId,
+          });
           if (sessionIdRef.current) {
             await repos.stats.finishGameSession(sessionIdRef.current, {
               itemCount: totals.answered,
@@ -500,6 +532,41 @@ export function useScenarioRun(
             cleanTurns: stats.cleanTurns,
             misses: stats.misses,
           });
+          // XP + achievements through the T19 host (§9.4); the XP toast rides the
+          // achievement toast surface as an ephemeral def (the T27 new-ending pattern).
+          const d = detailRef.current;
+          const ending = d?.endings.find((e) => e.id === effect.endingId) ?? null;
+          const xp = await recordScenarioFinished(stats).catch((err) => {
+            logError('manual', err);
+            return 0;
+          });
+          const clean = stats.turns > 0 && stats.cleanTurns === stats.turns;
+          if (xp > 0) {
+            useAchievementToasts.getState().push({
+              id: `scenario-xp-${row.id}`,
+              title: `+${xp} XP`,
+              description: `${ending ? `«${ending.title.ru}» — ` : ''}${
+                clean ? 'clean run' : `${stats.cleanTurns}/${stats.turns} clean turns`
+              }${newEnding ? ' · new ending' : ''}`,
+              icon: clean ? 'sparkles-outline' : 'radio-outline',
+            });
+          }
+          track('scenario_ending_found', {
+            scenarioId: row.scenarioId,
+            endingId: effect.endingId,
+            tone: ending?.tone ?? 'good',
+            newEnding,
+          });
+          for (const key of [
+            ['scenarios'],
+            ['scenario-runs'],
+            ['daily-activity'],
+            ['motivation'],
+            ['achievements'],
+          ]) {
+            void queryClient.invalidateQueries({ queryKey: key });
+          }
+          setFinish({ runId: row.id, endingId: effect.endingId, stats, newEnding, xp });
           return;
         }
         case 'TRACK':
@@ -546,6 +613,7 @@ export function useScenarioRun(
       let initial = initialState(graph);
       let existing: ScenarioRunRow | null = null;
       let didResume = false;
+      let walked: string[] = [graph.startTurnId];
       try {
         const candidate = await repos.scenarios.findResumableRun(detail.scenario.id);
         const path = candidate ? repos.scenarios.parseRunPath(candidate) : null;
@@ -556,6 +624,7 @@ export function useScenarioRun(
             initial = restored;
             existing = candidate;
             didResume = true;
+            walked = replay.visited;
           }
         }
       } catch (err) {
@@ -569,6 +638,8 @@ export function useScenarioRun(
       playedRef.current = [];
       setRun(existing);
       setResumed(didResume);
+      setVisited(walked);
+      setFinish(null);
       setState(initial);
       if (didResume) track('scenario_run_resumed', { scenarioId: detail.scenario.id });
     })();
@@ -656,6 +727,8 @@ export function useScenarioRun(
     stateRef.current = fresh;
     setRun(null);
     setResumed(false);
+    setVisited([g.startTurnId]);
+    setFinish(null);
     setState(fresh);
   }, [disarmSilence, stopAudio]);
 
@@ -677,7 +750,10 @@ export function useScenarioRun(
           }),
     run,
     resumed,
+    visited,
     playback,
+    player,
+    finish,
     endpoint,
     level,
     dispatch,

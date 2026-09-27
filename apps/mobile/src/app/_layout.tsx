@@ -132,6 +132,17 @@ export default function RootLayout() {
                 />
                 <Stack.Screen name="games" options={{ title: 'Games' }} />
                 <Stack.Screen name="dialogues" options={{ title: 'Диалоги' }} />
+                <Stack.Screen name="scenarios/index" options={{ title: 'Сценарии' }} />
+                <Stack.Screen name="scenarios/runs" options={{ title: 'Runs' }} />
+                <Stack.Screen
+                  name="scenario/[packId]/[scenarioId]"
+                  options={{
+                    headerShown: false,
+                    animation: 'fade',
+                    gestureEnabled: false,
+                    orientation: 'portrait',
+                  }}
+                />
                 <Stack.Screen
                   name="dialogue/[packId]/[dialogueId]"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}

@@ -130,6 +130,8 @@ export interface EngineGraph {
 
 export type TurnEvent =
   | { type: 'BEGIN' }
+  /** T62: continue a resumed run from the intro card (counters kept, prompt replayed, → listening). */
+  | { type: 'RESUME' }
   | { type: 'LINE_DONE' }
   | { type: 'MIC_TAP' }
   | { type: 'MIC_HOLD_START' }
@@ -147,7 +149,8 @@ export type TurnEvent =
   | { type: 'RESCUED'; outcome: RescueOutcome | null }
   | { type: 'LIFELINE_TAP' }
   | { type: 'SKIP_TAP' }
-  | { type: 'REPLAY_TAP' }
+  /** ⟳ (T62 §9.3): replay the prompt; `slower` = the long-press 0.8× variant. */
+  | { type: 'REPLAY_TAP'; slower?: boolean }
   | { type: 'SILENCE_25S' }
   | { type: 'APP_BACKGROUND' }
   | { type: 'APP_FOREGROUND' };
@@ -433,6 +436,20 @@ export function reduce(graph: EngineGraph, state: TurnState, event: TurnEvent): 
       return enterTurn(graph, state, state.turnId);
     }
 
+    case 'RESUME': {
+      // §7.3 / T27 decision 2: the restored turn keeps its counters and
+      // lifeline/skip flags; an expecting turn replays its prompt line and
+      // lands in listening, a monologue turn simply plays from its start.
+      if (phase.kind !== 'intro' || !turn) return { state, effects: [] };
+      if (!turn.expect) {
+        return {
+          state: { ...state, phase: { kind: 'saying', lineIdx: 0 }, pending: null },
+          effects: [{ type: 'PLAY', item: item(turn.say[0]!) }],
+        };
+      }
+      return react(state, 'repeat', [item(promptId(turn))]);
+    }
+
     case 'LINE_DONE': {
       if (!turn) return { state, effects: [] };
       if (phase.kind === 'saying') {
@@ -628,11 +645,12 @@ export function reduce(graph: EngineGraph, state: TurnState, event: TurnEvent): 
     case 'REPLAY_TAP': {
       if (phase.kind !== 'listening' || phase.recording !== 'idle' || !turn)
         return { state, effects: [] };
+      const slower = event.slower === true;
       return react(
         state,
-        'repeat',
-        [item(promptId(turn))],
-        [{ type: 'DISARM_SILENCE' }, trackEffect('scenario_line_replayed', { slower: false })],
+        slower ? 'slower' : 'repeat',
+        [slower ? item(promptId(turn), SLOWER_RATE, SLOWER_MOUTH_SCALE) : item(promptId(turn))],
+        [{ type: 'DISARM_SILENCE' }, trackEffect('scenario_line_replayed', { slower })],
       );
     }
 

@@ -213,6 +213,11 @@ export interface ScenarioRung {
   lastRun: ScenarioRunRow | null;
   /** The finished run with the most clean turns (ties → newest); null when none finished. */
   bestStats: ScenarioRunStats | null;
+  /** Cast + scene parsed (T62 hub thumbnail / accent stripe); [] / null when unreadable. */
+  cast: ScenarioCharacter[];
+  scene: ScenarioScene | null;
+  /** The pack's `scene/**` asset rows (staged or not) — the thumbnail's PNG lookup. */
+  assets: ScenarioAssetRow[];
 }
 
 export interface ScenarioFamily {
@@ -422,7 +427,7 @@ export function createScenariosRepo(db: SumrakDB) {
 
       const ids = [...new Set(rows.map((r) => r.scenario.id))];
       const packIds = [...new Set(rows.map((r) => r.scenario.packId))];
-      const [turnCounts, audioCounts, runRows] = await Promise.all([
+      const [turnCounts, audioCounts, runRows, assetRows] = await Promise.all([
         db
           .select({
             packId: scenarioTurns.packId,
@@ -447,6 +452,7 @@ export function createScenariosRepo(db: SumrakDB) {
           .from(scenarioRuns)
           .where(inArray(scenarioRuns.scenarioId, ids))
           .orderBy(desc(scenarioRuns.startedAt)),
+        db.select().from(scenarioAssets).where(inArray(scenarioAssets.packId, packIds)),
       ]);
       // Line counts per scenario (audio is all-or-nothing per scenario, so
       // "ready" = every sentence of the scenario has a staged audio row).
@@ -485,6 +491,19 @@ export function createScenariosRepo(db: SumrakDB) {
         }
         const audio = audioByKey.get(k);
         const lines = linesByKey.get(k) ?? 0;
+        const cast =
+          parseWith(
+            z.array(ScenarioCharacterSchema),
+            parseJsonText(scenario.castJson),
+            `${k}/cast`,
+            'scenario-cast-parse',
+          ) ?? [];
+        const scene = parseWith(
+          ScenarioSceneSchema,
+          parseJsonText(scenario.sceneJson),
+          `${k}/scene`,
+          'scenario-scene-parse',
+        );
         const rung: ScenarioRung = {
           packId: scenario.packId,
           id: scenario.id,
@@ -503,6 +522,9 @@ export function createScenariosRepo(db: SumrakDB) {
           runCount: runs.length,
           lastRun: runs[0] ?? null,
           bestStats: best,
+          cast,
+          scene,
+          assets: assetRows.filter((a) => a.packId === scenario.packId),
         };
         const list = families.get(scenario.familyId);
         if (list) list.push(rung);
