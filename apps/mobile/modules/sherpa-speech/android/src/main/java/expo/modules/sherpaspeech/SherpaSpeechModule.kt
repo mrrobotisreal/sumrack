@@ -4,7 +4,12 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
+import android.media.MediaCodec
+import android.media.MediaCodecList
+import android.media.MediaFormat
+import android.media.MediaMuxer
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.SystemClock
 import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
@@ -15,6 +20,7 @@ import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
@@ -47,6 +53,12 @@ import kotlin.math.sqrt
  * has no WAV MediaRecorder output, and the ASR models want exactly this
  * format, so recording anywhere else would just add a transcode step.
  *
+ * T59 (M17 «Сценарии», design §11) adds two things on the same executors:
+ * a WAV → Ogg/Opus transcoder (MediaCodec + MediaMuxer, no new dependency —
+ * attempt recordings are kept as Opus) and a second, independently
+ * resident Whisper multilingual recognizer (OfflineWhisperModelConfig) that
+ * re-decodes the same recordings in English for «как сказать <word>».
+ *
  * The module also carries the model-manager helpers that need native muscle:
  * streaming SHA-256, .tar.bz2 extraction, directory sizing.
  */
@@ -65,6 +77,15 @@ class SherpaSpeechModule : Module() {
 
   @Volatile private var asr: OfflineRecognizer? = null
   @Volatile private var loadedAsrId: String? = null
+
+  // ---- Whisper assist recognizer (T59) — resident beside the Zipformer ----
+  @Volatile private var whisper: OfflineRecognizer? = null
+  @Volatile private var loadedWhisperId: String? = null
+  /** Whisper's language is a model-config field, so a change = rebuild (see transcribeWhisper). */
+  @Volatile private var whisperLanguage: String = "en"
+  private var whisperFiles: WhisperFiles? = null
+
+  private data class WhisperFiles(val encoder: File, val decoder: File, val tokens: File)
 
   // ---- mic recording state (guarded by recordingLock) ----
   private val recordingLock = Any()
@@ -387,6 +408,139 @@ class SherpaSpeechModule : Module() {
       }
     }
 
+    // ---- Whisper assist recognizer (T59, design §11) ----
+
+    /**
+     * Load the Whisper multilingual assist recognizer from extracted model
+     * files (int8 encoder + decoder + tokens). Independent of the Zipformer:
+     * both recognizers may be resident at once (memory is the caller's
+     * budget — the T59 benchmark records it). Same contract as loadAsr:
+     * resolves with load time, same-id reload is a no-op.
+     */
+    AsyncFunction("loadWhisper") { assistId: String, encoderPath: String, decoderPath: String, tokensPath: String, promise: Promise ->
+      asrExecutor.execute {
+        try {
+          if (loadedWhisperId == assistId && whisper != null) {
+            promise.resolve(mapOf("loadMs" to 0, "alreadyLoaded" to true))
+            return@execute
+          }
+          whisper?.release()
+          whisper = null
+          loadedWhisperId = null
+
+          val files = WhisperFiles(
+            encoder = File(stripFileUri(encoderPath)),
+            decoder = File(stripFileUri(decoderPath)),
+            tokens = File(stripFileUri(tokensPath)),
+          )
+          if (!files.encoder.isFile || !files.decoder.isFile || !files.tokens.isFile) {
+            throw CodedException("ERR_WHISPER_FILES", "Whisper model files missing for $assistId", null)
+          }
+
+          val t0 = SystemClock.elapsedRealtime()
+          whisperFiles = files
+          whisperLanguage = "en"
+          whisper = buildWhisper(files, whisperLanguage)
+          loadedWhisperId = assistId
+          promise.resolve(
+            mapOf("loadMs" to (SystemClock.elapsedRealtime() - t0), "alreadyLoaded" to false),
+          )
+        } catch (t: Throwable) {
+          promise.reject(asCoded("ERR_WHISPER_LOAD", t))
+        }
+      }
+    }
+
+    AsyncFunction("unloadWhisper") { promise: Promise ->
+      asrExecutor.execute {
+        whisper?.release()
+        whisper = null
+        loadedWhisperId = null
+        whisperFiles = null
+        promise.resolve(null)
+      }
+    }
+
+    Function("getLoadedWhisperId") { loadedWhisperId }
+
+    /**
+     * Transcribe a mono PCM16 WAV with the Whisper assist recognizer.
+     * `language` is 'en' | 'ru' | 'auto' (auto = Whisper's own detection).
+     * Whisper's language lives in the recognizer config, so a language
+     * different from the resident one rebuilds the recognizer in place
+     * (~0.5–1 s for tiny) — T60 only ever asks for 'en', so this is the
+     * rare path. Returns the same shape as transcribeFile; Whisper emits no
+     * per-token timestamps here, so word spans degrade to [start, audioEnd].
+     */
+    AsyncFunction("transcribeWhisper") { wavPath: String, language: String, promise: Promise ->
+      if (whisper == null) {
+        promise.reject(CodedException("ERR_NO_WHISPER", "no Whisper model loaded", null))
+        return@AsyncFunction
+      }
+      asrExecutor.execute {
+        try {
+          val wanted = when (language) {
+            "en", "ru" -> language
+            "auto" -> ""
+            else -> throw CodedException("ERR_WHISPER_LANGUAGE", "unsupported language: $language", null)
+          }
+          var engine = whisper ?: throw CodedException("ERR_NO_WHISPER", "no Whisper model loaded", null)
+          if (wanted != whisperLanguage) {
+            val files = whisperFiles ?: throw CodedException("ERR_NO_WHISPER", "no Whisper model loaded", null)
+            engine.release()
+            whisper = null
+            engine = buildWhisper(files, wanted)
+            whisper = engine
+            whisperLanguage = wanted
+          }
+          val (samples, sampleRate) = readWavMono(File(stripFileUri(wavPath)))
+          val audioMs = samples.size * 1000L / sampleRate
+          val t0 = SystemClock.elapsedRealtime()
+          val stream = engine.createStream()
+          try {
+            stream.acceptWaveform(samples, sampleRate)
+            engine.decode(stream)
+            val result = engine.getResult(stream)
+            val decodeMs = SystemClock.elapsedRealtime() - t0
+            promise.resolve(
+              mapOf(
+                "text" to result.text.trim(),
+                "words" to aggregateWords(result.tokens, result.timestamps, audioMs),
+                "decodeMs" to decodeMs,
+                "audioMs" to audioMs,
+              ),
+            )
+          } finally {
+            stream.release()
+          }
+        } catch (t: Throwable) {
+          promise.reject(asCoded("ERR_WHISPER_TRANSCRIBE", t))
+        }
+      }
+    }
+
+    // ---- Ogg/Opus transcoder (T59, design §11 + ADR-0019 decision 7) ----
+
+    /**
+     * Transcode a PCM16 WAV (the T12 attempt format) to Ogg/Opus with the
+     * platform MediaCodec encoder + MediaMuxer's OGG writer (API 29+ — no
+     * new dependency). Runs on the I/O executor so a transcode never queues
+     * behind a decode. Rejects `ERR_OPUS_UNSUPPORTED` when the platform has
+     * no Opus encoder (the JS wrapper maps it to `code: 'unsupported'` and
+     * the app keeps WAV, design §12).
+     */
+    AsyncFunction("encodeWavToOpus") { wavPath: String, outPath: String, bitrateKbps: Int, promise: Promise ->
+      ioExecutor.execute {
+        try {
+          promise.resolve(
+            encodeWavToOpus(File(stripFileUri(wavPath)), File(stripFileUri(outPath)), bitrateKbps),
+          )
+        } catch (t: Throwable) {
+          promise.reject(asCoded("ERR_OPUS_ENCODE", t))
+        }
+      }
+    }
+
     // ---- mic capture (T12): AudioRecord → 16 kHz mono PCM16 WAV ----
 
     /**
@@ -594,6 +748,8 @@ class SherpaSpeechModule : Module() {
       asrExecutor.execute {
         asr?.release()
         asr = null
+        whisper?.release()
+        whisper = null
       }
       ttsExecutor.shutdown()
       asrExecutor.shutdown()
@@ -658,6 +814,138 @@ class SherpaSpeechModule : Module() {
     buf.put("data".toByteArray(Charsets.US_ASCII))
     buf.putInt(dataBytes)
     return buf.array()
+  }
+
+  /**
+   * Whisper recognizer over sherpa's OfflineRecognizer. `language` "" =
+   * auto-detect. task is always transcribe (never translate — the app wants
+   * the English word the learner said, not a Russian rendering of it);
+   * tailPaddings -1 = sherpa's default. 4 threads: decode latency is the
+   * number T60's «как сказать» path lives with, and the ASR executor
+   * serializes decodes so the Zipformer never contends with it.
+   */
+  private fun buildWhisper(files: WhisperFiles, language: String): OfflineRecognizer {
+    val config = OfflineRecognizerConfig(
+      featConfig = FeatureConfig(sampleRate = 16000, featureDim = 80),
+      modelConfig = OfflineModelConfig(
+        whisper = OfflineWhisperModelConfig(
+          encoder = files.encoder.absolutePath,
+          decoder = files.decoder.absolutePath,
+          language = language,
+          task = "transcribe",
+          tailPaddings = -1,
+        ),
+        tokens = files.tokens.absolutePath,
+        numThreads = 4,
+        debug = false,
+        provider = "cpu",
+        modelType = "whisper",
+      ),
+      decodingMethod = "greedy_search",
+    )
+    return OfflineRecognizer(config = config)
+  }
+
+  /**
+   * WAV → Ogg/Opus. The WAV's own sample rate is offered to the encoder
+   * (16 kHz for T12 attempts; Opus natively accepts 8/12/16/24/48 kHz — a
+   * rate outside that set is rejected as unsupported rather than resampled
+   * here). Feeds 20 ms frames, muxes packets as they come, returns the
+   * ticket's {bytes, durationMs, ms}.
+   */
+  private fun encodeWavToOpus(wav: File, out: File, bitrateKbps: Int): Map<String, Any> {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+      throw CodedException("ERR_OPUS_UNSUPPORTED", "Ogg/Opus muxing needs Android 10+", null)
+    }
+    val (samples, sampleRate) = readWavMono(wav)
+    if (samples.isEmpty()) throw CodedException("ERR_OPUS_EMPTY", "WAV has no samples", null)
+    if (sampleRate !in intArrayOf(8000, 12000, 16000, 24000, 48000)) {
+      throw CodedException("ERR_OPUS_UNSUPPORTED", "Opus cannot take a $sampleRate Hz input", null)
+    }
+    val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, sampleRate, 1).apply {
+      setInteger(MediaFormat.KEY_BIT_RATE, bitrateKbps.coerceIn(6, 128) * 1000)
+      setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 64 * 1024)
+    }
+    val codecName = MediaCodecList(MediaCodecList.REGULAR_CODECS).findEncoderForFormat(format)
+      ?: throw CodedException("ERR_OPUS_UNSUPPORTED", "no Opus encoder on this device", null)
+
+    val t0 = SystemClock.elapsedRealtime()
+    out.parentFile?.mkdirs()
+    if (out.exists()) out.delete()
+    val codec = MediaCodec.createByCodecName(codecName)
+    var muxer: MediaMuxer? = null
+    var muxStarted = false
+    try {
+      codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+      codec.start()
+      muxer = MediaMuxer(out.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_OGG)
+      var track = -1
+      val frame = sampleRate / 50 // 20 ms — the Opus frame the encoder wants
+      var pos = 0
+      var inputDone = false
+      var outputDone = false
+      val info = MediaCodec.BufferInfo()
+      while (!outputDone) {
+        if (!inputDone) {
+          val idx = codec.dequeueInputBuffer(10_000)
+          if (idx >= 0) {
+            val buf = codec.getInputBuffer(idx)!!
+            buf.clear()
+            buf.order(ByteOrder.LITTLE_ENDIAN)
+            val n = min(min(frame, samples.size - pos), buf.capacity() / 2)
+            val ptsUs = pos * 1_000_000L / sampleRate
+            if (n <= 0) {
+              codec.queueInputBuffer(idx, 0, 0, ptsUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+              inputDone = true
+            } else {
+              for (i in 0 until n) {
+                val v = (samples[pos + i] * 32768f).toInt().coerceIn(-32768, 32767)
+                buf.putShort(v.toShort())
+              }
+              codec.queueInputBuffer(idx, 0, n * 2, ptsUs, 0)
+              pos += n
+            }
+          }
+        }
+        val oi = codec.dequeueOutputBuffer(info, 10_000)
+        when {
+          oi == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+            // The OGG muxer needs Opus's CSD (OpusHead etc.) — it rides in
+            // this output format, so the track is added only now.
+            track = muxer.addTrack(codec.outputFormat)
+            muxer.start()
+            muxStarted = true
+          }
+          oi >= 0 -> {
+            val ob = codec.getOutputBuffer(oi)!!
+            val isConfig = info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
+            if (!isConfig && info.size > 0 && muxStarted) {
+              ob.position(info.offset)
+              ob.limit(info.offset + info.size)
+              muxer.writeSampleData(track, ob, info)
+            }
+            codec.releaseOutputBuffer(oi, false)
+            if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
+          }
+        }
+      }
+      if (!muxStarted) throw CodedException("ERR_OPUS_ENCODE", "encoder produced no output", null)
+    } catch (t: Throwable) {
+      runCatching { out.delete() }
+      throw t
+    } finally {
+      runCatching { codec.stop() }
+      codec.release()
+      muxer?.let { m ->
+        if (muxStarted) runCatching { m.stop() }
+        m.release()
+      }
+    }
+    return mapOf(
+      "bytes" to out.length(),
+      "durationMs" to samples.size * 1000L / sampleRate,
+      "ms" to (SystemClock.elapsedRealtime() - t0),
+    )
   }
 
   /** Minimal RIFF parser: mono/stereo PCM16 WAV → float samples + rate. */

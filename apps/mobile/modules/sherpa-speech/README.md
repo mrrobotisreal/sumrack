@@ -1,9 +1,10 @@
-# sherpa-speech — local Expo module (T11 + T12)
+# sherpa-speech — local Expo module (T11 + T12 + T59)
 
 On-device Russian speech for Сумрак, wrapping [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx):
 
 - **TTS (T11)**: Piper VITS Russian voices (Руслан / Ирина / Денис / Дмитрий), streamed to an `AudioTrack` as synthesis chunks arrive.
 - **ASR (T12)**: offline Zipformer transducer (Russian, int8) + mic capture (AudioRecord → 16 kHz mono PCM16 WAV — the exact input format the recognizer wants, since Android's MediaRecorder can't produce WAV). TTS and ASR run on separate single-thread executors so neither queues behind the other.
+- **Assist ASR + Opus (T59, M17 «Сценарии»)**: a second, independently resident **Whisper multilingual** recognizer (`OfflineWhisperModelConfig`) that re-decodes the same attempt WAV in English for «как сказать <word>», and a **WAV → Ogg/Opus transcoder** on the platform `MediaCodec` + `MediaMuxer` (no new dependency) so every scenario attempt is kept small.
 
 The JS surface is `index.ts` (typed `requireNativeModule` binding). App-level logic — voice catalog, downloads, engine routing, `expo-speech` fallback — lives in `apps/mobile/src/features/tts/`, not here. This module stays a thin native wrapper.
 
@@ -34,6 +35,10 @@ Reproduced from scratch this session (2026-08-21): `npx expo prebuild --platform
 | `transcribeFile(wavPath)`                            | Mono/stereo PCM16 WAV → `{text, words[{word,startMs,endMs}], decodeMs, audioMs}`. Words aggregated from BPE tokens (leading `▁`/space starts a word).                |
 | `startRecording(outPath)`                            | Mic → 16 kHz mono PCM16 WAV. Requires RECORD_AUDIO already granted (JS owns the flow). Emits `onRecordingLevel` (~8/s RMS) for the level ring.                       |
 | `stopRecording()` / `cancelRecording()`              | Finalize the WAV header and return `{path, durationMs}` / abort and delete. Both idempotent-safe on teardown.                                                        |
+| `loadWhisper(assistId, encoder, decoder, tokens)`    | T59: loads the Whisper assist recognizer (`task: transcribe`, language `en` at load, `tail_paddings` default, 4 threads) on the ASR executor. Resident **beside** the Zipformer — neither load unloads the other. Same-id reload is a no-op. |
+| `unloadWhisper()` / `getLoadedWhisperId()`           | Assist-recognizer lifecycle, mirrors the ASR API.                                                                                                                    |
+| `transcribeWhisper(wavPath, language)`               | `language` = `'en' \| 'ru' \| 'auto'`; Whisper's language is part of its config, so a different language than the resident one rebuilds the recognizer in place. Same result shape as `transcribeFile` (Whisper gives no per-token stamps → word spans degrade to `[start, audioEnd]`). |
+| `encodeWavToOpus(wavPath, outPath, bitrateKbps)`     | T59: PCM16 WAV → Ogg/Opus (`MediaMuxer.OutputFormat.MUXER_OUTPUT_OGG`, API 29+), 20 ms frames, mono at the WAV's own rate (Opus accepts 8/12/16/24/48 kHz — others reject). `{bytes, durationMs, ms}`. Rejects `ERR_OPUS_UNSUPPORTED` when no encoder exists (the app keeps WAV). On the I/O executor. |
 | `sha256File(path)`                                   | Streaming hash — 67 MB archives never enter JS memory.                                                                                                               |
 | `extractTarBz2(archivePath, destDir)`                | commons-compress, path-traversal-safe, returns top-level dir + bytes written.                                                                                        |
 | `dirSize(path)`                                      | Recursive bytes, for Settings storage accounting.                                                                                                                    |
@@ -47,6 +52,10 @@ Not bundled in the APK (design §6). Downloaded on demand by `src/features/tts/m
 ## ASR model (T12)
 
 Same pattern via `src/features/pronunciation/asr-manager.ts`: `sherpa-onnx-zipformer-ru-int8-2025-04-20` from the k2-fsa `asr-models` release assets (60.2 MB archive), sha256-pinned in `asr-catalog.ts`, installed under `documentDirectory/asr-models/<dirName>/`. Chosen as the only Russian model inside the design §6 40–60 MB window (GigaAM is better but 163+ MB). Host-verified before integration: accurate transcription of the bundled Russian test WAVs with per-token timestamps.
+
+## Assist model (T59)
+
+`src/features/pronunciation/assist-manager.ts` + `assist-catalog.ts`: one Whisper multilingual archive from the k2-fsa `asr-models` release assets (int8 encoder + int8 decoder + tokens are what the module loads; the fp32 twins ship in the same archive and are simply not opened), installed under `documentDirectory/assist-models/<dirName>/`, resolved manifest-first through the T23 resolver like every other model. Which size is pinned (tiny / base / small) is the T59 benchmark's decision — see the T59 row in `docs/SUMRAK_TICKETS.md`.
 
 ## Upgrading sherpa-onnx
 
