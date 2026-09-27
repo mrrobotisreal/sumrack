@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "drizzle-kit generate --custom",
     "encode:ambient": "node scripts/encode-ambient-beds.mjs",
+    "encode:scene": "node scripts/encode-scene-beds.mjs",
     "release:android": "./scripts/release-android.sh"
   },
   "dependencies": {
