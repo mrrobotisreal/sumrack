@@ -130,6 +130,8 @@ export default function DevJudgeScreen() {
   const [last, setLast] = React.useState<{
     transcript: string;
     meta: { detection: MetaDetection; resolution: MetaResolution } | null;
+    /** Whisper's English re-decode of the same WAV (shown so a real-voice test can see what was caught). */
+    whisperText: string | null;
     judge: JudgeResult | null;
     rescue: RescueOutcome | null | 'gated';
     clipSentenceId: string | null;
@@ -205,6 +207,7 @@ export default function DevJudgeScreen() {
         );
         if (detection) {
           let resolution: MetaResolution;
+          let whisperText: string | null = null;
           const t0 = Date.now();
           if (detection.intent === 'explain') {
             resolution = await resolveExplain(detection, {
@@ -221,6 +224,7 @@ export default function DevJudgeScreen() {
                 wavPath && isAssistInstalled()
                   ? async () => {
                       const w = await transcribeEnglish(wavPath);
+                      whisperText = w.text;
                       log({ op: 'whisper', text: w.text, decodeMs: w.decodeMs });
                       return w.text;
                     }
@@ -234,6 +238,7 @@ export default function DevJudgeScreen() {
           setLast({
             transcript,
             meta: { detection, resolution },
+            whisperText,
             judge: null,
             rescue: null,
             clipSentenceId,
@@ -265,6 +270,7 @@ export default function DevJudgeScreen() {
         setLast({
           transcript,
           meta: null,
+          whisperText: null,
           judge,
           rescue: gate ? null : 'gated',
           clipSentenceId: null,
@@ -610,6 +616,12 @@ export default function DevJudgeScreen() {
               {'ru' in last.meta.resolution ? ` · «${last.meta.resolution.ru}»` : ''}
               {'en' in last.meta.resolution ? ` — ${last.meta.resolution.en}` : ''}
             </Text>
+            {last.whisperText !== null && (
+              <Text variant="caption" className="mt-1">
+                whisper heard «{last.whisperText}»
+                {last.clipSentenceId ? ' · tap Play clip for the host’s answer' : ''}
+              </Text>
+            )}
           </>
         ) : last.judge ? (
           <>

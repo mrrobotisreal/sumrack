@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { parseHelpLine } from '@/features/ai/prompts/scenario-help';
 
@@ -361,6 +361,39 @@ describe('Appendix B garble → translit hits', () => {
 });
 
 describe('Whisper tail + English matching', () => {
+  it('the Whisper tail is trimmed to the Russian query length (Mitch 2026-09-27: «Зеркало газета кекс»)', async () => {
+    // «как сказать mirror» → ASR «как сказать мюрор» (1 query token), Whisper «Kex Gazette Mirror».
+    const detection = detectMetaIntent('как сказать мюрор', 'ru')!;
+    expect(detection.queryTokens).toEqual(['мюрор']);
+    const online = vi.fn(async (q: string) => `translated:${q}`);
+    const r = await resolveHowToSay(detection, {
+      glossary: [],
+      howToSaySentenceId: () => null,
+      whisper: async () => 'Kex Gazette Mirror',
+      online,
+    });
+    expect(online).toHaveBeenCalledWith('mirror');
+    expect(r).toMatchObject({ source: 'online', ru: 'translated:mirror' });
+    // A two-word ask keeps two («как сказать to rest» → «ту рест»), function words dropped after.
+    const two = detectMetaIntent('как сказать ту рест', 'ru')!;
+    await resolveHowToSay(two, {
+      glossary: [],
+      howToSaySentenceId: () => null,
+      whisper: async () => 'Kak skazat to rest',
+      online,
+    });
+    expect(online).toHaveBeenLastCalledWith('rest');
+    // The ASR dropped the English word (0 query tokens): still one Whisper word, never the garble.
+    const none = { ...detection, query: '', queryTokens: [] as string[] };
+    await resolveHowToSay(none, {
+      glossary: [],
+      howToSaySentenceId: () => null,
+      whisper: async () => 'Kex Gazette Mirror',
+      online,
+    });
+    expect(online).toHaveBeenLastCalledWith('mirror');
+  });
+
   it('englishTail keeps the last 1–3 alphabetic tokens', () => {
     expect(englishTail('kak skazat wallet')).toEqual(['kak', 'skazat', 'wallet']);
     expect(englishTail('How do you say, wallet?')).toEqual(['you', 'say', 'wallet']);

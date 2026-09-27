@@ -466,7 +466,12 @@ export async function resolveHowToSay(
   if (deps.whisper) {
     const text = await deps.whisper().catch(() => null);
     if (text) {
-      english = englishTail(text);
+      // The Russian ASR already told us how long the query is (the tokens after
+      // the trigger); Whisper's head is the trigger garbled into English
+      // («Kex Gazette Mirror» for «как сказать mirror»), so keep only that many
+      // words from the tail. Never fewer than one (the ASR may have dropped
+      // the English word entirely), never more than three (T60's cap).
+      english = englishTail(text, Math.max(1, Math.min(3, detection.queryTokens.length)));
       const entry = findGlossaryByEnglish(english, deps.glossary);
       if (entry) {
         const sentenceId = deps.howToSaySentenceId(entry.id);
