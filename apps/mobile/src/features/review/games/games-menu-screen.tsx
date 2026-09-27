@@ -76,6 +76,12 @@ export function GamesMenuScreen() {
         route="/dialogues"
       />
       <GameRow
+        icon="radio-outline"
+        title="Сценарии"
+        subtitle="Speak your way through a situation — no text, just you and the host"
+        route="/scenarios"
+      />
+      <GameRow
         icon="mic-outline"
         title="Pronunciation"
         subtitle={

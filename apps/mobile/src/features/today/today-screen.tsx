@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import {
   useDialogues,
   useDueCardCount,
+  useScenarios,
   usePackClassification,
   useProductionDueCount,
   useStories,
@@ -19,6 +20,7 @@ import { GoalRingCard } from '@/features/motivation/goal-ring-card';
 import { NotificationPromptCard } from '@/features/motivation/notification-prompt-card';
 import type { PathNode } from '@/features/path/path-model';
 import { isUnit, nextStepInfo, usePathState } from '@/features/path/use-path';
+import { isResumable, pickTodayScenario } from '@/features/scenario/hub-selection';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -39,6 +41,7 @@ export function TodayScreen() {
   const stories = useStories();
   const path = usePathState();
   const dialogues = useDialogues();
+  const scenarios = useScenarios();
 
   // Counts change while this tab is unfocused (sessions, reading) — refresh on return.
   useFocusEffect(
@@ -50,6 +53,7 @@ export function TodayScreen() {
       void queryClient.invalidateQueries({ queryKey: ['story-progress'] });
       void queryClient.invalidateQueries({ queryKey: ['path'] });
       void queryClient.invalidateQueries({ queryKey: ['dialogues'] });
+      void queryClient.invalidateQueries({ queryKey: ['scenarios'] });
     }, [queryClient]),
   );
 
@@ -76,7 +80,14 @@ export function TodayScreen() {
   // M14 (T46): dialogue_opened carries category/genre (stories/none unless authored).
   const classification = usePackClassification();
 
-  const coreQueries = [due, productionDue, progressList, stories, path, dialogues];
+  // M17 (T62, §9.1): «Сценарий» card — the next unplayed rung, else the rung
+  // with the lowest clean ratio; hidden when no scenario pack is installed.
+  const scenarioTarget = React.useMemo(
+    () => pickTodayScenario(scenarios.data ?? []),
+    [scenarios.data],
+  );
+
+  const coreQueries = [due, productionDue, progressList, stories, path, dialogues, scenarios];
   const loading = coreQueries.some((q) => q.isPending);
   const anyError = coreQueries.some((q) => q.isError);
 
@@ -189,6 +200,44 @@ export function TodayScreen() {
             </View>
             <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
               <Ionicons name="chatbubbles-outline" size={18} color={tokens.accent} />
+            </View>
+          </View>
+        </Pressable>
+      )}
+
+      {/* blind speaking scenario (T62) — always the next thing to say out loud */}
+      {scenarioTarget && (
+        <Pressable
+          onPress={() => {
+            track('scenario_opened', {
+              familyId: scenarioTarget.familyId,
+              level: scenarioTarget.level,
+              from: 'today',
+            });
+            router.push(`/scenario/${scenarioTarget.packId}/${scenarioTarget.id}`);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Play the scenario ${scenarioTarget.titleRu}`}
+          className="rounded-xl border border-border bg-surface p-4 active:bg-surface-2"
+        >
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text variant="caption" className="uppercase tracking-wider">
+                Сценарий · {scenarioTarget.level}
+              </Text>
+              <RNText className="font-reading text-xl text-text" numberOfLines={1}>
+                {scenarioTarget.titleRu}
+              </RNText>
+              <Text variant="caption" numberOfLines={1}>
+                {isResumable(scenarioTarget)
+                  ? 'Continue where you left off'
+                  : scenarioTarget.bestStats
+                    ? 'Your weakest run — try for a clean one'
+                    : 'Someone talks, you answer — no text'}
+              </Text>
+            </View>
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+              <Ionicons name="radio-outline" size={18} color={tokens.accent} />
             </View>
           </View>
         </Pressable>

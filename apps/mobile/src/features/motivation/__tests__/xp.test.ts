@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { Rating } from '@/db/repositories/reviews';
 
-import { levelForXp, XP_TABLE, xpForRating, xpForReading, xpToNextLevel } from '../xp';
+import {
+  levelForXp,
+  XP_TABLE,
+  xpForRating,
+  xpForReading,
+  xpForScenarioRun,
+  xpToNextLevel,
+} from '../xp';
 
 describe('XP table (T19 §7.7)', () => {
   it('awards per rating, identically for every game mode by construction', () => {
@@ -44,5 +51,31 @@ describe('level curve', () => {
 
   it('never returns nonsense for negative input', () => {
     expect(levelForXp(-50).level).toBe(1);
+  });
+});
+
+describe('scenario XP (T62, SPEAKING_SCENARIOS §9.4)', () => {
+  it('table: 25 finished · 15 clean bonus · 2 per clean turn', () => {
+    expect(XP_TABLE.scenarioFinished).toBe(25);
+    expect(XP_TABLE.scenarioCleanBonus).toBe(15);
+    expect(XP_TABLE.scenarioCleanTurn).toBe(2);
+    // A scenario run outranks a dialogue run (more is asked of the learner).
+    expect(XP_TABLE.scenarioFinished).toBeGreaterThan(XP_TABLE.dialogueFinished);
+  });
+
+  it('dirty run = 25 + 2 × cleanTurns', () => {
+    expect(xpForScenarioRun({ turns: 4, cleanTurns: 0 })).toBe(25);
+    expect(xpForScenarioRun({ turns: 4, cleanTurns: 2 })).toBe(29);
+    expect(xpForScenarioRun({ turns: 4, cleanTurns: 3 })).toBe(31);
+  });
+
+  it('clean run = 25 + 15 + 2 × turns (40 + 2 × cleanTurns)', () => {
+    expect(xpForScenarioRun({ turns: 4, cleanTurns: 4 })).toBe(48);
+    expect(xpForScenarioRun({ turns: 1, cleanTurns: 1 })).toBe(42);
+    expect(xpForScenarioRun({ turns: 6, cleanTurns: 6 })).toBe(52);
+  });
+
+  it('a zero-turn run is finished but never clean', () => {
+    expect(xpForScenarioRun({ turns: 0, cleanTurns: 0 })).toBe(25);
   });
 });
