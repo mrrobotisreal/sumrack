@@ -27,6 +27,7 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { downloadBundle } from '../recordings/bundle-service';
 import { runDirBytes } from '../recordings/paths';
+import { reconcileRunMedia } from '../recordings/prune';
 import { formatSize, practiceItems, transcriptText } from './debrief-core';
 import type { MediaState } from './attempt-row';
 import { TurnCard } from './turn-card';
@@ -67,6 +68,12 @@ export function DebriefScreen() {
   React.useEffect(() => {
     if (!debrief || openedRef.current) return;
     openedRef.current = true;
+    // Files gone behind the row's back (a wipe) ⇒ flip to archived/deleted before rendering ▶.
+    if (debrief.run.mediaLocal) {
+      void reconcileRunMedia(debrief.run.id).then((local) => {
+        if (!local) void queryClient.invalidateQueries({ queryKey: ['scenario-runs'] });
+      });
+    }
     track('scenario_debrief_opened', {
       turns: debrief.turns.length,
       misses: debrief.stats?.misses ?? 0,

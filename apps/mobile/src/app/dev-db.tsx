@@ -12,6 +12,10 @@ import { importPack, type ImportResult } from '@/db/importer';
 import type { ScenarioFamily, ScenarioRunRow } from '@/db/repositories/scenarios';
 import type { WordProfileRow } from '@/db/repositories/word-forms';
 import { friendlyAiMessage } from '@/features/ai/errors';
+import {
+  resetTranscodeQueueForDev,
+  setDevForceEncoderUnsupported,
+} from '@/features/scenario/recordings/transcode-queue';
 import { exportUserData } from '@/features/backup/export-core';
 import { restoreUserData } from '@/features/backup/restore-core';
 import {
@@ -292,6 +296,14 @@ export default function DevDbScreen() {
       setPlantLog(`failed: ${String(err)}`);
     }
   }, [refreshScenarios]);
+  // --- T63 (dev only): the §12 «Opus encoder unsupported» switch — WAVs stay, bundles carry WAV.
+  const [forceUnsupported, setForceUnsupported] = React.useState(false);
+  const toggleUnsupported = React.useCallback(() => {
+    const next = !forceUnsupported;
+    setDevForceEncoderUnsupported(next);
+    if (!next) resetTranscodeQueueForDev();
+    setForceUnsupported(next);
+  }, [forceUnsupported]);
   // --- T58 backup self-check (dev only): export → restore the same payload.
   const [backupLog, setBackupLog] = React.useState<string | null>(null);
   const backupSelfCheck = React.useCallback(async () => {
@@ -513,6 +525,22 @@ export default function DevDbScreen() {
             </Text>
           )}
         </View>
+        {__DEV__ && (
+          <Pressable
+            onPress={toggleUnsupported}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: forceUnsupported }}
+            accessibilityLabel="Simulate no Opus encoder"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">
+              Simulate no Opus encoder: {forceUnsupported ? 'ON' : 'off'}
+            </Text>
+            <Text variant="caption">
+              Next attempts keep their WAV (opus_encode_failed unsupported); bundles carry WAV.
+            </Text>
+          </Pressable>
+        )}
         {__DEV__ && (
           <Pressable
             onPress={() => void plantOldRuns()}

@@ -984,6 +984,11 @@ export function createScenariosRepo(db: SumrakDB) {
       return rows.length;
     },
 
+    /** Runs that believe their recordings are on disk (the prune reconcile checks the folder). */
+    async listRunsWithLocalMedia(): Promise<ScenarioRunRow[]> {
+      return db.select().from(scenarioRuns).where(eq(scenarioRuns.mediaLocal, true));
+    },
+
     /** Rows for a set of run ids (the prune service joins on-disk dirs to rows). */
     async getRunsByIds(runIds: string[]): Promise<ScenarioRunRow[]> {
       if (runIds.length === 0) return [];

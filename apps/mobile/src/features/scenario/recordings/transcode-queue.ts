@@ -1,7 +1,12 @@
 import { File } from 'expo-file-system';
 
 import { repos } from '@/db';
-import { encodeWavToOpus, isOpusUnsupported } from '@/features/pronunciation/opus-encoder';
+import {
+  encodeWavToOpus,
+  isOpusUnsupported,
+  OpusUnsupportedError,
+} from '@/features/pronunciation/opus-encoder';
+import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import { attemptFile, attemptFileName, ensureRunDir, withExt } from './paths';
@@ -44,8 +49,20 @@ interface QueueDeps {
   onUnsupported?: () => void;
 }
 
+/** Dev-only matrix switch (§12 «encoder unsupported»): makes the default encoder reject like a device without Opus. */
+let devForceUnsupported = false;
+export function setDevForceEncoderUnsupported(on: boolean): void {
+  if (__DEV__) devForceUnsupported = on;
+}
+
 const defaultDeps: QueueDeps = {
-  encode: (wav, out, opts) => encodeWavToOpus(wav, out, opts),
+  encode: (wav, out, opts) => {
+    if (__DEV__ && devForceUnsupported) {
+      track('opus_encode_failed', { code: 'unsupported', simulated: true });
+      return Promise.reject(new OpusUnsupportedError('simulated (dev switch)'));
+    }
+    return encodeWavToOpus(wav, out, opts);
+  },
   isUnsupported: isOpusUnsupported,
   setAudioFile: (attemptId, name) => repos.scenarios.setAttemptAudioFile(attemptId, name),
   fileExists: (uri) => {
@@ -169,6 +186,10 @@ let shared: TranscodeQueue | null = null;
 export function transcodeQueue(): TranscodeQueue {
   if (!shared) shared = createTranscodeQueue();
   return shared;
+}
+/** Dev only: drop the shared queue (its `unsupported` latch) after the simulated cell. */
+export function resetTranscodeQueueForDev(): void {
+  if (__DEV__) shared = null;
 }
 
 /**
