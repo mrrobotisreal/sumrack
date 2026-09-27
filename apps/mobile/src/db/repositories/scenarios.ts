@@ -959,6 +959,31 @@ export function createScenariosRepo(db: SumrakDB) {
       return new Map(rows.map((r) => [r.id, r.orderIdx]));
     },
 
+    /**
+     * One-time T63 cleanup: pre-T63 attempts stored the recorder's cache path
+     * (`file:///…/cache/pron-attempt.wav`, overwritten per attempt — never a
+     * durable recording). Null them so the debrief says «deleted» honestly.
+     */
+    async clearLegacyAudioFiles(): Promise<number> {
+      const rows = await db
+        .select({ id: scenarioAttempts.id })
+        .from(scenarioAttempts)
+        .where(
+          sql`${scenarioAttempts.audioFile} LIKE 'file:%' OR ${scenarioAttempts.audioFile} LIKE '/%'`,
+        );
+      if (rows.length === 0) return 0;
+      await db
+        .update(scenarioAttempts)
+        .set({ audioFile: null })
+        .where(
+          inArray(
+            scenarioAttempts.id,
+            rows.map((r) => r.id),
+          ),
+        );
+      return rows.length;
+    },
+
     /** Rows for a set of run ids (the prune service joins on-disk dirs to rows). */
     async getRunsByIds(runIds: string[]): Promise<ScenarioRunRow[]> {
       if (runIds.length === 0) return [];

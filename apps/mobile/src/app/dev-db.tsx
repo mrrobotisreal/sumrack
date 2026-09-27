@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { sql } from 'drizzle-orm';
 import { Directory, File, Paths } from 'expo-file-system';
 import { useFocusEffect } from 'expo-router';
 import * as React from 'react';
@@ -231,6 +232,66 @@ export default function DevDbScreen() {
     const runs = await repos.scenarios.listRuns(undefined, { limit: 5 });
     setScenarioReadout({ families, perRung, runs });
   }, []);
+  // --- T63 (dev only): plant N finished runs aged 31–40 days with fake recordings on disk,
+  // then the prune matrix cell has something to delete (rows stay, files go).
+  const [plantLog, setPlantLog] = React.useState<string | null>(null);
+  const plantOldRuns = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const families = await repos.scenarios.listScenarios();
+      const rung = families[0]?.rungs[0];
+      if (!rung) {
+        setPlantLog('no scenario installed');
+        return;
+      }
+      const detail = await repos.scenarios.getScenario(rung.packId, rung.id);
+      const turn = detail?.turns.find((t) => t.expect) ?? detail?.turns[0];
+      if (!detail || !turn) {
+        setPlantLog('no turns');
+        return;
+      }
+      const DAY = 86_400_000;
+      let bytes = 0;
+      const ids: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const run = await repos.scenarios.startRun({
+          packId: rung.packId,
+          scenarioId: rung.id,
+          familyId: rung.familyId,
+          level: rung.level,
+          startTurnId: detail.turns[0]!.id,
+        });
+        const attempt = await repos.scenarios.recordAttempt({
+          runId: run.id,
+          turnId: turn.id,
+          kind: 'answer',
+          outcome: 'matched',
+          transcript: 'planted',
+          detail: { kind: 'answer', target: 'planted', words: [], score: 100, slots: {} },
+          audioDurationMs: 2000,
+        });
+        const dir = new Directory(Paths.document, 'recordings', 'scenario', run.id);
+        dir.create({ intermediates: true });
+        const name = `t${String(turn.orderIdx).padStart(2, '0')}-a${attempt.attemptNo}.ogg`;
+        const f = new File(dir, name);
+        f.write(new Uint8Array(20_000).fill(i + 1));
+        bytes += 20_000;
+        await repos.scenarios.setAttemptAudioFile(attempt.id, name);
+        await repos.scenarios.finishRun(run.id, { endingId: detail.endings[0]!.id });
+        const at = Date.now() - (31 + i) * DAY;
+        await db.run(
+          sql`UPDATE scenario_runs SET started_at = ${at - 60_000}, finished_at = ${at} WHERE id = ${run.id}`,
+        );
+        ids.push(run.id);
+      }
+      // Pin the first planted run so the «pin survives prune» cell has a subject.
+      await repos.scenarios.setPinned(ids[0]!, true);
+      setPlantLog(`planted 10 runs aged 31–40 d · ${bytes} B on disk · pinned ${ids[0]}`);
+      await refreshScenarios();
+    } catch (err) {
+      setPlantLog(`failed: ${String(err)}`);
+    }
+  }, [refreshScenarios]);
   // --- T58 backup self-check (dev only): export → restore the same payload.
   const [backupLog, setBackupLog] = React.useState<string | null>(null);
   const backupSelfCheck = React.useCallback(async () => {
@@ -452,6 +513,20 @@ export default function DevDbScreen() {
             </Text>
           )}
         </View>
+        {__DEV__ && (
+          <Pressable
+            onPress={() => void plantOldRuns()}
+            accessibilityRole="button"
+            accessibilityLabel="Plant 10 old runs"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Plant 10 old runs (T63 prune cell)</Text>
+            <Text variant="caption" selectable>
+              {plantLog ??
+                'Ten finished runs aged 31–40 days, one 20 KB fake .ogg each, #1 pinned.'}
+            </Text>
+          </Pressable>
+        )}
         {__DEV__ && (
           <Pressable
             onPress={() => void backupSelfCheck()}

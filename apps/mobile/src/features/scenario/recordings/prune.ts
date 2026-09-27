@@ -35,6 +35,7 @@ export function pruneRecordings(reason: 'start' | 'post-run' | 'manual'): Promis
 async function doPrune(reason: 'start' | 'post-run' | 'manual'): Promise<PruneResult> {
   const empty: PruneResult = { runs: 0, bytes: 0, protectedCount: 0 };
   try {
+    if (reason === 'start') await repos.scenarios.clearLegacyAudioFiles();
     const settings = await getRecordingsSettings();
     const dirs = listRunDirs();
     if (dirs.length === 0) {
