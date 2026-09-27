@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import migrations from '../../drizzle/migrations';
 import { initMotivation } from '@/features/motivation/service';
 import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
+import { refreshInstalledAssist } from '@/features/pronunciation/assist-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateAmbientCursorsFromDb } from '@/store/ambient-cursors';
 import { hydrateAmbientPrefsFromDb } from '@/store/ambient-prefs';
@@ -61,6 +62,9 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         // ASR install state for Settings + the pronunciation game's gate
         // (T12). The recognizer itself loads lazily at session start.
         await refreshInstalledAsr();
+        // T59: the optional Whisper assist model — same scan, plus the
+        // `scenario.assistModel` mirror row scenario code gates on.
+        await refreshInstalledAssist();
         // T19: register the motivation bus, consume freezes for days missed
         // while the app was closed, sweep achievements, replan reminders.
         await initMotivation();

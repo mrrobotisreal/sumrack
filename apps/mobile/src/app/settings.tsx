@@ -13,6 +13,7 @@ import { BackupSettingsSection } from '@/features/backup/backup-settings-section
 import { GoalSettingsSection } from '@/features/motivation/goal-settings-section';
 import { NotificationsSettingsSection } from '@/features/motivation/notifications-settings-section';
 import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
+import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-section';
 import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
@@ -174,6 +175,7 @@ export default function SettingsScreen() {
 
       <VoicesSettingsSection />
       <AsrSettingsSection />
+      <AssistSettingsSection />
 
       <SyncSettingsSection />
 
@@ -222,6 +224,15 @@ export default function SettingsScreen() {
                 <View className="gap-0.5">
                   <Text className="font-ui-medium">Read any text</Text>
                   <Text variant="caption">Speak arbitrary Russian, voice QA + latency (T11)</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
+            <Link href="/dev-assist" asChild>
+              <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Assist bench</Text>
+                  <Text variant="caption">Whisper candidates × clips, Opus transcode (T59)</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
               </Pressable>

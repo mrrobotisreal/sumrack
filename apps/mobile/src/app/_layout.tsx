@@ -178,6 +178,7 @@ export default function RootLayout() {
                 <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
                 <Stack.Screen name="dev-db" options={{ title: 'DB Debug' }} />
                 <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
+                <Stack.Screen name="dev-assist" options={{ title: 'Assist bench' }} />
               </Stack>
               <AmbientAudioHost ready={introDone} />
               <AutoSync />

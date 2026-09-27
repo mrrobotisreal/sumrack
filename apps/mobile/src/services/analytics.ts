@@ -373,7 +373,21 @@ export type AnalyticsEvent =
   | 'profile_batch_finished'
   | 'profile_batch_cancelled'
   // M17 «Сценарии» — T58 data layer (SPEAKING_SCENARIOS §4.5: slugs/numbers only).
-  | 'scenario_pack_imported';
+  | 'scenario_pack_imported'
+  // M17 «Сценарии» — T59 native additions (§4.5 T59): opus_encode_done {ms,
+  // inBytes, outBytes, durationMs} · opus_encode_failed {code} · whisper_loaded
+  // {modelId, loadMs} · whisper_transcribed {decodeMs, audioMs, words, language}
+  // · assist_model_install_started/finished/failed {modelId, bytes|ms, source}
+  // · assist_model_deleted {modelId, bytes} · dev_assist_bench {…} (dev bench).
+  | 'opus_encode_done'
+  | 'opus_encode_failed'
+  | 'whisper_loaded'
+  | 'whisper_transcribed'
+  | 'assist_model_install_started'
+  | 'assist_model_install_finished'
+  | 'assist_model_install_failed'
+  | 'assist_model_deleted'
+  | 'dev_assist_bench';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
