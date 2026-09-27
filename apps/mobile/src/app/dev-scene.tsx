@@ -65,7 +65,7 @@ const PODCAST_TRIO = {
 };
 
 /** Starting guess for the podcast host (measured on-device — see the T61 status row). */
-const PODCAST_ANCHOR_SEED: MouthAnchor = { x: 0.455, y: 0.505, w: 0.13, h: 0.06, rotate: 0 };
+const PODCAST_ANCHOR_SEED: MouthAnchor = { x: 0.49, y: 0.257, w: 0.12, h: 0.032, rotate: 10 };
 
 const RATES = [1, 0.8] as const;
 const HUES = [25, 175, 225, 45, 210, 285] as const;

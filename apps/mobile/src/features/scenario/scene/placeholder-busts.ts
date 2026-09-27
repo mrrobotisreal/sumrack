@@ -89,8 +89,10 @@ export function mixHex(a: string, b: string, t: number): string {
  * highlights toward the text token; the rim light is the scene glow.
  */
 export function bustPalette(hue: number, tokens: ColorTokens, glow: string): BustPalette {
-  const skin = hslToHex(hue, 0.28, 0.6);
-  const cloth = hslToHex(hue, 0.22, 0.24);
+  // Skin takes only a whisper of the hue (a tint, not a blue face); cloth and
+  // hair carry the family colour.
+  const skin = hslToHex(hue, 0.14, 0.62);
+  const cloth = hslToHex(hue, 0.3, 0.26);
   return {
     skin,
     skinShade: mixHex(skin, tokens.scrim, 0.28),
@@ -101,7 +103,7 @@ export function bustPalette(hue: number, tokens: ColorTokens, glow: string): Bus
     iris: mixHex(hslToHex(hue + 150, 0.35, 0.3), tokens.scrim, 0.2),
     pupil: tokens.scrim,
     line: mixHex(skin, tokens.scrim, 0.55),
-    rim: glow,
+    rim: mixHex(glow, skin, 0.45),
   };
 }
 
@@ -176,15 +178,15 @@ function head(p: BustPalette, jaw: 'soft' | 'square'): BustNode[] {
     nodes.push({
       tag: 'path',
       layer: 'base',
-      d: 'M94 160 L96 206 Q150 236 204 206 L206 160 Q150 176 94 160 Z',
+      d: 'M104 166 L110 206 Q150 232 190 206 L196 166 Q150 182 104 166 Z',
       fill: p.skin,
     });
   }
-  // Cheek/jaw shade — one soft crescent low on the face.
+  // Chin shadow — one soft crescent under the mouth, never across it.
   nodes.push({
     tag: 'path',
     layer: 'base',
-    d: 'M96 178 Q150 240 204 178 Q150 218 96 178 Z',
+    d: 'M116 206 Q150 234 184 206 Q150 222 116 206 Z',
     fill: p.skinShade,
   });
   // Rim light along the lit edge (§8.3: "a soft rim light … carry it").

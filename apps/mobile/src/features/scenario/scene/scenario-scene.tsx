@@ -53,13 +53,20 @@ export interface ScenarioSceneProps {
   style?: object;
 }
 
-function useRenderProbe(enabled: boolean) {
-  const count = React.useRef(0);
+/**
+ * The T31 render probe, keyed on the props: commits are counted only while
+ * the props stay identical (a line playing changes nothing but the shared
+ * value), so a prop change resets the count and a warning means the scene
+ * re-rendered with playback — which must never happen.
+ */
+function useRenderProbe(enabled: boolean, signature: string) {
+  const count = React.useRef({ signature: '', renders: 0 });
   React.useEffect(() => {
-    count.current += 1;
-    if (__DEV__ && enabled && count.current > 24) {
+    if (count.current.signature !== signature) count.current = { signature, renders: 0 };
+    count.current.renders += 1;
+    if (__DEV__ && enabled && count.current.renders > 8) {
       console.warn(
-        `[T61] ScenarioScene rendered ${count.current}× — the scene must not re-render with playback`,
+        `[T61] ScenarioScene rendered ${count.current.renders}× with unchanged props — the scene must not re-render with playback`,
       );
     }
   });
@@ -74,7 +81,10 @@ export const ScenarioScene = React.memo(function ScenarioScene({
   forcePlaceholder = false,
   style,
 }: ScenarioSceneProps) {
-  useRenderProbe(!thumbnail);
+  useRenderProbe(
+    !thumbnail,
+    `${pose}|${active}|${forcePlaceholder}|${spec.bodyUri ?? ''}|${spec.layout}|${spec.placeholder?.kind ?? ''}|${spec.placeholder?.hue ?? ''}|${spec.mouthStyle}|${JSON.stringify(spec.mouthAnchor)}`,
+  );
   return (
     <SceneBox style={[styles.box, style]} accessibilityLabel={spec.hostName ?? undefined}>
       {(box) => (

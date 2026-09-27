@@ -74,7 +74,8 @@ describe('palette derivation', () => {
     const warm = bustPalette(25, colors.dark, '#c26a3a');
     const cool = bustPalette(220, colors.dark, '#c26a3a');
     expect(warm.skin).not.toBe(cool.skin);
-    expect(warm.rim).toBe('#c26a3a');
+    expect(warm.rim).not.toBe(cool.rim); // the glow, softened toward the skin
+    expect(bustPalette(25, colors.dark, '#000000').rim).not.toBe(warm.rim);
     expect(warm.pupil).toBe(colors.dark.scrim);
     for (const v of Object.values(warm)) expect(v).toMatch(/^#[0-9a-f]{6}$/);
   });
