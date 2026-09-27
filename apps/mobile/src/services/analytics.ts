@@ -395,7 +395,23 @@ export type AnalyticsEvent =
   | 'scenario_endpoint'
   | 'scenario_judge'
   | 'scenario_rescue'
-  | 'scenario_meta';
+  | 'scenario_meta'
+  // Run-lifecycle events of §4.5 T62 that the T60 reducer/executor already fire (declared here
+  // by T60; T62 adds scenario_opened / scenario_ending_found / scenario_subtitles_toggled):
+  // scenario_run_started {scenarioId, level, resumed} · scenario_run_finished {scenarioId,
+  // endingId, turns, cleanTurns, misses} · scenario_run_abandoned {scenarioId} ·
+  // scenario_run_resumed {scenarioId} · scenario_turn_advanced {turnId, misses, assisted,
+  // branchKey} · scenario_lifeline_revealed {turnId} · scenario_turn_skipped {turnId} ·
+  // scenario_line_replayed {slower} · scenario_nudge_played {kind}.
+  | 'scenario_run_started'
+  | 'scenario_run_finished'
+  | 'scenario_run_abandoned'
+  | 'scenario_run_resumed'
+  | 'scenario_turn_advanced'
+  | 'scenario_lifeline_revealed'
+  | 'scenario_turn_skipped'
+  | 'scenario_line_replayed'
+  | 'scenario_nudge_played';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
