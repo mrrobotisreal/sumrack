@@ -272,8 +272,10 @@ export default function DevSceneScreen() {
       released = true;
       clearTimeout(t);
       sub.remove();
-      p.release();
+      // Drop the player from state BEFORE releasing so the mouth tick never
+      // reads a released shared object (T61 device finding).
       setPlayer(null);
+      p.release();
     };
     // playing.key is the deliberate remount key.
     // eslint-disable-next-line react-hooks/exhaustive-deps

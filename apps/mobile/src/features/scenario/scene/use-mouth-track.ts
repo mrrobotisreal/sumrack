@@ -71,10 +71,22 @@ export function useMouthTrack(opts: {
     }
     const startWall = Date.now();
     let clock: MediaClock | null = null;
+    let id: ReturnType<typeof setInterval> | null = null;
     const tick = () => {
       let next = 0;
       if (line?.track != null && player) {
-        const read = Math.round(player.currentTime * 1000);
+        let read: number;
+        try {
+          read = Math.round(player.currentTime * 1000);
+        } catch {
+          // The line's player was released under us (a replay/skip mid-line
+          // — expo-audio throws on a released shared object): close the
+          // mouth and stop ticking; the next line remounts this effect.
+          if (id != null) clearInterval(id);
+          id = null;
+          shape.value = 0;
+          return;
+        }
         clock ??= startMediaClock(read, Date.now(), rate);
         const media = syncMediaClock(clock, read, Date.now());
         next = mouthShapeAt(line.track, line.roundMask, media) ?? 0;
@@ -84,9 +96,9 @@ export function useMouthTrack(opts: {
       if (shape.value !== next) shape.value = next;
     };
     tick();
-    const id = setInterval(tick, MOUTH_TICK_MS);
+    id = setInterval(tick, MOUTH_TICK_MS);
     return () => {
-      clearInterval(id);
+      if (id != null) clearInterval(id);
       shape.value = 0;
     };
   }, [player, line, speaking, rate, shape]);
