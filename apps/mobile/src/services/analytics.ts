@@ -411,7 +411,18 @@ export type AnalyticsEvent =
   | 'scenario_lifeline_revealed'
   | 'scenario_turn_skipped'
   | 'scenario_line_replayed'
-  | 'scenario_nudge_played';
+  | 'scenario_nudge_played'
+  // M17 «Сценарии» — T62 screens (§4.5 T62): scenario_opened {familyId, level, from} ·
+  // scenario_ending_found {endingId, tone, newEnding} · scenario_subtitles_toggled {enabled} ·
+  // scenario_pref_changed {key, value} · scenario_hub_opened {families, gate} ·
+  // scenario_gate_shown {gate} · scenario_assist_banner {action}.
+  | 'scenario_opened'
+  | 'scenario_ending_found'
+  | 'scenario_subtitles_toggled'
+  | 'scenario_pref_changed'
+  | 'scenario_hub_opened'
+  | 'scenario_gate_shown'
+  | 'scenario_assist_banner';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

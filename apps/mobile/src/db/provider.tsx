@@ -10,6 +10,7 @@ import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateAmbientCursorsFromDb } from '@/store/ambient-cursors';
 import { hydrateAmbientPrefsFromDb } from '@/store/ambient-prefs';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
+import { hydrateScenarioPrefsFromDb } from '@/features/scenario/store/scenario-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
 import { hydrateGoalPrefsFromDb } from '@/store/goal-prefs';
 import { hydrateBankPrefsFromDb } from '@/store/bank-prefs';
@@ -52,6 +53,8 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         await hydrateAmbientCursorsFromDb();
         await hydrateLookupPrefsFromDb();
         await hydrateGamePrefsFromDb();
+        // T62: «Сценарии» run prefs (subtitles, hold-to-talk, rescue, endpointing, bed).
+        await hydrateScenarioPrefsFromDb();
         await hydrateMotionPrefsFromDb();
         await hydrateDailyPrefsFromDb();
         await hydrateGoalPrefsFromDb();

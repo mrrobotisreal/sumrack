@@ -16,6 +16,7 @@ import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-sectio
 import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-section';
 import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
+import { ScenarioSettingsSection } from '@/features/scenario/scenario-settings-section';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
 import { VoicesSettingsSection } from '@/features/tts/voices-settings-section';
 import { track } from '@/services/analytics';
@@ -162,6 +163,8 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
+
+      <ScenarioSettingsSection />
 
       <AmbientSettingsSection />
 
