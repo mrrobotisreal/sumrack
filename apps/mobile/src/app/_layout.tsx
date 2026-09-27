@@ -180,6 +180,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-tts" options={{ title: 'Read any text' }} />
                 <Stack.Screen name="dev-assist" options={{ title: 'Assist bench' }} />
                 <Stack.Screen name="dev-judge" options={{ title: 'Judge lab' }} />
+                <Stack.Screen name="dev-scene" options={{ title: 'Scene gallery' }} />
               </Stack>
               <AmbientAudioHost ready={introDone} />
               <AutoSync />
