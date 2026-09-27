@@ -394,6 +394,203 @@ end (≈ 75 s · $0.21–0.26) — a verb profile is ~25 sections of forms.
 
 ---
 
-## 8. Speaking scenarios (M17 — filled by T63)
+## 8. Speaking scenarios (M17)
 
-Stub. «Сценарии» — blind speaking scenarios with a talking cast: design `../../docs/design/SPEAKING_SCENARIOS.md`, scripts `../../docs/design/SCENARIO_SCRIPTS_BATCH_1.md`, ADR-0019. T63 writes this section (adding a family, the assist model, recordings & pruning, media bundles & lazy restore, the judge lab + scene gallery, endpointing presets, cost expectations).
+«Сценарии» — blind speaking role-plays: a host talks, you answer out loud
+with no text on screen, an offline judge scores the answer against authored
+expectations, a talking cast moves its mouth to pipeline mouth tracks, every
+attempt is recorded and reviewable afterwards. Design
+`../../docs/design/SPEAKING_SCENARIOS.md`, scripts
+`../../docs/design/SCENARIO_SCRIPTS_BATCH_1.md`, ADR-0019 (workspace root).
+Entry points: Games → «Сценарии», the Today card «Сценарий», Settings →
+Scenarios (run prefs) and Settings → Speech recognition → «Recordings».
+
+### 8.1 Add a scenario family (a CT session)
+
+One pack per rung, `a{level}-scn-<family>-001`, `type: scenario`, no
+`category` (scenarios are not Library content). The authoring contract is
+`packages/pipeline/docs/AUTHORING.md` → **«Scenario drafts»** (frontmatter,
+turns, `EXPECT:` slots, retry lines, glossary, nudges, the branch map + the
+glossary coverage report) and **«Scenario audio»** (per-line renders on
+Multilingual v2, variant steering, `--player-audio` coach clips,
+`--audition` / `--seed radio-a1/host=<seed>`, `--mouth-only`, the cost gate).
+The founding pack's bible — cast roster, voices, cue notes, the numbering —
+is `../../sumrak-content/series/scenarios/SCENARIOS.md` once CT020 writes it.
+
+**The art rule.** Mitch's PNG layers live at
+`Stories/scenarios/<family>/art/sized/` (workspace root). The CT session copies
+`backdrop.png` → `<pack-dir>/scene/backdrop.png`, `body.png` →
+`scene/<host-id>/body.png`, `eyelids2.png` → `scene/<host-id>/eyelids.png`
+(≈ 4.7 MB per family — Wi-Fi-gated on the phone like large audio), sets the
+host's `portrait.body` / `eyelids`, and measures **`mouthAnchor`** with the
+**anchor picker**: dev build → Settings → Developer → **Scene gallery**
+(`sumrak://dev-scene`), pick the family, drag the mouth box over the closed
+lips, copy the printed `{ x, y, w, h, rotate }` fractions into the draft. The
+podcast host measured `{ x 0.49, y 0.257, w 0.12, h 0.032, rotate 10 }` on the
+1200×1600 body. **Re-publishing a rung with better art or re-auditioned lines
+is a `pack.version` bump** in every draft, never a new id (publish refuses
+same-version drift); already-published sentence ids stay byte-stable.
+
+```sh
+pnpm pipeline audio Stories/scenarios/<family>/*.scenario.md \
+  -o ../Stories/_build/<pack-id> --audition 2            # pick a seed per (scenario, character)
+pnpm pipeline audio … -o ../Stories/_build/<pack-id> \
+  --seed <scenario-id>/<host-id>=<seed> --player-audio    # finalize + coach clips
+pnpm pipeline publish ../Stories/_build/<pack-id> --content ../sumrak-content --push
+```
+
+The size line prints `scene/` separately («of which scene/ 4.68 MB»).
+
+### 8.2 The assist model («как сказать…» in English)
+
+Optional. Settings → Speech recognition → **Assist model** installs
+**`whisper-base-int8`** (Whisper base, int8 encoder + decoder, 153 MB on disk,
++137 MB resident beside the Russian recognizer, ~190 ms per 2–3 s clip,
+~430 ms cold load). It hears the English word inside «Как сказать _wallet_?»;
+without it the app falls back to the glossary (`translit` forms) → the online
+model → the «не знаю» nudge. Every Whisper archive is over GitHub's 100 MB
+tree limit, so it downloads as an asset of the `models` **Release** on
+`sumrak-content` (manifest `release: {tag, asset}`, PAT bearer +
+`Accept: application/octet-stream`), then the k2-fsa mirror as the fallback.
+
+T59's benchmark (20 synthetic «Как сказать <word>» clips per set, macOS `say`
+renders — re-run on Mitch's own voice with `sumrak://dev-assist`):
+
+| candidate              | glossary-fuzzy recovery (3 sets, ≥ 0.75) | exact word     | decode (median) | resident |
+| ---------------------- | ---------------------------------------- | -------------- | --------------- | -------- |
+| tiny-int8              | 75 / 65 / 70 %                           | 60 / 60 / 65 % | ~110 ms         | +79 MB   |
+| **base-int8 (pinned)** | **80 / 75 / 80 %**                       | 60 / 70 / 65 % | ~190 ms         | +137 MB  |
+| small-int8             | 70 / 75 / 85 %                           | 65 / 70 / 85 % | ~550 ms         | +353 MB  |
+
+Delete / reinstall any time; the hub shows a one-time banner offering it.
+
+### 8.3 Recordings and pruning
+
+Every attempt you speak is kept. The T12 recorder writes a 16 kHz mono WAV
+into the cache; when the judge's decision is persisted the file **moves** to
+`files/recordings/scenario/<runId>/tNN-aM.wav` (NN = the turn's order, M =
+the attempt number) and the attempt row stores that relative name. A
+background queue then transcodes it to **Ogg/Opus 20 kbps** (`tNN-aM.ogg`,
+~18 KB per 5 s), rewrites the row and deletes the WAV. On a device with no
+Opus encoder (`ERR_OPUS_UNSUPPORTED`) the WAV stays and is played and bundled
+as-is (~10× bigger; the bundle step warns once). The debrief plays either.
+
+**Settings → Speech recognition → Recordings** shows the total on device,
+**Keep for** (7 · 30 · 90 days), **Storage cap** (100 MB · 300 MB · 1 GB),
+**Prune now** and the trash icon = **Delete all recordings**. The prune runs
+at every app start and after every finished run (`scenario.recordings` in
+the settings table: `{ v, pruneDays, capBytes, lastPruneAt }`):
+
+1. unpinned runs whose finish (or start, if unfinished) is older than
+   `pruneDays` lose their files;
+2. if what remains still exceeds `capBytes`, the oldest unpinned **finished**
+   runs go next until it fits;
+3. **pinned runs are never pruned** (the pin is on the debrief header, also
+   visible as 📌 in the runs list);
+4. while a backup target is configured, a run whose media bundle has not been
+   uploaded yet is spared by rule 1 (not by rule 2 — a target that keeps
+   failing cannot grow the folder without bound).
+
+Pruning deletes **files only**: the run, its attempts, transcripts, per-word
+chips and scores all stay. In the debrief the media line then reads
+**«Recordings archived in your backup» + Download** (a bundle exists) or
+**«Recordings deleted»** (none does). `recordings_pruned {runs, bytes,
+orphans, reason}` is the honest count (`reason` = start / post-run / manual /
+delete-all). A run directory with no row (a wiped DB) is deleted as an
+orphan.
+
+### 8.4 Media bundles and lazy restore
+
+After a run finishes **and** its transcodes are done, the app packs the run
+directory into one **`SMB1`** blob (`'SMB1'` · u32 header length · JSON
+`{ v:1, runId, files:[{ name, bytes, sha256 }] }` · the bodies — names and
+sizes only, never a transcript), seals it with the **same passphrase key and
+envelope as the snapshots** (`kind: 'media'` in the envelope header; T20 files
+carry no `kind` and read as snapshots) and uploads it under the name
+**`sumrak-media-<runId>.json`** to every enabled target:
+
+- **GitHub**: `sumrak-content/backups/media/` (the snapshots stay in
+  `backups/`);
+- **syncd**: `PUT /backup?name=sumrak-media-<runId>.json` — the server
+  accepts the media name since the SumrakAPI change of 2026-09-27 (build +
+  deploy `syncd` from `SumrakAPI` `0142268` or later, `deploy/README.md`).
+
+State on `scenario_runs.mediaBundleState`: `null` (not yet) → `pending`
+(offline / target unreachable) → `uploaded` | `failed` (a target rejected it
+for a non-transient reason). The **pump** retries pending, failed and
+never-bundled finished runs at the automatic-backup trigger points (launch,
+foreground, background) and from the Backup card's **«Media: N bundles · M
+pending · tap to retry»** line. Bundles are **immutable**: a name a target
+already holds counts as uploaded; **no retention** applies to them (~150 KB
+each; 1,000 runs ≈ 150 MB, accepted — remote deletion for pruned runs is a
+follow-up). Events: `media_bundle_uploaded / failed {bytes, target}`,
+`media_bundle_downloaded`.
+
+**Restore is lazy.** A snapshot restore (§3) brings every run and attempt row
+back with `mediaLocal = false` and no files — the debrief shows
+**Download** on each run that has an uploaded bundle. Download fetches
+(syncd first, then GitHub), decrypts with the current key, verifies every
+sha256, writes the files into the run directory, re-points the attempts and
+flips `mediaLocal`. Nothing here blocks a screen; a failure shows one line in
+the debrief and leaves the row untouched.
+
+**Not configured?** Recordings stay local and are pruned on the same rules;
+the debrief shows «Set up backup to keep recordings» once
+(`scenario.backupHintShown`).
+
+### 8.5 The debrief and the runs list
+
+Ending card → **«Смотреть разбор»** opens that run's debrief; the hub's
+**«Runs · N»** (and Today's card) opens the runs list (day-grouped, per
+scenario or all; an unfinished run resumes in place). A debrief shows the
+header (family/rung, ending tone, turns · misses · hints · skips · rescues ·
+avg · XP, the pin), one card per turn in walk order — the host's line
+(tap-word, «EN», ▶ replay), each attempt (▶ your recording, the level strip,
+`Услышал:` with the per-word ✓/✗ chips against the target, badges
+`matched` / `near miss` / `miss` / `rescued` / `assisted` / `skipped`, the
+paraphrase score), meta asks where they happened, and **«Можно было
+сказать»** = `accept[0]` with ▶ coach audio when the pack shipped it — then
+**Practice these · N** (every required forms-slot lemma you missed goes to
+the word bank in one tap), **Play again**, **Share transcript** (plain text
+through the Android share sheet, no audio).
+
+### 8.6 Judge lab and scene gallery (dev builds)
+
+- **Judge lab** — Settings → Developer → Judge lab (`sumrak://dev-judge`):
+  pick any installed scenario turn, type or speak an answer, see the verdict
+  (`matched` / `miss` / `no-speech`), slots hit, paraphrase score, near-miss,
+  branch key, the meta-intent chain, and the live endpointing meter with the
+  `START` / `LOUD` chips. adb-drivable:
+  `adb shell am start -a android.intent.action.VIEW -d "sumrak://dev-judge?turn=<turnId>&say=<text>"`.
+- **Scene gallery** — Settings → Developer → Scene gallery
+  (`sumrak://dev-scene?line=<sentenceId|index>&rate=0.8`): every installed
+  cast in every pose, the mouth driven by a chosen line, the perf probe
+  (gfxinfo ≤ 1.6 % janky on the S25 is the T61 baseline) and the **anchor
+  picker** of §8.1.
+- **DB debug** (§4) lists the installed scenarios (audio staged / mouth /
+  stamps / assets) and the last five runs with pin · media · bundle state.
+
+### 8.7 Endpointing presets
+
+Settings → Scenarios → **End of turn**: `quick` = 0.8 s of trailing silence,
+`normal` = 1.1 s (default — the preset that won T62's device runs),
+`patient` = 1.6 s; a hard 20 s cap ends any turn, 6 s with no speech at all
+is a `no-speech` endpoint (the host nudges). Speech onset `START 0.08` /
+loud `0.05` on the module's normalized RMS — a silent room sits ~6× under
+START; hold-to-talk (Settings → Scenarios → Hold to talk) bypasses all of it.
+Calibration on Mitch's own voice is still open (the lab's chips are the tool).
+
+### 8.8 Cost expectations (measured)
+
+| what                                        | requests / chars | wall time                              | result                             |
+| ------------------------------------------- | ---------------- | -------------------------------------- | ---------------------------------- |
+| fixture «Проверка связи» audition (2 takes) | 6 / 150          | 12 s                                   | seed picked                        |
+| fixture finalize (54 lines + 2 coach)       | 56 / 1,115       | 89 s                                   | 90 s of audio, 444 KB Opus         |
+| a real A1 rung (~120 lines, ~3,000 chars)   | ≈ 3 k chars      | ≈ 3 min                                | (CT020 records the real numbers)   |
+| online rescue, one miss                     | 1 request        | Haiku 4.5 ≈ 1.9 s · GPT-6 Luna ≈ 1.1 s | ≈ $0.0007                          |
+| one attempt recording                       | —                | —                                      | 5 s → ~18.7 KB Opus (WAV ≈ 160 KB) |
+| one media bundle (4–8 attempts)             | —                | —                                      | ≈ 100–200 KB sealed                |
+
+ElevenLabs characters come off the monthly plan; the rescue rides the
+OpenRouter key from Settings → AI (a phone without a key simply plays
+offline — same game, slightly stricter).

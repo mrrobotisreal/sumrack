@@ -132,6 +132,19 @@ per run from every Generate / Learn sheet, with real-receipt estimates. The
 resumable batch. RUNBOOK §7 has the operations and the measured costs;
 design in `../docs/design/WORD_FORMS_AND_LESSONS.md` (ADR-0018).
 
+## Speaking scenarios (M17)
+
+**«Сценарии»** — blind speaking role-plays: a host with a talking cast
+speaks, you answer out loud in Russian with no text on screen, an offline
+judge scores authored expectations (an online fast model may rescue a
+near-miss), «что значит…» / «как сказать…» / «повтори» / «помедленнее» are
+spoken commands, every attempt is recorded as Opus and reviewed in a per-run
+**debrief** (per-word ✓/✗ chips, playback, model answer with coach audio,
+«Practice these»), recordings prune on a 30-day / 300 MB policy with pins,
+and each finished run is backed up as an immutable encrypted **media bundle**
+on both backup targets with lazy restore. RUNBOOK §8 has the operations;
+design in `../docs/design/SPEAKING_SCENARIOS.md` (ADR-0019).
+
 ## Quality gates
 
 ```sh
