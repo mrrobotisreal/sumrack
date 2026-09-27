@@ -1,0 +1,224 @@
+{
+  "_source": "docs/design/SCENARIO_SCRIPTS_BATCH_1.md §1.1 — «В эфире» A1 (pod-a1), every EXPECT/ACCEPT/REJECT block hand-copied 2026-09-27 (T60). Judge test cases only; the CT020 session authors the real pack.",
+  "scenarioId": "pod-a1",
+  "turns": [
+    {
+      "id": "pod-a1-t02",
+      "promptRu": "Скажи, как тебя зовут?",
+      "expect": {
+        "slots": [{ "kind": "free", "id": "name", "required": true, "minTokens": 1 }],
+        "accept": ["Меня зовут Митч.", "Я Митч.", "Митч."],
+        "reject": [
+          {
+            "forms": ["хорошо", "нормально", "спасибо", "отлично"],
+            "react": "Нет-нет, я спрашиваю имя."
+          }
+        ]
+      },
+      "next": "pod-a1-t03"
+    },
+    {
+      "id": "pod-a1-t03",
+      "promptRu": "Очень приятно! Откуда ты?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "origin",
+            "required": true,
+            "options": [
+              { "key": "usa", "lemma": "Америка", "forms": ["америк*", "сша", "штат*"] },
+              { "key": "colorado", "lemma": "Колорадо", "forms": ["колорадо"] },
+              { "key": "elsewhere", "lemma": "из", "forms": ["из"] }
+            ]
+          }
+        ],
+        "accept": ["Я из Америки.", "Из Колорадо.", "Я из США."]
+      },
+      "next": "pod-a1-t04"
+    },
+    {
+      "id": "pod-a1-t04",
+      "promptRu": "Понятно. А где ты живёшь сейчас?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "place",
+            "required": true,
+            "options": [
+              { "key": "austria", "lemma": "Австрия", "forms": ["австри*", "зальцбург*"] },
+              { "key": "usa", "lemma": "Америка", "forms": ["америк*", "колорадо", "сша"] },
+              { "key": "elsewhere", "lemma": "в", "forms": ["в"] }
+            ]
+          }
+        ],
+        "accept": ["Я живу в Австрии.", "В Зальцбурге.", "Сейчас я живу в Колорадо."]
+      },
+      "next": "pod-a1-t05"
+    },
+    {
+      "id": "pod-a1-t05",
+      "promptRu": "Класс. Расскажи, кем ты работаешь?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "job",
+            "required": true,
+            "options": [
+              {
+                "key": "programmer",
+                "lemma": "программист",
+                "forms": ["программист*", "разработчик*", "код", "программ*"]
+              },
+              { "key": "engineer", "lemma": "инженер", "forms": ["инженер*"] },
+              { "key": "student", "lemma": "студент", "forms": ["студент*", "учусь"] },
+              { "key": "teacher", "lemma": "учитель", "forms": ["учител*", "преподава*"] },
+              { "key": "doctor", "lemma": "врач", "forms": ["врач*", "доктор*"] },
+              { "key": "driver", "lemma": "водитель", "forms": ["водител*", "шофёр*"] },
+              { "key": "working", "lemma": "работать", "forms": ["работаю"] }
+            ]
+          }
+        ],
+        "accept": ["Я программист.", "Я работаю программистом.", "Я инженер, я пишу программы."],
+        "reject": [{ "forms": ["хорошо", "нормально", "спасибо"], "react": "Нет, я про работу." }]
+      },
+      "next": "pod-a1-t06"
+    },
+    {
+      "id": "pod-a1-t06",
+      "promptRu": "Интересно! А что ты любишь делать в свободное время?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "hobby",
+            "required": true,
+            "options": [
+              { "key": "read", "lemma": "читать", "forms": ["чита*", "книг*"] },
+              { "key": "films", "lemma": "фильм", "forms": ["фильм*", "кино", "смотр*"] },
+              { "key": "music", "lemma": "музыка", "forms": ["музык*", "слуша*"] },
+              { "key": "games", "lemma": "игра", "forms": ["игр*", "играть*"] },
+              { "key": "sport", "lemma": "спорт", "forms": ["спорт*", "бега*", "гуля*"] },
+              { "key": "cook", "lemma": "готовить", "forms": ["готов*"] },
+              { "key": "travel", "lemma": "путешествовать", "forms": ["путешеств*", "езд*"] },
+              { "key": "computers", "lemma": "компьютер", "forms": ["компьютер*", "собира*"] }
+            ]
+          }
+        ],
+        "accept": [
+          "Я люблю читать.",
+          "Люблю смотреть фильмы.",
+          "Я люблю слушать музыку и играть в игры."
+        ],
+        "branchOn": "hobby"
+      },
+      "next": { "on": { "read": "pod-a1-t07r", "films": "pod-a1-t07f" }, "default": "pod-a1-t07" }
+    },
+    {
+      "id": "pod-a1-t07r",
+      "promptRu": "Книги — это здорово! А ты любишь страшные истории?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "yesno",
+            "required": true,
+            "options": [
+              {
+                "key": "yes",
+                "lemma": "да",
+                "forms": ["да", "люблю", "конечно", "обожа*", "очень"]
+              },
+              { "key": "no", "lemma": "нет", "forms": ["нет", "не люблю", "не очень"] }
+            ]
+          }
+        ],
+        "accept": ["Да, очень люблю.", "Нет, не люблю.", "Конечно, обожаю."]
+      },
+      "next": "pod-a1-t08"
+    },
+    {
+      "id": "pod-a1-t07f",
+      "promptRu": "Фильмы! А какие: страшные или смешные?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "genre",
+            "required": true,
+            "options": [
+              { "key": "horror", "lemma": "страшный", "forms": ["страшн*", "ужас*", "хоррор*"] },
+              { "key": "comedy", "lemma": "смешной", "forms": ["смешн*", "комеди*"] },
+              { "key": "both", "lemma": "и", "forms": ["оба", "и те и другие", "всё", "разные"] }
+            ]
+          }
+        ],
+        "accept": ["Страшные.", "Я люблю ужасы.", "Смешные, комедии."]
+      },
+      "next": "pod-a1-t08"
+    },
+    {
+      "id": "pod-a1-t08",
+      "promptRu": "Скажи, ты давно учишь русский язык?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "duration",
+            "required": true,
+            "acceptsNumber": true,
+            "options": [
+              {
+                "key": "long",
+                "lemma": "давно",
+                "forms": ["давно", "долго", "лет", "год*", "года"]
+              },
+              { "key": "short", "lemma": "недавно", "forms": ["недавно", "месяц*", "недел*"] }
+            ]
+          }
+        ],
+        "accept": ["Давно, пять лет.", "Пять лет.", "Недавно, один год."]
+      },
+      "next": "pod-a1-t09"
+    },
+    {
+      "id": "pod-a1-t09",
+      "promptRu": "Ого! Ты молодец. А почему ты учишь русский?",
+      "expect": {
+        "slots": [
+          {
+            "kind": "forms",
+            "id": "reason",
+            "required": true,
+            "options": [
+              {
+                "key": "family",
+                "lemma": "семья",
+                "forms": ["семь*", "жен*", "невест*", "девушк*", "друз*", "родствен*"]
+              },
+              { "key": "work", "lemma": "работа", "forms": ["работ*"] },
+              {
+                "key": "travel",
+                "lemma": "путешествия",
+                "forms": ["путешеств*", "езд*", "поехать"]
+              },
+              {
+                "key": "like",
+                "lemma": "нравиться",
+                "forms": ["нравит*", "люблю", "интересн*", "красив*"]
+              }
+            ]
+          }
+        ],
+        "accept": [
+          "Моя невеста из Украины.",
+          "Потому что моя девушка говорит по-русски.",
+          "Мне нравится русский язык."
+        ]
+      },
+      "next": "pod-a1-t10"
+    }
+  ]
+}
