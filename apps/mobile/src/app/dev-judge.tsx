@@ -1,4 +1,5 @@
 import { createAudioPlayer } from 'expo-audio';
+import { useLocalSearchParams } from 'expo-router';
 import { File } from 'expo-file-system';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -105,6 +106,13 @@ function LabButton({
 
 export default function DevJudgeScreen() {
   const { tokens: theme } = useAppTheme();
+  /**
+   * adb-drivable (dev only): `sumrak://dev-judge?turn=t03&say=...` picks the
+   * first installed scenario + the turn and judges the transcript;
+   * `&wav=/data/local/tmp/x.wav` transcribes a pushed WAV first (the ASR path
+   * without a mic). `n` is a nonce so the same query can be re-fired.
+   */
+  const params = useLocalSearchParams<{ turn?: string; say?: string; wav?: string; n?: string }>();
   const families = useScenarios();
   const [picked, setPicked] = React.useState<{ packId: string; scenarioId: string } | null>(null);
   const detailQ = useScenario(picked?.packId, picked?.scenarioId);
@@ -211,7 +219,11 @@ export default function DevJudgeScreen() {
               howToSaySentenceId: (id) => clips[id]?.howToSay ?? null,
               whisper:
                 wavPath && isAssistInstalled()
-                  ? async () => (await transcribeEnglish(wavPath)).text
+                  ? async () => {
+                      const w = await transcribeEnglish(wavPath);
+                      log({ op: 'whisper', text: w.text, decodeMs: w.decodeMs });
+                      return w.text;
+                    }
                   : undefined,
               online: fetchHowToSayLine,
             });
@@ -432,6 +444,53 @@ export default function DevJudgeScreen() {
     </Pressable>
   );
   const rungs = (families.data ?? []).flatMap((f) => f.rungs);
+
+  // Deep-link driver (see the params note above). Selection changes are
+  // deferred to a microtask so the effects never set state synchronously.
+  const firedRef = React.useRef<string | null>(null);
+  const first = rungs[0];
+  React.useEffect(() => {
+    if (picked || !first) return;
+    const t = setTimeout(() => setPicked({ packId: first.packId, scenarioId: first.id }), 0);
+    return () => clearTimeout(t);
+  }, [picked, first]);
+  React.useEffect(() => {
+    if (!params.turn || !detail) return;
+    const id = turns.find((t) => t.id === params.turn || t.id.endsWith(`-${params.turn}`))?.id;
+    if (!id || id === turnId) return;
+    const t = setTimeout(() => setTurnId(id), 0);
+    return () => clearTimeout(t);
+  }, [params.turn, detail, turns, turnId]);
+  React.useEffect(() => {
+    const key = `${params.turn ?? ''}|${params.say ?? ''}|${params.wav ?? ''}|${params.n ?? ''}`;
+    if (!turn || busy || firedRef.current === key) return;
+    if (params.turn && !turn.id.endsWith(`-${params.turn}`) && turn.id !== params.turn) return;
+    if (!params.say && !params.wav) return;
+    firedRef.current = key;
+    void (async () => {
+      if (params.wav) {
+        const wavPath = params.wav.startsWith('file://') ? params.wav : `file://${params.wav}`;
+        lastWavRef.current = wavPath;
+        try {
+          const r = await transcribeWav(wavPath);
+          log({
+            op: 'asr',
+            file: params.wav.split('/').pop(),
+            text: r.text,
+            decodeMs: r.decodeMs,
+            audioMs: r.audioMs,
+          });
+          setTyped(r.text);
+          await analyze(r.text, wavPath);
+        } catch (err) {
+          log({ op: 'asr', error: err instanceof Error ? err.message : String(err) });
+        }
+        return;
+      }
+      setTyped(params.say!);
+      await analyze(params.say!, null);
+    })();
+  }, [params.turn, params.say, params.wav, params.n, turn, busy, analyze, log]);
 
   return (
     <ScrollView
