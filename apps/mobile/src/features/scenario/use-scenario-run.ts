@@ -58,6 +58,9 @@ import {
   type PlayedToken,
 } from './meta-intents';
 import { fetchExplainLine, fetchHowToSayLine, speakGloss, speakRu, stopPrompter } from './prompter';
+import { pruneRecordings } from './recordings/prune';
+import { stashAttemptWav, transcodeQueue } from './recordings/transcode-queue';
+import { scheduleBundle } from './recordings/bundle-service';
 
 /**
  * The effect executor (T60, SPEAKING_SCENARIOS §7.2 / §7.3): the ONE file
@@ -472,16 +475,29 @@ export function useScenarioRun(
         case 'PERSIST_ATTEMPT': {
           const row = await ensureRun();
           if (!row) return;
-          await repos.scenarios.recordAttempt({
+          // T63 §10.1: the row first (with no file), then the recorder's cache
+          // WAV moves into the run dir as `tNN-aM.wav`, the row learns the
+          // name, and the background queue transcodes it to `.ogg`.
+          const attempt = await repos.scenarios.recordAttempt({
             runId: row.id,
             turnId: effect.turnId,
             kind: effect.kind,
             outcome: effect.outcome as AnswerOutcome | MetaOutcome,
             transcript: effect.transcript,
             detail: effect.detail,
-            audioFile: effect.audio?.wavPath ?? null,
+            audioFile: null,
             audioDurationMs: effect.audio?.durationMs ?? null,
           });
+          const wav = effect.audio?.wavPath;
+          if (wav) {
+            const turnOrder =
+              graphRef.current?.turns.find((t) => t.id === effect.turnId)?.orderIdx ?? 0;
+            const name = stashAttemptWav(row.id, turnOrder, attempt.attemptNo, wav);
+            if (name) {
+              await repos.scenarios.setAttemptAudioFile(attempt.id, name);
+              transcodeQueue().enqueue({ runId: row.id, attemptId: attempt.id, wavName: name });
+            }
+          }
           return;
         }
         case 'GRADE': {
@@ -560,6 +576,10 @@ export function useScenarioRun(
             void queryClient.invalidateQueries({ queryKey: key });
           }
           setFinish({ runId: row.id, endingId: effect.endingId, stats, newEnding, xp });
+          // T63: the run's media bundle (after its transcodes) and the post-run prune —
+          // both off the effect queue; neither blocks the ending card.
+          scheduleBundle(row.id);
+          void pruneRecordings('post-run');
           return;
         }
         case 'TRACK':

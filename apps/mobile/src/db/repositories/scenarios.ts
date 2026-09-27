@@ -950,6 +950,89 @@ export function createScenariosRepo(db: SumrakDB) {
       };
     },
 
+    /** turnId → orderIdx of one scenario (rebuilds `tNN-aM` recording stems on bundle download). */
+    async getTurnOrders(packId: string, scenarioId: string): Promise<Map<string, number>> {
+      const rows = await db
+        .select({ id: scenarioTurns.id, orderIdx: scenarioTurns.orderIdx })
+        .from(scenarioTurns)
+        .where(and(eq(scenarioTurns.packId, packId), eq(scenarioTurns.scenarioId, scenarioId)));
+      return new Map(rows.map((r) => [r.id, r.orderIdx]));
+    },
+
+    /** Rows for a set of run ids (the prune service joins on-disk dirs to rows). */
+    async getRunsByIds(runIds: string[]): Promise<ScenarioRunRow[]> {
+      if (runIds.length === 0) return [];
+      return db.select().from(scenarioRuns).where(inArray(scenarioRuns.id, runIds));
+    },
+
+    /** Finished runs by bundle state (the T63 bundle pump: `null` = not bundled yet). */
+    async listRunsByBundleState(
+      state: 'pending' | 'uploaded' | 'failed' | null,
+      opts: { limit?: number } = {},
+    ): Promise<ScenarioRunRow[]> {
+      return db
+        .select()
+        .from(scenarioRuns)
+        .where(
+          and(
+            sql`${scenarioRuns.finishedAt} IS NOT NULL`,
+            state === null
+              ? isNull(scenarioRuns.mediaBundleState)
+              : eq(scenarioRuns.mediaBundleState, state),
+          ),
+        )
+        .orderBy(asc(scenarioRuns.finishedAt))
+        .limit(opts.limit ?? 20);
+    },
+
+    /** Attempts of one run with a local file (the bundle packer's manifest). */
+    async listAttemptsWithAudio(runId: string): Promise<ScenarioAttemptRow[]> {
+      return db
+        .select()
+        .from(scenarioAttempts)
+        .where(
+          and(eq(scenarioAttempts.runId, runId), sql`${scenarioAttempts.audioFile} IS NOT NULL`),
+        )
+        .orderBy(asc(scenarioAttempts.createdAt));
+    },
+
+    /** The transcode queue's rewrite (`tNN-aM.wav` → `.ogg`), or a bundle download's restore. */
+    async setAttemptAudioFile(attemptId: string, name: string | null): Promise<void> {
+      await db
+        .update(scenarioAttempts)
+        .set({ audioFile: name })
+        .where(eq(scenarioAttempts.id, attemptId));
+    },
+
+    /** A bundle download landed: files are local again and the attempts point at them. */
+    async markMediaRestored(
+      runId: string,
+      files: { attemptId: string; name: string }[],
+    ): Promise<void> {
+      await db.update(scenarioRuns).set({ mediaLocal: true }).where(eq(scenarioRuns.id, runId));
+      for (const f of files) {
+        await db
+          .update(scenarioAttempts)
+          .set({ audioFile: f.name })
+          .where(and(eq(scenarioAttempts.id, f.attemptId), eq(scenarioAttempts.runId, runId)));
+      }
+    },
+
+    /** Counts for the Backup card: «Media: N bundles · M pending». */
+    async countBundles(): Promise<{ uploaded: number; pending: number; failed: number }> {
+      const rows = await db
+        .select({ state: scenarioRuns.mediaBundleState, n: sql<number>`COUNT(*)` })
+        .from(scenarioRuns)
+        .where(sql`${scenarioRuns.mediaBundleState} IS NOT NULL`)
+        .groupBy(scenarioRuns.mediaBundleState);
+      const out = { uploaded: 0, pending: 0, failed: 0 };
+      for (const r of rows) {
+        if (r.state === 'uploaded' || r.state === 'pending' || r.state === 'failed')
+          out[r.state] = r.n;
+      }
+      return out;
+    },
+
     async setPinned(runId: string, pinned: boolean): Promise<void> {
       await db.update(scenarioRuns).set({ pinned }).where(eq(scenarioRuns.id, runId));
     },

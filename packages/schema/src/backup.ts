@@ -19,6 +19,13 @@ export const BackupEnvelopeSchema = z.strictObject({
   createdAt: z.iso.datetime({ offset: true }),
   /** App version that produced the snapshot, informational. */
   appVersion: z.string().min(1).optional(),
+  /**
+   * What the ciphertext holds (T63, SPEAKING_SCENARIOS §10.3). Absent or
+   * `'snapshot'` = the gzipped user-table JSON export (T20); `'media'` = a
+   * gzipped `SMB1` scenario media bundle (recordings of one run). Restore
+   * refuses a media envelope; the debrief's Download refuses a snapshot.
+   */
+  kind: z.enum(['snapshot', 'media']).optional(),
   /** AES-GCM + KDF parameters (key derived from Mitch's passphrase; key itself never stored). */
   cipher: z.strictObject({
     /** Cipher algorithm; only AES-256-GCM is supported (design §9). */

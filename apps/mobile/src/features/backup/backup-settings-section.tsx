@@ -4,7 +4,9 @@ import * as React from 'react';
 import { ActivityIndicator, Pressable, Switch, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { repos } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
+import { pumpBundles } from '@/features/scenario/recordings/bundle-service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -58,6 +60,12 @@ export function BackupSettingsSection() {
   });
   const [lastGithub, setLastGithub] = React.useState<LastBackup | null>(null);
   const [lastLocal, setLastLocal] = React.useState<LastBackup | null>(null);
+  /** T63 §10.3: «Media: N bundles · M pending» — the scenario runs' bundle states. */
+  const [media, setMedia] = React.useState<{ uploaded: number; pending: number; failed: number }>({
+    uploaded: 0,
+    pending: 0,
+    failed: 0,
+  });
 
   // Passphrase form (setup, change, or key re-entry) — transient only.
   const [formOpen, setFormOpen] = React.useState(false);
@@ -77,6 +85,7 @@ export function BackupSettingsSection() {
       setPrefs(await getBackupPrefs());
       setLastGithub(await getLastBackup(SETTING_KEYS.lastBackupGithub));
       setLastLocal(await getLastBackup(SETTING_KEYS.lastBackupLocal));
+      setMedia(await repos.scenarios.countBundles());
       setLoaded(true);
     })();
   }, []);
@@ -234,6 +243,23 @@ export function BackupSettingsSection() {
               <Text variant="caption" className="mt-0.5">
                 {lastGithub ? `Last backup ${formatWhen(lastGithub.at)}` : 'No backup yet'}
               </Text>
+              {media.uploaded + media.pending + media.failed > 0 && (
+                <Pressable
+                  onPress={() => {
+                    void pumpBundles().then(reload);
+                  }}
+                  disabled={media.pending + media.failed === 0}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry pending media bundles"
+                >
+                  <Text variant="caption" className="mt-1">
+                    Media: {media.uploaded} bundle{media.uploaded === 1 ? '' : 's'}
+                    {media.pending > 0 ? ` · ${media.pending} pending` : ''}
+                    {media.failed > 0 ? ` · ${media.failed} failed` : ''}
+                    {media.pending + media.failed > 0 ? ' · tap to retry' : ''}
+                  </Text>
+                </Pressable>
+              )}
               {/* Run-level failures (export/encrypt/gates) have no per-target rows. */}
               {lastRun?.outcome === 'error' && !lastRun.targets && lastRun.error && (
                 <Text variant="caption" className="mt-1 text-danger">

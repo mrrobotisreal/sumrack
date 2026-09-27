@@ -115,6 +115,17 @@ export async function restoreUserData(db: SumrakDB, raw: unknown): Promise<Resto
       await db.delete(table);
     }
     for (const [key, table] of INSERT_ORDER) {
+      if (key === 'scenarioRuns') {
+        // T63 §10.3: media is lazy on restore — the files were never in the
+        // snapshot; each debrief's Download fetches its bundle on demand.
+        // Attempts keep `audioFile` (the name inside the bundle).
+        await insertAll(
+          db,
+          table,
+          tables.scenarioRuns.map((r) => ({ ...r, mediaLocal: false })),
+        );
+        continue;
+      }
       await insertAll(db, table, tables[key]);
     }
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { backupFileName, parseBackupFileName } from '../naming';
+import {
+  backupFileName,
+  MEDIA_FILE_RE,
+  mediaFileName,
+  parseBackupFileName,
+  parseMediaFileName,
+} from '../naming';
 import { planRetention, RETENTION_DAILY_DAYS } from '../retention';
 
 function nameFor(dateKey: string, time = '030000'): string {
@@ -112,5 +118,29 @@ describe('retention ring buffer (30 daily + one per older month)', () => {
       nameFor('2026-08-23'),
     ];
     expect(planRetention(names).prune).toEqual([]);
+  });
+});
+
+describe('media bundle naming (T63 §10.3)', () => {
+  it('formats sumrak-media-<runId>.json from a newId-style run id and parses back', () => {
+    const runId = 'mg1x2k3a-abc12def00';
+    const name = mediaFileName(runId);
+    expect(name).toBe(`sumrak-media-${runId}.json`);
+    expect(MEDIA_FILE_RE.test(name)).toBe(true);
+    expect(parseMediaFileName(name)).toBe(runId);
+  });
+
+  it('is disjoint from the snapshot names, and never a retention candidate', () => {
+    const name = mediaFileName('mg1x2k3a-abc12def00');
+    expect(parseBackupFileName(name)).toBeNull();
+    expect(planRetention([name, nameFor('2026-01-01'), nameFor('2026-08-01')]).prune).toEqual([]);
+    expect(parseMediaFileName('sumrak-backup-20260823-030709Z.json')).toBeNull();
+  });
+
+  it('refuses run ids that could escape the name (separators, uppercase, too short)', () => {
+    expect(() => mediaFileName('../x')).toThrow();
+    expect(() => mediaFileName('ABC-def')).toThrow();
+    expect(() => mediaFileName('ab')).toThrow();
+    expect(parseMediaFileName('sumrak-media-../x.json')).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateAmbientCursorsFromDb } from '@/store/ambient-cursors';
 import { hydrateAmbientPrefsFromDb } from '@/store/ambient-prefs';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
+import { pruneRecordings } from '@/features/scenario/recordings/prune';
 import { hydrateScenarioPrefsFromDb } from '@/features/scenario/store/scenario-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
 import { hydrateGoalPrefsFromDb } from '@/store/goal-prefs';
@@ -68,6 +69,9 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         // T59: the optional Whisper assist model — same scan, plus the
         // `scenario.assistModel` mirror row scenario code gates on.
         await refreshInstalledAssist();
+        // T63: the recordings prune at app start (§10.1) — off the critical
+        // path, never awaited; rows stay, only stale audio goes.
+        void pruneRecordings('start');
         // T19: register the motivation bus, consume freezes for days missed
         // while the app was closed, sweep achievements, replan reminders.
         await initMotivation();

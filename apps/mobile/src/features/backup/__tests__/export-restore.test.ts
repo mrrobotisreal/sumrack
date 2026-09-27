@@ -601,6 +601,14 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(restored.syncState).toEqual(expected.syncState.filter((r) => r.packId === 'pack-a'));
     for (const k of Object.keys(expected) as (keyof typeof expected)[]) {
       if (k === 'syncState') continue;
+      if (k === 'scenarioRuns') {
+        // T63 §10.3: restore leaves media lazy — every run comes back
+        // `mediaLocal: false` (the debrief's Download fetches its bundle).
+        expect(restored[k]).toEqual(
+          (expected[k] as { mediaLocal: boolean }[]).map((r) => ({ ...r, mediaLocal: false })),
+        );
+        continue;
+      }
       expect(restored[k]).toEqual(expected[k]);
     }
     // Replace semantics: pre-existing junk is gone.
@@ -721,14 +729,21 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     const result = await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
     expect(result.rowCounts.scenarioRuns).toBe(2);
     expect(result.rowCounts.scenarioAttempts).toBe(2);
+    // T63: every restored run is `mediaLocal: false` (lazy media) — everything else byte-identical.
     expect(await target.select().from(scenarioRuns)).toEqual(
-      await source.select().from(scenarioRuns),
+      (await source.select().from(scenarioRuns)).map((r) => ({ ...r, mediaLocal: false })),
     );
     expect(await target.select().from(scenarioAttempts)).toEqual(
       await source.select().from(scenarioAttempts),
     );
     const run1 = (await target.select().from(scenarioRuns)).find((r) => r.id === 'srun-1')!;
     expect(run1).toMatchObject({ pinned: true, mediaLocal: false, mediaBundleState: 'uploaded' });
+    const run2 = (await target.select().from(scenarioRuns)).find((r) => r.id === 'srun-2')!;
+    expect(run2.mediaLocal).toBe(false); // was true at the source — restore made it lazy
+    // The attempts keep their bundle-relative file names for the lazy download to re-point.
+    expect(
+      (await target.select().from(scenarioAttempts)).find((a) => a.id === 'satt-2')!.audioFile,
+    ).toBe('srun-1/satt-2.ogg');
     expect(JSON.parse(run1.statsJson!)).toMatchObject({ turns: 2, avgScore: 61.5 });
     // The attempts' FK survived the ordered insert (runs before attempts).
     const fk = await target.all<{ n: number }>(

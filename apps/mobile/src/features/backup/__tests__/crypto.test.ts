@@ -8,6 +8,9 @@ import {
   encryptBackupPayload,
   GCM_IV_BYTES,
   parseEnvelopeText,
+  decryptBackupBytes,
+  encryptBackupBytes,
+  envelopeKind,
 } from '../crypto';
 import { BackupError } from '../errors';
 
@@ -82,6 +85,40 @@ describe('backup crypto', () => {
       expect.objectContaining({ code: 'invalid-envelope' }),
     );
     expect(() => parseEnvelopeText('{"format":"other"}')).toThrowError(
+      expect.objectContaining({ code: 'invalid-envelope' }),
+    );
+  });
+});
+
+describe('envelope kind (T63 media bundles)', () => {
+  it('snapshots carry no kind (T20 files) and read back as snapshot', () => {
+    const envelope = seal('{"a":1}');
+    expect(envelope.kind).toBeUndefined();
+    expect(envelopeKind(envelope)).toBe('snapshot');
+    expect(parseEnvelopeText(JSON.stringify(envelope)).kind).toBeUndefined();
+  });
+
+  it('a media envelope round-trips arbitrary bytes, parses, and is refused by the snapshot decryptor', () => {
+    const blob = new Uint8Array([0x53, 0x4d, 0x42, 0x31, 0, 0, 0, 2, 0x7b, 0x7d, 9, 8, 7]);
+    const envelope = encryptBackupBytes(blob, key, {
+      saltB64: SALT_B64,
+      iterations: ITERATIONS,
+      iv: IV,
+      createdAt: new Date('2026-09-27T10:00:00Z'),
+      kind: 'media',
+    });
+    expect(envelope.kind).toBe('media');
+    const reparsed = parseEnvelopeText(JSON.stringify(envelope));
+    expect(envelopeKind(reparsed)).toBe('media');
+    expect(Array.from(decryptBackupBytes(reparsed, key))).toEqual(Array.from(blob));
+    expect(() => decryptBackupEnvelope(reparsed, key)).toThrowError(
+      expect.objectContaining({ code: 'invalid-envelope' }),
+    );
+  });
+
+  it('an unknown kind is refused at the envelope boundary', () => {
+    const envelope = seal('{"a":1}');
+    expect(() => parseEnvelopeText(JSON.stringify({ ...envelope, kind: 'video' }))).toThrowError(
       expect.objectContaining({ code: 'invalid-envelope' }),
     );
   });

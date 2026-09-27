@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { BackupError } from './errors';
-import { parseBackupFileName } from './naming';
+import { MEDIA_FILE_RE, parseBackupFileName } from './naming';
 
 /**
  * HTTP client for syncd, the home-server backup service (T21, design §9).
@@ -120,6 +120,18 @@ export class SyncdClient {
       .filter((x): x is typeof x & { parsed: NonNullable<typeof x.parsed> } => x.parsed !== null)
       .map(({ row, parsed }) => ({ name: row.name, size: row.size, timestamp: parsed.timestamp }))
       .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  /**
+   * T63 media bundles stored on the home server (`sumrak-media-<runId>.json`),
+   * every name the server lists that matches `MEDIA_FILE_RE`.
+   */
+  async listMediaBundles(): Promise<{ name: string; size: number }[]> {
+    const res = await this.request('/backups', { method: 'GET' });
+    const { backups } = await this.parse(res, ListResponseSchema, 'listing');
+    return backups
+      .filter((b) => MEDIA_FILE_RE.test(b.name))
+      .map((b) => ({ name: b.name, size: b.size }));
   }
 
   /** Upload one sealed envelope (create-only server side; server prunes). */

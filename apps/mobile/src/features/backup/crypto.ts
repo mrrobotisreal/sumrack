@@ -49,6 +49,8 @@ export interface EncryptParams {
   iv: Uint8Array;
   createdAt: Date;
   appVersion?: string;
+  /** T63: `'media'` for a scenario media bundle; omitted for snapshots (T20 files carry none). */
+  kind?: 'snapshot' | 'media';
 }
 
 /** payload JSON string → sealed envelope object (caller serializes/uploads it). */
@@ -57,14 +59,27 @@ export function encryptBackupPayload(
   key: Uint8Array,
   params: EncryptParams,
 ): BackupEnvelope {
+  return encryptBackupBytes(strToU8(payloadJson), key, params);
+}
+
+/**
+ * Arbitrary bytes → sealed envelope (T63 media bundles ride the same
+ * gzip → AES-GCM → base64 pipeline; `kind` says what the plaintext is).
+ */
+export function encryptBackupBytes(
+  plaintext: Uint8Array,
+  key: Uint8Array,
+  params: EncryptParams,
+): BackupEnvelope {
   if (params.iv.length !== GCM_IV_BYTES) throw new BackupError('unknown', 'bad IV length');
-  const gzipped = gzipSync(strToU8(payloadJson));
+  const gzipped = gzipSync(plaintext);
   const ciphertext = gcm(key, params.iv).encrypt(gzipped);
   return {
     format: 'sumrak-backup',
     version: 1,
     createdAt: params.createdAt.toISOString(),
     ...(params.appVersion ? { appVersion: params.appVersion } : {}),
+    ...(params.kind ? { kind: params.kind } : {}),
     cipher: {
       alg: 'aes-256-gcm',
       kdf: 'pbkdf2-sha256',
@@ -100,6 +115,19 @@ export function parseEnvelopeText(text: string): BackupEnvelope {
  * BackupError('decrypt-failed'), and nothing is ever partially returned.
  */
 export function decryptBackupEnvelope(envelope: BackupEnvelope, key: Uint8Array): string {
+  if (envelopeKind(envelope) !== 'snapshot') {
+    throw new BackupError('invalid-envelope', 'this file is a media bundle, not a snapshot');
+  }
+  return strFromU8(decryptBackupBytes(envelope, key));
+}
+
+/** `kind` with the T20 default: files without the field are snapshots. */
+export function envelopeKind(envelope: BackupEnvelope): 'snapshot' | 'media' {
+  return envelope.kind ?? 'snapshot';
+}
+
+/** Envelope + key → plaintext bytes (any kind; T63 media bundles decrypt through here). */
+export function decryptBackupBytes(envelope: BackupEnvelope, key: Uint8Array): Uint8Array {
   let gzipped: Uint8Array;
   try {
     const iv = base64ToBytes(envelope.cipher.ivB64);
@@ -109,7 +137,7 @@ export function decryptBackupEnvelope(envelope: BackupEnvelope, key: Uint8Array)
     throw new BackupError('decrypt-failed', 'AES-GCM authentication failed');
   }
   try {
-    return strFromU8(gunzipSync(gzipped));
+    return gunzipSync(gzipped);
   } catch {
     // Authenticated but not gzip — can only mean an incompatible producer.
     throw new BackupError('invalid-envelope', 'decrypted payload is not gzip');

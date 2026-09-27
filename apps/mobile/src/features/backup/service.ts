@@ -39,6 +39,13 @@ import { reportSyncdReachability } from './syncd-status';
  */
 
 export const BACKUPS_DIR = 'backups';
+/** T63: scenario media bundles live beside the snapshots, one level down (§10.3). */
+export const MEDIA_DIR = `${BACKUPS_DIR}/media`;
+
+/** The GitHub target's one write path: `<subdir>/<name>` (snapshots and T63 media bundles). */
+export function githubBackupPath(subdir: string, name: string): string {
+  return `${subdir}/${name}`;
+}
 
 let backupInFlight: Promise<BackupRunSummary> | null = null;
 
@@ -207,7 +214,7 @@ async function doRunBackup({ trigger }: RunBackupOptions): Promise<BackupRunSumm
       await runTarget('github', githubReady, async () => {
         const client = new GithubContentClient(github!.config!, github!.pat!);
         await client.putFile(
-          `${BACKUPS_DIR}/${sealed.name}`,
+          githubBackupPath(BACKUPS_DIR, sealed.name),
           bytesToBase64(utf8Bytes(sealed.json)),
           `Backup ${sealed.name}`,
         );

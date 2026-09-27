@@ -423,7 +423,25 @@ export type AnalyticsEvent =
   | 'scenario_hub_opened'
   | 'scenario_gate_shown'
   | 'scenario_assist_banner'
-  | 'scenario_runs_list_opened';
+  | 'scenario_runs_list_opened'
+  // M17 «Сценарии» — T63 recordings / debrief / media bundles (§4.5 T63):
+  // scenario_debrief_opened {turns, misses, mediaLocal, bundle} · scenario_attempt_played {ext} ·
+  // scenario_practice_added {count} · recordings_pruned {runs, bytes, orphans, reason,
+  // protectedCount} · media_bundle_uploaded {bytes, target, files, dup?} · media_bundle_failed
+  // {bytes, target, code, transient} · media_bundle_downloaded {bytes, target, files} ·
+  // media_bundle_wav_warning {files} · scenario_run_pinned {pinned} · scenario_transcript_shared
+  // {turns} · scenario_debrief_download_failed {code}.
+  | 'scenario_debrief_opened'
+  | 'scenario_attempt_played'
+  | 'scenario_practice_added'
+  | 'recordings_pruned'
+  | 'media_bundle_uploaded'
+  | 'media_bundle_failed'
+  | 'media_bundle_downloaded'
+  | 'media_bundle_wav_warning'
+  | 'scenario_run_pinned'
+  | 'scenario_transcript_shared'
+  | 'scenario_debrief_download_failed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

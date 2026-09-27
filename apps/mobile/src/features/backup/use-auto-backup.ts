@@ -7,6 +7,8 @@ import { localDateKey } from '@/db/repositories/stats';
 
 import { probeActivitySince } from './activity-probe';
 import { getBackupPrefs, getLastBackup, isBackupConfigured } from './config';
+import { pumpBundles } from '@/features/scenario/recordings/bundle-service';
+
 import { runBackup } from './service';
 import { isSyncdConfigured } from './syncd-config';
 
@@ -88,11 +90,21 @@ async function maybeSessionBackup(): Promise<void> {
 export function useAutoBackup() {
   React.useEffect(() => {
     void maybeDailyBackup().catch(() => {});
+    // T63: the media-bundle pump rides the same trigger points — pending /
+    // failed / never-bundled finished runs retry here (§10.3), gated inside
+    // on "a target is configured + online", never on the daily stamp.
+    void pumpBundles().catch(() => {});
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void maybeDailyBackup().catch(() => {});
+      if (state === 'active') {
+        void maybeDailyBackup().catch(() => {});
+        void pumpBundles().catch(() => {});
+      }
       // Android grants a short grace window on backgrounding — enough for a
       // small upload; a miss is retried by the next daily trigger anyway.
-      if (state === 'background') void maybeSessionBackup().catch(() => {});
+      if (state === 'background') {
+        void maybeSessionBackup().catch(() => {});
+        void pumpBundles().catch(() => {});
+      }
     });
     return () => sub.remove();
   }, []);

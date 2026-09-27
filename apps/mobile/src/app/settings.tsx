@@ -14,6 +14,7 @@ import { GoalSettingsSection } from '@/features/motivation/goal-settings-section
 import { NotificationsSettingsSection } from '@/features/motivation/notifications-settings-section';
 import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
 import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-section';
+import { RecordingsSettingsSection } from '@/features/scenario/recordings/recordings-settings-section';
 import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
 import { ScenarioSettingsSection } from '@/features/scenario/scenario-settings-section';
@@ -179,6 +180,7 @@ export default function SettingsScreen() {
       <VoicesSettingsSection />
       <AsrSettingsSection />
       <AssistSettingsSection />
+      <RecordingsSettingsSection />
 
       <SyncSettingsSection />
 
