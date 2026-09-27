@@ -54,6 +54,9 @@ let devForceUnsupported = false;
 export function setDevForceEncoderUnsupported(on: boolean): void {
   if (__DEV__) devForceUnsupported = on;
 }
+export function getDevForceEncoderUnsupported(): boolean {
+  return devForceUnsupported;
+}
 
 const defaultDeps: QueueDeps = {
   encode: (wav, out, opts) => {

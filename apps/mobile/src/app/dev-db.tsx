@@ -13,6 +13,7 @@ import type { ScenarioFamily, ScenarioRunRow } from '@/db/repositories/scenarios
 import type { WordProfileRow } from '@/db/repositories/word-forms';
 import { friendlyAiMessage } from '@/features/ai/errors';
 import {
+  getDevForceEncoderUnsupported,
   resetTranscodeQueueForDev,
   setDevForceEncoderUnsupported,
 } from '@/features/scenario/recordings/transcode-queue';
@@ -297,7 +298,7 @@ export default function DevDbScreen() {
     }
   }, [refreshScenarios]);
   // --- T63 (dev only): the §12 «Opus encoder unsupported» switch — WAVs stay, bundles carry WAV.
-  const [forceUnsupported, setForceUnsupported] = React.useState(false);
+  const [forceUnsupported, setForceUnsupported] = React.useState(getDevForceEncoderUnsupported);
   const toggleUnsupported = React.useCallback(() => {
     const next = !forceUnsupported;
     setDevForceEncoderUnsupported(next);
