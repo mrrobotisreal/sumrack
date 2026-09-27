@@ -175,6 +175,8 @@ export const SETTING_KEYS = {
    * policy for attempt recordings (unpinned runs first, §10.1).
    */
   scenarioRecordings: 'scenario.recordings',
+  /** boolean (T63, §12): the one-time debrief line «Set up backup to keep recordings» was shown. */
+  scenarioBackupHintShown: 'scenario.backupHintShown',
   /**
    * Whisper assist-model state mirror (M17 §4.4; declared in T58, owned by
    * T59): { v: 1, installed: boolean, id } — a quick gate for «как сказать»

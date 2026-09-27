@@ -134,6 +134,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dialogues" options={{ title: 'Диалоги' }} />
                 <Stack.Screen name="scenarios/index" options={{ title: 'Сценарии' }} />
                 <Stack.Screen name="scenarios/runs" options={{ title: 'Runs' }} />
+                <Stack.Screen name="scenario/debrief/[runId]" options={{ title: 'Разбор' }} />
                 <Stack.Screen
                   name="scenario/[packId]/[scenarioId]"
                   options={{

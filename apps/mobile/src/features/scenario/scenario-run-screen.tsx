@@ -261,8 +261,8 @@ export function ScenarioRunScreen() {
         xp={run.finish.xp}
         nextLevel={next?.level ?? null}
         onDebrief={() => {
-          track('scenario_runs_list_opened', { scenarioId: detail.scenario.id, runs: 1 });
-          router.push({ pathname: '/scenarios/runs', params: { scenarioId: detail.scenario.id } });
+          // T63: straight to this run's debrief (the runs list stays behind the hub's «Runs · N»).
+          router.replace(`/scenario/debrief/${run.finish!.runId}`);
         }}
         onAgain={() => void run.restart()}
         onNext={() => {
