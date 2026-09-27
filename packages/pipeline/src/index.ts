@@ -57,7 +57,11 @@ export {
   type TokenSpan,
 } from './narration.ts';
 export {
+  GITHUB_TREE_FILE_LIMIT,
   MIRROR_MODELS,
+  MODELS_RELEASE_TAG,
+  ghReleaseStore,
+  releaseAssetName,
   MODELS_MANIFEST_FILE,
   mirrorFilePath,
   runModelsMirror,

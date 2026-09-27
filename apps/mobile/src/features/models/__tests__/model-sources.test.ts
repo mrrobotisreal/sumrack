@@ -4,6 +4,7 @@ import { MIRROR_MODELS } from '@sumrak/pipeline';
 import { describe, expect, it } from 'vitest';
 
 import { ASR_MODEL } from '@/features/pronunciation/asr-catalog';
+import { ASSIST_MODEL } from '@/features/pronunciation/assist-catalog';
 import { PIPER_VOICES } from '@/features/tts/catalog';
 
 /**
@@ -15,9 +16,9 @@ import { PIPER_VOICES } from '@/features/tts/catalog';
  */
 
 describe('mirror ↔ catalog pins', () => {
-  it('covers exactly the app catalogs: 4 Piper voices + 1 ASR model', () => {
+  it('covers exactly the app catalogs: 4 Piper voices + 1 ASR model + 1 assist model', () => {
     const mirrorIds = MIRROR_MODELS.map((m) => m.id).sort();
-    const catalogIds = [...PIPER_VOICES.map((v) => v.id), ASR_MODEL.id].sort();
+    const catalogIds = [...PIPER_VOICES.map((v) => v.id), ASR_MODEL.id, ASSIST_MODEL.id].sort();
     expect(mirrorIds).toEqual(catalogIds);
   });
 
@@ -41,13 +42,29 @@ describe('mirror ↔ catalog pins', () => {
     expect(mirror!.bytes).toBe(ASR_MODEL.archiveBytes);
     expect(mirror!.upstreamUrl).toBe(ASR_MODEL.archiveUrl);
   });
+
+  it('both sources claim the same pins for the assist model, which is release-hosted (T59)', () => {
+    const mirror = MIRROR_MODELS.find((m) => m.id === ASSIST_MODEL.id);
+    expect(mirror).toBeDefined();
+    expect(mirror!.kind).toBe('assist');
+    expect(mirror!.sha256).toBe(ASSIST_MODEL.archiveSha256);
+    expect(mirror!.bytes).toBe(ASSIST_MODEL.archiveBytes);
+    expect(mirror!.upstreamUrl).toBe(ASSIST_MODEL.archiveUrl);
+    expect(mirror!.displayName).toBe(ASSIST_MODEL.displayName);
+    // 207 MB — over the tree limit, so it must ride the release path.
+    expect(mirror!.release).toEqual({ tag: 'models' });
+  });
 });
 
 describe('shared resolver wiring', () => {
   const read = (rel: string) => readFileSync(join(__dirname, '../../../..', 'src', rel), 'utf8');
 
   it('both managers install through the ONE shared resolver, not private copies', () => {
-    for (const manager of ['features/tts/manager.ts', 'features/pronunciation/asr-manager.ts']) {
+    for (const manager of [
+      'features/tts/manager.ts',
+      'features/pronunciation/asr-manager.ts',
+      'features/pronunciation/assist-manager.ts',
+    ]) {
       const source = read(manager);
       expect(source, manager).toContain("from '@/features/models/install-source'");
       expect(source, manager).toContain('resolveModelDownloadSpecs');

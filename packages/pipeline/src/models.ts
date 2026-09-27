@@ -29,12 +29,24 @@ import {
  * repo; re-runs skip verified-present files (idempotent); the repo's model
  * files are never deleted or overwritten ("never delete, only add" — old
  * manifests and installs may reference them).
+ *
+ * T59: an archive over GitHub's 100 MB per-file limit (the Whisper assist
+ * model) cannot live in the tree. Such a `MirrorModel` carries `release`
+ * and is uploaded — after the same verification — as an asset of a GitHub
+ * **Release** on the content repo (`gh release upload`, never clobbered);
+ * its manifest entry points at the release (`release: {tag, asset}`) and
+ * the app downloads the asset through the T23 resolver's `release` source.
  */
 
 export interface MirrorModel {
   /** Stable id — MUST match the app catalog id (pin-tested from the app repo). */
   id: string;
-  kind: 'tts-voice' | 'asr';
+  kind: 'tts-voice' | 'asr' | 'assist';
+  /**
+   * T59: present ⇒ the archive is a GitHub Release asset (tag) on the
+   * content repo instead of a tree file. Required for archives ≥ 100 MB.
+   */
+  release?: { tag: string };
   /** The upstream k2-fsa release-asset URL the app currently pins. */
   upstreamUrl: string;
   /** The sha256 the app currently pins for that asset. */
@@ -45,6 +57,9 @@ export interface MirrorModel {
 }
 
 const TTS_RELEASE_BASE = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models';
+
+/** The one Release on the content repo that carries over-limit model archives. */
+export const MODELS_RELEASE_TAG = 'models';
 
 function piperMirror(
   name: string,
@@ -102,12 +117,45 @@ export const MIRROR_MODELS: readonly MirrorModel[] = [
     bytes: 60_239_942,
     displayName: 'Russian speech recognition',
   },
+  /**
+   * T59: the Whisper multilingual assist model pinned by the S25 benchmark
+   * (`features/pronunciation/assist-catalog.ts` 2026-09-27). 207.6 MB —
+   * over the tree limit, hence a Release asset under the `models` tag.
+   */
+  {
+    id: 'whisper-base-int8',
+    kind: 'assist',
+    upstreamUrl:
+      'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
+    sha256: '911b2083efd7c0dca2ac3b358b75222660dc09fb716d64fbfc417ba6c99ff3de',
+    bytes: 207_557_382,
+    displayName: 'Assist model (English in «как сказать…»)',
+    release: { tag: MODELS_RELEASE_TAG },
+  },
 ] as const;
 
-/** Repo-relative path an archive mirrors to: models/{tts,asr}/<upstream filename>. */
+/** GitHub's hard per-file limit for files in the repo tree. */
+export const GITHUB_TREE_FILE_LIMIT = 100 * 1024 * 1024;
+
+const KIND_DIR: Record<MirrorModel['kind'], string> = {
+  'tts-voice': 'tts',
+  asr: 'asr',
+  assist: 'assist',
+};
+
+/**
+ * Repo-relative path an archive mirrors to: models/{tts,asr,assist}/<upstream
+ * filename>. For release-hosted models this is the NOMINAL path the manifest
+ * carries (the asset name is its basename) — nothing is written there.
+ */
 export function mirrorFilePath(model: MirrorModel): string {
   const fileName = model.upstreamUrl.split('/').pop()!;
-  return `models/${model.kind === 'tts-voice' ? 'tts' : 'asr'}/${fileName}`;
+  return `models/${KIND_DIR[model.kind]}/${fileName}`;
+}
+
+/** The asset name a release-hosted model uploads as. */
+export function releaseAssetName(model: MirrorModel): string {
+  return model.upstreamUrl.split('/').pop()!;
 }
 
 export const MODELS_MANIFEST_FILE = 'models-manifest.json';
@@ -126,6 +174,60 @@ export const fetchDownloader: Downloader = async (url, destFile) => {
   writeFileSync(destFile, Buffer.from(await res.arrayBuffer()));
 };
 
+/**
+ * T59: the release-asset side of the mirror, behind a seam so tests never
+ * touch GitHub. The default runs `gh` against the content repo's remote.
+ */
+export interface ReleaseStore {
+  /** Asset names already attached to `tag` (empty when the release does not exist). */
+  listAssets(tag: string): Promise<string[]>;
+  /** Create the release (idempotent: a no-op when it exists). */
+  ensureRelease(tag: string): Promise<void>;
+  /** Attach `file` as `assetName` — must not clobber an existing asset. */
+  upload(tag: string, file: string, assetName: string): Promise<void>;
+}
+
+function gh(repoDir: string, args: string[]): string {
+  const res = spawnSync('gh', args, { cwd: repoDir, encoding: 'utf8' });
+  if (res.status !== 0) {
+    throw new Error(`gh ${args.join(' ')} failed:\n${(res.stderr || res.stdout).slice(-800)}`);
+  }
+  return res.stdout;
+}
+
+export function ghReleaseStore(repoDir: string): ReleaseStore {
+  return {
+    async listAssets(tag) {
+      const res = spawnSync('gh', ['release', 'view', tag, '--json', 'assets'], {
+        cwd: repoDir,
+        encoding: 'utf8',
+      });
+      if (res.status !== 0) {
+        if (/release not found/i.test(res.stderr)) return [];
+        throw new Error(`gh release view ${tag} failed:\n${res.stderr.slice(-800)}`);
+      }
+      const parsed = JSON.parse(res.stdout) as { assets?: { name: string }[] };
+      return (parsed.assets ?? []).map((a) => a.name);
+    },
+    async ensureRelease(tag) {
+      const res = spawnSync('gh', ['release', 'view', tag], { cwd: repoDir, encoding: 'utf8' });
+      if (res.status === 0) return;
+      gh(repoDir, [
+        'release',
+        'create',
+        tag,
+        '--title',
+        'Speech model archives',
+        '--notes',
+        'Self-hosted speech-model archives over the 100 MB tree limit (T59). Managed by `pipeline models mirror` — never delete assets.',
+      ]);
+    },
+    async upload(tag, file, assetName) {
+      gh(repoDir, ['release', 'upload', tag, `${file}#${assetName}`]);
+    },
+  };
+}
+
 export interface MirrorOptions {
   push?: boolean;
   message?: string;
@@ -133,13 +235,19 @@ export interface MirrorOptions {
   download?: Downloader;
   /** Test seam; defaults to the real pinned MIRROR_MODELS. */
   models?: readonly MirrorModel[];
+  /** Test seam; defaults to `gh` against the content repo. */
+  releases?: ReleaseStore;
 }
 
 export interface MirrorModelReport {
   id: string;
   file: string;
-  /** 'downloaded' = fetched + verified this run; 'present' = already mirrored + verified. */
-  action: 'downloaded' | 'present';
+  /**
+   * 'downloaded' = fetched + verified this run; 'present' = already mirrored +
+   * verified; 'uploaded' = fetched, verified and attached to the release this
+   * run; 'released' = already attached to the release.
+   */
+  action: 'downloaded' | 'present' | 'uploaded' | 'released';
   sha256: string;
   bytes: number;
 }
@@ -184,13 +292,62 @@ export async function runModelsMirror(
 
   const models = opts.models ?? MIRROR_MODELS;
   const download = opts.download ?? fetchDownloader;
+  const releases = opts.releases ?? ghReleaseStore(contentRepoDir);
   const tmpDir = mkdtempSync(join(tmpdir(), 'sumrak-models-'));
   const reports: MirrorModelReport[] = [];
+  const releaseAssets = new Map<string, string[]>();
 
   try {
     for (const model of models) {
       const relPath = mirrorFilePath(model);
       const target = join(contentRepoDir, relPath);
+
+      if (model.release) {
+        // T59: release-hosted. Same download + verify, then attach as an
+        // asset; an asset already there is never replaced.
+        const tag = model.release.tag;
+        const assetName = releaseAssetName(model);
+        if (!releaseAssets.has(tag)) releaseAssets.set(tag, await releases.listAssets(tag));
+        if (releaseAssets.get(tag)!.includes(assetName)) {
+          console.log(`= ${model.id}: already on release "${tag}" as ${assetName}`);
+          reports.push({
+            id: model.id,
+            file: relPath,
+            action: 'released',
+            sha256: model.sha256,
+            bytes: model.bytes,
+          });
+          continue;
+        }
+        console.log(`↓ ${model.id}: downloading ${model.upstreamUrl}`);
+        const tmpFile = join(tmpDir, assetName);
+        await download(model.upstreamUrl, tmpFile);
+        const digest = sha256File(tmpFile);
+        if (digest !== model.sha256) {
+          throw new Error(
+            `${model.id}: downloaded archive failed verification against the pinned sha256 ` +
+              `(got ${digest}) — nothing was uploaded`,
+          );
+        }
+        await releases.ensureRelease(tag);
+        await releases.upload(tag, tmpFile, assetName);
+        releaseAssets.get(tag)!.push(assetName);
+        console.log(`✓ ${model.id}: verified, uploaded to release "${tag}" as ${assetName}`);
+        reports.push({
+          id: model.id,
+          file: relPath,
+          action: 'uploaded',
+          sha256: digest,
+          bytes: model.bytes,
+        });
+        continue;
+      }
+
+      if (model.bytes >= GITHUB_TREE_FILE_LIMIT) {
+        throw new Error(
+          `${model.id} is ${model.bytes} bytes — over GitHub's 100 MB tree limit; give it a \`release\` tag`,
+        );
+      }
 
       if (existsSync(target)) {
         // Never overwrite: an existing file must already be the pinned bytes.
@@ -250,6 +407,9 @@ export async function runModelsMirror(
     sha256: model.sha256,
     displayName: model.displayName,
     meta: { upstreamUrl: model.upstreamUrl },
+    ...(model.release
+      ? { release: { tag: model.release.tag, asset: releaseAssetName(model) } }
+      : {}),
   }));
   const manifestFile = join(contentRepoDir, MODELS_MANIFEST_FILE);
   let manifestAction: 'written' | 'unchanged' = 'written';
@@ -268,8 +428,13 @@ export async function runModelsMirror(
     writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   }
 
-  // Commit only when something actually changed.
-  git(contentRepoDir, ['add', 'models', MODELS_MANIFEST_FILE]);
+  // Commit only when something actually changed. (`models/` may not exist
+  // when every model is release-hosted — add it only if present.)
+  git(contentRepoDir, [
+    'add',
+    ...(existsSync(join(contentRepoDir, 'models')) ? ['models'] : []),
+    MODELS_MANIFEST_FILE,
+  ]);
   const staged = git(contentRepoDir, ['status', '--porcelain']).trim();
   if (staged === '') {
     return { models: reports, manifest: manifestAction, outcome: 'unchanged', pushed: false };

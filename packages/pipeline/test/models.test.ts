@@ -6,12 +6,15 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ModelsManifestSchema } from '@sumrak/schema';
 import {
+  GITHUB_TREE_FILE_LIMIT,
   MIRROR_MODELS,
   MODELS_MANIFEST_FILE,
   mirrorFilePath,
+  releaseAssetName,
   runModelsMirror,
   type Downloader,
   type MirrorModel,
+  type ReleaseStore,
 } from '../src/models.ts';
 
 const dirs: string[] = [];
@@ -74,26 +77,125 @@ const fakeDownloader: Downloader = async (url, dest) => {
   writeFileSync(dest, FAKE_BYTES[id]!);
 };
 
+/** In-memory ReleaseStore (T59 seam): never touches GitHub. */
+function fakeReleases(): ReleaseStore & { assets: Map<string, string[]>; uploads: string[] } {
+  const assets = new Map<string, string[]>();
+  const uploads: string[] = [];
+  return {
+    assets,
+    uploads,
+    async listAssets(tag) {
+      return [...(assets.get(tag) ?? [])];
+    },
+    async ensureRelease(tag) {
+      if (!assets.has(tag)) assets.set(tag, []);
+    },
+    async upload(tag, file, assetName) {
+      if (assets.get(tag)?.includes(assetName)) throw new Error('asset exists');
+      uploads.push(readFileSync(file, 'utf8'));
+      assets.get(tag)!.push(assetName);
+    },
+  };
+}
+
+const FAKE_RELEASE_BYTES = 'FAKE BIG ASSIST ARCHIVE BYTES';
+const FAKE_RELEASE_MODEL: MirrorModel = {
+  id: 'fake-assist',
+  kind: 'assist',
+  upstreamUrl: 'https://upstream.example/asr-models/fake-assist.tar.bz2',
+  sha256: sha256(FAKE_RELEASE_BYTES),
+  bytes: FAKE_RELEASE_BYTES.length,
+  displayName: 'Fake assist',
+  release: { tag: 'models' },
+};
+const fakeDownloaderWithRelease: Downloader = async (url, dest) => {
+  const id = url.split('/').pop()!.replace('.tar.bz2', '');
+  writeFileSync(dest, id === 'fake-assist' ? FAKE_RELEASE_BYTES : FAKE_BYTES[id]!);
+};
+
 describe('MIRROR_MODELS data', () => {
-  it('covers exactly the five pinned archives (4 TTS + 1 ASR), unique ids + hashes', () => {
-    expect(MIRROR_MODELS).toHaveLength(5);
+  it('covers the six pinned archives (4 TTS + 1 ASR + 1 assist), unique ids + hashes', () => {
+    expect(MIRROR_MODELS).toHaveLength(6);
     expect(MIRROR_MODELS.filter((m) => m.kind === 'tts-voice')).toHaveLength(4);
     expect(MIRROR_MODELS.filter((m) => m.kind === 'asr')).toHaveLength(1);
-    expect(new Set(MIRROR_MODELS.map((m) => m.id)).size).toBe(5);
-    expect(new Set(MIRROR_MODELS.map((m) => m.sha256)).size).toBe(5);
+    expect(MIRROR_MODELS.filter((m) => m.kind === 'assist')).toHaveLength(1);
+    expect(new Set(MIRROR_MODELS.map((m) => m.id)).size).toBe(6);
+    expect(new Set(MIRROR_MODELS.map((m) => m.sha256)).size).toBe(6);
     for (const m of MIRROR_MODELS) {
       expect(m.sha256).toMatch(/^[a-f0-9]{64}$/);
-      // Every archive must clear GitHub's 100 MB hard per-file limit (ticket risk note).
-      expect(m.bytes).toBeLessThan(100 * 1024 * 1024);
+      // Tree files must clear GitHub's 100 MB hard per-file limit; anything
+      // bigger must be release-hosted (T59).
+      if (m.bytes >= GITHUB_TREE_FILE_LIMIT) expect(m.release).toBeDefined();
+      else expect(m.release).toBeUndefined();
     }
   });
 
-  it('maps every model under models/{tts,asr}/ keeping the upstream filename', () => {
+  it('maps every model under models/{tts,asr,assist}/ keeping the upstream filename', () => {
+    const dirs = { 'tts-voice': 'models/tts/', asr: 'models/asr/', assist: 'models/assist/' };
     for (const m of MIRROR_MODELS) {
       const rel = mirrorFilePath(m);
-      expect(rel.startsWith(m.kind === 'tts-voice' ? 'models/tts/' : 'models/asr/')).toBe(true);
+      expect(rel.startsWith(dirs[m.kind])).toBe(true);
       expect(rel.endsWith(m.upstreamUrl.split('/').pop()!)).toBe(true);
+      expect(releaseAssetName(m)).toBe(m.upstreamUrl.split('/').pop());
     }
+  });
+});
+
+describe('release-hosted models (T59)', () => {
+  it('verifies, uploads once, writes a manifest entry with release {tag, asset}, no tree file', async () => {
+    const content = makeContentRepo();
+    const releases = fakeReleases();
+    const summary = await runModelsMirror(content, {
+      models: [...FAKE_MODELS, FAKE_RELEASE_MODEL],
+      download: fakeDownloaderWithRelease,
+      releases,
+    });
+    expect(summary.models.map((m) => m.action)).toEqual(['downloaded', 'downloaded', 'uploaded']);
+    expect(releases.assets.get('models')).toEqual(['fake-assist.tar.bz2']);
+    expect(releases.uploads).toEqual([FAKE_RELEASE_BYTES]);
+    expect(existsSync(join(content, 'models/assist'))).toBe(false);
+
+    const manifest = ModelsManifestSchema.parse(
+      JSON.parse(readFileSync(join(content, MODELS_MANIFEST_FILE), 'utf8')),
+    );
+    const entry = manifest.models.find((m) => m.id === 'fake-assist')!;
+    expect(entry.kind).toBe('assist');
+    expect(entry.file).toBe('models/assist/fake-assist.tar.bz2');
+    expect(entry.release).toEqual({ tag: 'models', asset: 'fake-assist.tar.bz2' });
+    expect(manifest.models.find((m) => m.id === 'fake-voice')!.release).toBeUndefined();
+
+    // Second run: asset present → 'released', nothing re-uploaded, nothing to commit.
+    const again = await runModelsMirror(content, {
+      models: [...FAKE_MODELS, FAKE_RELEASE_MODEL],
+      download: fakeDownloaderWithRelease,
+      releases,
+    });
+    expect(again.models.map((m) => m.action)).toEqual(['present', 'present', 'released']);
+    expect(releases.uploads).toHaveLength(1);
+    expect(again.outcome).toBe('unchanged');
+  });
+
+  it('refuses a bad hash before any upload', async () => {
+    const content = makeContentRepo();
+    const releases = fakeReleases();
+    const badDownloader: Downloader = async (_url, dest) => writeFileSync(dest, 'wrong bytes');
+    await expect(
+      runModelsMirror(content, { models: [FAKE_RELEASE_MODEL], download: badDownloader, releases }),
+    ).rejects.toThrow(/failed verification.*nothing was uploaded/s);
+    expect(releases.uploads).toHaveLength(0);
+    expect(releases.assets.size).toBe(0);
+  });
+
+  it('refuses an over-limit model that has no release tag', async () => {
+    const content = makeContentRepo();
+    const big: MirrorModel = { ...FAKE_MODELS[0]!, id: 'too-big', bytes: GITHUB_TREE_FILE_LIMIT };
+    await expect(
+      runModelsMirror(content, {
+        models: [big],
+        download: fakeDownloader,
+        releases: fakeReleases(),
+      }),
+    ).rejects.toThrow(/over GitHub's 100 MB tree limit/);
   });
 });
 

@@ -70,6 +70,33 @@ describe('ModelsManifestSchema', () => {
     }
   });
 
+  it('accepts the T59 assist kind with an optional release-asset pointer', () => {
+    const parsed = ModelsManifestSchema.parse({
+      schemaVersion: 1,
+      models: [
+        {
+          id: 'whisper-base-int8',
+          kind: 'assist',
+          file: 'models/assist/sherpa-onnx-whisper-base.tar.bz2',
+          bytes: 207_557_382,
+          sha256: '911b2083efd7c0dca2ac3b358b75222660dc09fb716d64fbfc417ba6c99ff3de',
+          displayName: 'Assist model',
+          release: { tag: 'models', asset: 'sherpa-onnx-whisper-base.tar.bz2' },
+        },
+      ],
+    });
+    expect(parsed.models[0]!.release).toEqual({
+      tag: 'models',
+      asset: 'sherpa-onnx-whisper-base.tar.bz2',
+    });
+    expect(
+      ModelsManifestSchema.safeParse({
+        schemaVersion: 1,
+        models: [{ ...validEntry, release: { tag: '' } }],
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects a malformed sha256 / kind / bytes with precise paths', () => {
     const result = safeParseModelsManifest({
       schemaVersion: 1,

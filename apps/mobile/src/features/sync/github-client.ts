@@ -13,6 +13,10 @@ const GithubFileMetaSchema = z.object({
   size: z.number().int().nonnegative().catch(0),
   download_url: z.string().min(1).nullable().catch(null),
 });
+/** T59: the slice of a release payload the asset resolver needs. */
+const GithubReleaseSchema = z.object({
+  assets: z.array(z.object({ name: z.string(), url: z.string().min(1) })).catch([]),
+});
 
 /**
  * Minimal GitHub contents-API client (design §3.3: "the app reads via the
@@ -164,6 +168,33 @@ export class GithubContentClient {
       throw new SyncError('http', `no download url for ${path}`, { path });
     }
     return parsed.data.download_url;
+  }
+
+  /**
+   * T59: resolve the API URL of one asset of a GitHub Release on this repo
+   * (`models` tag — archives over the 100 MB tree limit). The returned URL
+   * is the asset's `url` (api.github.com/…/releases/assets/<id>): fetching
+   * it with `Accept: application/octet-stream` + the PAT bearer header
+   * redirects to the signed object store URL. No token is embedded here;
+   * the caller sends the header. Errors carry tag/asset + status only.
+   */
+  async getReleaseAssetUrl(tag: string, asset: string): Promise<string> {
+    const { owner, repo } = this.config;
+    const path = `releases/${tag}/${asset}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases/tags/${encodeURIComponent(tag)}`;
+    const res = await this.request(url, path, {
+      method: 'GET',
+      accept: 'application/vnd.github+json',
+    });
+    const parsed = GithubReleaseSchema.safeParse((await res.json()) as unknown);
+    if (!parsed.success) {
+      throw new SyncError('http', `release ${tag} is not a release listing`, { path });
+    }
+    const found = parsed.data.assets.find((a) => a.name === asset);
+    if (!found) {
+      throw new SyncError('not-found', `${asset} not attached to release ${tag}`, { path });
+    }
+    return found.url;
   }
 
   /**

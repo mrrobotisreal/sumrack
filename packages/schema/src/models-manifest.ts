@@ -13,8 +13,11 @@ import { StableIdSchema } from './common';
  * URL/hash constants when the manifest or repo is unreachable.
  */
 
-/** What a mirrored archive is: a Piper TTS voice or the ASR model. */
-export const ModelKindSchema = z.enum(['tts-voice', 'asr']);
+/**
+ * What a mirrored archive is: a Piper TTS voice, the Russian ASR model, or
+ * (T59) the optional Whisper multilingual assist recognizer.
+ */
+export const ModelKindSchema = z.enum(['tts-voice', 'asr', 'assist']);
 export type ModelKind = z.infer<typeof ModelKindSchema>;
 
 export const ModelsManifestEntrySchema = z.strictObject({
@@ -36,6 +39,21 @@ export const ModelsManifestEntrySchema = z.strictObject({
   displayName: z.string().min(1),
   /** Informational extras (e.g. the upstream URL the archive was mirrored from). */
   meta: z.record(z.string(), z.string()).optional(),
+  /**
+   * T59: archives over GitHub's 100 MB per-file limit cannot live in the
+   * repo tree — they are attached to a GitHub **Release** on the content repo
+   * instead. When present, `file` is the nominal `models/…` path (the asset's
+   * name is its basename) and the app downloads the release asset (by tag +
+   * asset name, PAT-authenticated) rather than the repo file.
+   */
+  release: z
+    .strictObject({
+      /** The release tag on the content repo (e.g. "models"). */
+      tag: z.string().min(1),
+      /** The asset file name inside that release. */
+      asset: z.string().min(1),
+    })
+    .optional(),
 });
 export type ModelsManifestEntry = z.infer<typeof ModelsManifestEntrySchema>;
 

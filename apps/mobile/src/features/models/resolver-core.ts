@@ -24,17 +24,24 @@ export interface ModelRef {
   bytes: number;
 }
 
-export type ModelSourceKind = 'content-repo' | 'upstream-fallback';
+/**
+ * 'release' (T59): the archive is an asset of a GitHub Release on the
+ * content repo — the documented home for archives over GitHub's 100 MB
+ * tree limit (the Whisper assist model).
+ */
+export type ModelSourceKind = 'content-repo' | 'release' | 'upstream-fallback';
 
 export type PlannedModelSource =
   | { source: 'content-repo'; path: string; sha256: string; bytes: number }
+  | { source: 'release'; tag: string; asset: string; sha256: string; bytes: number }
   | { source: 'upstream-fallback'; url: string; sha256: string; bytes: number };
 
 /**
  * Order the sources to try for one model: content repo first when the
- * manifest lists the id, always ending with the pinned upstream fallback.
- * A null manifest (unreachable + no cache, or invalid) degrades cleanly to
- * fallback-only — a missing/corrupt manifest must never block installs.
+ * manifest lists the id (a Release asset when the entry says so), always
+ * ending with the pinned upstream fallback. A null manifest (unreachable +
+ * no cache, or invalid) degrades cleanly to fallback-only — a
+ * missing/corrupt manifest must never block installs.
  */
 export function planModelSources(
   ref: ModelRef,
@@ -48,6 +55,18 @@ export function planModelSources(
   };
   const entry = manifest?.models.find((m) => m.id === ref.id);
   if (!entry) return [upstream];
+  if (entry.release) {
+    return [
+      {
+        source: 'release',
+        tag: entry.release.tag,
+        asset: entry.release.asset,
+        sha256: entry.sha256,
+        bytes: entry.bytes,
+      },
+      upstream,
+    ];
+  }
   return [
     { source: 'content-repo', path: entry.file, sha256: entry.sha256, bytes: entry.bytes },
     upstream,

@@ -48,6 +48,35 @@ describe('planModelSources', () => {
     });
   });
 
+  it('plans a Release asset first when the manifest entry carries release {tag, asset} (T59)', () => {
+    const manifest: ModelsManifest = {
+      schemaVersion: 1,
+      models: [
+        {
+          id: 'whisper-base-int8',
+          kind: 'assist',
+          file: 'models/assist/sherpa-onnx-whisper-base.tar.bz2',
+          bytes: 207_557_382,
+          sha256: 'c'.repeat(64),
+          displayName: 'Assist',
+          release: { tag: 'models', asset: 'sherpa-onnx-whisper-base.tar.bz2' },
+        },
+      ],
+    };
+    const ref: ModelRef = { ...REF, id: 'whisper-base-int8' };
+    const sources = planModelSources(ref, manifest);
+    expect(sources).toEqual([
+      {
+        source: 'release',
+        tag: 'models',
+        asset: 'sherpa-onnx-whisper-base.tar.bz2',
+        sha256: 'c'.repeat(64),
+        bytes: 207_557_382,
+      },
+      { source: 'upstream-fallback', url: REF.fallbackUrl, sha256: REF.sha256, bytes: REF.bytes },
+    ]);
+  });
+
   it('degrades to fallback-only when the manifest is unavailable', () => {
     expect(planModelSources(REF, null)).toEqual([
       { source: 'upstream-fallback', url: REF.fallbackUrl, sha256: REF.sha256, bytes: REF.bytes },

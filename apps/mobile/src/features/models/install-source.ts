@@ -27,6 +27,20 @@ export type ModelDownloadSpec =
   | { source: 'upstream-fallback'; url: string; sha256: string; bytes: number }
   | {
       /**
+       * T59: a GitHub Release asset on the content repo. The asset's API URL
+       * is resolved just in time; the download itself needs the PAT as a
+       * bearer header + `Accept: application/octet-stream` (GitHub then 302s
+       * to a signed objects URL). `headers` therefore carry the token — pass
+       * them only into the download call, never log them.
+       */
+      source: 'release';
+      resolveUrl: () => Promise<string>;
+      headers: () => Promise<Record<string, string>>;
+      sha256: string;
+      bytes: number;
+    }
+  | {
+      /**
        * Content-repo downloads resolve their URL just in time: a signed,
        * short-lived raw.githubusercontent.com URL from the contents API
        * (streaming ~67 MB through api.github.com itself gets the HTTP/2
@@ -62,6 +76,18 @@ export async function resolveModelDownloadSpecs(ref: ModelRef): Promise<ModelDow
         return {
           source: 'content-repo',
           resolveUrl: () => client.getFileDownloadUrl(planned.path),
+          sha256: planned.sha256,
+          bytes: planned.bytes,
+        };
+      }
+      if (planned.source === 'release') {
+        return {
+          source: 'release',
+          resolveUrl: () => client.getReleaseAssetUrl(planned.tag, planned.asset),
+          headers: async () => ({
+            Authorization: `Bearer ${pat}`,
+            Accept: 'application/octet-stream',
+          }),
           sha256: planned.sha256,
           bytes: planned.bytes,
         };
@@ -119,10 +145,17 @@ export async function downloadModelArchive(
     try {
       onPhase('downloading', 0);
       const url = 'url' in spec ? spec.url : await spec.resolveUrl();
-      const download = LegacyFileSystem.createDownloadResumable(url, archiveFile.uri, {}, (p) => {
-        const total = p.totalBytesExpectedToWrite > 0 ? p.totalBytesExpectedToWrite : spec.bytes;
-        onPhase('downloading', Math.min(1, p.totalBytesWritten / total));
-      });
+      const headers = 'headers' in spec ? await spec.headers() : undefined;
+      const options = headers ? { headers } : {};
+      const download = LegacyFileSystem.createDownloadResumable(
+        url,
+        archiveFile.uri,
+        options,
+        (p) => {
+          const total = p.totalBytesExpectedToWrite > 0 ? p.totalBytesExpectedToWrite : spec.bytes;
+          onPhase('downloading', Math.min(1, p.totalBytesWritten / total));
+        },
+      );
       const result = await download.downloadAsync();
       if (!result || result.status !== 200) {
         throw new Error(`download failed (HTTP ${result?.status ?? '—'})`);
