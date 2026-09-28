@@ -40,7 +40,7 @@ import {
   DEFAULT_LANGUAGE_CODE,
   DEFAULT_MODEL_ID,
   ElevenLabsClient,
-  isV3Model,
+  isTaggedModel,
 } from './elevenlabs.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { loadExtras } from './extras.ts';
@@ -550,7 +550,7 @@ async function renderDirection(
 ): Promise<{ audio: Buffer; stampResultFor: (durationMs: number) => StampResult }> {
   // Per-direction model beats the CLI --model, which beats the default (v2).
   const model = direction.model ?? modelId ?? DEFAULT_MODEL_ID;
-  const v3 = isV3Model(model);
+  const v3 = isTaggedModel(model);
   // v3 rejects previous_text; mood steering there is the leading audio tag
   // plus any per-sentence cues. Tags become part of the rendered text, so
   // every token span shifts by the inserted length — stamp mapping stays
@@ -1093,7 +1093,7 @@ export function planAudioRun(
       // the steering tags/cues/context that ride along in the text (they bill
       // like any other character).
       const model = direction.model ?? opts.modelId ?? DEFAULT_MODEL_ID;
-      const v3 = isV3Model(model);
+      const v3 = isTaggedModel(model);
       const runs = planNarrationRuns(story, direction, v3, draftDir).filter(
         (r) => r.audioFile === undefined,
       );

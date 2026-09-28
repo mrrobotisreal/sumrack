@@ -32,7 +32,7 @@ export {
   ElevenLabsClient,
   ElevenLabsError,
   OUTPUT_FORMAT,
-  isV3Model,
+  isTaggedModel,
   type ElevenLabsVoice,
   type RenderRequest,
   type RenderResult,

@@ -26,9 +26,19 @@ export const DEFAULT_MODEL_ID = 'eleven_multilingual_v2';
  */
 export const DEFAULT_LANGUAGE_CODE = 'ru';
 
-/** v3-family models differ in accepted params (no previous_text, no language_code; audio tags instead). */
-export function isV3Model(modelId: string): boolean {
-  return modelId.startsWith('eleven_v3');
+/**
+ * Tagged-model gate (T64): the models whose steering channel is inline
+ * `[audio tags]` in the text — every `eleven_v3*` variant and `eleven_v4`.
+ * They share one request shape (no `previous_text`, no `language_code`, no
+ * default speaker boost — probe-verified for v4 on 2026-09-28, see
+ * AUTHORING.md «Eleven v3 / v4 tags»). `eleven_v4_turbo` is the realtime
+ * sibling and is refused outright — never a rendering model here.
+ */
+export function isTaggedModel(modelId: string): boolean {
+  if (modelId === 'eleven_v4_turbo') {
+    throw new Error('eleven_v4_turbo is the realtime model — not for rendering; use eleven_v4');
+  }
+  return modelId.startsWith('eleven_v3') || modelId === 'eleven_v4';
 }
 /**
  * Highest-quality MP3 the with-timestamps endpoint serves on the Creator tier
@@ -190,15 +200,16 @@ export class ElevenLabsClient {
   }
 
   /**
-   * Render text to speech with character-level timestamps. Non-v3 requests
-   * default `language_code` to {@link DEFAULT_LANGUAGE_CODE} and speaker
-   * boost to on (ADR-0016) when the caller pins neither; v3 gets neither
-   * field unless the caller asks (it rejects `language_code`).
+   * Render text to speech with character-level timestamps. Untagged (v2)
+   * requests default `language_code` to {@link DEFAULT_LANGUAGE_CODE} and
+   * speaker boost to on (ADR-0016) when the caller pins neither; tagged
+   * models (v3 / v4) get neither field unless the caller asks (v3 rejects
+   * `language_code`; v4 accepts and ignores it — probe (c)).
    */
   async renderWithTimestamps(req: RenderRequest): Promise<RenderResult> {
     const path = `/v1/text-to-speech/${encodeURIComponent(req.voiceId)}/with-timestamps?output_format=${OUTPUT_FORMAT}`;
     const modelId = req.modelId ?? DEFAULT_MODEL_ID;
-    const v3 = isV3Model(modelId);
+    const v3 = isTaggedModel(modelId);
     const settings =
       !v3 && req.voiceSettings?.useSpeakerBoost === undefined
         ? { ...req.voiceSettings, useSpeakerBoost: true }

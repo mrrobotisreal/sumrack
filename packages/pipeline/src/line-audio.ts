@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import type { NodeAudio } from '@sumrak/schema';
 import {
   DEFAULT_MODEL_ID,
-  isV3Model,
+  isTaggedModel,
   type ElevenLabsClient,
   type VoiceSettings,
 } from './elevenlabs.ts';
@@ -32,13 +32,13 @@ export interface LineRenderSpec {
   characterId: string;
   /** Exact text + token spans to synthesize (single sentence, or free text with no spans). */
   narration: NarrationText;
-  /** Optional Eleven v3 audio tag(s) prepended to the text on v3 models only. */
+  /** Optional Eleven v3 / v4 audio tag(s) prepended to the text on tagged models only (`isTaggedModel`). */
   audioTag?: string;
-  /** v2 steering: text "spoken before" the line (never rendered). Ignored on v3. */
+  /** v2 steering: text "spoken before" the line (never rendered). Ignored on v3 / v4. */
   previousText?: string;
   /** v2 steering: voice settings for this line. */
   voiceSettings?: VoiceSettings;
-  /** `language_code` override (the client defaults non-v3 requests to ru). */
+  /** `language_code` override (the client defaults untagged (v2) requests to ru). */
   languageCode?: string;
 }
 
@@ -84,9 +84,10 @@ export function providerVoiceOf(voice: string, characterId: string): string {
 }
 
 /**
- * Render one line. On v3 models the audio tag becomes part of the rendered
- * text (every span shifts by the prefix length); on other models the tag is
- * not applied and `previousText` / `voiceSettings` steer instead.
+ * Render one line. On tagged models (v3 / v4) the audio tag becomes part of
+ * the rendered text (every span shifts by the prefix length); on other
+ * models the tag is not applied and `previousText` / `voiceSettings` steer
+ * instead.
  */
 export async function renderLine(
   client: ElevenLabsClient,
@@ -96,7 +97,7 @@ export async function renderLine(
 ): Promise<RenderedLine> {
   const base = spec.narration;
   const model = modelId ?? DEFAULT_MODEL_ID;
-  const v3 = isV3Model(model);
+  const v3 = isTaggedModel(model);
   const prefix = v3 && spec.audioTag ? `${spec.audioTag} ` : '';
   const narration: NarrationText = prefix
     ? {

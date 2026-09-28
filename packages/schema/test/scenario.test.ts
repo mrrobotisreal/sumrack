@@ -482,9 +482,10 @@ describe('scenario glossary', () => {
     );
   });
 
-  it('rejects more than 120 entries', () => {
+  const withEntries = (total: number) => {
     const pack = makeValidScenarioPack() as any;
-    for (let i = 0; i < 120; i++) {
+    // The valid pack already carries one entry; fill to `total`.
+    for (let i = scn(pack).glossary.length; i < total; i++) {
       scn(pack).glossary.push({
         ...secondEntry(),
         id: `gl-${i}`,
@@ -493,7 +494,18 @@ describe('scenario glossary', () => {
         howToSay: makeLine(`gl-${i}-how`, 'Да.'),
       });
     }
-    expectIssue(pack, 'scenarios[0].glossary', '120');
+    return pack;
+  };
+
+  it('accepts exactly 180 entries (the T64 bound — 120 → 180, 2026-09-28)', () => {
+    const pack = withEntries(180);
+    expect(scn(pack).glossary).toHaveLength(180);
+    expect(safeParsePack(pack).success).toBe(true);
+  });
+
+  it('rejects 181 entries', () => {
+    const pack = withEntries(181);
+    expectIssue(pack, 'scenarios[0].glossary', '180');
   });
 });
 

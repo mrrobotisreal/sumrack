@@ -340,7 +340,7 @@ const ScenarioShape = z.strictObject({
   turns: z.array(ScenarioTurnSchema).min(1).max(SCENARIO_MAX_TURNS),
   /** T25's Ending (title/recap/tone). */
   endings: z.array(EndingSchema).min(1),
-  glossary: z.array(GlossaryEntrySchema).max(120),
+  glossary: z.array(GlossaryEntrySchema).max(180), // 120 → 180 (T64, Mitch 2026-09-28)
   /**
    * Host-voiced service lines the engine needs at any turn — exactly one of each kind:
    * 'silence' («Ты здесь?» after 25 s of nothing), 'which-word' («Какое слово? Скажи ещё раз» when
