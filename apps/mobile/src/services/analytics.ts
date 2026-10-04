@@ -421,6 +421,9 @@ export type AnalyticsEvent =
   | 'scenario_subtitles_toggled'
   | 'scenario_pref_changed'
   | 'scenario_hub_opened'
+  // scenario_level_selected {familyId, level, isDefault} — a rung chip tapped on the hub
+  // (Mitch 2026-10-04: the chips are a level picker; finished rungs stay selectable).
+  | 'scenario_level_selected'
   | 'scenario_gate_shown'
   | 'scenario_assist_banner'
   | 'scenario_runs_list_opened'

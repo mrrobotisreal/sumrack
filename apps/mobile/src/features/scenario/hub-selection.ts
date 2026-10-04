@@ -77,3 +77,18 @@ export function rungChipState(rung: Pick<ScenarioRung, 'bestStats'>): RungChipSt
 export function familyLead(family: ScenarioFamily): ScenarioRung | null {
   return family.rungs[0] ?? null;
 }
+
+/**
+ * The rung a family card pre-selects before the user touches a level chip
+ * (Mitch 2026-10-04): a resumable run wins, else the first unfinished rung,
+ * else the lowest rung. Every rung stays selectable — finishing A1 never
+ * hides it behind A2; the chips are a level picker, not a progress readout.
+ */
+export function defaultRung(family: Pick<ScenarioFamily, 'rungs'>): ScenarioRung | null {
+  return (
+    family.rungs.find(isResumable) ??
+    family.rungs.find((r) => !isFinished(r)) ??
+    family.rungs[0] ??
+    null
+  );
+}

@@ -25,13 +25,15 @@ import { useAppTheme } from '@/theme/use-app-theme';
 import { haptics } from './haptics';
 import { HostThumb, rungSceneSpec } from './host-thumb';
 import { useHubGates, type HubGate } from './hub-gates';
-import { familyLead, isResumable, rungChipState } from './hub-selection';
+import { defaultRung, familyLead, isResumable, rungChipState } from './hub-selection';
 
 /**
  * The «Сценарии» hub (T62, SPEAKING_SCENARIOS §9.1): families as cards (RU
  * title + EN subtitle, the scene's accent stripe, the host thumbnail), rung
- * chips (✓ finished once, ★ clean), «Continue» when a resumable run exists,
- * «Runs · N» (T63's list — a stub until then). The two gates render HERE
+ * chips as a LEVEL PICKER (✓ finished once, ★ clean, the selected level
+ * outlined — Mitch 2026-10-04: a finished A1 stays selectable next to A2;
+ * the card's primary button starts / continues the SELECTED level), «Runs ·
+ * N» (T63's list — a stub until then). The two gates render HERE
  * (ASR model missing → Settings → Speech; mic denied → system settings) and
  * disable every Start; nothing gates mid-run (§12). A one-time banner
  * offers the Whisper assist model.
@@ -231,12 +233,15 @@ function FamilyCard({
   const { tokens: theme } = useAppTheme();
   const lead = familyLead(family);
   const spec = React.useMemo(() => (lead ? rungSceneSpec(lead) : null), [lead]);
-  if (!lead || !spec) return null;
-  const accent = spec.accent ?? theme.accent;
-  // The first unfinished rung is the card's Start; a resumable one wins.
-  const resumable = family.rungs.find(isResumable) ?? null;
-  const nextRung = family.rungs.find((r) => r.bestStats === null) ?? family.rungs[0]!;
+  // The level picker: the user's pick wins; otherwise `defaultRung` (resumable →
+  // first unfinished → lowest). The pick is per card and resets if the rung vanishes.
+  const [pickedId, setPickedId] = React.useState<string | null>(null);
+  const selected =
+    family.rungs.find((r) => r.id === pickedId) ?? defaultRung(family) ?? family.rungs[0] ?? null;
   const runCount = family.rungs.reduce((n, r) => n + r.runCount, 0);
+  if (!lead || !spec || !selected) return null;
+  const accent = spec.accent ?? theme.accent;
+  const selectedResumable = isResumable(selected);
 
   return (
     <View className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -258,8 +263,16 @@ function FamilyCard({
                   <RungChip
                     key={rung.id}
                     rung={rung}
+                    selected={rung.id === selected.id}
                     disabled={disabled}
-                    onPress={() => (isResumable(rung) ? onContinue(rung) : onStart(rung))}
+                    onPress={() => {
+                      track('scenario_level_selected', {
+                        familyId: rung.familyId,
+                        level: rung.level,
+                        isDefault: rung.id === (defaultRung(family)?.id ?? ''),
+                      });
+                      setPickedId(rung.id);
+                    }}
                   />
                 ))}
               </View>
@@ -267,35 +280,37 @@ function FamilyCard({
           </View>
 
           <View className="flex-row items-center gap-2">
-            {resumable ? (
+            {selectedResumable ? (
               <Pressable
-                onPress={() => onContinue(resumable)}
+                onPress={() => onContinue(selected)}
                 disabled={disabled}
                 accessibilityRole="button"
-                accessibilityLabel={`Continue ${resumable.titleRu} ${resumable.level}`}
+                accessibilityLabel={`Continue ${selected.titleRu} ${selected.level}`}
                 className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3 ${
                   disabled ? 'opacity-40' : 'active:opacity-80'
                 }`}
               >
                 <Ionicons name="play" size={15} color={theme.bg} />
-                <Text className="font-ui-medium text-bg">Continue · {resumable.level}</Text>
+                <Text className="font-ui-medium text-bg">Continue · {selected.level}</Text>
               </Pressable>
             ) : (
               <Pressable
-                onPress={() => onStart(nextRung)}
+                onPress={() => onStart(selected)}
                 disabled={disabled}
                 accessibilityRole="button"
-                accessibilityLabel={`Start ${nextRung.titleRu} ${nextRung.level}`}
+                accessibilityLabel={`Start ${selected.titleRu} ${selected.level}`}
                 className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-accent py-3 ${
                   disabled ? 'opacity-40' : 'active:opacity-80'
                 }`}
               >
                 <Ionicons name="mic" size={15} color={theme.bg} />
-                <Text className="font-ui-medium text-bg">Начать · {nextRung.level}</Text>
+                <Text className="font-ui-medium text-bg">
+                  {rungChipState(selected) === 'new' ? 'Начать' : 'Ещё раз'} · {selected.level}
+                </Text>
               </Pressable>
             )}
             <Pressable
-              onPress={() => onRuns(nextRung)}
+              onPress={() => onRuns(selected)}
               accessibilityRole="button"
               accessibilityLabel={`Runs of ${lead.titleRu}`}
               className="flex-row items-center gap-1.5 rounded-xl border border-border bg-surface-2 px-3.5 py-3 active:bg-surface"
@@ -312,10 +327,12 @@ function FamilyCard({
 
 function RungChip({
   rung,
+  selected,
   disabled,
   onPress,
 }: {
   rung: ScenarioRung;
+  selected: boolean;
   disabled: boolean;
   onPress: () => void;
 }) {
@@ -327,9 +344,10 @@ function RungChip({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${rung.level} — ${state === 'clean' ? 'clean run' : state === 'finished' ? 'finished' : 'not played'}${resumable ? ', in progress' : ''}`}
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${rung.level} — ${state === 'clean' ? 'clean run' : state === 'finished' ? 'finished' : 'not played'}${resumable ? ', in progress' : ''}${selected ? ', selected' : ''}`}
       className={`flex-row items-center gap-1 rounded-full border px-1 py-0.5 ${
-        resumable ? 'border-accent/50' : 'border-border'
+        selected ? 'border-accent bg-accent-soft' : resumable ? 'border-accent/50' : 'border-border'
       } ${disabled ? 'opacity-50' : 'active:bg-surface-2'}`}
     >
       <LevelChip level={rung.level} />

@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LevelChip, type CefrLevel } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
 import type { Ending } from '@sumrak/schema';
 import type { ScenarioRunStats } from '@/db/repositories/scenarios';
@@ -30,6 +31,8 @@ const TONE_LABEL: Record<Ending['tone'], string> = {
 
 export function EndingCard({
   ending,
+  level,
+  titleRu,
   stats,
   newEnding,
   xp,
@@ -40,6 +43,9 @@ export function EndingCard({
   onClose,
 }: {
   ending: Ending;
+  /** The rung just finished — shown so an A1 and an A2 ending of the same title never look alike. */
+  level: CefrLevel;
+  titleRu: string;
   stats: ScenarioRunStats;
   newEnding: boolean;
   /** The XP just awarded (the toast's number, echoed here). */
@@ -62,6 +68,12 @@ export function EndingCard({
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }}
     >
       <View className="items-center gap-2">
+        <View className="flex-row items-center gap-2">
+          <LevelChip level={level} />
+          <Text variant="caption" numberOfLines={1}>
+            {titleRu}
+          </Text>
+        </View>
         <Ionicons name={TONE_ICON[ending.tone]} size={44} color={theme.accent} />
         <Text variant="caption" className="uppercase tracking-wider">
           {TONE_LABEL[ending.tone]}
@@ -124,7 +136,7 @@ export function EndingCard({
             accessibilityRole="button"
             className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-accent/50 bg-accent-soft py-3.5 active:opacity-80"
           >
-            <Text className="font-ui-medium text-accent">Следующий уровень</Text>
+            <Text className="font-ui-medium text-accent">Следующий уровень · {nextLevel}</Text>
             <Ionicons name="arrow-forward" size={15} color={theme.accent} />
           </Pressable>
         )}

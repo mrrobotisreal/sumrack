@@ -4,6 +4,7 @@ import type { ScenarioFamily, ScenarioRung, ScenarioRunStats } from '@/db/reposi
 
 import {
   cleanRatio,
+  defaultRung,
   isClean,
   isResumable,
   nextRung,
@@ -117,5 +118,31 @@ describe('rung chips + resume + next level', () => {
     expect(nextRung(fams, { familyId: 'radio', level: 'B1' })).toBeNull();
     expect(nextRung(fams, { familyId: 'doctor', level: 'A2' })).toBeNull();
     expect(nextRung(fams, { familyId: 'bank', level: 'A1' })).toBeNull();
+  });
+});
+
+describe('level picker default (Mitch 2026-10-04 — finished rungs stay selectable)', () => {
+  const open = { id: 'x', finishedAt: null } as unknown as ScenarioRung['lastRun'];
+
+  it('pre-selects the first unfinished rung', () => {
+    const fam = families(rung('doctor', 'A1', stats(4, 4)), rung('doctor', 'A2', null))[0]!;
+    expect(defaultRung(fam)?.level).toBe('A2');
+  });
+
+  it('a resumable run wins over an unfinished higher rung', () => {
+    const fam = families(
+      rung('doctor', 'A1', stats(4, 4), { lastRun: open }),
+      rung('doctor', 'A2', null),
+    )[0]!;
+    expect(defaultRung(fam)?.level).toBe('A1');
+  });
+
+  it('falls back to the lowest rung when every rung is finished', () => {
+    const fam = families(rung('doctor', 'A1', stats(4, 3)), rung('doctor', 'A2', stats(4, 4)))[0]!;
+    expect(defaultRung(fam)?.level).toBe('A1');
+  });
+
+  it('is null for an empty family', () => {
+    expect(defaultRung({ rungs: [] })).toBeNull();
   });
 });

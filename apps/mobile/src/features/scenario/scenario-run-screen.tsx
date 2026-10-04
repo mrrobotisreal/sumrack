@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ActivityIndicator, Alert, BackHandler, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LevelChip } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { useScenario, useScenarioStamps, useScenarios } from '@/db/hooks';
@@ -256,6 +257,8 @@ export function ScenarioRunScreen() {
     return (
       <EndingCard
         ending={ending}
+        level={detail.scenario.level}
+        titleRu={detail.scenario.titleRu}
         stats={run.finish.stats}
         newEnding={run.finish.newEnding}
         xp={run.finish.xp}
@@ -307,6 +310,8 @@ export function ScenarioRunScreen() {
           style={{ top: insets.top + 6 }}
         >
           <View className="flex-1 flex-row items-center gap-2 rounded-full bg-scrim/40 px-3 py-1.5">
+            {/* Mitch 2026-10-04: the level is always visible mid-run (A1 vs A2 of the same title). */}
+            <LevelChip level={detail.scenario.level} />
             <Text className="font-ui-medium text-sm" numberOfLines={1}>
               {detail.scenario.titleRu}
             </Text>
