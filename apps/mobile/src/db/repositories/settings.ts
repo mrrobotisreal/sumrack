@@ -183,6 +183,22 @@ export const SETTING_KEYS = {
    * fallbacks that mirrors the on-disk model state, never the truth itself.
    */
   scenarioAssistModel: 'scenario.assistModel',
+  /**
+   * «ТРКИ» prefs (M18, TORFL_EXAM_PREP §4.4; declared in T68, healed by
+   * `features/torfl/settings-core.ts`): { v: 1, showEnglishInstructions:
+   * true, drillTimer: 'off' | 'exam-pace' ('off'), breakBetweenSubtests:
+   * true, allowLookupInMockReading: true } — field-by-field healing.
+   */
+  torflPrefs: 'torfl.prefs',
+  /** The real exam date (M18 §4.4): ISO 'YYYY-MM-DD' or null — the hub countdown. Invalid → null. */
+  torflExamDate: 'torfl.examDate',
+  /**
+   * «Exam grading» run profile (M18 §4.4, ADR-0020 decision 10): { v: 1,
+   * provider, quality, effort } — the M16 run-profile triple only; default
+   * { <the grammar preset's provider>, 'normal', 'high' }; healed
+   * field-by-field like `ai.grammarPreset`.
+   */
+  torflGradingPreset: 'torfl.gradingPreset',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

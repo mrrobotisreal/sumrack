@@ -7,6 +7,9 @@ import {
 import * as React from 'react';
 
 import { classifyPack, type Classified } from '@/features/library/categories';
+import type { ExamMode, ExamScope } from '@/features/torfl/model';
+import type { ExamSubtestKind } from '@sumrak/schema';
+import { queryClient } from '@/lib/query-client';
 import { profileKeyFor } from '@/features/word-forms/profile-core';
 
 import { repos } from './index';
@@ -65,6 +68,21 @@ export const queryKeys = {
   scenarioRunDebrief: (runId: string) => ['scenario-runs', 'debrief', runId] as const,
   scenarioStamps: (packId: string, sentenceId: string) =>
     ['scenario-stamps', packId, sentenceId] as const,
+  // M18 «ТРКИ» (T68, TORFL §4.3). `['exams']` is the invalidation root for
+  // content AND user rows (attempts/responses/deck) — `invalidateExams()`.
+  exams: {
+    all: ['exams'] as const,
+    list: (packId?: string, mode?: ExamMode) =>
+      ['exams', 'list', packId ?? 'all', mode ?? 'all'] as const,
+    one: (packId: string, examId: string) => ['exams', 'one', packId, examId] as const,
+    activeAttempt: ['exams', 'attempts', 'active'] as const,
+    attempts: (scope?: ExamScope, limit?: number) =>
+      ['exams', 'attempts', 'list', scope ?? 'all', limit ?? 50] as const,
+    attempt: (attemptId: string) => ['exams', 'attempts', 'one', attemptId] as const,
+    topicStats: (sinceMs?: number, subtestKind?: string) =>
+      ['exams', 'topic-stats', sinceMs ?? 0, subtestKind ?? 'all'] as const,
+    deckCounts: ['exams', 'deck-counts'] as const,
+  },
   // M16 word profiles (T53, WORD_FORMS §5.4 key): keyed by the profile key,
   // not the bank item id — profiles outlive items and are shared by lemma.
   wordProfile: (lemmaNorm: string, kind: ProfileKind) => ['word-profile', lemmaNorm, kind] as const,
@@ -468,6 +486,71 @@ export function useScenarioStamps(packId: string | undefined, sentenceId: string
     queryFn: () => repos.scenarios.getStampsForSentence(packId!, sentenceId!),
     enabled: !!packId && !!sentenceId,
   });
+}
+
+// --- M18 «ТРКИ» exams (T68) -------------------------------------------------
+
+/** Installed exams (optional pack / mode filter), JSON parsed — the hub's lists (T69). */
+export function useExams(filter: { packId?: string; mode?: ExamMode } = {}) {
+  return useQuery({
+    queryKey: queryKeys.exams.list(filter.packId, filter.mode),
+    queryFn: () => repos.exams.listExams(filter),
+  });
+}
+
+/** One exam, Zod-parsed (null = missing / unreadable). */
+export function useExam(packId: string | undefined, examId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.exams.one(packId ?? '', examId ?? ''),
+    queryFn: () => repos.exams.getExam(packId!, examId!),
+    enabled: !!packId && !!examId,
+  });
+}
+
+/** The one active attempt (hub resume banner, T71). */
+export function useActiveExamAttempt() {
+  return useQuery({
+    queryKey: queryKeys.exams.activeAttempt,
+    queryFn: () => repos.exams.getActiveAttempt(),
+  });
+}
+
+/** Attempt history, newest first. */
+export function useExamAttempts(opts: { scope?: ExamScope; limit?: number } = {}) {
+  return useQuery({
+    queryKey: queryKeys.exams.attempts(opts.scope, opts.limit),
+    queryFn: () => repos.exams.listAttempts(opts),
+  });
+}
+
+/** One attempt + its responses (results / review screens). */
+export function useExamAttempt(attemptId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.exams.attempt(attemptId ?? ''),
+    queryFn: () => repos.exams.getAttempt(attemptId!),
+    enabled: !!attemptId,
+  });
+}
+
+/** Per-topic accuracy over objective responses (readiness / hub breakdown). */
+export function useExamTopicStats(opts: { sinceMs?: number; subtestKind?: ExamSubtestKind } = {}) {
+  return useQuery({
+    queryKey: queryKeys.exams.topicStats(opts.sinceMs, opts.subtestKind),
+    queryFn: () => repos.exams.topicStats(opts),
+  });
+}
+
+/** Exam deck totals («Работа над ошибками · N»). */
+export function useExamDeckCounts() {
+  return useQuery({
+    queryKey: queryKeys.exams.deckCounts,
+    queryFn: () => repos.exams.deckCounts(),
+  });
+}
+
+/** Invalidate every exam query (content + attempts + deck) after any exam write or import. */
+export function invalidateExams(): Promise<void> {
+  return queryClient.invalidateQueries({ queryKey: queryKeys.exams.all });
 }
 
 // --- M16 word profiles (T53) ------------------------------------------------
