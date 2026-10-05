@@ -861,6 +861,8 @@ exam:
 ---
 ```
 
+**Required vs optional — the same for mocks and drills:** an exam needs `id`, `format`, `level`, `mode`, `title`, `subtests` (`blurb` optional). Every subtest needs `id`, `kind`, `title`, `instructions`, `durationMin`, `dictionary`, `navigation`, `maxPoints` and `parts`; `pointsPerItem` is optional (objective subtests need it **or** per-item `points`) and `audioPlays` is optional except on a mock's listening subtest. Every part needs `id`, `instructions`, `items`; `timeSec` is optional. A drill's `durationMin` is the exam-pace budget the app may show, not an enforced timer.
+
 Every item has `id` (**unique per exam**, across subtests; never a sentence id — the two namespaces are separate), `kind`, `topic` (a TORFL §3.4 slug — see the census below), optional `explain` (English, may quote Russian; shown after answering in drills and in review after a mock) and, on objective items only, optional `points` (overrides `pointsPerItem`).
 
 **Which kinds go where:** `lexgram` / `reading` / `listening` parts hold only `choice` and `typed`; a `writing` part holds **exactly one** `writing` item; `speaking` parts hold only the three speaking kinds.
@@ -977,7 +979,11 @@ Objective subtests (`lexgram`, `reading`, `listening`): each item is worth its `
 `annotate` and `validate` print, for every exam:
 
 - **Matrix map** — subtest → parts → items with kind / topic / points and `Σ x / maxPoints ✓`; rubric subtests show `rubric % of 100`.
-- **Topic census** — items per topic slug. A slug outside TORFL §3.4, or listed there under a different subtest kind, is flagged `?` — a warning, never an error (the app renders unknown slugs raw). The §3.4 list lives in `src/exam-topics.ts`.
+- **Topic census** — items per topic slug. A slug outside TORFL §3.4, or listed there under a different subtest kind, is flagged `?` — a warning, never an error (the app renders unknown slugs raw). The §3.4 slugs (data in `src/exam-topics.ts`):
+  - lexgram — `lex-verbs` · `lex-family` · `lex-negation` · `agr` · `pron` · `case-prep` · `case-acc` · `case-gen` · `case-dat` · `case-instr` · `verb-forms` · `verb-aspect` · `verb-motion` · `conj`
+  - reading — `read-continue` · `read-signs` · `read-topic` · `read-detail`
+  - listening — `listen-where` · `listen-who` · `listen-phrase` · `listen-detail` · `listen-info`
+  - writing — `write-letter` · speaking — `speak-reply` · `speak-situation` · `speak-monologue`
 - **Official-shape check** — for a `mock` with `format: torfl`, `level: A1` only: `⚠ official-shape:` lines for every deviation from the official A1 numbers (five subtests in the SPbU order; lexgram 70 items / 70 points / 40 min / no dictionary / free; reading 25 / 100 / 40 / dictionary / free; listening 20 / 100 / 30 / no dictionary / linear / `audioPlays: 2`; writing 30 min with dictionary; speaking 20 min, linear, parts 300 / 300 / 600 s), or `✓ official shape (TORFL A1 mock)`. Drills print «not checked». **Warnings never change the exit code** — a short practice mock is legal.
 - **Ref table** — every ref → story · sentence span · track, `✓` / `✗`; inherited listening audio is marked `audio↑`.
 
@@ -985,7 +991,7 @@ Schema errors (everything in this section that says "must") fail `annotate` with
 
 ### Ids (the TORFL convention)
 
-Story ids: `rd-<NN>` reading texts · `ls-<NN>` listening scripts · `ex-<NN>` examiner lines · `md-<slug>` model answers · `lx-<topic>` lexicon topics. Sentence ids: `tf<level><pack-code><NN>-sNN`, e.g. `tfa1m01r01-s01` = A1, mock 01, reading text 01, sentence 01 (`l` listening, `e` examiner, `d` model). Exam ids: `a1-mock-NN`, drill ids per the CT bible. The CT bible `sumrak-content/series/torfl/TORFL.md` is the canonical id table.
+Story ids: `rd-<NN>` reading texts · `ls-<NN>` listening scripts · `ex-<NN>` examiner lines · `md-<slug>` model answers · `lx-<topic>` lexicon topics. Sentence ids: `tf<level><pack-code><NN>-sNN`, e.g. `tfa1m01r01-s01` = A1, mock 01 (`m01`; drill and study packs take the code the CT bible assigns — e.g. `lx` for the lexicon, `fx` for the T67 fixture), story kind + number `r01` (`r` reading, `l` listening, `e` examiner, `d` model answer), sentence 01. It is a convention the pipeline does not enforce (sentence ids only have to be unique pack-wide), so follow the bible. Exam ids: `a1-mock-NN`, drill ids per the CT bible. The CT bible `sumrak-content/series/torfl/TORFL.md` is the canonical id table.
 
 ### Exam gotchas
 
@@ -993,7 +999,7 @@ Story ids: `rd-<NN>` reading texts · `ls-<NN>` listening scripts · `ex-<NN>` e
 2. **Quote YAML strings with `:`, `#`, `«»` or a leading `-`/`[`/`{`** — `stem: 'Он сказал: «…»'`. Single quotes are safest; a single quote inside is doubled (`'it''s'`).
 3. **Stems with two blanks are refused** — split the item, or reword one blank into the text.
 4. **`bullets` is the writing list; `points` is the score.** A writing or speaking item with `points` is an error.
-5. **Give the story drafts in the same `annotate` call** as the exam drafts; an exam draft alone may only reference nothing.
+5. **Give the story drafts in the same `annotate` call** as the exam drafts; an exam draft given alone may carry no story refs.
 6. **`trackId` waits for audio** — add it (if at all) after `pipeline audio`; until then omit it.
 7. **Mock listening needs `audioPlays`;** drill listening does not (drills replay freely).
 8. **Item ids are per exam, not per subtest** — prefix by subtest (`lg01`, `rd01`, `ls01`, `wr01`, `sp01`).
