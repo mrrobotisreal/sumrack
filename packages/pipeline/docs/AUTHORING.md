@@ -58,7 +58,7 @@ voice:
 | ----------- | -------------------- | ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `narrator`  | Рассказчик           | `stories`              | `0.50 / 0.75 / 0.00 / 1.00 / true` (No End House §5.6, CT011e)  | «Я рассказываю эту историю медленно, тихо, будто вспоминаю то, чего не хотел бы помнить.»                                               |
 | `anchor`    | Диктор               | `news`                 | `0.70 / 0.80 / 0.15 / 1.05 / true`                              | «Добрый вечер. В эфире вечерний выпуск новостей. Коротко о главном.»                                                                    |
-| `lecturer`  | Лектор               | `education`            | `0.65 / 0.80 / 0.20 / 0.97 / true`                              | «Итак, продолжим лекцию. Сегодня мы разберём эту тему спокойно и по порядку. Обратите внимание на примеры.»                             |
+| `lecturer`  | Лектор               | `education`, `torfl`   | `0.65 / 0.80 / 0.20 / 0.97 / true`                              | «Итак, продолжим лекцию. Сегодня мы разберём эту тему спокойно и по порядку. Обратите внимание на примеры.»                             |
 | `host`      | Ведущий              | `podcast`              | `0.35 / 0.75 / 0.50 / 1.05 / true`                              | «Привет-привет! Вы слушаете наш подкаст. Устраивайтесь поудобнее — сегодня будет интересно, и я, честно говоря, сам не могу дождаться.» |
 | `voiceover` | Закадровый голос     | `documentary`          | `0.60 / 0.80 / 0.25 / 0.95 / true`                              | «Здесь, вдали от городов, природа живёт по своим законам. Каждый год здесь повторяется одна и та же история.»                           |
 | `guide`     | Гид                  | `travel`               | `0.40 / 0.75 / 0.45 / 1.02 / true`                              | «Смотрите, мы только что приехали, и я вам сейчас всё покажу. Это место — одно из моих любимых.»                                        |
@@ -204,11 +204,11 @@ A draft has two parts: **YAML frontmatter** between `---` fences, then **sentenc
 pack:
   id: a1-creepypasta-002 # stable kebab-case id, never renumbered
   version: 1 # integer ≥ 1; bump to update a published pack
-  type: stories # stories | course-unit | checkpoint | prompts | dialogue
+  type: stories # stories | course-unit | checkpoint | prompts | dialogue | scenario | exam
   title: { ru: 'Фотография', en: 'The Photograph' }
   level: A1 # A1 | A2 | B1 | B2 | C1  (no C2)
   tags: ['creepypasta', 'horror', 'grammar:genitive']
-  category: stories # OPTIONAL (M14): stories | news | education | podcast | documentary | travel
+  category: stories # OPTIONAL (M14): stories | news | education | podcast | documentary | travel | torfl (M18)
   genre: horror # OPTIONAL (M14): fiction genre — horror | mystery | scifi | fantasy | action |
   #   comedy | romance | drama | family | slice-of-life | absurd | fairy-tale
 story:
@@ -528,8 +528,9 @@ No `SPEAKER:` in choices — choices always speak as `player`. A node with `CHOI
 - `packages/pipeline/fixtures/m14/` — the M14 category fixtures: `news-090-1/2.draft.md` (`category: news`, `register: anchor`, `subtitle` + `source` on each story → `a2-news-090`), `podcast-090.draft.md` (`podcast` / `host` → `a2-podcast-090`), `comedy-090.draft.md` (`stories` + `genre: comedy` / `narrator` → `a1-comedy-090`); `annotate` reproduces their `packages/schema/fixtures/packs/<id>/pack.json` byte-for-byte.
 - `packages/pipeline/fixtures/the-dinner.dialogue.md` — the canonical dialogue example: the T25 fixture pack «Ужин у мамы» (11 nodes, 2 choice points, 3 endings, a legal loop) in draft form; `annotate` reproduces `packages/schema/fixtures/packs/a2-dialogue-001` exactly.
 - `packages/pipeline/fixtures/radio-check.scenario.md` — the canonical scenario example: the T56 fixture pack «Проверка связи» (6 turns, a free slot with a reject reaction, a forms slot branching on `good`/`bad`/`default`, 15 glossary entries, 3 nudges, a placeholder host) in draft form; `annotate` reproduces `packages/schema/fixtures/packs/a1-scenario-fixture` exactly, and its coverage report flags exactly «отлично» and «эфир».
-- `packages/pipeline/fixtures/broken/` — deliberately broken drafts showing the big failure classes (missing lemma, misaligned table, dead branch, trap cycle, dangling references; for scenarios: a dangling `on` target, `EXPECT:` without `RETRY:`, `branchOn` on a free slot, plus two broken `pack.json`s — half-voiced and mouth-track mismatch) and their error messages.
-- `packages/schema/src/pack.ts` + `packages/schema/src/dialogue.ts` — the Zod schemas every emitted pack must satisfy (the pipeline runs them for you).
+- `packages/pipeline/fixtures/exam-fixture/` — the canonical exam example (T67): story drafts `rd-01` (a 6-sentence reading text) and `ls-01` (a 5-line two-voice dialogue) + `mock.exam.md` (`a1-mock-fx`, all five subtests in the official order, a few items each — deliberately not official-shape, so `validate` prints six `⚠ official-shape:` lines) + `drill.exam.md` (`a1-drill-fx`, a lexgram drill with `explain` and one `typed`/`half` item); `annotate exam-fixture/*.md` reproduces `packages/schema/fixtures/packs/a1-exam-fixture` exactly.
+- `packages/pipeline/fixtures/broken/` — deliberately broken drafts showing the big failure classes (missing lemma, misaligned table, dead branch, trap cycle, dangling references; for scenarios: a dangling `on` target, `EXPECT:` without `RETRY:`, `branchOn` on a free slot, plus two broken `pack.json`s — half-voiced and mouth-track mismatch; for exams (`exam-*`, annotate them with `exam-fixture/rd-01` + `ls-01`): a dangling `storyId`, a non-contiguous span, Σ points ≠ `maxPoints`, `answer` out of range, a speaking item in a reading subtest, a monologue group of 3, a bullet cue with punctuation, and the half-voiced `exam-half-voiced.pack.json`) and their error messages.
+- `packages/schema/src/pack.ts` + `packages/schema/src/dialogue.ts` (+ `scenario.ts`, `exam.ts`) — the Zod schemas every emitted pack must satisfy (the pipeline runs them for you).
 
 ## Content guidance for Sumrak stories
 
@@ -800,7 +801,6 @@ They also print the **glossary coverage report**: every **content lemma the cast
 
 > **Scenario host voices — the six fixed voice IDs (Mitch, 2026-10-04).** The six «Сценарии» hosts render ONLY from these ElevenLabs voice ids, no exceptions: Кирилл `8dhAblFTpeeEB1XoNWkd` · Елена Сергеевна `24cpwcP86kWKZVm5xL51` · Оксана `jbdzge6XKKuimi00dJwg` · Витя `KZH0fz8sc0VdgvPJ9sYb` · лейтенант Громов `KCHQFvRLLOBtTYbW6N09` · Незнакомец `ArHXzPPSKFNaYrb6JndW`. Write the raw id into the draft (`voice: 'elevenlabs:8dhAblFTpeeEB1XoNWkd'` — `resolveVoiceId` passes a 20-character id through untouched) rather than the voice's display name: the account keeps retired look-alike designs under similar names, and a name lookup could silently re-cast a host. The per-family drivers `packages/pipeline/_<host>-v4-render.mts` (and `_<host>-a2-v4-render.mts`) pin the same ids. The coach stays `River` on Multilingual v2. Roster + history: `sumrak-content/series/scenarios/SCENARIOS.md` §2.
 
-
 `pipeline audio` renders a scenario **per line** on Multilingual v2 — every `SAY:`, `CONFUSED:`/`HINT:`/`SECOND:`, `REACT:`, glossary `EXPLAIN:`/`HOWTOSAY:` and nudge becomes its own Opus file in the speaking character's library voice at `audio/<scenario-id>/<sentence-id>.opus`, with word stamps (the ≥95 % aligner gate + monotonicity per line; an untrusted alignment ships that line with no stamps) and a **mouth track** written into the line's `audio.mouth`. The per-line core (`line-audio.ts`) is the one dialogues use; scenarios add the variant steering and the mouth track.
 
 - **Variants and steering.** v2 has no audio tags, so the retry registers are steered by `previous_text` + settings deltas, per SPEAKING_SCENARIOS §3: a `CONFUSED:` line is rendered with the character's `cues.confused` as `previous_text` and **stability −0.1 / style +0.1**; a `HINT:` line with `cues.hint` and **speed 0.95**; every other line (`SAY:`, `SECOND:`, `REACT:`, glossary clips, nudges, coach) renders with the base settings (stability 0.5 · similarity 0.75 · style 0 · speaker boost) and no `previous_text`. When a character has no `cues:` the defaults apply (confused = «Извини, я не совсем понял. Ты можешь повторить?», hint = «Ничего, не спеши. Я помогу — давай ещё раз, медленно.»). The cue text is _conditioning_, never rendered, so it can be Russian or an English stage direction. **What v2 steering actually buys is small**: on the fixture the same text at the same seed came out ~0.2 s longer and ~0.5–1 dB softer as `confused`/`hint` than as plain `say` (`Stories/_build/a1-scenario-fixture/audition/ab/`) — a slower, softer take, not a different emotion. Write the confused/hint _text_ to carry the register; the steering only nudges delivery.
@@ -811,3 +811,190 @@ They also print the **glossary coverage report**: every **content lemma the cast
 - **`--mouth-only`** recomputes every mouth track of an already-rendered `<pack-dir>/pack.json` from the Opus files on disk and rewrites `pack.json` — drafts optional, **zero ElevenLabs calls** — for tuning the ladder; it is idempotent on an unchanged ladder (the fixture reproduces byte-identical).
 - **Cost gate**: every run prints `N scenario line(s), M scenario coach render(s) — R ElevenLabs request(s), ~C characters` and asks to proceed; `--yes` for scripted runs; an unconfirmed run makes zero calls. **Cost expectations** (fixture «Проверка связи», 54 lines + 2 coach, 1,115 chars): the 2-take audition = 6 requests / 150 chars in 12 s; the full finalize = 56 requests / 1,115 chars in 89 s → 90 s of audio, 444 KB of Opus. A real A1 rung (~120 lines, ~3,000 chars) is therefore ≈ 3 min and ≈ 3 k characters of the plan.
 - **`scene/` ships wholesale.** `publish` copies `pack.json`, every line/coach `audio/…opus`, and **every file under `<pack-dir>/scene/`** (any depth, dotfiles skipped) — the PNG layers the portraits/backdrop reference. The size line reports `scene/` separately («of which scene/ 4.68 MB (Wi-Fi-gated PNG layers)»): the app's sync gate treats `scene/` + `.png` like large audio (T58). The CT session copies Mitch's art in from `Stories/scenarios/<family>/art/sized/` — `backdrop.png` → `scene/backdrop.png`, `body.png` → `scene/<host-id>/body.png`, `eyelids2.png` → `scene/<host-id>/eyelids.png` (≈ 4.7 MB per family) — and sets the portrait's `body`/`eyelids`/`mouthAnchor`; **`mouthAnchor` fractions are measured with T61's anchor picker** (dev screen) once it lands; until then keep `placeholder`.
+
+## Exam drafts (`*.exam.md` — M18, T67)
+
+An **exam pack** (`type: exam`, design `docs/design/TORFL_EXAM_PREP.md` §3 at the workspace root, ADR-0020) holds one or more structured tests — **exam → subtests → parts → items** — in `mock` mode (a faithful timed ТРКИ) or `drill` mode (practice with instant feedback). It is authored as two kinds of file given to `annotate` **together**:
+
+1. **Story drafts** (ordinary `*.draft.md`, everything above applies unchanged) for every reading passage, listening script, examiner line and model answer — full 7-column token tables, `pack:` byte-identical across the pack, `voice:` directions for `pipeline audio` (multi-voice listening dialogues via `sentenceVoices`). **Exam audio is story audio**: no other audio exists or is rendered.
+2. **One exam draft per exam** (`*.exam.md`): **YAML frontmatter only** — a single `exam:` key (+ an optional `pack:`). The markdown body below the closing `---` is author notes; `annotate` ignores it. The pipeline recognizes an exam draft by the `exam:` key, never by filename.
+
+```bash
+pnpm pipeline annotate stories/*.draft.md mock-01.exam.md drills.exam.md -o packs/a1-torfl-mock-001/pack.json
+pnpm pipeline validate packs/a1-torfl-mock-001/pack.json     # the four exam reports (below)
+pnpm pipeline audio  packs/a1-torfl-mock-001/pack.json stories/*.draft.md …   # renders the STORIES, exactly as for a story pack
+```
+
+`pack:` in an exam draft follows the extras precedent: **optional next to story drafts** (it must then match them byte-for-byte), **required when the pack has no story drafts** (a lexgram-only drill bank, CT028) — and such a story-less pack's items may carry **no** story refs. Exams appear in `pack.exams` in the order their drafts are given on the command line. Use `type: exam` and `category: torfl` (the «ТРКИ» shelf; default register `lecturer`).
+
+### The exam object
+
+```yaml
+---
+exam:
+  id: a1-mock-01 # unique within the pack
+  format: torfl # the only format today
+  level: A1
+  mode: mock # mock | drill
+  title: { ru: 'Вариант 1', en: 'Mock exam 1' }
+  blurb: 'One line for a drill card.' # OPTIONAL, drills
+  subtests: # mocks: writing → lexgram → reading → listening → speaking (official order)
+    - id: lexgram # unique within the exam
+      kind: lexgram # writing | lexgram | reading | listening | speaking
+      title: { ru: 'Лексика. Грамматика', en: 'Vocabulary. Grammar' }
+      instructions: { ru: 'Время выполнения теста — 40 минут. …', en: '40 minutes · …' }
+      durationMin: 40
+      dictionary: false # the SPbU dictionary rule: reading + writing true, the rest false
+      navigation: free # free (paper subtests) | linear (listening, speaking)
+      pointsPerItem: 1 # objective subtests: this, or `points` on every item
+      maxPoints: 70 # objective: MUST equal Σ item points; rubric subtests: 100
+      audioPlays: 2 # listening subtests of mock exams: REQUIRED (official 2)
+      parts:
+        - id: p1 # unique within the subtest
+          instructions:
+            {
+              ru: 'Задания 1–24. Выберите один вариант ответа.',
+              en: 'Items 1–24. Choose one answer.',
+            }
+          timeSec: 300 # OPTIONAL — speaking parts: 300 / 300 / 600
+          items: […] # ≥ 1
+---
+```
+
+Every item has `id` (**unique per exam**, across subtests; never a sentence id — the two namespaces are separate), `kind`, `topic` (a TORFL §3.4 slug — see the census below), optional `explain` (English, may quote Russian; shown after answering in drills and in review after a mock) and, on objective items only, optional `points` (overrides `pointsPerItem`).
+
+**Which kinds go where:** `lexgram` / `reading` / `listening` parts hold only `choice` and `typed`; a `writing` part holds **exactly one** `writing` item; `speaking` parts hold only the three speaking kinds.
+
+**`choice`** — A–Г single choice. `options` 2–4 (unique after lower-casing, ё → е and space-collapsing), `answer` = the **0-based** index. The `stem` has **at most one gap**: «…» (U+2026), ASCII `...` or `___` all count as a gap. `stemEn` (optional) is the drill-only translation.
+
+```yaml
+- {
+    id: lg01,
+    kind: choice,
+    topic: case-prep,
+    stem: 'Нина любит играть … компьютере.',
+    options: ['в', 'на'],
+    answer: 1,
+    explain: 'играть на компьютере — «на» + prepositional.',
+  }
+- id: rd05
+  kind: choice
+  topic: read-detail
+  passage: { storyId: rd-02, sentenceIds: [tfa1m01r02-s03, tfa1m01r02-s04] } # optional span
+  stem: 'Анна работает в …'
+  options: ['школе', 'банке', 'магазине']
+  answer: 1
+```
+
+**`typed`** — free text. `prompt`, `accept` (full credit; ё/е-tolerant, trailing-`*` stem globs allowed), optional `half` (half credit — right meaning, wrong form). Same `passage` / `audio` refs as `choice`.
+
+```yaml
+- {
+    id: dr06,
+    kind: typed,
+    topic: case-prep,
+    prompt: 'Громов отдыхает в (парк).',
+    accept: ['парке'],
+    half: ['парк', 'парку'],
+  }
+```
+
+**`writing`** — the letter. `task` (the situation, `{ru, en}`), `bullets` (3–15 of `{ id, text: {ru, en}, cues: [...] }` — the points to cover; **`bullets`, not `points`**, which is the score field), `minSentences` (≥ 5), `minQuestions` (default 0), optional `maxQuestions` (≥ `minQuestions`), optional `model` (the model letter — a story ref).
+
+```yaml
+- id: wr01
+  kind: writing
+  topic: write-letter
+  task: { ru: 'Напишите письмо другу о своей жизни.', en: 'Write to a friend about your life.' }
+  bullets:
+    - { id: b1, text: { ru: 'как вас зовут', en: 'your name' }, cues: ['зовут'] }
+    - { id: b2, text: { ru: 'где вы живёте', en: 'where you live' }, cues: ['живу', 'живём'] }
+    - { id: b3, text: { ru: 'где вы работаете', en: 'where you work' }, cues: ['работа*'] }
+  minSentences: 13
+  minQuestions: 4
+  maxQuestions: 5
+  model: { storyId: md-letter-01 }
+```
+
+**`speaking-reply`** (task 1) / **`speaking-situation`** (task 2) — `prompt` (**required** story ref: the examiner's line or the read-aloud situation), `situation` (`{ru, en}`, **required** on `speaking-situation`), `expect` (**the M17 expectation, verbatim** — `slots` + `accept`, `accept[0]` is the model answer; same slot kinds and form rules as a scenario's `EXPECT:`, written as YAML), `minTokens` (default 4 — «да / нет / не знаю» is not a full answer).
+
+```yaml
+- id: sp01
+  kind: speaking-reply
+  topic: speak-reply
+  prompt: { storyId: ex-01, sentenceIds: [tfa1m01e01-s01] }
+  expect:
+    slots:
+      - kind: forms
+        id: city
+        required: true
+        options: [{ key: city, lemma: 'город', forms: ['москв*', 'казан*'] }]
+    accept: ['Я живу в Москве.']
+- id: sp06
+  kind: speaking-situation
+  topic: speak-situation
+  prompt: { storyId: ex-02, sentenceIds: [tfa1m01e02-s01] }
+  situation: { ru: 'Вы в кафе. Закажите чай.', en: 'You are in a café. Order tea.' }
+  expect:
+    slots: [{ kind: free, id: order, required: true, minTokens: 2, cues: ['чай'] }]
+    accept: ['Дайте, пожалуйста, чай.']
+```
+
+**`speaking-monologue`** (task 3) — `topicTitle` (`{ru, en}`), `questions` (4–12 of `{ ru, cues: [...] }`), `group` (two items sharing a group = «choose one of two topics»; a group has **exactly 2** members), `minSentences` / `maxSentences` (defaults 10 / 12), `prepSec` / `answerSec` (defaults 480 / 120), optional `model`.
+
+```yaml
+- id: sp11
+  kind: speaking-monologue
+  topic: speak-monologue
+  group: m1
+  topicTitle: { ru: 'О себе', en: 'About myself' }
+  questions:
+    - { ru: 'Как вас зовут?', cues: ['зовут'] }
+    - { ru: 'Откуда вы?', cues: ['из'] }
+    - { ru: 'Где вы живёте?', cues: ['живу'] }
+    - { ru: 'Что вы любите делать?', cues: ['люблю', 'нравится'] }
+  model: { storyId: md-self }
+```
+
+**Cues** (writing bullets, monologue questions, speaking slot forms) follow the M17 slot-form rule: NFC, letters/digits/spaces/in-word hyphens only, **no punctuation**, a glob is a single **trailing** `*` (`работа*`).
+
+### Story refs
+
+`passage` (reading), `audio` (listening), `prompt` (speaking) and `model` (writing / monologue) are `{ storyId, sentenceIds?, trackId? }`:
+
+- `storyId` must be a story **in this pack** (one of the story drafts given to the same `annotate` run).
+- `sentenceIds` (optional) must exist in that story and be a **contiguous run in story order** (`[s03, s04]`, never `[s04, s03]` or `[s01, s03]`). Absent = the whole story.
+- `trackId` (optional) must be one of that story's audio track ids — so it only validates **after** `pipeline audio` has rendered the story; leave it out while drafting (absent = the story's first track).
+- **Listening inheritance:** in a listening part, items after the first may omit `audio` and inherit **the part's first item's** `audio` (one dialogue → several questions). The first item must carry one.
+- **Audio is all-or-nothing:** once any story in the pack has a track, every story referenced by an `audio` or `prompt` ref needs one too. Passages and models may stay silent.
+
+### Points arithmetic
+
+Objective subtests (`lexgram`, `reading`, `listening`): each item is worth its `points` or the subtest's `pointsPerItem`, and **Σ must equal `maxPoints`** (±0.001) — the official A1 matrix is lexgram 70 × 1 = 70, reading 25 × 4 = 100, listening 20 × 5 = 100. Writing and speaking are **rubric %**: their items never carry `points`; set `maxPoints: 100`.
+
+### The four reports
+
+`annotate` and `validate` print, for every exam:
+
+- **Matrix map** — subtest → parts → items with kind / topic / points and `Σ x / maxPoints ✓`; rubric subtests show `rubric % of 100`.
+- **Topic census** — items per topic slug. A slug outside TORFL §3.4, or listed there under a different subtest kind, is flagged `?` — a warning, never an error (the app renders unknown slugs raw). The §3.4 list lives in `src/exam-topics.ts`.
+- **Official-shape check** — for a `mock` with `format: torfl`, `level: A1` only: `⚠ official-shape:` lines for every deviation from the official A1 numbers (five subtests in the SPbU order; lexgram 70 items / 70 points / 40 min / no dictionary / free; reading 25 / 100 / 40 / dictionary / free; listening 20 / 100 / 30 / no dictionary / linear / `audioPlays: 2`; writing 30 min with dictionary; speaking 20 min, linear, parts 300 / 300 / 600 s), or `✓ official shape (TORFL A1 mock)`. Drills print «not checked». **Warnings never change the exit code** — a short practice mock is legal.
+- **Ref table** — every ref → story · sentence span · track, `✓` / `✗`; inherited listening audio is marked `audio↑`.
+
+Schema errors (everything in this section that says "must") fail `annotate` with exit 1 and a `file:line:` pointing at the offending YAML node in the exam draft — ref errors included.
+
+### Ids (the TORFL convention)
+
+Story ids: `rd-<NN>` reading texts · `ls-<NN>` listening scripts · `ex-<NN>` examiner lines · `md-<slug>` model answers · `lx-<topic>` lexicon topics. Sentence ids: `tf<level><pack-code><NN>-sNN`, e.g. `tfa1m01r01-s01` = A1, mock 01, reading text 01, sentence 01 (`l` listening, `e` examiner, `d` model). Exam ids: `a1-mock-NN`, drill ids per the CT bible. The CT bible `sumrak-content/series/torfl/TORFL.md` is the canonical id table.
+
+### Exam gotchas
+
+1. **`answer` is 0-based.** А = 0, Б = 1, В = 2, Г = 3.
+2. **Quote YAML strings with `:`, `#`, `«»` or a leading `-`/`[`/`{`** — `stem: 'Он сказал: «…»'`. Single quotes are safest; a single quote inside is doubled (`'it''s'`).
+3. **Stems with two blanks are refused** — split the item, or reword one blank into the text.
+4. **`bullets` is the writing list; `points` is the score.** A writing or speaking item with `points` is an error.
+5. **Give the story drafts in the same `annotate` call** as the exam drafts; an exam draft alone may only reference nothing.
+6. **`trackId` waits for audio** — add it (if at all) after `pipeline audio`; until then omit it.
+7. **Mock listening needs `audioPlays`;** drill listening does not (drills replay freely).
+8. **Item ids are per exam, not per subtest** — prefix by subtest (`lg01`, `rd01`, `ls01`, `wr01`, `sp01`).
+9. **The body is ignored** — anything below the closing `---` (a key, the answer table you derived, notes) never reaches the pack.
