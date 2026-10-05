@@ -62,7 +62,7 @@ export type ModelTable = Record<AiProvider, Record<AiQuality, string>>;
 export const DEFAULT_MODEL_TABLE: ModelTable = {
   anthropic: {
     fastest: 'anthropic/claude-haiku-4.5',
-    fast: 'anthropic/claude-sonnet-5',
+    fast: 'anthropic/claude-sonnet-5.5',
     normal: 'anthropic/claude-opus-5.5',
     best: 'anthropic/claude-fable-5.1',
   },
@@ -73,11 +73,15 @@ export const DEFAULT_MODEL_TABLE: ModelTable = {
     best: 'openai/gpt-6-astra',
   },
 };
+/** Retired default slugs a stored table may still carry → their successor (2026-10-05). */
+const RETIRED_TABLE_SLUGS: Readonly<Record<string, string>> = {
+  'anthropic/claude-sonnet-5': 'anthropic/claude-sonnet-5.5',
+};
 /** Human hints shown under each notch (model display names; prices are NOT hardcoded — they drift). */
 export const MODEL_HINTS: Record<AiProvider, Record<AiQuality, string>> = {
   anthropic: {
     fastest: 'Claude Haiku 4.5',
-    fast: 'Claude Sonnet 5',
+    fast: 'Claude Sonnet 5.5',
     normal: 'Claude Opus 5.5',
     best: 'Claude Fable 5.1',
   },
@@ -203,7 +207,9 @@ export function sanitizeModelTable(raw: unknown): ModelTable {
     const healed = {} as Record<AiQuality, string>;
     for (const quality of QUALITY_ORDER) {
       const parsed = ModelSchema.safeParse(row[quality]);
-      healed[quality] = parsed.success ? parsed.data : DEFAULT_MODEL_TABLE[provider][quality];
+      healed[quality] = parsed.success
+        ? (RETIRED_TABLE_SLUGS[parsed.data] ?? parsed.data)
+        : DEFAULT_MODEL_TABLE[provider][quality];
     }
     table[provider] = healed;
   }

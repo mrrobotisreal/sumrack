@@ -103,7 +103,7 @@ export const SETTING_KEYS = {
    */
   checkpointPassThreshold: 'path.checkpointPassThreshold',
   /**
-   * OpenRouter model id (T16), e.g. 'anthropic/claude-sonnet-5' — validated
+   * OpenRouter model id (T16), e.g. 'anthropic/claude-opus-5.5' — validated
    * on read (features/ai/config). The API key is NEVER here: secure-store
    * only (same rule as the GitHub PAT).
    */

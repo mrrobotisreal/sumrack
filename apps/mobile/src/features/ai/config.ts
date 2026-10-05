@@ -16,27 +16,43 @@ import { SETTING_KEYS } from '@/db/repositories/settings';
  */
 const OPENROUTER_KEY = 'sumrak.ai.openrouter.key';
 
-/** Claude by default (design §12 decision #12). Ids are OpenRouter's. */
-export const DEFAULT_MODEL = 'anthropic/claude-sonnet-5';
+/**
+ * Claude by default (design §12 decision #12). Ids are OpenRouter's.
+ * Opus 5.5 since 2026-10-05 (Mitch): close to Fable quality, far cheaper
+ * than Opus 5 — Sonnet 5.5 / Haiku 4.5 stay one tap away for speed.
+ */
+export const DEFAULT_MODEL = 'anthropic/claude-opus-5.5';
 
 /** Curated picker options — a custom id can be typed in Settings. */
 export const MODEL_OPTIONS: { id: string; label: string; hint: string }[] = [
   {
-    id: 'anthropic/claude-sonnet-5',
-    label: 'Claude Sonnet 5',
-    hint: 'Default — fast and thorough',
+    id: 'anthropic/claude-opus-5.5',
+    label: 'Claude Opus 5.5',
+    hint: 'Default — deepest, most accurate feedback',
   },
   {
-    id: 'anthropic/claude-opus-5',
-    label: 'Claude Opus 5',
-    hint: 'Deepest feedback, slower + pricier',
+    id: 'anthropic/claude-sonnet-5.5',
+    label: 'Claude Sonnet 5.5',
+    hint: 'Much faster, may be less thorough',
   },
   {
     id: 'anthropic/claude-haiku-4.5',
     label: 'Claude Haiku 4.5',
-    hint: 'Cheapest, fine for enrichment',
+    hint: 'Extremely fast + cheap, quality not the point',
   },
 ];
+
+/**
+ * Retired curated ids → their replacement (2026-10-05). Settings «Save»
+ * always writes the selected id, so devices carry the old default as a
+ * stored row; reading through this map keeps them on a curated option
+ * instead of a stale "custom" id. The old default (Sonnet 5) follows the
+ * default change to Opus 5.5.
+ */
+export const RETIRED_MODEL_IDS: Readonly<Record<string, string>> = {
+  'anthropic/claude-sonnet-5': DEFAULT_MODEL,
+  'anthropic/claude-opus-5': 'anthropic/claude-opus-5.5',
+};
 
 /**
  * Anything that plausibly looks like an OpenRouter model id. Exported since
@@ -52,7 +68,8 @@ export const ModelSchema = z
 export async function getModel(): Promise<string> {
   const stored = await repos.settings.get<string>(SETTING_KEYS.aiModel);
   const parsed = ModelSchema.safeParse(stored ?? '');
-  return parsed.success ? parsed.data : DEFAULT_MODEL;
+  if (!parsed.success) return DEFAULT_MODEL;
+  return RETIRED_MODEL_IDS[parsed.data] ?? parsed.data;
 }
 
 export async function setModel(model: string): Promise<boolean> {

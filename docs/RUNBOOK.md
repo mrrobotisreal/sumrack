@@ -324,7 +324,7 @@ counts. Deleting the row by hand is a safe «cancel».
 
 Settings → AI → Grammar & word forms → **Advanced: model ids**. One
 OpenRouter slug per provider × quality; the defaults are decision 3 of the
-design (Claude Haiku 4.5 · Sonnet 5 · Opus 5.5 · Fable 5.1 and GPT-6 Luna ·
+design (Claude Haiku 4.5 · Sonnet 5.5 · Opus 5.5 · Fable 5.1 and GPT-6 Luna ·
 Sol · Sol Pro · Astra). Slugs drift: when a notch starts failing with
 «request rejected», paste the current slug from openrouter.ai/models into
 that cell (blur commits; the regex refuses anything that is not

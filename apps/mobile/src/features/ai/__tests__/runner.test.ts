@@ -164,7 +164,7 @@ describe('runChat without a run profile (decision 6 guard)', () => {
     );
     const result = await runChat('explain', { messages: MESSAGES, maxTokens: 10 });
     expect(Object.keys(sentBody(0))).toEqual(['model', 'messages', 'max_tokens', 'temperature']);
-    expect(sentBody(0).model).toBe('anthropic/claude-sonnet-5'); // DEFAULT_MODEL via getModel()
+    expect(sentBody(0).model).toBe('anthropic/claude-opus-5.5'); // DEFAULT_MODEL via getModel()
     expect(result).not.toHaveProperty('effortApplied');
     expect(track).toHaveBeenCalledWith('ai_request_sent', { feature: 'explain' });
     expect(track).toHaveBeenCalledWith('ai_request_succeeded', {

@@ -180,6 +180,14 @@ describe('model table healing (§2.4, slug-by-slug)', () => {
     expect(healed.openai.fast).toBe(DEFAULT_MODEL_TABLE.openai.fast);
   });
 
+  it('a retired default slug (Sonnet 5) heals to its successor (2026-10-05)', () => {
+    const raw = structuredClone(DEFAULT_MODEL_TABLE) as Record<string, Record<string, unknown>>;
+    raw.anthropic!.fast = 'anthropic/claude-sonnet-5';
+    expect(sanitizeModelTable(raw).anthropic.fast).toBe('anthropic/claude-sonnet-5.5');
+    expect(DEFAULT_MODEL_TABLE.anthropic.fast).toBe('anthropic/claude-sonnet-5.5');
+    expect(MODEL_HINTS.anthropic.fast).toBe('Claude Sonnet 5.5');
+  });
+
   it('a missing provider row or non-object heals to defaults entirely', () => {
     expect(sanitizeModelTable({ anthropic: { best: 'anthropic/claude-fable-5.1' } })).toEqual({
       anthropic: DEFAULT_MODEL_TABLE.anthropic,
