@@ -282,3 +282,280 @@ export function makeValidScenarioPack(): Record<string, unknown> {
     ],
   });
 }
+
+const L = (ru: string, en = ru): Record<string, unknown> => ({ ru, en });
+
+/** A minimal speaking expectation (one forms slot + one paraphrase). */
+export function makeExpect(): Record<string, unknown> {
+  return {
+    slots: [
+      {
+        kind: 'forms',
+        id: 'city',
+        required: true,
+        options: [{ key: 'moscow', lemma: 'Москва', forms: ['москв*'] }],
+      },
+    ],
+    accept: ['Я живу в Москве.'],
+  };
+}
+
+/**
+ * A minimal, structurally valid `exam` pack for tests to mutate (T67): two
+ * stories (`rd-01` reading text, `ls-01` listening script) and one A1 `mock`
+ * exam with all five subtests in the official order — lexgram 2 × 1 = 2 pts,
+ * reading 2 × 4 = 8 pts (passage ref with a contiguous span), listening
+ * 2 × 5 = 10 pts (second item inherits the first's audio), writing 1 letter,
+ * speaking reply + situation + a monologue group of two. No audio.
+ */
+export function makeValidExamPack(): Record<string, unknown> {
+  const instr = L('Выберите один вариант ответа.', 'Choose one answer.');
+  const monologue = (id: string, title: string) => ({
+    id,
+    kind: 'speaking-monologue',
+    topic: 'speak-monologue',
+    group: 'g1',
+    topicTitle: L(title),
+    questions: [
+      { ru: 'Как вас зовут?', cues: ['зовут'] },
+      { ru: 'Откуда вы?', cues: ['из'] },
+      { ru: 'Где вы живёте?', cues: ['живу'] },
+      { ru: 'Кем вы работаете?', cues: ['работаю'] },
+    ],
+  });
+  return structuredClone({
+    id: 'a1-exam-test',
+    version: 1,
+    type: 'exam',
+    title: L('Тест', 'Test'),
+    level: 'A1',
+    tags: ['torfl'],
+    category: 'torfl',
+    stories: [
+      {
+        id: 'rd-01',
+        title: L('Текст', 'Text'),
+        level: 'A1',
+        audio: [],
+        sentences: [
+          makeSentence('tfa1t01r01-s01', 'Меня зовут Анна.'),
+          makeSentence('tfa1t01r01-s02', 'Я живу в Москве.'),
+          makeSentence('tfa1t01r01-s03', 'Я работаю в банке.'),
+        ],
+      },
+      {
+        id: 'ls-01',
+        title: L('Диалог', 'Dialogue'),
+        level: 'A1',
+        audio: [],
+        sentences: [
+          makeSentence('tfa1t01l01-s01', 'Привет, Саша!'),
+          makeSentence('tfa1t01l01-s02', 'Привет, Маша!'),
+        ],
+      },
+    ],
+    exams: [
+      {
+        id: 'a1-mock-t',
+        format: 'torfl',
+        level: 'A1',
+        mode: 'mock',
+        title: L('Вариант Т', 'Mock T'),
+        subtests: [
+          {
+            id: 'writing',
+            kind: 'writing',
+            title: L('Письмо', 'Writing'),
+            instructions: L('30 минут.', '30 minutes.'),
+            durationMin: 30,
+            dictionary: true,
+            navigation: 'free',
+            maxPoints: 100,
+            parts: [
+              {
+                id: 'p1',
+                instructions: L('Напишите письмо.', 'Write a letter.'),
+                items: [
+                  {
+                    id: 'wr01',
+                    kind: 'writing',
+                    topic: 'write-letter',
+                    task: L('Напишите письмо другу.', 'Write to a friend.'),
+                    bullets: [
+                      { id: 'b1', text: L('как вас зовут'), cues: ['зовут'] },
+                      { id: 'b2', text: L('где вы живёте'), cues: ['живу'] },
+                      { id: 'b3', text: L('где вы работаете'), cues: ['работаю', 'работа*'] },
+                    ],
+                    minSentences: 10,
+                    minQuestions: 2,
+                    maxQuestions: 5,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'lexgram',
+            kind: 'lexgram',
+            title: L('Лексика. Грамматика', 'Vocabulary. Grammar'),
+            instructions: L('40 минут.', '40 minutes.'),
+            durationMin: 40,
+            dictionary: false,
+            navigation: 'free',
+            pointsPerItem: 1,
+            maxPoints: 2,
+            parts: [
+              {
+                id: 'p1',
+                instructions: instr,
+                items: [
+                  {
+                    id: 'lg01',
+                    kind: 'choice',
+                    topic: 'case-prep',
+                    stem: 'Нина играет … компьютере.',
+                    options: ['в', 'на'],
+                    answer: 1,
+                    explain: 'играть на компьютере',
+                  },
+                  {
+                    id: 'lg02',
+                    kind: 'typed',
+                    topic: 'case-prep',
+                    prompt: 'Я живу в (Москва).',
+                    accept: ['москве'],
+                    half: ['москва'],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'reading',
+            kind: 'reading',
+            title: L('Чтение', 'Reading'),
+            instructions: L('40 минут.', '40 minutes.'),
+            durationMin: 40,
+            dictionary: true,
+            navigation: 'free',
+            pointsPerItem: 4,
+            maxPoints: 8,
+            parts: [
+              {
+                id: 'p4',
+                instructions: instr,
+                items: [
+                  {
+                    id: 'rd01',
+                    kind: 'choice',
+                    topic: 'read-detail',
+                    passage: {
+                      storyId: 'rd-01',
+                      sentenceIds: ['tfa1t01r01-s01', 'tfa1t01r01-s02'],
+                    },
+                    stem: 'Анна живёт в …',
+                    options: ['Москве', 'Казани', 'Сочи'],
+                    answer: 0,
+                  },
+                  {
+                    id: 'rd02',
+                    kind: 'choice',
+                    topic: 'read-detail',
+                    passage: { storyId: 'rd-01' },
+                    stem: 'Анна работает в …',
+                    options: ['школе', 'банке', 'магазине'],
+                    answer: 1,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'listening',
+            kind: 'listening',
+            title: L('Аудирование', 'Listening'),
+            instructions: L('30 минут.', '30 minutes.'),
+            durationMin: 30,
+            dictionary: false,
+            navigation: 'linear',
+            pointsPerItem: 5,
+            maxPoints: 10,
+            audioPlays: 2,
+            parts: [
+              {
+                id: 'p3',
+                instructions: instr,
+                items: [
+                  {
+                    id: 'ls01',
+                    kind: 'choice',
+                    topic: 'listen-who',
+                    audio: { storyId: 'ls-01' },
+                    stem: 'Саша и Маша …',
+                    options: ['друзья', 'брат и сестра', 'коллеги'],
+                    answer: 0,
+                  },
+                  {
+                    id: 'ls02',
+                    kind: 'choice',
+                    topic: 'listen-detail',
+                    stem: 'Кто говорит первым?',
+                    options: ['Маша', 'Саша', 'Анна'],
+                    answer: 0,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'speaking',
+            kind: 'speaking',
+            title: L('Говорение', 'Speaking'),
+            instructions: L('20 минут.', '20 minutes.'),
+            durationMin: 20,
+            dictionary: false,
+            navigation: 'linear',
+            maxPoints: 100,
+            parts: [
+              {
+                id: 't1',
+                instructions: L('Ответьте.', 'Reply.'),
+                timeSec: 300,
+                items: [
+                  {
+                    id: 'sp01',
+                    kind: 'speaking-reply',
+                    topic: 'speak-reply',
+                    prompt: { storyId: 'ls-01', sentenceIds: ['tfa1t01l01-s01'] },
+                    expect: makeExpect(),
+                  },
+                ],
+              },
+              {
+                id: 't2',
+                instructions: L('Начните диалог.', 'Start the dialogue.'),
+                timeSec: 300,
+                items: [
+                  {
+                    id: 'sp02',
+                    kind: 'speaking-situation',
+                    topic: 'speak-situation',
+                    prompt: { storyId: 'ls-01', sentenceIds: ['tfa1t01l01-s02'] },
+                    situation: L('Вы в кафе.', 'You are in a café.'),
+                    expect: makeExpect(),
+                  },
+                ],
+              },
+              {
+                id: 't3',
+                instructions: L('Монолог.', 'Monologue.'),
+                timeSec: 600,
+                items: [monologue('sp03', 'О себе'), monologue('sp04', 'Мой дом')],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+}

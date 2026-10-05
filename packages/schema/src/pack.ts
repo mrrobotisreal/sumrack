@@ -7,6 +7,7 @@ import {
   StableIdSchema,
 } from './common';
 import { DialogueSchema } from './dialogue';
+import { ExamSchema, examStoryRefs } from './exam';
 import { ScenarioSchema, scenarioLines } from './scenario';
 import { SentenceSchema, WordStampSchema, type Sentence } from './sentence';
 
@@ -231,7 +232,11 @@ export type PackTheme = z.infer<typeof PackThemeSchema>;
  *   and ends within the track duration (dialogue node audio is checked on the
  *   node itself — see DialogueNodeSchema);
  * - pack `type` implies required sections (stories / lesson / exercises /
- *   prompts / dialogues / scenarios).
+ *   prompts / dialogues / scenarios / exams);
+ * - exam ids unique; every exam story ref resolves (TORFL §3.2 invariant 7):
+ *   the story exists, `sentenceIds` exist in it as a contiguous in-order run,
+ *   `trackId` exists on it, and once any story in the pack has audio every
+ *   `audio`/`prompt` ref's story has ≥ 1 track (all-or-nothing).
  */
 export const PackSchema = z
   .strictObject({
@@ -253,6 +258,12 @@ export const PackSchema = z
     dialogues: z.array(DialogueSchema).optional(),
     /** Blind speaking scenarios (T56, M17). Required ≥1 for `scenario` packs. */
     scenarios: z.array(ScenarioSchema).optional(),
+    /**
+     * Structured tests (T67, M18, TORFL_EXAM_PREP §3). Required ≥1 for `exam`
+     * packs; their passages / scripts / examiner lines / model answers are
+     * this pack's `stories`, referenced by id (resolved below).
+     */
+    exams: z.array(ExamSchema).optional(),
     /** Markdown grammar mini-lesson (course-unit packs). */
     lesson: LessonSchema.optional(),
     /** Authored exercise overrides (checkpoints mainly). */
@@ -338,6 +349,13 @@ export const PackSchema = z
         message: 'a "scenario" pack must contain at least one scenario',
       });
     }
+    if (pack.type === 'exam' && (pack.exams?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exams'],
+        message: 'an "exam" pack must contain at least one exam',
+      });
+    }
 
     // id uniqueness
     const storyIds = new Set<string>();
@@ -372,6 +390,75 @@ export const PackSchema = z
         });
       }
       scenarioIds.add(scenario.id);
+    });
+
+    const examIds = new Set<string>();
+    (pack.exams ?? []).forEach((exam, ei) => {
+      if (examIds.has(exam.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['exams', ei, 'id'],
+          message: `duplicate exam id "${exam.id}"`,
+        });
+      }
+      examIds.add(exam.id);
+    });
+
+    // Exam story refs resolve (TORFL §3.2 invariant 7). Exam item ids are not
+    // sentence ids and never join the sentence-id set below.
+    const storiesById = new Map(pack.stories.map((s) => [s.id, s]));
+    const packHasAudio = pack.stories.some((s) => s.audio.length > 0);
+    (pack.exams ?? []).forEach((exam, ei) => {
+      for (const { ref, field, itemId, path: refPath } of examStoryRefs(exam)) {
+        const path = ['exams', ei, ...refPath];
+        const story = storiesById.get(ref.storyId);
+        if (!story) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [...path, 'storyId'],
+            message: `item "${itemId}" ${field} references unknown story "${ref.storyId}" (refs point into this pack's stories)`,
+          });
+          continue;
+        }
+        if (ref.sentenceIds) {
+          const order = new Map(story.sentences.map((s, i) => [s.id, i]));
+          let prev: number | undefined;
+          ref.sentenceIds.forEach((sid, k) => {
+            const idx = order.get(sid);
+            if (idx === undefined) {
+              ctx.addIssue({
+                code: 'custom',
+                path: [...path, 'sentenceIds', k],
+                message: `sentence "${sid}" is not in story "${story.id}"`,
+              });
+              prev = undefined;
+              return;
+            }
+            if (prev !== undefined && idx !== prev + 1) {
+              ctx.addIssue({
+                code: 'custom',
+                path: [...path, 'sentenceIds', k],
+                message: `sentenceIds must be a contiguous run in story order — "${sid}" does not directly follow "${ref.sentenceIds![k - 1]}" in story "${story.id}"`,
+              });
+            }
+            prev = idx;
+          });
+        }
+        if (ref.trackId !== undefined && !story.audio.some((t) => t.id === ref.trackId)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [...path, 'trackId'],
+            message: `story "${story.id}" has no audio track "${ref.trackId}"`,
+          });
+        }
+        if (packHasAudio && (field === 'audio' || field === 'prompt') && story.audio.length === 0) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [...path, 'storyId'],
+            message: `pack ships audio but story "${story.id}" (item "${itemId}" ${field}) has none — every audio/prompt story needs a track once any story has one`,
+          });
+        }
+      }
     });
 
     // Sentence ids are unique pack-wide, across stories, dialogues AND

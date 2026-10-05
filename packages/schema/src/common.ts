@@ -17,6 +17,8 @@ export type CefrLevel = z.infer<typeof CefrLevelSchema>;
  * - `dialogue` — branching speak-your-choice dialogues (T25, V2 §3)
  * - `scenario` — blind speaking scenarios with a talking cast (T56, M17,
  *   SPEAKING_SCENARIOS §2)
+ * - `exam` — structured tests (mock ТРКИ exams + drills) whose items reference
+ *   stories in the same pack (T67, M18, TORFL_EXAM_PREP §3)
  */
 export const PackTypeSchema = z.enum([
   'stories',
@@ -25,6 +27,7 @@ export const PackTypeSchema = z.enum([
   'prompts',
   'dialogue',
   'scenario',
+  'exam',
 ]);
 export type PackType = z.infer<typeof PackTypeSchema>;
 
