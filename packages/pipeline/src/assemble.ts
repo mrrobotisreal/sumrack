@@ -5,6 +5,7 @@ import {
   MIN_CHOICES_PER_NODE,
   PLAYER_CHARACTER_ID,
   analyzeDialogueGraph,
+  examStoryRefs,
   safeParsePack,
   type Choice,
   type Dialogue,
@@ -19,6 +20,7 @@ import { alignSentence } from './align.ts';
 import { DraftError, type DraftIssue } from './errors.ts';
 import type { DraftSentence, DraftTokenRow, ParsedDraft } from './draft.ts';
 import type { DraftDialogueNode, ParsedDialogueDraft } from './dialogue-draft.ts';
+import { parseIssuePath, type ParsedExamDraft } from './exam-draft.ts';
 import type { PackExtras } from './extras.ts';
 import { assembleScenario } from './scenario-assemble.ts';
 import { draftScenarioSentences, type ParsedScenarioDraft } from './scenario-draft.ts';
@@ -306,13 +308,26 @@ export function assemblePack(
   extras?: PackExtras,
   dialogueDrafts: readonly ParsedDialogueDraft[] = [],
   scenarioDrafts: readonly ParsedScenarioDraft[] = [],
+  examDrafts: readonly ParsedExamDraft[] = [],
 ): Pack {
   const noDrafts =
     drafts.length === 0 && dialogueDrafts.length === 0 && scenarioDrafts.length === 0;
-  if (noDrafts && !extras) {
+  // T67: an exam draft may carry `pack:` itself (the extras precedent).
+  const examMeta = examDrafts.find((d) => d.pack !== undefined);
+  if (noDrafts && !extras && examDrafts.length === 0) {
     throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
   }
-  if (noDrafts && extras && !extras.pack) {
+  if (noDrafts && !extras && !examMeta) {
+    throw new DraftError([
+      {
+        file: examDrafts[0]!.file,
+        line: 2,
+        message:
+          'an exam pack with no story drafts must carry its "pack:" meta in an exam draft (or give the story drafts it references)',
+      },
+    ]);
+  }
+  if (noDrafts && extras && !extras.pack && !examMeta) {
     throw new DraftError([
       {
         file: extras.file,
@@ -330,6 +345,9 @@ export function assemblePack(
     ...dialogueDrafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
     ...scenarioDrafts.map((d) => ({ file: d.file, pack: d.frontmatter.pack })),
   ];
+  // Exam drafts' optional `pack:` joins the comparison (after the drafts, so
+  // a story draft stays the reference when there is one).
+  for (const d of examDrafts) if (d.pack) metas.push({ file: d.file, pack: d.pack });
   const first = metas[0];
   const packMetaJson = JSON.stringify(first ? first.pack : extras!.pack);
   for (const m of metas.slice(1)) {
@@ -433,7 +451,38 @@ export function assemblePack(
     assembleScenario(d, issues, assembleSentence),
   );
 
+  // T67 exams: ids unique across exam drafts; a pack with exam drafts is an
+  // `exam` pack; a story-less exam pack carries no story refs.
+  const examIds = new Map<string, string>();
+  for (const d of examDrafts) {
+    const seenIn = examIds.get(d.exam.id);
+    if (seenIn !== undefined) {
+      issues.push({
+        file: d.file,
+        line: d.lineAt(['id']),
+        message: `duplicate exam id "${d.exam.id}" (already used in ${seenIn})`,
+      });
+    }
+    examIds.set(d.exam.id, d.file);
+    if (stories.length === 0) {
+      for (const ref of examStoryRefs(d.exam)) {
+        issues.push({
+          file: d.file,
+          line: d.lineAt(ref.path),
+          message: `item "${ref.itemId}" ${ref.field} references story "${ref.ref.storyId}", but no story drafts were given — pass the story drafts to annotate together with the exam drafts`,
+        });
+      }
+    }
+  }
+
   const meta = first ? first.pack : extras!.pack!;
+  if (examDrafts.length > 0 && meta.type !== 'exam') {
+    issues.push({
+      file: first?.file ?? extras!.file,
+      line: 2,
+      message: `exam drafts were given but the pack meta says type "${meta.type}" — an exam pack has type: exam`,
+    });
+  }
   const pack: Pack = {
     id: meta.id,
     version: meta.version,
@@ -445,6 +494,7 @@ export function assemblePack(
   };
   if (dialogues.length > 0) pack.dialogues = dialogues;
   if (scenarios.length > 0) pack.scenarios = scenarios;
+  if (examDrafts.length > 0) pack.exams = examDrafts.map((d) => d.exam);
   if (extras?.lesson) pack.lesson = extras.lesson;
   if (extras?.prompts) pack.prompts = extras.prompts;
   if (extras?.exercises) pack.exercises = extras.exercises;
@@ -479,10 +529,24 @@ export function assemblePack(
   const result = safeParsePack(pack);
   if (!result.success) {
     throw new DraftError(
-      result.issues.map((i) => ({
-        file: first?.file ?? extras!.file,
-        message: `assembled pack failed schema validation at ${i.path}: ${i.message}`,
-      })),
+      result.issues.map((i) => {
+        // Pack-level exam issues (refs resolve — TORFL §3.2 invariant 7) map
+        // back to the exam draft and the line of the offending YAML node.
+        const segs = parseIssuePath(i.path);
+        const examDraft =
+          segs[0] === 'exams' && typeof segs[1] === 'number' ? examDrafts[segs[1]] : undefined;
+        if (examDraft) {
+          return {
+            file: examDraft.file,
+            line: examDraft.lineAt(segs.slice(2)),
+            message: `exam ${i.path.replace(/^exams\[\d+\]\.?/, '')}: ${i.message}`,
+          };
+        }
+        return {
+          file: first?.file ?? extras?.file ?? examDrafts[0]!.file,
+          message: `assembled pack failed schema validation at ${i.path}: ${i.message}`,
+        };
+      }),
     );
   }
   return result.data;
