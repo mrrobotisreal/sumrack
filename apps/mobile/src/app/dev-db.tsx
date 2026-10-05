@@ -7,8 +7,9 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { db, repos } from '@/db';
-import { queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
-import { importPack, type ImportResult } from '@/db/importer';
+import { invalidateExams, queryKeys, usePacks, useStories, useTokenSearch } from '@/db/hooks';
+import { importPack, removePack, type ImportResult } from '@/db/importer';
+import type { ExamAttempt, ExamDeckCounts, ExamSummary } from '@/db/repositories/exams';
 import type { ScenarioFamily, ScenarioRunRow } from '@/db/repositories/scenarios';
 import type { WordProfileRow } from '@/db/repositories/word-forms';
 import { friendlyAiMessage } from '@/features/ai/errors';
@@ -26,6 +27,8 @@ import {
   EFFORT_LABELS,
 } from '@/features/ai/run-profile';
 import { classifyPack } from '@/features/library/categories';
+import { initialAttemptState, subtestItemCount } from '@/features/torfl/model';
+import { itemPoints } from '@sumrak/schema';
 import { generateProfile } from '@/features/word-forms/profile-service';
 import { detectRuDatePath, formatRuDate } from '@/lib/ru-date';
 import { syncQueryKeys } from '@/features/sync/hooks';
@@ -45,6 +48,9 @@ const FIXTURE_PACKS = [
   // T58 (M17): the T56 «Проверка связи» scenario — audio-less here (the
   // readout shows localUri null); T57's rendered copy lands via sync.
   { id: 'a1-scenario-fixture', note: 'scenario · radio-a1 · 6 turns · 15 glossary' },
+  // T68 (M18): the T67 exam fixture — dev import only; «Delete exam fixture» below removes
+  // it with every attempt/response/deck row that references it (device data hygiene).
+  { id: 'a1-exam-fixture', note: 'exam · a1-mock-fx 5 subtests / 16 items · a1-drill-fx 6 items' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -54,7 +60,49 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
   'a1-comedy-090': () => require('@sumrak/schema/fixtures/packs/a1-comedy-090/pack.json'),
   'a1-scenario-fixture': () =>
     require('@sumrak/schema/fixtures/packs/a1-scenario-fixture/pack.json'),
+  'a1-exam-fixture': () => require('@sumrak/schema/fixtures/packs/a1-exam-fixture/pack.json'),
 };
+
+const EXAM_FIXTURE_ID = 'a1-exam-fixture';
+
+/** T68 dev readout: installed exams + the last 5 attempts + response counts + deck counts. */
+interface ExamReadout {
+  exams: ExamSummary[];
+  attempts: ExamAttempt[];
+  /** Per attempt id: responses by gradingStatus. */
+  responses: Record<string, Record<string, number>>;
+  deck: ExamDeckCounts;
+}
+
+/** «kind items/Σpts» per subtest — Σ = item points for objective subtests, maxPoints otherwise. */
+function formatExam(e: ExamSummary): string {
+  if (!e.exam) return `${e.packId}/${e.examId} · ${e.mode} · JSON UNREADABLE`;
+  const subtests = e.exam.subtests.map((st) => {
+    const items = st.parts.flatMap((p) => p.items);
+    const objective = st.pointsPerItem !== undefined || items.some((i) => i.points !== undefined);
+    const sum = objective ? items.reduce((n, i) => n + itemPoints(st, i), 0) : st.maxPoints;
+    return `${st.kind} ${subtestItemCount(st)}/${sum}${objective ? '' : '%'}`;
+  });
+  const items = e.exam.subtests.reduce((n, st) => n + subtestItemCount(st), 0);
+  const max = e.exam.subtests.reduce((n, st) => n + st.maxPoints, 0);
+  return `${e.packId}/${e.examId} · ${e.mode} · ${e.exam.subtests.length} subtests · ${items} items · Σ maxPoints ${max} · ${subtests.join(' · ')}`;
+}
+
+function formatAttempt(a: ExamAttempt, responses: Record<string, number> | undefined): string {
+  const when = new Date(a.startedAt).toISOString().slice(0, 16).replace('T', ' ');
+  const results = a.results
+    ? Object.entries(a.results)
+        .map(([id, r]) => `${id} ${r.pct}%${r.provisional ? '*' : ''}`)
+        .join(', ')
+    : '—';
+  const resp =
+    responses && Object.keys(responses).length > 0
+      ? Object.entries(responses)
+          .map(([k, n]) => `${k} ${n}`)
+          .join(', ')
+      : 'none';
+  return `${when} · ${a.examId} · ${a.scope}/${a.mode} · ${a.status}${a.verdict ? ` → ${a.verdict}` : ''} · subtests ${a.subtestIds?.join(',') ?? '?'} · results ${results} · responses ${resp}${a.pinned ? ' · pinned' : ''}`;
+}
 
 /**
  * T03 debug screen — a verification surface, not product UI (real library
@@ -237,6 +285,99 @@ export default function DevDbScreen() {
     const runs = await repos.scenarios.listRuns(undefined, { limit: 5 });
     setScenarioReadout({ families, perRung, runs });
   }, []);
+  // --- T68 «Exams» readout + dev actions ------------------------------------
+  const [examReadout, setExamReadout] = React.useState<ExamReadout | null>(null);
+  const [examLog, setExamLog] = React.useState<string | null>(null);
+  const refreshExams = React.useCallback(async () => {
+    const [examList, attempts, deck] = await Promise.all([
+      repos.exams.listExams(),
+      repos.exams.listAttempts({ limit: 5 }),
+      repos.exams.deckCounts(),
+    ]);
+    const responses: ExamReadout['responses'] = {};
+    for (const a of attempts) responses[a.id] = await repos.exams.countResponsesByStatus(a.id);
+    setExamReadout({ exams: examList, attempts, responses, deck });
+  }, []);
+  /** Dev attempt on the fixture mock: start (refused while one is active) + one scored response. */
+  const startDevAttempt = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const exam = await repos.exams.getExam(EXAM_FIXTURE_ID, 'a1-mock-fx');
+      if (!exam) {
+        setExamLog('import a1-exam-fixture first');
+        return;
+      }
+      const attempt = await repos.exams.startAttempt({
+        packId: EXAM_FIXTURE_ID,
+        examId: exam.id,
+        scope: 'full',
+        subtestIds: exam.subtests.map((st) => st.id),
+        mode: exam.mode,
+        state: initialAttemptState(exam.subtests),
+      });
+      await repos.exams.recordResponse({
+        attemptId: attempt.id,
+        subtestId: 'lexgram',
+        itemId: 'lg01',
+        answer: { kind: 'choice', index: 0 },
+        points: 0,
+        maxPoints: 1,
+        gradingStatus: 'scored',
+      });
+      setExamLog(`started ${attempt.id} (active) + 1 response`);
+    } catch (err) {
+      setExamLog(`failed: ${String(err)}`);
+    }
+    await invalidateExams();
+    await refreshExams();
+  }, [refreshExams]);
+  const abandonDevAttempt = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const active = await repos.exams.getActiveAttempt();
+      if (!active) {
+        setExamLog('no active attempt');
+        return;
+      }
+      if (active.packId !== EXAM_FIXTURE_ID) {
+        setExamLog(`active attempt ${active.id} is not a fixture attempt — left alone`);
+        return;
+      }
+      await repos.exams.abandonAttempt(active.id);
+      setExamLog(`abandoned ${active.id}`);
+    } catch (err) {
+      setExamLog(`failed: ${String(err)}`);
+    }
+    await invalidateExams();
+    await refreshExams();
+  }, [refreshExams]);
+  /**
+   * Device data hygiene (CLAUDE.md, T66): remove the exam fixture COMPLETELY —
+   * every attempt (responses cascade) + deck card that references it, the
+   * pack + its content rows (cascade) + sync_state, and a staged pack dir.
+   */
+  const deleteExamFixture = React.useCallback(async () => {
+    if (!__DEV__) return;
+    try {
+      const user = await repos.exams.deleteUserRowsForPack(EXAM_FIXTURE_ID);
+      await removePack(db, EXAM_FIXTURE_ID);
+      const dir = packDir(EXAM_FIXTURE_ID);
+      const hadDir = dir.exists;
+      if (hadDir) dir.delete();
+      setExamLog(
+        `deleted fixture: ${user.attempts} attempts (+ responses) · ${user.cards} deck cards · pack + content + sync_state${hadDir ? ' · staged dir' : ''}`,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+        queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
+        invalidateExams(),
+      ]);
+    } catch (err) {
+      setExamLog(`failed: ${String(err)}`);
+    }
+    await refreshExams();
+  }, [queryClient, refreshExams]);
   // --- T63 (dev only): plant N finished runs aged 31–40 days with fake recordings on disk,
   // then the prune matrix cell has something to delete (rows stay, files go).
   const [plantLog, setPlantLog] = React.useState<string | null>(null);
@@ -311,16 +452,19 @@ export default function DevDbScreen() {
     if (!__DEV__) return;
     try {
       const { payload } = await exportUserData(db);
-      const before = `export: scenarioRuns ${payload.tables.scenarioRuns.length} · scenarioAttempts ${payload.tables.scenarioAttempts.length} · keys ${Object.keys(payload.tables).length}`;
+      const t = payload.tables;
+      const before = `export: scenarioRuns ${t.scenarioRuns.length} · scenarioAttempts ${t.scenarioAttempts.length} · examAttempts ${t.examAttempts.length} · examResponses ${t.examResponses.length} · examItemCards ${t.examItemCards.length} · keys ${Object.keys(t).length}`;
       const result = await restoreUserData(db, JSON.parse(JSON.stringify(payload)));
+      const c = result.rowCounts;
       setBackupLog(
-        `${before} → restore: scenarioRuns ${result.rowCounts.scenarioRuns} · scenarioAttempts ${result.rowCounts.scenarioAttempts} · total ${result.totalRows}`,
+        `${before} → restore: scenarioRuns ${c.scenarioRuns} · scenarioAttempts ${c.scenarioAttempts} · examAttempts ${c.examAttempts} · examResponses ${c.examResponses} · examItemCards ${c.examItemCards} · total ${result.totalRows}`,
       );
       await refreshScenarios();
+      await refreshExams();
     } catch (err) {
       setBackupLog(`failed: ${String(err)}`);
     }
-  }, [refreshScenarios]);
+  }, [refreshScenarios, refreshExams]);
   const packs = usePacks();
   const stories = useStories();
   const [query, setQuery] = React.useState('');
@@ -365,15 +509,17 @@ export default function DevDbScreen() {
           queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
           queryClient.invalidateQueries({ queryKey: queryKeys.scenarios }),
           queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
+          invalidateExams(),
         ]);
         await refreshScenarios();
+        await refreshExams();
       } catch (err) {
         setFixtureStatus((s) => ({ ...s, [id]: `failed: ${String(err)}` }));
       } finally {
         setBusy(null);
       }
     },
-    [busy, queryClient, refreshScenarios],
+    [busy, queryClient, refreshScenarios, refreshExams],
   );
   // Built-in FTS smoke test: known fixture lemma «стена» queried as "стена"
   // and ё-folded «чёрный» queried as "черный" — proves FTS5 MATCH works
@@ -386,7 +532,8 @@ export default function DevDbScreen() {
       track('debug_db_opened');
       void refreshReadout();
       void refreshScenarios();
-    }, [refreshReadout, refreshScenarios]),
+      void refreshExams();
+    }, [refreshReadout, refreshScenarios, refreshExams]),
   );
 
   return (
@@ -586,6 +733,90 @@ export default function DevDbScreen() {
           ))}
           {scenarioReadout && scenarioReadout.runs.length === 0 && (
             <Text variant="caption">No runs yet.</Text>
+          )}
+        </View>
+      </View>
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Exams (M18 · T68)
+        </Text>
+        <View className="gap-2">
+          {examReadout?.exams.map((e) => (
+            <View
+              key={`${e.packId}/${e.examId}`}
+              className="rounded-xl border border-border bg-surface p-3"
+            >
+              <Text className="font-ui-medium">
+                {e.titleRu} · {e.titleEn}
+              </Text>
+              <Text variant="caption" selectable>
+                {formatExam(e)}
+              </Text>
+            </View>
+          ))}
+          {examReadout && examReadout.exams.length === 0 && (
+            <Text variant="caption">No exams installed — import a1-exam-fixture above.</Text>
+          )}
+        </View>
+        <Text variant="caption" className="mt-2" selectable>
+          deck:{' '}
+          {examReadout
+            ? `${examReadout.deck.due} due · ${examReadout.deck.total} total · ${examReadout.deck.suspended} suspended · topics ${Object.keys(examReadout.deck.byTopic).length}`
+            : '…'}
+        </Text>
+        {__DEV__ && (
+          <View className="mt-2 gap-2">
+            <Pressable
+              onPress={() => void startDevAttempt()}
+              accessibilityRole="button"
+              accessibilityLabel="Start dev exam attempt"
+              className="rounded-xl border border-border bg-surface p-3 active:opacity-80"
+            >
+              <Text className="font-ui-medium">Start dev attempt (a1-mock-fx)</Text>
+              <Text variant="caption">
+                Active full-scope attempt + one scored lexgram response.
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void abandonDevAttempt()}
+              accessibilityRole="button"
+              accessibilityLabel="Abandon dev exam attempt"
+              className="rounded-xl border border-border bg-surface p-3 active:opacity-80"
+            >
+              <Text className="font-ui-medium">Abandon active dev attempt</Text>
+              <Text variant="caption">Only touches an attempt on the fixture pack.</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void deleteExamFixture()}
+              accessibilityRole="button"
+              accessibilityLabel="Delete exam fixture"
+              className="rounded-xl border border-border bg-surface p-3 active:opacity-80"
+            >
+              <Text className="font-ui-medium">Delete exam fixture</Text>
+              <Text variant="caption" selectable>
+                {examLog ??
+                  'Pack + content + sync_state + every fixture attempt/response/deck row (hygiene).'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+        <Text variant="caption" className="mt-2">
+          Last 5 attempts
+        </Text>
+        <View className="mt-1 gap-1">
+          {examReadout?.attempts.map((a) => (
+            <Text
+              key={a.id}
+              variant="caption"
+              selectable
+              className="rounded-lg bg-surface px-3 py-2"
+            >
+              {formatAttempt(a, examReadout.responses[a.id])}
+            </Text>
+          ))}
+          {examReadout && examReadout.attempts.length === 0 && (
+            <Text variant="caption">No attempts yet.</Text>
           )}
         </View>
       </View>

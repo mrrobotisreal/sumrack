@@ -296,7 +296,8 @@ export function createStatsRepo(db: SumrakDB) {
 /**
  * The known `game_sessions.mode` values (T58 records this union — the
  * previous convention was "by string"): the T06 review modes, the T12–T14
- * games, the T17 unit quiz, the T27 dialogue run and the M17 scenario run.
+ * games, the T17 unit quiz, the T27 dialogue run, the M17 scenario run and
+ * the M18 exam drill / rehearsal.
  */
 export type GameSessionMode =
   | 'flashcards'
@@ -308,6 +309,9 @@ export type GameSessionMode =
   | 'listening'
   | 'unit-quiz'
   | 'dialogue'
-  | 'scenario';
+  | 'scenario'
+  // M18 (declared in T68): the TORFL drill runner (T70) and «Мои ответы» rehearsal (T74).
+  | 'exam-drill'
+  | 'torfl-rehearsal';
 
 export type StatsRepo = ReturnType<typeof createStatsRepo>;

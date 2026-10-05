@@ -444,7 +444,47 @@ export type AnalyticsEvent =
   | 'media_bundle_wav_warning'
   | 'scenario_run_pinned'
   | 'scenario_transcript_shared'
-  | 'scenario_debrief_download_failed';
+  | 'scenario_debrief_download_failed'
+  // M18 (T68–T74) — TORFL exam prep («ТРКИ», TORFL_EXAM_PREP §4.5). Declared by T68; later tickets
+  // fire them. Props are slugs / ids / numbers / booleans only — never answers, transcripts,
+  // letters or any Russian text.
+  // torfl_hub_opened {from} · torfl_exam_date_set {daysOut} · torfl_topic_banked {topic, words,
+  // newWords} · torfl_text_opened {packId, storyId, from} · exam_drill_started {packId, examId,
+  // subtestKind, topic, source: 'set'|'deck'|'lightning'} · exam_drill_item_answered {subtestKind,
+  // topic, correct, ms} · exam_drill_finished {…, answered, correct, ms} · exam_deck_reviewed {due,
+  // reviewed} · exam_started {packId, examId, scope, subtestKind?} · exam_resumed {scope,
+  // subtestKind, remainingSec} (no attemptId) · exam_subtest_started {subtestKind, scope} ·
+  // exam_subtest_submitted {subtestKind, answered, total, autoSubmitted, timeUsedSec} ·
+  // exam_audio_played {playNo} · exam_lookup_used {subtestKind} · exam_finished {scope, verdict,
+  // lexgramPct, readingPct, listeningPct, writingPct, speakingPct, provisional} · exam_abandoned
+  // {scope, subtestKind, answered} · exam_review_opened {scope} · exam_writing_scored {source:
+  // 'offline'|'ai'|'self', pct, sentences, questions, pointsCovered} · exam_speaking_scored {task,
+  // source, pct} · exam_grading_failed {kind, code} · exam_recording_saved {task, ms} ·
+  // torfl_rehearsal_finished {topic, score} · torfl_ticket_drawn {topic}.
+  // ai_request_* gain feature 'exam-writing' | 'exam-speaking' via the AiFeature union.
+  | 'torfl_hub_opened'
+  | 'torfl_exam_date_set'
+  | 'torfl_topic_banked'
+  | 'torfl_text_opened'
+  | 'exam_drill_started'
+  | 'exam_drill_item_answered'
+  | 'exam_drill_finished'
+  | 'exam_deck_reviewed'
+  | 'exam_started'
+  | 'exam_resumed'
+  | 'exam_subtest_started'
+  | 'exam_subtest_submitted'
+  | 'exam_audio_played'
+  | 'exam_lookup_used'
+  | 'exam_finished'
+  | 'exam_abandoned'
+  | 'exam_review_opened'
+  | 'exam_writing_scored'
+  | 'exam_speaking_scored'
+  | 'exam_grading_failed'
+  | 'exam_recording_saved'
+  | 'torfl_rehearsal_finished'
+  | 'torfl_ticket_drawn';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

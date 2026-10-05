@@ -29,7 +29,10 @@ export type AiFeature =
   // M17 scenarios (T60): the rescue judge + the two суфлёр one-liners.
   | 'scenario-rescue'
   | 'scenario-explain'
-  | 'scenario-howtosay';
+  | 'scenario-howtosay'
+  // M18 TORFL grading (declared in T68, TORFL §4.5; the T72/T73 prompts use them).
+  | 'exam-writing'
+  | 'exam-speaking';
 
 export interface RunChatResult extends ChatResult {
   /**
