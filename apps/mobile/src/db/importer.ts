@@ -1,4 +1,5 @@
 import {
+  ExamSchema,
   parsePack,
   scenarioLines,
   type LineAudio,
@@ -19,6 +20,7 @@ import {
   dialogueNodeStamps,
   dialogueNodes,
   dialogues,
+  exams,
   exerciseSpecs,
   journalPrompts,
   lessons,
@@ -50,6 +52,8 @@ export interface ImportResult {
     stories: number;
     dialogues: number;
     scenarios: number;
+    /** T68: `exams` rows (exam packs' stories count under `stories`). */
+    exams: number;
     sentences: number;
     tokens: number;
   };
@@ -223,6 +227,7 @@ function countContent(pack: Pack) {
     stories: pack.stories.length,
     dialogues: pack.dialogues?.length ?? 0,
     scenarios: pack.scenarios?.length ?? 0,
+    exams: pack.exams?.length ?? 0,
     sentences: sentenceCount,
     tokens: tokenCount,
   };
@@ -432,6 +437,24 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       kind: spec.kind,
       orderIdx,
       spec: spec as unknown as Record<string, unknown>,
+    });
+  }
+
+  // T68 (TORFL §4.1): one row per exam, the whole validated Exam as JSON
+  // (re-parsed alone — `ExamSchema` is self-contained, refs were resolved
+  // by `parsePack`). Stories of exam packs went through the story path above.
+  for (const [orderIdx, raw] of (pack.exams ?? []).entries()) {
+    const exam = ExamSchema.parse(raw);
+    await db.insert(exams).values({
+      packId: pack.id,
+      examId: exam.id,
+      orderIdx,
+      format: exam.format,
+      level: exam.level,
+      mode: exam.mode,
+      titleRu: exam.title.ru,
+      titleEn: exam.title.en,
+      json: JSON.stringify(exam),
     });
   }
 }
