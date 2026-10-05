@@ -13,6 +13,9 @@ import {
   dialogueEndingsSeen,
   dialogueRuns,
   encounters,
+  examAttempts,
+  examItemCards,
+  examResponses,
   frozenDays,
   gameSessions,
   grammarLessons,
@@ -78,6 +81,10 @@ const INSERT_ORDER: [UserTableKey, SQLiteTable][] = [
   // T58: runs before attempts (FK); after grammarLessons, before settings.
   ['scenarioRuns', scenarioRuns],
   ['scenarioAttempts', scenarioAttempts],
+  // T68: attempts before responses (FK); the deck has no FK.
+  ['examAttempts', examAttempts],
+  ['examResponses', examResponses],
+  ['examItemCards', examItemCards],
   ['settings', settings],
   ['syncState', syncState],
   ['analyticsEvents', analyticsEvents],

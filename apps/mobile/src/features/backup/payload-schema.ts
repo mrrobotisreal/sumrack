@@ -294,6 +294,59 @@ const scenarioAttemptRow = z.strictObject({
   createdAt: int,
 });
 
+/**
+ * T68 (TORFL_EXAM_PREP §4.2/§4.6): the three M18 user tables. JSON columns
+ * are carried verbatim as strings (the exams repo Zod-parses on read, so a
+ * restore never rejects a future engine/grading shape); enum-ish columns are
+ * strict so an out-of-domain status is refused whole.
+ */
+const examAttemptRow = z.strictObject({
+  id: z.string(),
+  packId: z.string(),
+  examId: z.string(),
+  scope: z.enum(['full', 'subtest', 'drill']),
+  subtestIds: z.string(),
+  mode: z.enum(['mock', 'drill']),
+  status: z.enum(['active', 'finished', 'abandoned']),
+  stateJson: z.string(),
+  startedAt: int,
+  finishedAt: int.nullable(),
+  resultsJson: z.string().nullable(),
+  verdict: z.enum(['pass', 'pass-borderline', 'fail']).nullable(),
+  xpAwarded: int,
+  pinned: z.boolean(),
+});
+
+const examResponseRow = z.strictObject({
+  id: z.string(),
+  attemptId: z.string(),
+  subtestId: z.string(),
+  itemId: z.string(),
+  answerJson: z.string(),
+  points: z.number().nullable(),
+  maxPoints: z.number(),
+  gradingStatus: z.enum(['scored', 'provisional', 'pending-ai', 'ai-failed', 'self-graded']),
+  gradingJson: z.string().nullable(),
+  durationMs: int.nullable(),
+  createdAt: int,
+  updatedAt: int,
+});
+
+const examItemCardRow = z.strictObject({
+  itemKey: z.string(),
+  packId: z.string(),
+  examId: z.string(),
+  itemId: z.string(),
+  subtestKind: z.string(),
+  topic: z.string(),
+  fsrsJson: z.string(),
+  due: int,
+  lastResult: z.enum(['correct', 'wrong']).nullable(),
+  suspended: z.boolean(),
+  createdAt: int,
+  updatedAt: int,
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -354,6 +407,10 @@ export const BackupPayloadSchema = z.strictObject({
     // T58 (M17): additive-with-default — pre-M17 snapshots restore under version 1.
     scenarioRuns: z.array(scenarioRunRow).default([]),
     scenarioAttempts: z.array(scenarioAttemptRow).default([]),
+    // T68 (M18): additive-with-default — pre-M18 snapshots restore under version 1.
+    examAttempts: z.array(examAttemptRow).default([]),
+    examResponses: z.array(examResponseRow).default([]),
+    examItemCards: z.array(examItemCardRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -389,6 +446,9 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   grammarLessons: 'grammar_lessons',
   scenarioRuns: 'scenario_runs',
   scenarioAttempts: 'scenario_attempts',
+  examAttempts: 'exam_attempts',
+  examResponses: 'exam_responses',
+  examItemCards: 'exam_item_cards',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

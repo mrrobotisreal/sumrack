@@ -15,6 +15,9 @@ import {
   dialogueEndingsSeen,
   dialogueRuns,
   encounters,
+  examAttempts,
+  examItemCards,
+  examResponses,
   frozenDays,
   gameSessions,
   grammarLessons,
@@ -441,6 +444,103 @@ async function seedSource(db: SumrakDB) {
       createdAt: NOW - 6300,
     },
   ]);
+  // T68: a finished full mock with two responses (one pending AI) + an abandoned drill + two deck cards.
+  await db.insert(examAttempts).values([
+    {
+      id: 'eatt-1',
+      packId: 'a1-exam-fixture',
+      examId: 'a1-mock-fx',
+      scope: 'full',
+      subtestIds: JSON.stringify(['writing', 'lexgram', 'reading', 'listening', 'speaking']),
+      mode: 'mock',
+      status: 'finished',
+      stateJson: JSON.stringify({ v: 1, subtests: [], current: 4, phase: 'done' }),
+      startedAt: NOW - 5800,
+      finishedAt: NOW - 5000,
+      resultsJson: JSON.stringify({
+        lexgram: { points: 4, maxPoints: 5, pct: 80, provisional: false, gradedBy: 'offline' },
+      }),
+      verdict: 'pass-borderline',
+      xpAwarded: 60,
+      pinned: true,
+    },
+    {
+      id: 'eatt-2',
+      packId: 'a1-exam-fixture',
+      examId: 'a1-drill-fx',
+      scope: 'drill',
+      subtestIds: JSON.stringify(['lexgram']),
+      mode: 'drill',
+      status: 'abandoned',
+      stateJson: JSON.stringify({ v: 1, subtests: [], current: 0, phase: 'intro' }),
+      startedAt: NOW - 4900,
+      finishedAt: NOW - 4800,
+      resultsJson: null,
+      verdict: null,
+      xpAwarded: 0,
+      pinned: false,
+    },
+  ]);
+  await db.insert(examResponses).values([
+    {
+      id: 'eresp-1',
+      attemptId: 'eatt-1',
+      subtestId: 'lexgram',
+      itemId: 'lg01',
+      answerJson: JSON.stringify({ kind: 'choice', index: 1 }),
+      points: 1,
+      maxPoints: 1,
+      gradingStatus: 'scored',
+      gradingJson: null,
+      durationMs: 8000,
+      createdAt: NOW - 5700,
+      updatedAt: NOW - 5700,
+    },
+    {
+      id: 'eresp-2',
+      attemptId: 'eatt-1',
+      subtestId: 'writing',
+      itemId: 'wr01',
+      answerJson: JSON.stringify({ kind: 'writing', text: 'Здравствуй, мама!' }),
+      points: 30.5,
+      maxPoints: 100,
+      gradingStatus: 'pending-ai',
+      gradingJson: JSON.stringify({ v: 1, offline: { criteria: [] } }),
+      durationMs: null,
+      createdAt: NOW - 5600,
+      updatedAt: NOW - 5500,
+    },
+  ]);
+  await db.insert(examItemCards).values([
+    {
+      itemKey: 'a1-exam-fixture:a1-mock-fx:lg01',
+      packId: 'a1-exam-fixture',
+      examId: 'a1-mock-fx',
+      itemId: 'lg01',
+      subtestKind: 'lexgram',
+      topic: 'case-prep',
+      fsrsJson: JSON.stringify({ due: NOW, state: 1 }),
+      due: NOW,
+      lastResult: 'wrong',
+      suspended: false,
+      createdAt: NOW - 5000,
+      updatedAt: NOW - 5000,
+    },
+    {
+      itemKey: 'a1-exam-fixture:a1-drill-fx:dr01',
+      packId: 'a1-exam-fixture',
+      examId: 'a1-drill-fx',
+      itemId: 'dr01',
+      subtestKind: 'lexgram',
+      topic: 'case-prep',
+      fsrsJson: '{}',
+      due: NOW + 1000,
+      lastResult: null,
+      suspended: true,
+      createdAt: NOW - 4800,
+      updatedAt: NOW - 4800,
+    },
+  ]);
   await db.insert(settings).values([
     { key: 'themeMode', value: 'dark', updatedAt: NOW },
     { key: 'goal.daily', value: { reviews: 20, readingMin: 10 }, updatedAt: NOW },
@@ -506,6 +606,9 @@ async function selectAllUserTables(db: SumrakDB) {
     grammarLessons: await db.select().from(grammarLessons),
     scenarioRuns: await db.select().from(scenarioRuns),
     scenarioAttempts: await db.select().from(scenarioAttempts),
+    examAttempts: await db.select().from(examAttempts),
+    examResponses: await db.select().from(examResponses),
+    examItemCards: await db.select().from(examItemCards),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -768,6 +871,63 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(result.rowCounts.wordProfiles).toBe(2);
   });
 
+  it('exam_attempts + exam_responses + exam_item_cards round-trip through export → restore (T68)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    expect(payload.tables.examAttempts.map((a) => a.id).sort()).toEqual(['eatt-1', 'eatt-2']);
+    expect(payload.tables.examResponses.map((r) => r.id).sort()).toEqual(['eresp-1', 'eresp-2']);
+    expect(payload.tables.examItemCards).toHaveLength(2);
+    expect(typeof payload.tables.examAttempts[0]!.stateJson).toBe('string');
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    expect(result.rowCounts.examAttempts).toBe(2);
+    expect(result.rowCounts.examResponses).toBe(2);
+    expect(result.rowCounts.examItemCards).toBe(2);
+    expect(await target.select().from(examAttempts)).toEqual(
+      await source.select().from(examAttempts),
+    );
+    expect(await target.select().from(examResponses)).toEqual(
+      await source.select().from(examResponses),
+    );
+    expect(await target.select().from(examItemCards)).toEqual(
+      await source.select().from(examItemCards),
+    );
+    // Restored responses still cascade with their attempt (FK intact).
+    await target.delete(examAttempts).where(sql`id = 'eatt-1'`);
+    expect(await target.select().from(examResponses)).toHaveLength(0);
+  });
+
+  it('a pre-M18 payload (no exam keys) still parses + restores under version 1', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as { tables: Record<string, unknown> };
+    delete legacy.tables.examAttempts;
+    delete legacy.tables.examResponses;
+    delete legacy.tables.examItemCards;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.examAttempts).toBe(0);
+    expect(result.rowCounts.examResponses).toBe(0);
+    expect(result.rowCounts.examItemCards).toBe(0);
+    expect(await target.select().from(examAttempts)).toHaveLength(0);
+    expect(result.rowCounts.scenarioRuns).toBe(2);
+  });
+
+  it('an exam attempt with an out-of-domain status is refused whole (T68)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const bad = JSON.parse(JSON.stringify(payload)) as {
+      tables: { examAttempts: { status: string }[] };
+    };
+    bad.tables.examAttempts[0]!.status = 'paused';
+    await expect(restoreUserData(createTestDb(), bad)).rejects.toThrow(/examAttempts/);
+  });
+
   it('an invalid payload is refused with ZERO writes (live DB untouched)', async () => {
     const target = createTestDb();
     await target.insert(notes).values({
@@ -853,13 +1013,8 @@ describe('user-table drift guard', () => {
       // T68 exam content table (rebuilt from packs, never backed up).
       'exams',
     ]);
-    // T68 phase 1 → 5: the three exam user tables join the payload in the backup phase.
-    const PENDING_BACKUP = new Set(['exam_attempts', 'exam_responses', 'exam_item_cards']);
     const isInfra = (n: string) =>
-      n.startsWith('sqlite_') ||
-      n.startsWith('__drizzle') ||
-      n.includes('_fts') ||
-      PENDING_BACKUP.has(n);
+      n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');
     const userTables = rows
       .map((r) => r.name)
       .filter((n) => !CONTENT_TABLES.has(n) && !isInfra(n))
