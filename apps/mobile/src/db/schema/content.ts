@@ -17,9 +17,12 @@ export const packs = sqliteTable('packs', {
   version: integer('version').notNull(),
   // 'dialogue' joined the pack types in T25 (type-level only — dialogue
   // content tables + importer support landed in T26); 'scenario' in T56
-  // (type-level only — scenario content tables + importer land in T58).
+  // (type-level only — scenario content tables + importer land in T58);
+  // 'exam' in T67 (type-level only — the `exams` table + importer land in T68).
   type: text('type')
-    .$type<'stories' | 'course-unit' | 'checkpoint' | 'prompts' | 'dialogue' | 'scenario'>()
+    .$type<
+      'stories' | 'course-unit' | 'checkpoint' | 'prompts' | 'dialogue' | 'scenario' | 'exam'
+    >()
     .notNull(),
   titleRu: text('title_ru').notNull(),
   titleEn: text('title_en').notNull(),
