@@ -850,9 +850,16 @@ describe('user-table drift guard', () => {
       'scenario_line_audio',
       'scenario_line_stamps',
       'scenario_assets',
+      // T68 exam content table (rebuilt from packs, never backed up).
+      'exams',
     ]);
+    // T68 phase 1 → 5: the three exam user tables join the payload in the backup phase.
+    const PENDING_BACKUP = new Set(['exam_attempts', 'exam_responses', 'exam_item_cards']);
     const isInfra = (n: string) =>
-      n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');
+      n.startsWith('sqlite_') ||
+      n.startsWith('__drizzle') ||
+      n.includes('_fts') ||
+      PENDING_BACKUP.has(n);
     const userTables = rows
       .map((r) => r.name)
       .filter((n) => !CONTENT_TABLES.has(n) && !isInfra(n))

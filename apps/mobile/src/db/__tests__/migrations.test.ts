@@ -92,6 +92,7 @@ describe('migrations from empty DB', () => {
       'scenario_line_audio',
       'scenario_line_stamps',
       'scenario_assets',
+      'exams',
     ];
     const userTables = [
       'bank_items',
@@ -111,6 +112,9 @@ describe('migrations from empty DB', () => {
       'grammar_lessons',
       'scenario_runs',
       'scenario_attempts',
+      'exam_attempts',
+      'exam_responses',
+      'exam_item_cards',
       'settings',
       'sync_state',
       'analytics_events',
@@ -167,7 +171,97 @@ describe('migrations from empty DB', () => {
     const db = createTestDb();
     await expectScenarioTables(db);
   });
+
+  it('0015_exams: fresh DB has the exams content table + three user tables with their indexes', async () => {
+    const db = createTestDb();
+    await expectExamTables(db);
+    expect(journal.entries.at(-1)).toMatchObject({ idx: 15, tag: '0015_exams' });
+  });
 });
+
+/** T68 shape assertions shared by the fresh + upgrade cases (TORFL_EXAM_PREP §4.1/§4.2). */
+async function expectExamTables(db: SumrakDB) {
+  expect(await columnNames(db, 'exams')).toEqual([
+    'pack_id',
+    'exam_id',
+    'order_idx',
+    'format',
+    'level',
+    'mode',
+    'title_ru',
+    'title_en',
+    'json',
+  ]);
+  expect(await columnNames(db, 'exam_attempts')).toEqual([
+    'id',
+    'pack_id',
+    'exam_id',
+    'scope',
+    'subtest_ids',
+    'mode',
+    'status',
+    'state_json',
+    'started_at',
+    'finished_at',
+    'results_json',
+    'verdict',
+    'xp_awarded',
+    'pinned',
+  ]);
+  expect(await columnNames(db, 'exam_responses')).toEqual([
+    'id',
+    'attempt_id',
+    'subtest_id',
+    'item_id',
+    'answer_json',
+    'points',
+    'max_points',
+    'grading_status',
+    'grading_json',
+    'duration_ms',
+    'created_at',
+    'updated_at',
+  ]);
+  expect(await columnNames(db, 'exam_item_cards')).toEqual([
+    'item_key',
+    'pack_id',
+    'exam_id',
+    'item_id',
+    'subtest_kind',
+    'topic',
+    'fsrs_json',
+    'due',
+    'last_result',
+    'suspended',
+    'created_at',
+    'updated_at',
+  ]);
+  expect(await indexNames(db, 'exams')).toEqual(expect.arrayContaining(['exams_mode_idx']));
+  expect(await indexNames(db, 'exam_attempts')).toEqual(
+    expect.arrayContaining(['exam_attempts_status_idx', 'exam_attempts_exam_idx']),
+  );
+  expect(await indexNames(db, 'exam_responses')).toEqual(
+    expect.arrayContaining(['exam_responses_item_uq', 'exam_responses_grading_idx']),
+  );
+  expect(await indexNames(db, 'exam_item_cards')).toEqual(
+    expect.arrayContaining(['exam_item_cards_due_idx', 'exam_item_cards_topic_idx']),
+  );
+  const idx = await db.all<{ name: string; unique: number }>(
+    sql.raw('PRAGMA index_list(exam_responses)'),
+  );
+  expect(idx.find((i) => i.name === 'exam_responses_item_uq')).toMatchObject({ unique: 1 });
+  // Content FK cascades from packs; responses cascade with their attempt; no other FKs.
+  const fk = async (t: string) =>
+    db.all<{ table: string; on_delete: string }>(sql.raw(`PRAGMA foreign_key_list(${t})`));
+  expect(await fk('exams')).toEqual([
+    expect.objectContaining({ table: 'packs', on_delete: 'CASCADE' }),
+  ]);
+  expect(await fk('exam_responses')).toEqual([
+    expect.objectContaining({ table: 'exam_attempts', on_delete: 'CASCADE' }),
+  ]);
+  expect(await fk('exam_attempts')).toEqual([]);
+  expect(await fk('exam_item_cards')).toEqual([]);
+}
 
 /** T58 shape assertions shared by the fresh + upgrade cases (SPEAKING_SCENARIOS §4.1/§4.2). */
 async function expectScenarioTables(db: SumrakDB) {
@@ -294,6 +388,57 @@ async function expectScenarioTables(db: SumrakDB) {
     expect(rows, t).toEqual([expect.objectContaining({ table: 'packs', on_delete: 'CASCADE' })]);
   }
 }
+
+describe('0015_exams upgrade from 0014', () => {
+  it('creates the four tables on a device that ran 0014; pre-existing rows untouched; responses cascade with their attempt', async () => {
+    const { sqlite, db } = createDbUpTo('0014_scenarios');
+    sqlite
+      .prepare(
+        `INSERT INTO bank_items (id, kind, lemma, lemma_norm, surface, normalized, translation, needs_enrichment, created_at)
+         VALUES ('bi-1', 'word', 'тёмный', 'темный', 'тёмный', 'темный', 'dark', 0, 1)`,
+      )
+      .run();
+    sqlite
+      .prepare(
+        `INSERT INTO scenario_runs (id, pack_id, scenario_id, family_id, level, started_at, path_json)
+         VALUES ('run-1', 'p', 'radio-a1', 'radio', 'A1', 1, '{"v":1,"steps":[]}')`,
+      )
+      .run();
+    const before = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'exam%'`,
+    );
+    expect(before).toEqual([]);
+
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+
+    await expectExamTables(db);
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM bank_items').get()).toEqual({ n: 1 });
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM scenario_runs').get()).toEqual({ n: 1 });
+    sqlite
+      .prepare(
+        `INSERT INTO exam_attempts (id, pack_id, exam_id, scope, subtest_ids, mode, status, state_json, started_at)
+         VALUES ('att-1', 'p', 'a1-mock-fx', 'full', '["lexgram"]', 'mock', 'active', '{}', 1)`,
+      )
+      .run();
+    // §4.2 defaults: xp_awarded 0, pinned false.
+    expect(
+      sqlite.prepare('SELECT xp_awarded, pinned FROM exam_attempts WHERE id = ?').get('att-1'),
+    ).toEqual({ xp_awarded: 0, pinned: 0 });
+    const insertResponse = sqlite.prepare(
+      `INSERT INTO exam_responses (id, attempt_id, subtest_id, item_id, answer_json, max_points, grading_status, created_at, updated_at)
+       VALUES (?, 'att-1', 'lexgram', 'lg01', '{}', 1, 'scored', 2, 2)`,
+    );
+    insertResponse.run('r-1');
+    // UNIQUE(attemptId, subtestId, itemId).
+    expect(() => insertResponse.run('r-2')).toThrow(/UNIQUE/);
+    sqlite.prepare("DELETE FROM exam_attempts WHERE id = 'att-1'").run();
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM exam_responses').get()).toEqual({ n: 0 });
+    const applied = sqlite.prepare('SELECT COUNT(*) AS n FROM "__drizzle_migrations"').get() as {
+      n: number;
+    };
+    expect(applied.n).toBe(journal.entries.length);
+  });
+});
 
 describe('0014_scenarios upgrade from 0013', () => {
   it('creates the seven tables on a device that ran 0013; pre-existing rows untouched; attempts cascade with their run', async () => {

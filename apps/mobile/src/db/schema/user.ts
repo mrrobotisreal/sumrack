@@ -567,6 +567,110 @@ export const scenarioAttempts = sqliteTable(
   (t) => [index('scenario_attempts_run_idx').on(t.runId, t.turnId, t.attemptNo)],
 );
 
+/**
+ * Exam attempts (T68, TORFL_EXAM_PREP §4.2) — one sitting of an exam: a full
+ * mock, one subtest, or a drill session. `packId`/`examId` are unenforced
+ * content refs (attempts outlive pack versions, §12). The JSON columns are
+ * contracts owned by `features/torfl/model.ts` and Zod-parsed on read by the
+ * exams repo. Only one `active` attempt exists at a time (repo rule).
+ */
+export const examAttempts = sqliteTable(
+  'exam_attempts',
+  {
+    id: text('id').primaryKey(),
+    packId: text('pack_id').notNull(),
+    examId: text('exam_id').notNull(),
+    /** 'full' | 'subtest' | 'drill' */
+    scope: text('scope').$type<'full' | 'subtest' | 'drill'>().notNull(),
+    /** JSON string[] — the subtests this attempt covers, in order. */
+    subtestIds: text('subtest_ids').notNull(),
+    /** 'mock' | 'drill' (copied from the exam at start). */
+    mode: text('mode').$type<'mock' | 'drill'>().notNull(),
+    status: text('status').$type<'active' | 'finished' | 'abandoned'>().notNull(),
+    /** Engine state for resume (`ExamAttemptState`): cursor, wall-clock deadlines, play counters, speaking phase. */
+    stateJson: text('state_json').notNull(),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at'),
+    /** `{ [subtestId]: ExamSubtestResult }` — written at finish (and upgraded by AI grading). */
+    resultsJson: text('results_json'),
+    /** 'pass' | 'pass-borderline' | 'fail' | null (non-full scopes). */
+    verdict: text('verdict').$type<'pass' | 'pass-borderline' | 'fail'>(),
+    xpAwarded: integer('xp_awarded').notNull().default(0),
+    /** Keeps recordings from pruning (§8.5). */
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  },
+  (t) => [
+    index('exam_attempts_status_idx').on(t.status, t.startedAt),
+    index('exam_attempts_exam_idx').on(t.packId, t.examId, t.startedAt),
+  ],
+);
+
+/** Grading lifecycle of one response (§4.2; the T72 queue keys on `pending-ai`). */
+export type ExamGradingStatus =
+  'scored' | 'provisional' | 'pending-ai' | 'ai-failed' | 'self-graded';
+
+/**
+ * One answered item inside an attempt (§4.2): every drill answer and every
+ * scored mock item lands here, so history, per-topic accuracy and readiness
+ * read from one table. Upserted on (attemptId, subtestId, itemId); cascades
+ * with its attempt (the scenario_attempts precedent).
+ */
+export const examResponses = sqliteTable(
+  'exam_responses',
+  {
+    id: text('id').primaryKey(),
+    attemptId: text('attempt_id')
+      .notNull()
+      .references(() => examAttempts.id, { onDelete: 'cascade' }),
+    subtestId: text('subtest_id').notNull(),
+    itemId: text('item_id').notNull(),
+    /** `ExamAnswer` — choice {index} · typed {text} · writing {text} · speaking {transcript, …}. */
+    answerJson: text('answer_json').notNull(),
+    points: real('points'),
+    maxPoints: real('max_points').notNull(),
+    gradingStatus: text('grading_status').$type<ExamGradingStatus>().notNull(),
+    /** `ExamGrading` — offline breakdown + AI rubric payload (§6.2), or NULL. */
+    gradingJson: text('grading_json'),
+    durationMs: integer('duration_ms'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('exam_responses_item_uq').on(t.attemptId, t.subtestId, t.itemId),
+    index('exam_responses_grading_idx').on(t.gradingStatus),
+  ],
+);
+
+/**
+ * The exam deck («Работа над ошибками», §7.2) — FSRS state per exam item,
+ * SEPARATE from `cards`/`review_log` (ADR-0020 decision 5: vocabulary stats
+ * never see exam items). `fsrsJson` holds the ts-fsrs Card; `due` is
+ * denormalized for the due query.
+ */
+export const examItemCards = sqliteTable(
+  'exam_item_cards',
+  {
+    /** `${packId}:${examId}:${itemId}` */
+    itemKey: text('item_key').primaryKey(),
+    packId: text('pack_id').notNull(),
+    examId: text('exam_id').notNull(),
+    itemId: text('item_id').notNull(),
+    subtestKind: text('subtest_kind').notNull(),
+    topic: text('topic').notNull(),
+    fsrsJson: text('fsrs_json').notNull(),
+    due: integer('due').notNull(),
+    /** 'correct' | 'wrong' — the last grade's outcome (NULL until first graded). */
+    lastResult: text('last_result').$type<'correct' | 'wrong'>(),
+    suspended: integer('suspended', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [
+    index('exam_item_cards_due_idx').on(t.due),
+    index('exam_item_cards_topic_idx').on(t.topic),
+  ],
+);
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
