@@ -49,6 +49,7 @@ describe('REGISTERS table', () => {
       podcast: 'host',
       documentary: 'voiceover',
       travel: 'guide',
+      torfl: 'lecturer',
     });
     expect(DEFAULT_VOICE).toBe('elevenlabs:Mr. Wintrow');
   });
@@ -125,6 +126,14 @@ describe('applyRegister', () => {
     expect(r.style).toBe('guest-host');
     expect(r.stylePrompt).toBe('Привет.');
     expect(r.settings).toEqual(REGISTERS.host.settings);
+  });
+
+  it('the «ТРКИ» category (M18, T67) defaults to the lecturer register', () => {
+    expect(CATEGORY_DEFAULT_REGISTER.torfl).toBe('lecturer');
+    const r = applyRegister({ id: 'lx-01', voice: DEFAULT_VOICE } as VoiceDirection, 'torfl');
+    expect(r.voice).toBe(DEFAULT_VOICE);
+    expect(r.style).toBe('lecturer');
+    expect(r.settings).toEqual(REGISTERS.lecturer.settings);
   });
 
   it('explicit register beats the pack category', () => {

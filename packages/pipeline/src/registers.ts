@@ -117,6 +117,8 @@ export const CATEGORY_DEFAULT_REGISTER: Record<string, RegisterSlug> = {
   podcast: 'host',
   documentary: 'voiceover',
   travel: 'guide',
+  /** M18 (T67): the «ТРКИ» shelf — model answers, lexicon examples, examiner lines. */
+  torfl: 'lecturer',
 };
 
 /** A voice direction after register resolution: `voice` and `style` are always present. */

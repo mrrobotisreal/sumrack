@@ -195,6 +195,20 @@ export {
   type ParsedDraft,
 } from './draft.ts';
 export { DraftError, formatIssue, type DraftIssue } from './errors.ts';
+export {
+  ExamFrontmatterSchema,
+  parseExamDraft,
+  parseIssuePath,
+  type ParsedExamDraft,
+} from './exam-draft.ts';
+export {
+  renderExamReports,
+  renderMatrixMap,
+  renderOfficialShape,
+  renderRefTable,
+  renderTopicCensus,
+} from './exam-report.ts';
+export { EXAM_TOPICS, EXAM_TOPIC_KIND } from './exam-topics.ts';
 export { ExtrasFrontmatterSchema, loadExtras, parseExtras, type PackExtras } from './extras.ts';
 export {
   FrontmatterSchema,

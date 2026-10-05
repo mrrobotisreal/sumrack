@@ -2,6 +2,7 @@ import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
 import { renderBranchMap, renderScenarioBranchMap } from './branch-map.ts';
 import { glossaryCoverage, renderCoverageReport } from './coverage.ts';
+import { renderExamReports } from './exam-report.ts';
 import {
   planAudioRun,
   runAudition,
@@ -139,6 +140,7 @@ function annotateCommand(args: string[]): void {
       summary.scenarios > 0
         ? `${summary.scenarios} scenario${summary.scenarios === 1 ? '' : 's'}`
         : null,
+      summary.exams > 0 ? `${summary.exams} exam${summary.exams === 1 ? '' : 's'}` : null,
       summary.pack.lesson ? 'lesson' : null,
       summary.pack.prompts ? `${summary.pack.prompts.length} prompts` : null,
       summary.pack.exercises ? `${summary.pack.exercises.length} exercises` : null,
@@ -153,6 +155,7 @@ function annotateCommand(args: string[]): void {
       console.log(`\n${renderBranchMap(dialogue)}`);
     }
     printScenarioReports(summary.pack);
+    printExamReports(summary.pack);
   } catch (e) {
     if (e instanceof DraftError) {
       fail(e.issues.map(formatIssue).join('\n'), 1);
@@ -169,6 +172,11 @@ function printScenarioReports(pack: Pack): void {
   }
 }
 
+/** T67: matrix map, topic census, official-shape check, ref table for every exam (warnings only). */
+function printExamReports(pack: Pack): void {
+  for (const report of renderExamReports(pack)) console.log(`\n${report}`);
+}
+
 function validateCommand(args: string[]): void {
   if (args.length === 0 || args.some((a) => a.startsWith('-'))) {
     fail(`validate needs one or more pack.json paths\n\n${USAGE}`, 2);
@@ -182,6 +190,7 @@ function validateCommand(args: string[]): void {
         console.log(`\n${renderBranchMap(dialogue)}`);
       }
       printScenarioReports(result.pack);
+      printExamReports(result.pack);
     } else {
       failed = true;
       console.error(`✗ ${file}: invalid pack`);
