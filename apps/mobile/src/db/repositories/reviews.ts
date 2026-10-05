@@ -46,9 +46,11 @@ export const UNIFIED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'l
 /**
  * One shared scheduler, default FSRS-5 parameters (no fuzz — single user,
  * no need to de-synchronize siblings). If parameters ever become tunable
- * (settings), this is the only construction site.
+ * (settings), this is the only construction site. Exported (T68) so the
+ * exam deck (`exams` repo, ADR-0020 decision 5) schedules with the SAME
+ * parameters while keeping its own tables.
  */
-const scheduler = fsrs(generatorParameters());
+export const reviewScheduler = fsrs(generatorParameters());
 
 export { Rating, State };
 export type { Grade };
@@ -281,7 +283,7 @@ export function createReviewsRepo(db: SumrakDB) {
       if (!row) throw new Error(`gradeCard: card ${cardId} not found`);
       const now = opts.now ?? Date.now();
 
-      const { card: next, log } = scheduler.next(cardRowToFsrs(row), new Date(now), rating);
+      const { card: next, log } = reviewScheduler.next(cardRowToFsrs(row), new Date(now), rating);
 
       const updated: CardRow = {
         ...row,
