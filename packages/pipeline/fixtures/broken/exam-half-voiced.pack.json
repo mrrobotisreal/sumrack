@@ -1,0 +1,1207 @@
+{
+  "id": "a1-exam-fixture",
+  "version": 1,
+  "type": "exam",
+  "title": {
+    "ru": "ТРКИ: тестовый пакет",
+    "en": "TORFL: fixture pack"
+  },
+  "level": "A1",
+  "tags": [
+    "torfl",
+    "torfl:fixture"
+  ],
+  "stories": [
+    {
+      "id": "ls-01",
+      "title": {
+        "ru": "Маша и Саша",
+        "en": "Masha and Sasha"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "tfa1fx01l01-s01",
+          "ru": "Привет, Саша! Где ты сейчас?",
+          "en": "Hi, Sasha! Where are you now?",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Саша",
+              "lemma": "Саша",
+              "translation": "Sasha",
+              "pos": "noun",
+              "grammar": "m.sg. voc. (= nom.)",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Где",
+              "lemma": "где",
+              "translation": "where",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "ты",
+              "lemma": "ты",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "сейчас",
+              "lemma": "сейчас",
+              "translation": "now",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01l01-s02",
+          "ru": "Привет, Маша! Я в Екатеринбурге.",
+          "en": "Hi, Masha! I'm in Yekaterinburg.",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Маша",
+              "lemma": "Маша",
+              "translation": "Masha",
+              "pos": "noun",
+              "grammar": "f.sg. voc. (= nom.)",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Екатеринбурге",
+              "lemma": "Екатеринбург",
+              "translation": "Yekaterinburg",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01l01-s03",
+          "ru": "Ты там работаешь?",
+          "en": "Do you work there?",
+          "tokens": [
+            {
+              "text": "Ты",
+              "lemma": "ты",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "работаешь",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "2sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01l01-s04",
+          "ru": "Нет, я там учусь.",
+          "en": "No, I study there.",
+          "tokens": [
+            {
+              "text": "Нет",
+              "lemma": "нет",
+              "translation": "no",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "учусь",
+              "lemma": "учиться",
+              "translation": "study",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01l01-s05",
+          "ru": "Как интересно! Пока!",
+          "en": "How interesting! Bye!",
+          "tokens": [
+            {
+              "text": "Как",
+              "lemma": "как",
+              "translation": "how",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "интересно",
+              "lemma": "интересно",
+              "translation": "interesting",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Пока",
+              "lemma": "пока",
+              "translation": "bye",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "rd-01",
+      "title": {
+        "ru": "Анна и её работа",
+        "en": "Anna and her job"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "tfa1fx01r01-s01",
+          "ru": "Меня зовут Анна.",
+          "en": "My name is Anna.",
+          "tokens": [
+            {
+              "text": "Меня",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "acc.",
+              "level": "A1",
+              "note": "меня зовут = my name is"
+            },
+            {
+              "text": "зовут",
+              "lemma": "звать",
+              "translation": "(they) call",
+              "pos": "verb",
+              "grammar": "3pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "Анна",
+              "lemma": "Анна",
+              "translation": "Anna",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01r01-s02",
+          "ru": "Я живу в Москве.",
+          "en": "I live in Moscow.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живу",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Москве",
+              "lemma": "Москва",
+              "translation": "Moscow",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01r01-s03",
+          "ru": "Я работаю в банке.",
+          "en": "I work at a bank.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "работаю",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in, at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "банке",
+              "lemma": "банк",
+              "translation": "bank",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01r01-s04",
+          "ru": "Мой банк недалеко от дома.",
+          "en": "My bank is not far from home.",
+          "tokens": [
+            {
+              "text": "Мой",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "банк",
+              "lemma": "банк",
+              "translation": "bank",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "недалеко",
+              "lemma": "недалеко",
+              "translation": "not far",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "от",
+              "lemma": "от",
+              "translation": "from",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "дома",
+              "lemma": "дом",
+              "translation": "home, house",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01r01-s05",
+          "ru": "Утром я иду на работу пешком.",
+          "en": "In the morning I walk to work.",
+          "tokens": [
+            {
+              "text": "Утром",
+              "lemma": "утром",
+              "translation": "in the morning",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "иду",
+              "lemma": "идти",
+              "translation": "go (on foot)",
+              "pos": "verb",
+              "grammar": "1sg. pres.; unidirectional",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (direction)",
+              "level": "A1"
+            },
+            {
+              "text": "работу",
+              "lemma": "работа",
+              "translation": "work",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "пешком",
+              "lemma": "пешком",
+              "translation": "on foot",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa1fx01r01-s06",
+          "ru": "Вечером я читаю книги.",
+          "en": "In the evening I read books.",
+          "tokens": [
+            {
+              "text": "Вечером",
+              "lemma": "вечером",
+              "translation": "in the evening",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "читаю",
+              "lemma": "читать",
+              "translation": "read",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "книги",
+              "lemma": "книга",
+              "translation": "book",
+              "pos": "noun",
+              "grammar": "f.pl. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "rd01-wintrow-lecturer",
+          "voice": "elevenlabs:Mr. Wintrow",
+          "style": "lecturer",
+          "file": "audio/rd-01-rd01-wintrow-lecturer.opus",
+          "durationMs": 12000,
+          "timestamps": []
+        }
+      ]
+    }
+  ],
+  "exams": [
+    {
+      "id": "a1-drill-fx",
+      "format": "torfl",
+      "level": "A1",
+      "mode": "drill",
+      "title": {
+        "ru": "Падежи: предложный",
+        "en": "Cases: prepositional"
+      },
+      "blurb": "Where? в / на + prepositional — six fixture items.",
+      "subtests": [
+        {
+          "id": "lexgram",
+          "kind": "lexgram",
+          "title": {
+            "ru": "Лексика. Грамматика",
+            "en": "Vocabulary. Grammar"
+          },
+          "instructions": {
+            "ru": "Выберите один вариант ответа.",
+            "en": "Choose one answer."
+          },
+          "durationMin": 10,
+          "dictionary": false,
+          "navigation": "free",
+          "pointsPerItem": 1,
+          "maxPoints": 6,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задания 1–6.",
+                "en": "Items 1–6."
+              },
+              "items": [
+                {
+                  "id": "dr01",
+                  "topic": "case-prep",
+                  "explain": "на радио — «на» with places that are events/stations/open areas (на работе, на почте, на радио).",
+                  "kind": "choice",
+                  "stem": "Кирилл работает … радио.",
+                  "stemEn": "Kirill works at the radio station.",
+                  "options": [
+                    "в",
+                    "на"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dr02",
+                  "topic": "case-prep",
+                  "explain": "где? в + prepositional: больница → в больнице.",
+                  "kind": "choice",
+                  "stem": "Елена Сергеевна сейчас в …",
+                  "options": [
+                    "больница",
+                    "больнице",
+                    "больницу"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dr03",
+                  "topic": "case-prep",
+                  "explain": "о ком / о чём? о + prepositional: о Москве.",
+                  "kind": "choice",
+                  "stem": "Мы говорили о …",
+                  "options": [
+                    "Москва",
+                    "Москве",
+                    "Москву",
+                    "Москвой"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dr04",
+                  "topic": "case-prep",
+                  "explain": "на каком этаже? adjective in the prepositional too: на пятом этаже.",
+                  "kind": "choice",
+                  "stem": "Витя живёт на … этаже.",
+                  "options": [
+                    "пятый",
+                    "пятом",
+                    "пятого"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dr05",
+                  "topic": "case-prep",
+                  "explain": "в банке — где? в + prepositional.",
+                  "kind": "choice",
+                  "stem": "Оксана сидит в …",
+                  "options": [
+                    "банк",
+                    "банке"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dr06",
+                  "topic": "case-prep",
+                  "explain": "в парке — prepositional of «парк» (-е). The bare form or a dative earns half credit.",
+                  "kind": "typed",
+                  "prompt": "Лейтенант Громов отдыхает в (парк).",
+                  "accept": [
+                    "парке"
+                  ],
+                  "half": [
+                    "парк",
+                    "парку"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a1-mock-fx",
+      "format": "torfl",
+      "level": "A1",
+      "mode": "mock",
+      "title": {
+        "ru": "Вариант ФХ",
+        "en": "Fixture mock"
+      },
+      "subtests": [
+        {
+          "id": "writing",
+          "kind": "writing",
+          "title": {
+            "ru": "Письмо",
+            "en": "Writing"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 30 минут. Можно пользоваться словарём.",
+            "en": "30 minutes · dictionary allowed."
+          },
+          "durationMin": 30,
+          "dictionary": true,
+          "navigation": "free",
+          "maxPoints": 100,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Напишите письмо другу.",
+                "en": "Write a letter to a friend."
+              },
+              "items": [
+                {
+                  "id": "wr01",
+                  "topic": "write-letter",
+                  "kind": "writing",
+                  "task": {
+                    "ru": "Ваш друг хочет знать о вашей жизни. Напишите ему письмо.",
+                    "en": "Your friend wants to know about your life. Write them a letter."
+                  },
+                  "bullets": [
+                    {
+                      "id": "b1",
+                      "text": {
+                        "ru": "как вас зовут",
+                        "en": "your name"
+                      },
+                      "cues": [
+                        "зовут"
+                      ]
+                    },
+                    {
+                      "id": "b2",
+                      "text": {
+                        "ru": "где вы живёте",
+                        "en": "where you live"
+                      },
+                      "cues": [
+                        "живу",
+                        "живём"
+                      ]
+                    },
+                    {
+                      "id": "b3",
+                      "text": {
+                        "ru": "где вы работаете",
+                        "en": "where you work"
+                      },
+                      "cues": [
+                        "работа*"
+                      ]
+                    },
+                    {
+                      "id": "b4",
+                      "text": {
+                        "ru": "что вы любите делать",
+                        "en": "what you like doing"
+                      },
+                      "cues": [
+                        "люблю",
+                        "нравится"
+                      ]
+                    }
+                  ],
+                  "minSentences": 10,
+                  "minQuestions": 2,
+                  "maxQuestions": 5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lexgram",
+          "kind": "lexgram",
+          "title": {
+            "ru": "Лексика. Грамматика",
+            "en": "Vocabulary. Grammar"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 40 минут. Пользоваться словарём нельзя.",
+            "en": "40 minutes · no dictionary."
+          },
+          "durationMin": 40,
+          "dictionary": false,
+          "navigation": "free",
+          "pointsPerItem": 1,
+          "maxPoints": 5,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задания 1–3. Выберите один вариант ответа.",
+                "en": "Items 1–3. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "lg01",
+                  "topic": "case-prep",
+                  "kind": "choice",
+                  "stem": "Нина любит играть … компьютере.",
+                  "options": [
+                    "в",
+                    "на"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "lg02",
+                  "topic": "lex-verbs",
+                  "kind": "choice",
+                  "stem": "Я … по-русски.",
+                  "options": [
+                    "говорю",
+                    "рассказываю",
+                    "спрашиваю"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg03",
+                  "topic": "case-gen",
+                  "kind": "choice",
+                  "stem": "У меня нет …",
+                  "options": [
+                    "брат",
+                    "брата",
+                    "брату",
+                    "братом"
+                  ],
+                  "answer": 1
+                }
+              ]
+            },
+            {
+              "id": "p5",
+              "instructions": {
+                "ru": "Задания 4–5. Выберите один вариант ответа.",
+                "en": "Items 4–5. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "lg04",
+                  "topic": "verb-motion",
+                  "kind": "choice",
+                  "stem": "Вчера мы … в театр.",
+                  "options": [
+                    "шли",
+                    "ходили",
+                    "идём"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "lg05",
+                  "topic": "conj",
+                  "kind": "choice",
+                  "stem": "Я не пришёл, … был болен.",
+                  "options": [
+                    "поэтому",
+                    "потому что"
+                  ],
+                  "answer": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "reading",
+          "kind": "reading",
+          "title": {
+            "ru": "Чтение",
+            "en": "Reading"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 40 минут. Можно пользоваться словарём.",
+            "en": "40 minutes · dictionary allowed."
+          },
+          "durationMin": 40,
+          "dictionary": true,
+          "navigation": "free",
+          "pointsPerItem": 4,
+          "maxPoints": 12,
+          "parts": [
+            {
+              "id": "p4",
+              "instructions": {
+                "ru": "Задания 1–3. Прочитайте текст. Выберите один вариант ответа.",
+                "en": "Items 1–3. Read the text. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "rd01",
+                  "topic": "read-detail",
+                  "kind": "choice",
+                  "stem": "Анна живёт в …",
+                  "options": [
+                    "Москве",
+                    "Казани",
+                    "Сочи"
+                  ],
+                  "answer": 0,
+                  "passage": {
+                    "storyId": "rd-01",
+                    "sentenceIds": [
+                      "tfa1fx01r01-s01",
+                      "tfa1fx01r01-s02"
+                    ]
+                  }
+                },
+                {
+                  "id": "rd02",
+                  "topic": "read-detail",
+                  "kind": "choice",
+                  "stem": "Анна работает в …",
+                  "options": [
+                    "школе",
+                    "банке",
+                    "магазине"
+                  ],
+                  "answer": 1,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                },
+                {
+                  "id": "rd03",
+                  "topic": "read-detail",
+                  "kind": "choice",
+                  "stem": "Утром Анна идёт на работу …",
+                  "options": [
+                    "пешком",
+                    "на метро",
+                    "на автобусе"
+                  ],
+                  "answer": 0,
+                  "passage": {
+                    "storyId": "rd-01",
+                    "sentenceIds": [
+                      "tfa1fx01r01-s05"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "listening",
+          "kind": "listening",
+          "title": {
+            "ru": "Аудирование",
+            "en": "Listening"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 30 минут. Каждый текст звучит два раза.",
+            "en": "30 minutes · every text plays twice."
+          },
+          "durationMin": 30,
+          "dictionary": false,
+          "navigation": "linear",
+          "pointsPerItem": 5,
+          "maxPoints": 15,
+          "audioPlays": 2,
+          "parts": [
+            {
+              "id": "p3",
+              "instructions": {
+                "ru": "Задания 1–3. Прослушайте диалог Маши и Саши. Выберите один вариант ответа.",
+                "en": "Items 1–3. Listen to Masha and Sasha. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "ls01",
+                  "topic": "listen-detail",
+                  "kind": "choice",
+                  "stem": "Саша сейчас в …",
+                  "options": [
+                    "Москве",
+                    "Екатеринбурге",
+                    "Санкт-Петербурге"
+                  ],
+                  "answer": 1,
+                  "audio": {
+                    "storyId": "ls-01"
+                  }
+                },
+                {
+                  "id": "ls02",
+                  "topic": "listen-detail",
+                  "kind": "choice",
+                  "stem": "Саша в Екатеринбурге …",
+                  "options": [
+                    "работает",
+                    "учится",
+                    "отдыхает"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "ls03",
+                  "topic": "listen-who",
+                  "kind": "choice",
+                  "stem": "Маша и Саша — …",
+                  "options": [
+                    "друзья",
+                    "отец и дочь",
+                    "врач и пациент"
+                  ],
+                  "answer": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "speaking",
+          "kind": "speaking",
+          "title": {
+            "ru": "Говорение",
+            "en": "Speaking"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 20 минут.",
+            "en": "20 minutes."
+          },
+          "durationMin": 20,
+          "dictionary": false,
+          "navigation": "linear",
+          "maxPoints": 100,
+          "parts": [
+            {
+              "id": "t1",
+              "instructions": {
+                "ru": "Задание 1. Ответьте на вопросы.",
+                "en": "Task 1. Answer the questions."
+              },
+              "items": [
+                {
+                  "id": "sp01",
+                  "topic": "speak-reply",
+                  "kind": "speaking-reply",
+                  "prompt": {
+                    "storyId": "ls-01",
+                    "sentenceIds": [
+                      "tfa1fx01l01-s01"
+                    ]
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "forms",
+                        "id": "city",
+                        "required": true,
+                        "options": [
+                          {
+                            "key": "city",
+                            "lemma": "город",
+                            "forms": [
+                              "москв*",
+                              "казан*",
+                              "екатеринбург*"
+                            ]
+                          }
+                        ],
+                        "acceptsNumber": false
+                      }
+                    ],
+                    "accept": [
+                      "Я сейчас в Москве."
+                    ]
+                  },
+                  "minTokens": 4
+                }
+              ],
+              "timeSec": 300
+            },
+            {
+              "id": "t2",
+              "instructions": {
+                "ru": "Задание 2. Начните диалог.",
+                "en": "Task 2. Start the dialogue."
+              },
+              "items": [
+                {
+                  "id": "sp02",
+                  "topic": "speak-situation",
+                  "kind": "speaking-situation",
+                  "prompt": {
+                    "storyId": "ls-01",
+                    "sentenceIds": [
+                      "tfa1fx01l01-s03"
+                    ]
+                  },
+                  "situation": {
+                    "ru": "Вы хотите узнать, где работает ваш друг. Спросите его.",
+                    "en": "You want to know where your friend works. Ask them."
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "free",
+                        "id": "question",
+                        "required": true,
+                        "minTokens": 2,
+                        "cues": [
+                          "где",
+                          "работаешь"
+                        ]
+                      }
+                    ],
+                    "accept": [
+                      "Где ты работаешь?"
+                    ]
+                  },
+                  "minTokens": 4
+                }
+              ],
+              "timeSec": 300
+            },
+            {
+              "id": "t3",
+              "instructions": {
+                "ru": "Задание 3. Выберите тему и расскажите.",
+                "en": "Task 3. Choose a topic and talk about it."
+              },
+              "items": [
+                {
+                  "id": "sp03",
+                  "topic": "speak-monologue",
+                  "kind": "speaking-monologue",
+                  "group": "m1",
+                  "topicTitle": {
+                    "ru": "О себе",
+                    "en": "About myself"
+                  },
+                  "questions": [
+                    {
+                      "ru": "Как вас зовут?",
+                      "cues": [
+                        "зовут"
+                      ]
+                    },
+                    {
+                      "ru": "Откуда вы?",
+                      "cues": [
+                        "из"
+                      ]
+                    },
+                    {
+                      "ru": "Где вы живёте?",
+                      "cues": [
+                        "живу"
+                      ]
+                    },
+                    {
+                      "ru": "Что вы любите делать?",
+                      "cues": [
+                        "люблю",
+                        "нравится"
+                      ]
+                    }
+                  ],
+                  "minSentences": 10,
+                  "maxSentences": 12,
+                  "prepSec": 480,
+                  "answerSec": 120
+                },
+                {
+                  "id": "sp04",
+                  "topic": "speak-monologue",
+                  "kind": "speaking-monologue",
+                  "group": "m1",
+                  "topicTitle": {
+                    "ru": "Мой дом",
+                    "en": "My home"
+                  },
+                  "questions": [
+                    {
+                      "ru": "Где ваш дом?",
+                      "cues": [
+                        "дом"
+                      ]
+                    },
+                    {
+                      "ru": "Какая у вас квартира?",
+                      "cues": [
+                        "квартир*"
+                      ]
+                    },
+                    {
+                      "ru": "Сколько в ней комнат?",
+                      "cues": [
+                        "комнат*"
+                      ]
+                    },
+                    {
+                      "ru": "Что вам нравится в доме?",
+                      "cues": [
+                        "нравится"
+                      ]
+                    }
+                  ],
+                  "minSentences": 10,
+                  "maxSentences": 12,
+                  "prepSec": 480,
+                  "answerSec": 120
+                }
+              ],
+              "timeSec": 600
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "category": "torfl"
+}
