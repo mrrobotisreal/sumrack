@@ -7,7 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
-import { useExamAttempts, useExams } from '@/db/hooks';
+import { useActiveExamAttempt, useExamAttempts, useExams } from '@/db/hooks';
 import type { ExamAttempt } from '@/db/repositories/exams';
 import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { cn } from '@/lib/cn';
@@ -65,6 +65,7 @@ export function TorflHubScreen({
   const mocks = useExamListItems('mock');
   const texts = useExamTexts();
   const attempts = useExamAttempts({ limit: 20 });
+  const activeAttempt = useActiveExamAttempt();
   const { date, today, setDate } = useExamDate();
   const [dateOpen, setDateOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ExamSubtestKind>('lexgram');
@@ -219,6 +220,30 @@ export function TorflHubScreen({
 
       {/* ---- mocks ---- */}
       <Section title="Пробные экзамены">
+        {activeAttempt.data?.status === 'active' && activeAttempt.data.mode === 'mock' && (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/exam/run/[attemptId]',
+                params: { attemptId: activeAttempt.data!.id },
+              })
+            }
+            accessibilityRole="button"
+            testID="torfl-resume-banner"
+            className="mb-2 flex-row items-center gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 active:opacity-80"
+          >
+            <Ionicons name="play-circle" size={22} color={tokens.accent} />
+            <View className="flex-1 gap-0.5">
+              <Text className="font-ui-medium">Продолжить пробный экзамен</Text>
+              <Text variant="caption">
+                {titleOf.get(`${activeAttempt.data.packId}/${activeAttempt.data.examId}`) ??
+                  activeAttempt.data.examId}{' '}
+                · таймер идёт по часам
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+          </Pressable>
+        )}
         {mocks.items.length === 0 ? (
           <EmptyLine text="Пробных экзаменов пока нет — они придут с синхронизацией." />
         ) : (
@@ -381,7 +406,28 @@ export function TorflHubScreen({
           <EmptyLine text="Попыток пока нет. Здесь будут пробные экзамены и тренировки." />
         ) : (
           (attempts.data ?? []).map((a) => (
-            <AttemptRow key={a.id} attempt={a} title={titleOf.get(`${a.packId}/${a.examId}`)} />
+            <AttemptRow
+              key={a.id}
+              attempt={a}
+              title={titleOf.get(`${a.packId}/${a.examId}`)}
+              onOpen={
+                a.mode !== 'mock'
+                  ? undefined
+                  : a.status === 'active'
+                    ? () =>
+                        router.push({
+                          pathname: '/exam/run/[attemptId]',
+                          params: { attemptId: a.id },
+                        })
+                    : a.status === 'finished'
+                      ? () =>
+                          router.push({
+                            pathname: '/exam/results/[attemptId]',
+                            params: { attemptId: a.id },
+                          })
+                      : undefined
+              }
+            />
           ))
         )}
       </Section>
@@ -441,23 +487,53 @@ const STATUS_LABELS: Record<ExamAttempt['status'], string> = {
   abandoned: 'прерван',
 };
 
-function AttemptRow({ attempt, title }: { attempt: ExamAttempt; title: string | undefined }) {
+function AttemptRow({
+  attempt,
+  title,
+  onOpen,
+}: {
+  attempt: ExamAttempt;
+  title: string | undefined;
+  onOpen?: () => void;
+}) {
   const pct = overallPct(attempt.results);
   const when = new Date(attempt.startedAt).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',
   });
+  const verdictText =
+    attempt.verdict === 'pass'
+      ? 'сдал бы'
+      : attempt.verdict === 'pass-borderline'
+        ? 'сдал бы (на грани)'
+        : attempt.verdict === 'fail'
+          ? 'не сдал'
+          : null;
+  const scope =
+    attempt.mode === 'mock'
+      ? attempt.scope === 'full'
+        ? ' · весь экзамен'
+        : ' · один субтест'
+      : '';
+  const Row = onOpen ? Pressable : View;
   return (
-    <View className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+    <Row
+      {...(onOpen ? { onPress: onOpen, accessibilityRole: 'button' as const } : {})}
+      testID={`history-${attempt.id}`}
+      className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+    >
       <View className="flex-1 gap-0.5">
         <Text className="font-ui-medium" numberOfLines={1}>
           {title ?? attempt.examId}
         </Text>
         <Text variant="caption">
-          {when} · {MODE_LABELS[attempt.mode]} · {STATUS_LABELS[attempt.status]}
+          {when} · {MODE_LABELS[attempt.mode]}
+          {scope} · {STATUS_LABELS[attempt.status]}
+          {verdictText ? ` · ${verdictText}` : ''}
         </Text>
       </View>
       <Text variant="caption">{pct === null ? '—' : `${pct.toLocaleString('ru-RU')} %`}</Text>
-    </View>
+      {onOpen ? <Ionicons name="chevron-forward" size={14} color="#888" /> : null}
+    </Row>
   );
 }
