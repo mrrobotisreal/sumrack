@@ -22,6 +22,8 @@ export function ExamInstructionScreen({
   showEnglish,
   durationOverrideSec,
   blocked,
+  blockedAction,
+  extraFacts,
   onBegin,
   onSkip,
   onQuit,
@@ -31,8 +33,12 @@ export function ExamInstructionScreen({
   showEnglish: boolean;
   /** DEV only: the `?devDurationSec=` override, shown so the tester knows. */
   durationOverrideSec?: number;
-  /** A reason the subtest cannot start (listening audio not downloaded). */
+  /** A reason the subtest cannot start (listening audio not downloaded / no ASR model / mic denied). */
   blocked?: string | null;
+  /** T73: an action under the blocked reason (Settings link). */
+  blockedAction?: { label: string; onPress: () => void };
+  /** T73: extra fact lines (the speaking tasks). */
+  extraFacts?: string[];
   onBegin: () => void;
   onSkip: () => void;
   onQuit: () => void;
@@ -93,15 +99,37 @@ export function ExamInstructionScreen({
               text={`Каждый текст звучит ${subtest.audioPlays ?? 2} раза. Назад нельзя.`}
             />
           )}
+          {subtest.kind === 'speaking' && (
+            <Fact icon="mic-outline" text="Каждый ответ записывается; подсказок и повторов нет." />
+          )}
+          {(extraFacts ?? []).map((f) => (
+            <Fact key={f} icon="chevron-forward-outline" text={f} />
+          ))}
           <Fact icon="eye-off-outline" text="Проверки ответов не будет — результат после сдачи." />
         </View>
         {blocked ? (
           <View
-            className="flex-row items-start gap-3 rounded-xl border border-danger/50 bg-danger/10 px-4 py-3"
+            className="gap-2 rounded-xl border border-danger/50 bg-danger/10 px-4 py-3"
             testID="instruction-blocked"
           >
-            <Ionicons name="cloud-offline-outline" size={20} color={tokens.danger} />
-            <Text className="flex-1">{blocked}</Text>
+            <View className="flex-row items-start gap-3">
+              <Ionicons
+                name={subtest.kind === 'speaking' ? 'mic-off-outline' : 'cloud-offline-outline'}
+                size={20}
+                color={tokens.danger}
+              />
+              <Text className="flex-1">{blocked}</Text>
+            </View>
+            {blockedAction ? (
+              <Pressable
+                onPress={blockedAction.onPress}
+                accessibilityRole="button"
+                testID="instruction-blocked-action"
+                className="self-start rounded-full border border-border bg-surface px-4 py-1.5 active:bg-surface-2"
+              >
+                <Text className="font-ui-medium text-sm text-accent">{blockedAction.label}</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>

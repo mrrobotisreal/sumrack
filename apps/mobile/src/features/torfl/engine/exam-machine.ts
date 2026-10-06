@@ -2,11 +2,15 @@ import type { Exam, ExamSubtest, ExamSubtestKind } from '@sumrak/schema';
 
 import {
   ExamAttemptStateSchema,
+  ExamSpeakingStateSchema,
   isAnswered,
   type ExamAnswer,
   type ExamAttemptState,
+  type ExamSpeakingState,
+  type SpeakingAnswer,
 } from '../model';
 import { buildLayout, flatIndexOf } from './layout';
+import { speakingTaskOf, type SpeakingTask } from '../grading/speaking';
 
 /**
  * The mock-exam engine (T71, TORFL_EXAM_PREP §8.1) — a PURE reducer in the
@@ -29,9 +33,18 @@ import { buildLayout, flatIndexOf } from './layout';
  * - Writing (T72) runs like an objective subtest: instructions → BEGIN →
  *   `running` with the letter editor; every edit is an `ANSWER` (persisted at
  *   once), `SUBMIT_SUBTEST` / the deadline emit `SCORE_SUBTEST` (the executor
- *   grades offline + enqueues the AI grade). Speaking still opens the
- *   `placeholder` phase («скоро», T73) whose `SUBMIT_SUBTEST` records it
- *   skipped (excluded, never 0 %).
+ *   grades offline + enqueues the AI grade).
+ * - Speaking (T73, TORFL §8.4) is linear over the three tasks with its own
+ *   cursor `state.speaking`: task 1 / 2 items go `prompt` (the examiner line
+ *   plays once; `AUDIO_ENDED`) → `recording` (`START_REC`; the recorder hook
+ *   stops on the endpointer / cap / «Закончить», transcribes and sends
+ *   `REC_DONE {answer}`) → the next item; task 3 goes `choose` (two topics)
+ *   → `CHOOSE_TOPIC` → `prep` (8:00 wall-clock) → `PREP_DONE` / the deadline
+ *   → `answer` (a fixed 2:00 window; the deadline emits `STOP_REC` and waits
+ *   in `processing` for `REC_DONE`). Every part has a time budget
+ *   (`part.timeSec`): when it runs out the current recording is stopped and
+ *   the part's remaining items are skipped. `SKIP_ITEM` skips the current
+ *   item without a response. The 20-min subtest deadline governs overall.
  */
 
 /** Gap between a listening text's two plays (§8.2). */
@@ -77,6 +90,8 @@ export interface ExamRunState {
   playCounts: Record<string, number>;
   flagged: string[];
   audio: RunAudio;
+  /** The speaking subtest's cursor while it runs (T73); null elsewhere. */
+  speaking: ExamSpeakingState | null;
   /** In-memory only (the responses table is the truth; hydrated on load, never persisted). */
   answers: Record<string, ExamAnswer>;
 }
@@ -110,8 +125,15 @@ export type ExamEvent =
   | { type: 'APP_BACKGROUND'; now: number }
   | { type: 'BREAK_DONE' }
   | { type: 'ABANDON' }
-  /** Reserved for T73 (speaking recorder). */
-  | { type: 'REC_DONE' };
+  // --- speaking (T73) ---
+  /** Task 3: the candidate picked one of the two topics. */
+  | { type: 'CHOOSE_TOPIC'; itemId: string; now: number }
+  /** Task 3: «Готов» during prep (the deadline does the same through TICK). */
+  | { type: 'PREP_DONE'; now: number }
+  /** «Пропустить»: the current item gets no response. */
+  | { type: 'SKIP_ITEM'; now: number }
+  /** The recorder hook finished (stopped → transcribed → persisted): store the answer and move on. */
+  | { type: 'REC_DONE'; itemId: string; answer: SpeakingAnswer; now: number };
 
 export type ExamEffect =
   | { type: 'SUBTEST_STARTED'; subtestId: string; kind: ExamSubtestKind }
@@ -131,9 +153,10 @@ export type ExamEffect =
     }
   | { type: 'FINISH' }
   | { type: 'ABANDON' }
-  // Declared now, used by T72 / T73:
-  | { type: 'START_REC' }
+  // Speaking (T73): the recorder hook drives from `state.speaking`; these are the engine's record of intent.
+  | { type: 'START_REC'; itemId: string; task: SpeakingTask; capMs: number; fixedWindow: boolean }
   | { type: 'STOP_REC' }
+  // Declared in T71, unused (the executor enqueues at SCORE_SUBTEST):
   | { type: 'ENQUEUE_GRADING'; subtestId: string };
 
 export interface Transition {
@@ -143,10 +166,14 @@ export interface Transition {
 
 const NOOP = (state: ExamRunState): Transition => ({ state, effects: [] });
 
-/** Kinds without a runner yet: only speaking (T73). Writing became real in T72. */
-export function isPlaceholderKind(kind: ExamSubtestKind): boolean {
-  return kind === 'speaking';
+/** Kinds without a runner: none since T73 (writing became real in T72, speaking in T73). Kept for the callers' shape. */
+export function isPlaceholderKind(_kind: ExamSubtestKind): boolean {
+  void _kind;
+  return false;
 }
+
+/** Task 1 / task 2 answer caps (§8.4): 30 s replies, 40 s situations. The endpointer stops earlier on silence. */
+export const SPEAKING_CAP_MS: Record<1 | 2, number> = { 1: 30_000, 2: 40_000 };
 
 // --- construction / persistence ------------------------------------------------------
 
@@ -177,6 +204,7 @@ export function initialRunState(
     playCounts: {},
     flagged: [],
     audio: { key: null, phase: 'idle' },
+    speaking: null,
     answers,
   };
 }
@@ -239,6 +267,7 @@ export function hydrate(
     (p) => p === rawAudio?.phase,
   );
   const phase = PHASES.find((p) => p === persisted.phase) ?? 'instructions';
+  const speakingParsed = ExamSpeakingStateSchema.nullable().safeParse(persisted.speaking ?? null);
   return {
     v: 1,
     subtests,
@@ -251,6 +280,7 @@ export function hydrate(
       phase: audioPhase ?? 'idle',
       gapUntil: typeof rawAudio?.gapUntil === 'number' ? rawAudio.gapUntil : undefined,
     },
+    speaking: speakingParsed.success ? speakingParsed.data : null,
     answers,
   };
 }
@@ -341,6 +371,140 @@ function enterGroup(
   return { ...state, audio: { key, phase: 'done' } };
 }
 
+// --- speaking (T73) ----------------------------------------------------------------------------
+
+/** Seconds a speaking window really gets: the authored value, or the dev override when shorter. */
+function windowSec(ctx: ExamCtx, authored: number | undefined, fallback: number): number {
+  const sec = authored ?? fallback;
+  return ctx.durationOverrideSec !== undefined ? Math.min(sec, ctx.durationOverrideSec) : sec;
+}
+
+/** The items of part `partIdx` of the speaking subtest, in order. */
+function partItems(subtest: ExamSubtest, partIdx: number) {
+  return subtest.parts[partIdx]?.items ?? [];
+}
+
+/**
+ * Enter part `partIdx` at its first item (or the topic choice for a
+ * monologue part). Returns the new speaking cursor + effects, or null when
+ * there is no such part (the subtest is over).
+ */
+function enterSpeakingPart(
+  ctx: ExamCtx,
+  subtest: ExamSubtest,
+  partIdx: number,
+  now: number,
+  effects: ExamEffect[],
+): ExamSpeakingState | null {
+  const part = subtest.parts[partIdx];
+  if (!part) return null;
+  const items = partItems(subtest, partIdx);
+  const first = items[0];
+  if (!first) return enterSpeakingPart(ctx, subtest, partIdx + 1, now, effects);
+  const task = speakingTaskOf(first) ?? 1;
+  const partDeadlineAt = part.timeSec
+    ? now + windowSec(ctx, part.timeSec, part.timeSec) * 1000
+    : undefined;
+  if (task === 3) {
+    return { task, phase: 'choose', itemId: null, partIdx, partDeadlineAt };
+  }
+  return { task, phase: 'prompt', itemId: first.id, partIdx, partDeadlineAt };
+}
+
+/** Move to the next item of the current part, or to the next part; null = the subtest is done. */
+function advanceSpeaking(
+  ctx: ExamCtx,
+  subtest: ExamSubtest,
+  sp: ExamSpeakingState,
+  now: number,
+  effects: ExamEffect[],
+): ExamSpeakingState | null {
+  const partIdx = sp.partIdx ?? 0;
+  if (sp.task === 3 || sp.partExpired) {
+    return enterSpeakingPart(ctx, subtest, partIdx + 1, now, effects);
+  }
+  const items = partItems(subtest, partIdx);
+  const idx = items.findIndex((i) => i.id === sp.itemId);
+  const next = items[idx + 1];
+  if (!next) return enterSpeakingPart(ctx, subtest, partIdx + 1, now, effects);
+  return { ...sp, phase: 'prompt', itemId: next.id, phaseDeadlineAt: undefined };
+}
+
+function withSpeaking(
+  state: ExamRunState,
+  subtest: ExamSubtest,
+  sp: ExamSpeakingState | null,
+): ExamRunState {
+  if (!sp) return { ...state, speaking: null };
+  const layout = buildLayout(subtest);
+  const flat = sp.itemId ? (layout.indexOf.get(sp.itemId) ?? 0) : 0;
+  return { ...withCursor(state, state.current, subtest, flat), speaking: sp };
+}
+
+/** Apply a cursor move: a null cursor submits the subtest (every part done). */
+function speakingStep(
+  ctx: ExamCtx,
+  state: ExamRunState,
+  subtest: ExamSubtest,
+  sp: ExamSpeakingState | null,
+  now: number,
+  effects: ExamEffect[],
+): Transition {
+  if (!sp) return submit(ctx, { ...state, speaking: null }, now, false, effects);
+  return {
+    state: withSpeaking(state, subtest, sp),
+    effects: [...effects, { type: 'PERSIST_STATE', urgent: true }],
+  };
+}
+
+function startRec(sp: ExamSpeakingState): ExamEffect {
+  if (sp.task === 3) {
+    return { type: 'START_REC', itemId: sp.itemId ?? '', task: 3, capMs: 0, fixedWindow: true };
+  }
+  return {
+    type: 'START_REC',
+    itemId: sp.itemId ?? '',
+    task: sp.task as 1 | 2,
+    capMs: SPEAKING_CAP_MS[sp.task as 1 | 2],
+    fixedWindow: false,
+  };
+}
+
+function speakingTick(
+  ctx: ExamCtx,
+  state: ExamRunState,
+  subtest: ExamSubtest,
+  now: number,
+): Transition {
+  const sp = state.speaking;
+  if (!sp) return NOOP(state);
+  const recording = sp.phase === 'recording' || sp.phase === 'answer';
+  // The part's time budget ran out.
+  if (sp.partDeadlineAt !== undefined && now >= sp.partDeadlineAt && !sp.partExpired) {
+    if (recording) {
+      return {
+        state: { ...state, speaking: { ...sp, phase: 'processing', partExpired: true } },
+        effects: [{ type: 'STOP_REC' }, { type: 'PERSIST_STATE', urgent: true }],
+      };
+    }
+    if (sp.phase === 'processing') return NOOP(state);
+    const effects: ExamEffect[] = [];
+    const next = enterSpeakingPart(ctx, subtest, (sp.partIdx ?? 0) + 1, now, effects);
+    return speakingStep(ctx, state, subtest, next, now, effects);
+  }
+  // Task 3 windows.
+  if (sp.task === 3 && sp.phaseDeadlineAt !== undefined && now >= sp.phaseDeadlineAt) {
+    if (sp.phase === 'prep') return reduce(ctx, state, { type: 'PREP_DONE', now });
+    if (sp.phase === 'answer') {
+      return {
+        state: { ...state, speaking: { ...sp, phase: 'processing', phaseDeadlineAt: undefined } },
+        effects: [{ type: 'STOP_REC' }, { type: 'PERSIST_STATE', urgent: true }],
+      };
+    }
+  }
+  return NOOP(state);
+}
+
 function openSubtest(ctx: ExamCtx, state: ExamRunState, index: number): Transition {
   if (index >= state.subtests.length) return finishRun(state, []);
   const cur = state.subtests[index]!;
@@ -349,22 +513,32 @@ function openSubtest(ctx: ExamCtx, state: ExamRunState, index: number): Transiti
     current: index,
     phase: isPlaceholderKind(cur.kind) ? 'placeholder' : 'instructions',
     audio: { key: null, phase: 'idle' },
+    speaking: null,
   };
   return { state: next, effects: [{ type: 'PERSIST_STATE', urgent: true }] };
 }
 
 function finishRun(state: ExamRunState, effects: ExamEffect[]): Transition {
   return {
-    state: { ...state, phase: 'done', audio: { key: null, phase: 'idle' } },
+    state: { ...state, phase: 'done', audio: { key: null, phase: 'idle' }, speaking: null },
     effects: [...effects, { type: 'FINISH' }, { type: 'PERSIST_STATE', urgent: true }],
   };
 }
 
-function submit(ctx: ExamCtx, state: ExamRunState, now: number, auto: boolean): Transition {
+function submit(
+  ctx: ExamCtx,
+  state: ExamRunState,
+  now: number,
+  auto: boolean,
+  lead: ExamEffect[] = [],
+): Transition {
   const cur = state.subtests[state.current];
   const subtest = currentSubtest(ctx, state);
   if (!cur || !subtest) return NOOP(state);
-  const effects: ExamEffect[] = [{ type: 'STOP_AUDIO' }];
+  const effects: ExamEffect[] = [...lead, { type: 'STOP_AUDIO' }];
+  // A recording in progress when the subtest closes is stopped; the hook persists it before scoring.
+  const sp = state.speaking;
+  if (sp && (sp.phase === 'recording' || sp.phase === 'answer')) effects.push({ type: 'STOP_REC' });
   // A subtest submitted before BEGIN (a «скоро» placeholder, or a listening subtest whose audio
   // is not downloaded and the candidate chose to skip it) is recorded SKIPPED, never scored.
   const placeholder = cur.status === 'intro';
@@ -377,7 +551,7 @@ function submit(ctx: ExamCtx, state: ExamRunState, now: number, auto: boolean): 
     skipped: placeholder ? true : undefined,
     timeUsedSec,
   });
-  next = { ...next, audio: { key: null, phase: 'idle' } };
+  next = { ...next, audio: { key: null, phase: 'idle' }, speaking: null };
   if (!placeholder) {
     effects.push({
       type: 'SCORE_SUBTEST',
@@ -460,8 +634,84 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
         phase: 'running',
       };
       next = enterGroup(ctx, next, event.now, effects);
+      if (subtest.kind === 'speaking') {
+        const sp = enterSpeakingPart(ctx, subtest, 0, event.now, effects);
+        if (!sp) return submit(ctx, next, event.now, false, effects);
+        next = withSpeaking(next, subtest, sp);
+      }
       effects.push({ type: 'PERSIST_STATE', urgent: true });
       return { state: next, effects };
+    }
+
+    case 'CHOOSE_TOPIC': {
+      const sp = state.speaking;
+      if (state.phase !== 'running' || !subtest || !sp || sp.phase !== 'choose') return NOOP(state);
+      const item = partItems(subtest, sp.partIdx ?? 0).find((i) => i.id === event.itemId);
+      if (!item || item.kind !== 'speaking-monologue') return NOOP(state);
+      const next: ExamSpeakingState = {
+        ...sp,
+        phase: 'prep',
+        itemId: item.id,
+        chosenId: item.id,
+        phaseDeadlineAt: event.now + windowSec(ctx, item.prepSec, 480) * 1000,
+      };
+      return {
+        state: withSpeaking(state, subtest, next),
+        effects: [{ type: 'PERSIST_STATE', urgent: true }],
+      };
+    }
+
+    case 'PREP_DONE': {
+      const sp = state.speaking;
+      if (state.phase !== 'running' || !subtest || !sp || sp.phase !== 'prep') return NOOP(state);
+      const item = partItems(subtest, sp.partIdx ?? 0).find((i) => i.id === sp.itemId);
+      if (!item || item.kind !== 'speaking-monologue') return NOOP(state);
+      const next: ExamSpeakingState = {
+        ...sp,
+        phase: 'answer',
+        phaseDeadlineAt: event.now + windowSec(ctx, item.answerSec, 120) * 1000,
+      };
+      return {
+        state: withSpeaking(state, subtest, next),
+        effects: [startRec(next), { type: 'PERSIST_STATE', urgent: true }],
+      };
+    }
+
+    case 'SKIP_ITEM': {
+      const sp = state.speaking;
+      if (state.phase !== 'running' || !subtest || !sp) return NOOP(state);
+      if (sp.phase === 'processing') return NOOP(state);
+      const effects: ExamEffect[] = [];
+      if (sp.phase === 'recording' || sp.phase === 'answer') effects.push({ type: 'STOP_REC' });
+      // Skipping during the topic choice / prep skips the whole monologue.
+      const skipPart = sp.task === 3;
+      const next = skipPart
+        ? enterSpeakingPart(ctx, subtest, (sp.partIdx ?? 0) + 1, event.now, effects)
+        : advanceSpeaking(ctx, subtest, sp, event.now, effects);
+      return speakingStep(ctx, state, subtest, next, event.now, effects);
+    }
+
+    case 'REC_DONE': {
+      const sp = state.speaking;
+      if (state.phase !== 'running' || !subtest || !sp) return NOOP(state);
+      if (sp.itemId !== event.itemId) return NOOP(state);
+      if (sp.phase !== 'recording' && sp.phase !== 'answer' && sp.phase !== 'processing') {
+        return NOOP(state);
+      }
+      const effects: ExamEffect[] = [
+        {
+          type: 'PERSIST_RESPONSE',
+          subtestId: subtest.id,
+          itemId: event.itemId,
+          answer: event.answer,
+        },
+      ];
+      const withAnswer: ExamRunState = {
+        ...state,
+        answers: { ...state.answers, [event.itemId]: event.answer },
+      };
+      const next = advanceSpeaking(ctx, subtest, sp, event.now, effects);
+      return speakingStep(ctx, withAnswer, subtest, next, event.now, effects);
     }
 
     case 'ANSWER': {
@@ -557,7 +807,18 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
     }
 
     case 'AUDIO_ENDED': {
-      if (state.phase !== 'running' || state.audio.phase !== 'playing') return NOOP(state);
+      if (state.phase !== 'running') return NOOP(state);
+      const sp = state.speaking;
+      if (sp && subtest?.kind === 'speaking') {
+        // The examiner's line (task 1) / the situation (task 2) finished → the mic opens.
+        if (sp.phase !== 'prompt' || !sp.itemId) return NOOP(state);
+        const next: ExamSpeakingState = { ...sp, phase: 'recording' };
+        return {
+          state: { ...state, speaking: next },
+          effects: [startRec(next), { type: 'PERSIST_STATE', urgent: false }],
+        };
+      }
+      if (state.audio.phase !== 'playing') return NOOP(state);
       return {
         state: interruptAudio(ctx, state, event.now),
         effects: [{ type: 'PERSIST_STATE', urgent: false }],
@@ -569,6 +830,7 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
       if (cur.deadlineAt !== undefined && event.now >= cur.deadlineAt) {
         return submit(ctx, state, event.now, true);
       }
+      if (subtest.kind === 'speaking') return speakingTick(ctx, state, subtest, event.now);
       if (
         subtest.kind === 'listening' &&
         state.audio.phase === 'gap' &&
@@ -598,6 +860,17 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
       if (cur.deadlineAt !== undefined && event.now >= cur.deadlineAt) {
         return submit(ctx, state, event.now, true);
       }
+      if (subtest.kind === 'speaking' && state.speaking) {
+        const sp = state.speaking;
+        // A recording cut by a kill / background is lost (the exam does not rewind): the item is
+        // skipped. `prompt` replays; `prep` / `choose` keep their wall-clock deadlines.
+        if (sp.phase === 'recording' || sp.phase === 'answer' || sp.phase === 'processing') {
+          const effects: ExamEffect[] = [{ type: 'STOP_REC' }];
+          const moved = advanceSpeaking(ctx, subtest, sp, event.now, effects);
+          return speakingStep(ctx, state, subtest, moved, event.now, effects);
+        }
+        return { state, effects: [{ type: 'PERSIST_STATE', urgent: true }] };
+      }
       // Interrupted-play rule: a play cut by a kill / background counts as heard; a text waiting
       // out its 3 s gap gets a fresh gap (the candidate was away, not listening).
       let next = interruptAudio(ctx, state, event.now);
@@ -615,6 +888,18 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
 
     case 'APP_BACKGROUND': {
       if (state.phase !== 'running') return NOOP(state);
+      const sp = state.speaking;
+      if (sp && (sp.phase === 'recording' || sp.phase === 'answer')) {
+        // The mic cannot run in the background: stop now; RESUME skips the item.
+        return {
+          state,
+          effects: [
+            { type: 'STOP_AUDIO' },
+            { type: 'STOP_REC' },
+            { type: 'PERSIST_STATE', urgent: true },
+          ],
+        };
+      }
       return {
         state: interruptAudio(ctx, state, event.now),
         effects: [{ type: 'STOP_AUDIO' }, { type: 'PERSIST_STATE', urgent: true }],
@@ -623,12 +908,30 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
 
     case 'ABANDON': {
       return {
-        state: { ...state, phase: 'abandoned', audio: { key: null, phase: 'idle' } },
-        effects: [{ type: 'STOP_AUDIO' }, { type: 'ABANDON' }],
+        state: {
+          ...state,
+          phase: 'abandoned',
+          audio: { key: null, phase: 'idle' },
+          speaking: null,
+        },
+        effects: [{ type: 'STOP_AUDIO' }, { type: 'STOP_REC' }, { type: 'ABANDON' }],
       };
     }
-
-    case 'REC_DONE':
-      return NOOP(state);
   }
+}
+
+/** The speaking item on screen (null outside a speaking subtest / before a topic is chosen). */
+export function currentSpeakingItem(ctx: ExamCtx, state: ExamRunState) {
+  const subtest = currentSubtest(ctx, state);
+  const sp = state.speaking;
+  if (!subtest || subtest.kind !== 'speaking' || !sp || !sp.itemId) return null;
+  return partItems(subtest, sp.partIdx ?? 0).find((i) => i.id === sp.itemId) ?? null;
+}
+
+/** Remaining ms of the current speaking window (task 3 prep / answer) or the part budget; 0 when none. */
+export function speakingWindowMs(state: ExamRunState, now: number): number {
+  const sp = state.speaking;
+  if (!sp) return 0;
+  const at = sp.phaseDeadlineAt ?? sp.partDeadlineAt;
+  return at === undefined ? 0 : Math.max(0, at - now);
 }

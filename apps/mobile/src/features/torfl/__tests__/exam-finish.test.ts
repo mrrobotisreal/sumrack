@@ -64,7 +64,7 @@ describe('computeFinish', () => {
         if (item.kind === 'choice') answers[item.id] = choice(item.answer);
       }
     }
-    const f = computeFinish(EXAM, submitted(all, ['writing']), answers, 'full');
+    const f = computeFinish(EXAM, submitted(all, ['writing', 'speaking']), answers, 'full');
     expect(Object.keys(f.results).sort()).toEqual(['listening', 'lexgram', 'reading'].sort());
     expect(f.pcts).toEqual({ lexgram: 100, reading: 100, listening: 100 });
     expect(f.verdict?.verdict).toBeNull();
@@ -106,12 +106,70 @@ describe('computeFinish', () => {
         if (item.kind === 'choice') answers[item.id] = choice(item.answer);
       }
     }
-    const full = computeFinish(EXAM, submitted(all), answers, 'full');
+    const full = computeFinish(EXAM, submitted(all, ['speaking']), answers, 'full');
     expect(Object.keys(full.results).sort()).toEqual(
       ['writing', 'lexgram', 'reading', 'listening'].sort(),
     );
     expect(full.verdict?.verdict).toBeNull();
     expect(full.verdict?.missing).toEqual(['speaking']);
+  });
+
+  it('T73: a submitted speaking subtest is scored offline → provisional; with all five sat the verdict appears (provisional)', () => {
+    const answers: Record<string, ExamAnswer> = {
+      sp01: {
+        kind: 'speaking-reply',
+        transcript: 'Я сейчас в Москве',
+        recordingPath: null,
+        durationMs: 1,
+      },
+      sp02: {
+        kind: 'speaking-situation',
+        transcript: 'где ты работаешь',
+        recordingPath: null,
+        durationMs: 1,
+      },
+      sp03: {
+        kind: 'speaking-monologue',
+        transcript: 'меня зовут митч я живу в колорадо я работаю я читаю',
+        recordingPath: null,
+        durationMs: 1,
+      },
+    };
+    const f = computeFinish(EXAM, submitted(['speaking']), answers, 'subtest');
+    expect(f.results.speaking).toEqual({
+      points: 73.6,
+      maxPoints: 100,
+      pct: 73.6,
+      provisional: true,
+      gradedBy: 'offline',
+    });
+    expect(f.missed).toEqual([]);
+    // Nothing recorded is a real 0 % (the candidate sat the subtest), never skipped.
+    expect(
+      computeFinish(EXAM, submitted(['speaking']), {}, 'subtest').results.speaking,
+    ).toMatchObject({
+      pct: 0,
+      provisional: true,
+    });
+    // All five sat → the first five-subtest verdict, provisional while writing/speaking are offline.
+    const all = EXAM.subtests.map((s) => s.id);
+    const every: Record<string, ExamAnswer> = {
+      ...answers,
+      wr01: {
+        kind: 'writing',
+        text: 'Привет, Саша!\nМеня зовут Митч. Я живу в Колорадо. Я работаю. Я люблю читать. Что ты любишь? Где ты живёшь? Как дела? Я учу русский. Это интересно. Жду ответа. Пока!',
+      },
+    };
+    for (const s of EXAM.subtests) {
+      for (const item of s.parts.flatMap((p) => p.items)) {
+        if (item.kind === 'choice') every[item.id] = choice(item.answer);
+      }
+    }
+    const five = computeFinish(EXAM, submitted(all), every, 'full');
+    expect(Object.keys(five.results)).toHaveLength(5);
+    expect(five.verdict?.missing).toEqual([]);
+    expect(five.verdict?.verdict).toBe('pass');
+    expect(five.verdict?.provisional).toBe(true);
   });
 
   it('an unsubmitted subtest is not scored', () => {

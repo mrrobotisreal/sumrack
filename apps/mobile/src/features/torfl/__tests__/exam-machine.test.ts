@@ -64,7 +64,7 @@ describe('layout', () => {
 });
 
 describe('start / begin / deadlines (wall clock)', () => {
-  it('START opens the first subtest; objective + writing → instructions, speaking → placeholder', () => {
+  it('START opens the first subtest; objective, writing AND speaking (T73) → instructions', () => {
     const lex = run(['lexgram']);
     lex.send({ type: 'START', now: T0 });
     expect(lex.state.phase).toBe('instructions');
@@ -74,7 +74,8 @@ describe('start / begin / deadlines (wall clock)', () => {
     expect(writing.state.phase).toBe('instructions');
     const speaking = run(['speaking']);
     speaking.send({ type: 'START', now: T0 });
-    expect(speaking.state.phase).toBe('placeholder');
+    expect(speaking.state.phase).toBe('instructions');
+    expect(speaking.state.speaking).toBeNull();
   });
 
   it('writing (T72): BEGIN → running with the 30 min deadline; a letter ANSWER persists; SUBMIT scores', () => {
@@ -407,7 +408,7 @@ describe('placeholders, breaks, finish', () => {
     expect(r.state.subtests[r.state.current]!.id).toBe('listening');
   });
 
-  it('a full mock: writing → lexgram → reading → listening → speaking(skipped) → FINISH', () => {
+  it('a full mock: writing → lexgram → reading → listening → speaking (skipped from its instructions) → FINISH', () => {
     const r = run(ALL, false);
     r.send({ type: 'START', now: T0 });
     expect(r.state.phase).toBe('instructions');
@@ -417,10 +418,12 @@ describe('placeholders, breaks, finish', () => {
       r.send({ type: 'BEGIN', now: T0 });
       r.send({ type: 'SUBMIT_SUBTEST', now: T0 + 1000 });
     }
-    expect(r.state.phase).toBe('placeholder');
+    expect(r.state.phase).toBe('instructions');
     expect(r.state.subtests[r.state.current]!.id).toBe('speaking');
+    // No ASR model / mic (§12): the instruction screen's skip records it skipped, unscored.
     r.send({ type: 'SUBMIT_SUBTEST', now: T0 });
     expect(r.state.phase).toBe('done');
+    expect(r.state.subtests[4]).toMatchObject({ status: 'submitted', skipped: true });
     expect(r.effects.filter((e) => e.type === 'SCORE_SUBTEST')).toHaveLength(4);
     expect(r.effects.filter((e) => e.type === 'FINISH')).toHaveLength(1);
   });
@@ -459,7 +462,7 @@ describe('placeholders, breaks, finish', () => {
     const r = run(['lexgram']);
     begin(r);
     const fx = r.send({ type: 'ABANDON' });
-    expect(types(fx)).toEqual(['STOP_AUDIO', 'ABANDON']);
+    expect(types(fx)).toEqual(['STOP_AUDIO', 'STOP_REC', 'ABANDON']);
     expect(r.state.phase).toBe('abandoned');
     expect(r.send({ type: 'TICK', now: T0 + 99 * MIN })).toEqual([]);
   });
@@ -494,5 +497,222 @@ describe('persistence round trip', () => {
     const revived = hydrate(EXAM, odd as never, {});
     expect(revived.phase).toBe('instructions');
     expect(revived.subtests.map((s) => s.id)).toEqual(['lexgram', 'reading']);
+  });
+});
+
+describe('speaking (T73): three tasks, parts, windows, recordings', () => {
+  const spoken = (
+    itemId: string,
+    kind: 'speaking-reply' | 'speaking-situation' | 'speaking-monologue',
+    t = 'я тут',
+  ): ExamEvent => ({
+    type: 'REC_DONE',
+    itemId,
+    answer: { kind, transcript: t, recordingPath: `t1-${itemId}.wav`, durationMs: 1500 },
+    now: T0 + 5000,
+  });
+
+  it('BEGIN enters task 1 at its first item in `prompt` with the part budget (300 s) + the 20 min deadline', () => {
+    const r = run(['speaking']);
+    begin(r);
+    expect(r.state.phase).toBe('running');
+    expect(r.state.subtests[0]!.deadlineAt).toBe(T0 + 20 * MIN);
+    expect(r.state.speaking).toMatchObject({
+      task: 1,
+      phase: 'prompt',
+      itemId: 'sp01',
+      partIdx: 0,
+      partDeadlineAt: T0 + 300_000,
+    });
+    expect(types(r.effects)).not.toContain('START_REC');
+  });
+
+  it('AUDIO_ENDED on the prompt opens the mic (START_REC, cap 30 s task 1); REC_DONE persists + moves to task 2', () => {
+    const r = run(['speaking']);
+    begin(r);
+    const fx = r.send({ type: 'AUDIO_ENDED', now: T0 + 2000 });
+    expect(fx[0]).toEqual({
+      type: 'START_REC',
+      itemId: 'sp01',
+      task: 1,
+      capMs: 30_000,
+      fixedWindow: false,
+    });
+    expect(r.state.speaking?.phase).toBe('recording');
+    const done = r.send(spoken('sp01', 'speaking-reply'));
+    expect(types(done)).toEqual(['PERSIST_RESPONSE', 'PERSIST_STATE']);
+    expect(r.state.answers.sp01).toMatchObject({ kind: 'speaking-reply', transcript: 'я тут' });
+    expect(r.state.speaking).toMatchObject({
+      task: 2,
+      phase: 'prompt',
+      itemId: 'sp02',
+      partIdx: 1,
+    });
+    expect(r.state.speaking?.partDeadlineAt).toBe(T0 + 5000 + 300_000);
+    // task 2 cap = 40 s
+    const fx2 = r.send({ type: 'AUDIO_ENDED', now: T0 + 6000 });
+    expect(fx2[0]).toMatchObject({ type: 'START_REC', itemId: 'sp02', task: 2, capMs: 40_000 });
+  });
+
+  it('a REC_DONE for another item / outside a recording phase is ignored', () => {
+    const r = run(['speaking']);
+    begin(r);
+    expect(r.send(spoken('sp02', 'speaking-situation'))).toEqual([]);
+    expect(r.send(spoken('sp01', 'speaking-reply'))).toEqual([]); // still in `prompt`
+    expect(r.state.speaking?.phase).toBe('prompt');
+  });
+
+  it('SKIP_ITEM during the prompt skips the item without a response; during a recording it stops the mic first', () => {
+    const r = run(['speaking']);
+    begin(r);
+    const fx = r.send({ type: 'SKIP_ITEM', now: T0 + 1000 });
+    expect(types(fx)).toEqual(['PERSIST_STATE']);
+    expect(r.state.answers.sp01).toBeUndefined();
+    expect(r.state.speaking).toMatchObject({ task: 2, itemId: 'sp02', phase: 'prompt' });
+    r.send({ type: 'AUDIO_ENDED', now: T0 + 2000 });
+    const fx2 = r.send({ type: 'SKIP_ITEM', now: T0 + 3000 });
+    expect(types(fx2)[0]).toBe('STOP_REC');
+    expect(r.state.speaking).toMatchObject({ task: 3, phase: 'choose', itemId: null, partIdx: 2 });
+  });
+
+  it('task 3: choose → prep (8:00 wall-clock) → PREP_DONE → answer (2:00, fixed window START_REC) → REC_DONE → the subtest submits + scores', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    expect(r.state.speaking?.phase).toBe('choose');
+    expect(r.send({ type: 'PREP_DONE', now: T0 })).toEqual([]);
+    expect(r.send({ type: 'CHOOSE_TOPIC', itemId: 'sp01', now: T0 })).toEqual([]); // not a topic
+    const t1 = T0 + 10_000;
+    r.send({ type: 'CHOOSE_TOPIC', itemId: 'sp04', now: t1 });
+    expect(r.state.speaking).toMatchObject({
+      task: 3,
+      phase: 'prep',
+      itemId: 'sp04',
+      chosenId: 'sp04',
+      phaseDeadlineAt: t1 + 480_000,
+    });
+    // TICK inside prep: nothing; at the prep deadline → answer with the 2:00 window + START_REC
+    expect(r.send({ type: 'TICK', now: t1 + 100_000 })).toEqual([]);
+    const fx = r.send({ type: 'TICK', now: t1 + 480_000 });
+    expect(fx[0]).toEqual({
+      type: 'START_REC',
+      itemId: 'sp04',
+      task: 3,
+      capMs: 0,
+      fixedWindow: true,
+    });
+    expect(r.state.speaking).toMatchObject({ phase: 'answer', phaseDeadlineAt: t1 + 600_000 });
+    // the answer window ends → STOP_REC, waits in processing
+    const end = r.send({ type: 'TICK', now: t1 + 600_000 });
+    expect(types(end)).toEqual(['STOP_REC', 'PERSIST_STATE']);
+    expect(r.state.speaking?.phase).toBe('processing');
+    expect(r.send({ type: 'TICK', now: t1 + 601_000 })).toEqual([]);
+    // the hook delivers the transcribed answer → persisted → no more parts → SCORE + FINISH
+    const done = r.send(spoken('sp04', 'speaking-monologue', 'меня зовут митч'));
+    expect(types(done)).toEqual([
+      'PERSIST_RESPONSE',
+      'STOP_AUDIO',
+      'SCORE_SUBTEST',
+      'FINISH',
+      'PERSIST_STATE',
+    ]);
+    expect(r.state.phase).toBe('done');
+    expect(r.state.speaking).toBeNull();
+    const score = done.find((e) => e.type === 'SCORE_SUBTEST');
+    expect(score).toMatchObject({ kind: 'speaking', answered: 1, total: 4, autoSubmitted: false });
+  });
+
+  it('PREP_DONE early («Готов») opens the answer window at once', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    r.send({ type: 'CHOOSE_TOPIC', itemId: 'sp03', now: T0 });
+    const fx = r.send({ type: 'PREP_DONE', now: T0 + 30_000 });
+    expect(types(fx)).toEqual(['START_REC', 'PERSIST_STATE']);
+    expect(r.state.speaking).toMatchObject({ phase: 'answer', phaseDeadlineAt: T0 + 150_000 });
+  });
+
+  it('the part budget: when task 1 runs out mid-recording the mic stops, the answer still lands, then task 2 opens', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'AUDIO_ENDED', now: T0 + 1000 });
+    const fx = r.send({ type: 'TICK', now: T0 + 300_000 });
+    expect(types(fx)).toEqual(['STOP_REC', 'PERSIST_STATE']);
+    expect(r.state.speaking).toMatchObject({ phase: 'processing', partExpired: true });
+    expect(r.send({ type: 'TICK', now: T0 + 301_000 })).toEqual([]); // waits for the hook
+    r.send(spoken('sp01', 'speaking-reply'));
+    expect(r.state.answers.sp01).toBeDefined();
+    expect(r.state.speaking).toMatchObject({ task: 2, phase: 'prompt', partIdx: 1 });
+    expect(r.state.speaking?.partExpired).toBeUndefined();
+  });
+
+  it('the part budget running out on a prompt (nothing recording) moves straight to the next part', () => {
+    const r = run(['speaking']);
+    begin(r);
+    const fx = r.send({ type: 'TICK', now: T0 + 300_000 });
+    expect(types(fx)).toEqual(['PERSIST_STATE']);
+    expect(r.state.speaking).toMatchObject({ task: 2, phase: 'prompt', itemId: 'sp02' });
+  });
+
+  it('the subtest deadline (20 min) auto-submits even mid-recording: STOP_REC before STOP_AUDIO + SCORE', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'AUDIO_ENDED', now: T0 + 1000 });
+    const fx = r.send({ type: 'TICK', now: T0 + 20 * MIN });
+    expect(types(fx).slice(0, 3)).toEqual(['STOP_AUDIO', 'STOP_REC', 'SCORE_SUBTEST']);
+    expect(r.state.phase).toBe('done');
+    expect(r.state.subtests[0]!.autoSubmitted).toBe(true);
+  });
+
+  it('APP_BACKGROUND mid-recording stops the mic; RESUME skips the lost item; a prompt / prep survive', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'AUDIO_ENDED', now: T0 + 1000 });
+    const bg = r.send({ type: 'APP_BACKGROUND', now: T0 + 2000 });
+    expect(types(bg)).toEqual(['STOP_AUDIO', 'STOP_REC', 'PERSIST_STATE']);
+    const back = r.send({ type: 'RESUME', now: T0 + 9000 });
+    expect(types(back)).toEqual(['STOP_REC', 'PERSIST_STATE']);
+    expect(r.state.answers.sp01).toBeUndefined();
+    expect(r.state.speaking).toMatchObject({ task: 2, phase: 'prompt' });
+    // prompt: RESUME keeps the cursor
+    r.send({ type: 'RESUME', now: T0 + 10_000 });
+    expect(r.state.speaking).toMatchObject({ task: 2, phase: 'prompt', itemId: 'sp02' });
+  });
+
+  it('hydrate restores the speaking cursor round-trip and drops a malformed one', () => {
+    const r = run(['speaking']);
+    begin(r);
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    r.send({ type: 'SKIP_ITEM', now: T0 });
+    r.send({ type: 'CHOOSE_TOPIC', itemId: 'sp03', now: T0 });
+    const persisted = toPersisted(r.state);
+    expect(persisted.speaking).toMatchObject({ task: 3, phase: 'prep', itemId: 'sp03' });
+    const back = hydrate(EXAM, persisted, {});
+    expect(back.speaking).toEqual(r.state.speaking);
+    const bad = hydrate(EXAM, { ...persisted, speaking: { task: 9, phase: 'nope' } } as never, {});
+    expect(bad.speaking).toBeNull();
+  });
+
+  it('a dev duration override shrinks every speaking window to it (prep / answer / part), never the official values in release', () => {
+    const r = run(['speaking']);
+    const ctxDev: ExamCtx = { exam: EXAM, breakBetween: false, durationOverrideSec: 20 };
+    let state = initialRunState(EXAM, ['speaking']);
+    const step = (e: ExamEvent) => {
+      const t = reduce(ctxDev, state, e);
+      state = t.state;
+      return t.effects;
+    };
+    step({ type: 'START', now: T0 });
+    step({ type: 'BEGIN', now: T0 });
+    expect(state.speaking?.partDeadlineAt).toBe(T0 + 20_000);
+    step({ type: 'SKIP_ITEM', now: T0 });
+    step({ type: 'SKIP_ITEM', now: T0 });
+    step({ type: 'CHOOSE_TOPIC', itemId: 'sp03', now: T0 });
+    expect(state.speaking?.phaseDeadlineAt).toBe(T0 + 20_000);
+    step({ type: 'PREP_DONE', now: T0 });
+    expect(state.speaking?.phaseDeadlineAt).toBe(T0 + 20_000);
+    void r;
   });
 });

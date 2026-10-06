@@ -14,8 +14,19 @@ import { logError } from '@/services/error-log';
 import { hasApiKey } from '@/features/ai/config';
 
 import { gradeWritingOffline, offlineItemScore } from '../grading/writing';
+import {
+  gradeSpeakingOffline,
+  offlineSpeakingPoints,
+  responseShare,
+  speakingTaskOf,
+} from '../grading/speaking';
 import { pumpGradingQueue } from '../grading/queue';
-import type { ExamAnswer, ExamGrading } from '../model';
+import type { ExamAnswer, ExamGrading, SpeakingAnswer } from '../model';
+import {
+  enqueueExamTranscode,
+  useExamRecorder,
+  type ExamRecorder,
+} from '../speaking/use-exam-recorder';
 import { getTorflPrefs } from '../settings';
 import { DEFAULT_TORFL_PREFS, type TorflPrefs } from '../settings-core';
 import { fileExists } from '../drill/drill-item';
@@ -62,6 +73,8 @@ export interface ExamRun {
   finishedAttemptId: string | null;
   /** True while the finish transaction runs. */
   finishing: boolean;
+  /** T73: the speaking recorder (level / phase for the mic ring; the executor drives it). */
+  recorder: ExamRecorder;
 }
 
 /**
@@ -76,6 +89,12 @@ export interface ExamRun {
  *    subtest (T72) gets the offline provisional grade per letter and goes
  *    `pending-ai` (a key exists → the grading queue pumps at once) or stays
  *    `provisional`,
+ *  - `START_REC` / `STOP_REC` (T73) → the exam recorder hook (mic → endpoint
+ *    → WAV under `recordings/exam/<attemptId>/` → Opus queue → Zipformer +
+ *    Whisper transcripts) whose `onDone` sends `REC_DONE {answer}`; a
+ *    SPEAKING `PERSIST_RESPONSE` also queues the transcode once the row
+ *    exists, and a speaking `SCORE_SUBTEST` grades every recorded answer
+ *    offline (judge / coverage / estimate) → `pending-ai` or `provisional`,
  *  - `FINISH` → `finalizeAttempt` (results, verdict, XP, deck entries after
  *    finish) → the results route,
  *  - `ABANDON` → `abandonAttempt`.
@@ -112,6 +131,17 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
   const dev = typeof __DEV__ !== 'undefined' && __DEV__;
   const overrideSec = devDurationOverrideSec(devDurationSecParam, dev);
 
+  // T73: the recorder reports back through `REC_DONE`; `send` is defined below, so go through a ref.
+  const sendRef = React.useRef<(event: ExamEvent) => void>(() => undefined);
+  const recorder = useExamRecorder({
+    onDone: (itemId, answer) =>
+      sendRef.current({ type: 'REC_DONE', itemId, answer, now: Date.now() }),
+  });
+  const recorderRef = React.useRef(recorder);
+  React.useEffect(() => {
+    recorderRef.current = recorder;
+  });
+
   /** Serialize DB side effects so responses, state and the finish never interleave. */
   const enqueue = React.useCallback((job: () => Promise<unknown>) => {
     queueRef.current = queueRef.current.then(job).catch((err) => logError('manual', err));
@@ -146,8 +176,9 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
             const subtest = ctx.exam.subtests.find((s) => s.id === e.subtestId);
             const item = subtest?.parts.flatMap((p) => p.items).find((i) => i.id === e.itemId);
             if (!subtest || !item) break;
-            void enqueue(() =>
-              repos.exams.recordResponse({
+            const speakingKind = speakingTaskOf(item) !== null;
+            void enqueue(async () => {
+              const row = await repos.exams.recordResponse({
                 attemptId: a.id,
                 subtestId: e.subtestId,
                 itemId: e.itemId,
@@ -157,11 +188,27 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                 maxPoints:
                   item.kind === 'writing'
                     ? subtest.maxPoints
-                    : (subtest.pointsPerItem ?? item.points ?? 1),
-                // T72: a letter draft is `provisional` until the subtest closes (kill-safe autosave).
-                gradingStatus: item.kind === 'writing' ? 'provisional' : 'scored',
-              }),
-            );
+                    : speakingKind
+                      ? responseShare(subtest, item)
+                      : (subtest.pointsPerItem ?? item.points ?? 1),
+                // T72/T73: a letter draft / a recorded answer is `provisional` until the subtest closes.
+                gradingStatus: item.kind === 'writing' || speakingKind ? 'provisional' : 'scored',
+                durationMs:
+                  e.answer.kind === 'speaking-reply' ||
+                  e.answer.kind === 'speaking-situation' ||
+                  e.answer.kind === 'speaking-monologue'
+                    ? e.answer.durationMs
+                    : undefined,
+              });
+              // T73: the row exists → the WAV may transcode (the queue rewrites `recordingPath`).
+              const rec =
+                e.answer.kind === 'speaking-reply' ||
+                e.answer.kind === 'speaking-situation' ||
+                e.answer.kind === 'speaking-monologue'
+                  ? e.answer.recordingPath
+                  : null;
+              if (rec && rec.endsWith('.wav')) enqueueExamTranscode(a.id, row.id, rec);
+            });
             break;
           }
           case 'PERSIST_STATE': {
@@ -189,6 +236,62 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
               timeUsedSec: e.timeUsedSec,
             });
             if (!subtest) break;
+            if (subtest.kind === 'speaking') {
+              // T73: the offline provisional grade per recorded answer, then the AI queue when a key exists.
+              void enqueue(async () => {
+                const online = await hasApiKey();
+                const detail = await repos.exams.getAttempt(a.id);
+                const byItem = new Map((detail?.responses ?? []).map((r) => [r.itemId, r]));
+                for (const part of subtest.parts) {
+                  for (const item of part.items) {
+                    const task = speakingTaskOf(item);
+                    if (task === null) continue;
+                    const given = answers[item.id];
+                    const row = byItem.get(item.id);
+                    const stored = row?.answer;
+                    const answer: SpeakingAnswer | undefined =
+                      given &&
+                      (given.kind === 'speaking-reply' ||
+                        given.kind === 'speaking-situation' ||
+                        given.kind === 'speaking-monologue')
+                        ? {
+                            ...given,
+                            recordingPath:
+                              stored && stored.kind === given.kind
+                                ? stored.recordingPath
+                                : given.recordingPath,
+                          }
+                        : undefined;
+                    // An unanswered item (skipped / the unchosen topic) gets no row: it is 0 of its share.
+                    if (!answer) continue;
+                    const grade = gradeSpeakingOffline(item, answer);
+                    if (!grade) continue;
+                    const share = responseShare(subtest, item);
+                    const grading: ExamGrading = {
+                      v: 1,
+                      offline: { criteria: grade.criteria, details: { ...grade.details } },
+                    };
+                    const hasText =
+                      answer.transcript.trim().length > 0 ||
+                      (answer.assistTranscript ?? '').trim().length > 0;
+                    await repos.exams.recordResponse({
+                      attemptId: a.id,
+                      subtestId: subtest.id,
+                      itemId: item.id,
+                      answer,
+                      points: offlineSpeakingPoints(grade, share),
+                      maxPoints: share,
+                      gradingStatus: online && hasText ? 'pending-ai' : 'provisional',
+                      grading,
+                      durationMs: answer.durationMs,
+                    });
+                    track('exam_speaking_scored', { task, source: 'offline', pct: grade.pct });
+                  }
+                }
+                if (online) void pumpGradingQueue();
+              });
+              break;
+            }
             if (subtest.kind === 'writing') {
               // T72: the offline provisional grade per letter, then the AI queue when a key exists.
               void enqueue(async () => {
@@ -304,7 +407,23 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
             });
             break;
           }
+          case 'START_REC': {
+            void recorderRef.current.start({
+              itemId: e.itemId,
+              task: e.task,
+              capMs: e.capMs,
+              fixedWindow: e.fixedWindow,
+              attemptId: a.id,
+            });
+            break;
+          }
+          case 'STOP_REC': {
+            // Stop whatever is recording; the hook's onDone → REC_DONE. Idle = no-op.
+            recorderRef.current.stop('manual');
+            break;
+          }
           case 'ABANDON': {
+            void recorderRef.current.cancel();
             void enqueue(async () => {
               const s = stateRef.current;
               const cur = s ? s.subtests[s.current] : undefined;
@@ -341,6 +460,9 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
     },
     [perform],
   );
+  React.useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   // --- load ------------------------------------------------------------------------------
   React.useEffect(() => {
@@ -499,6 +621,7 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
     audioMissing,
     finishedAttemptId,
     finishing,
+    recorder,
   };
 }
 

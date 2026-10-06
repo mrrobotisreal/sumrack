@@ -108,6 +108,30 @@ export function buildExamAudio(input: BuildAudioInput): ExamAudio {
 type ContentRepo = Pick<Repositories['content'], 'getStoryDetail' | 'getWordStamps'>;
 
 /**
+ * T73: the audio of ONE story ref (an examiner line / a situation read
+ * aloud / a model answer) — the same resolver as an item's audio, without
+ * the part inheritance. Null when the story is gone.
+ */
+export async function loadRefAudio(
+  content: ContentRepo,
+  packId: string,
+  ref: StoryRef,
+  fileExists: (uri: string) => boolean,
+): Promise<ExamAudio | null> {
+  const detail = await content.getStoryDetail(packId, ref.storyId);
+  if (!detail) return null;
+  const track = pickTrack(detail.audio, ref);
+  const stamps = track ? await content.getWordStamps(packId, ref.storyId, track.id) : [];
+  return buildExamAudio({
+    ref,
+    sentences: detail.sentences,
+    tracks: detail.audio,
+    stamps,
+    fileExists,
+  });
+}
+
+/**
  * Load a drill/mock item's passage + audio. `part`/`itemIdx` let
  * `resolveItemAudio` apply the «one dialogue → several questions» inheritance.
  * Missing stories resolve to `null` (a pack update removed them) — callers

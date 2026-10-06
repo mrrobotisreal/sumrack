@@ -7,20 +7,33 @@ import { Text } from '@/components/ui/text';
 import { useStudyAmbience, useQuietStudy } from '@/features/ambient-audio/activity';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { currentSubtest, isPlaceholderKind, itemTotal } from './engine/exam-machine';
-import { devDurationOverrideSec } from './engine/rules';
+import { useHubGates } from '@/features/scenario/hub-gates';
+
+import {
+  currentSubtest,
+  isPlaceholderKind,
+  itemTotal,
+  speakingWindowMs,
+} from './engine/exam-machine';
+import { devDurationOverrideSec, dictionaryAllowed } from './engine/rules';
 import { useExamRun } from './engine/use-exam-run';
 import { ExamBreakScreen, ExamPlaceholderScreen } from './exam-break-screen';
 import { ExamInstructionScreen } from './exam-instruction-screen';
 import { ExamObjectiveScreen } from './exam-objective-screen';
 import { ExamWritingScreen } from './exam-writing-screen';
+import { ExamSpeakingScreen, speakingFacts } from './speaking/exam-speaking-screen';
+import { speakingGateMessage } from './speaking/gates';
 
 /**
  * The mock runner route body (T71) — `/exam/run/[attemptId]`, full-screen,
  * gesture disabled. A thin switch over `useExamRun`: it renders the phase the
- * pure engine is in (instructions → objective / writing runner → break →
- * placeholder) and forwards user intent as engine events. Quit = confirm → «Сохранить и
- * выйти» (stays resumable) / «Завершить попытку» (abandon).
+ * pure engine is in (instructions → objective / writing / speaking runner →
+ * break) and forwards user intent as engine events. Quit = confirm →
+ * «Сохранить и выйти» (stays resumable) / «Завершить попытку» (abandon).
+ *
+ * T73 gates (TORFL §12): a speaking subtest's instruction screen is BLOCKED
+ * without the ASR model or with the mic denied (the M17 hub gates), with
+ * the reason; «Пропустить» records it skipped and the rest of the mock runs.
  */
 export function ExamRunScreen() {
   const { attemptId, devDurationSec } = useLocalSearchParams<{
@@ -30,13 +43,22 @@ export function ExamRunScreen() {
   const router = useRouter();
   const { tokens } = useAppTheme();
   const run = useExamRun(attemptId, devDurationSec);
-  // A mock never plays the ambient bed while the candidate listens; reading/lexgram keep the quiet education bed.
+  const gates = useHubGates();
+  // A mock never plays the ambient bed while the candidate listens or speaks; reading/lexgram keep the quiet education bed.
   const state = run.state;
   const subtest =
     run.exam && state ? currentSubtest({ exam: run.exam, breakBetween: false }, state) : undefined;
   const listeningNow = subtest?.kind === 'listening' && state?.phase === 'running';
-  useStudyAmbience(!listeningNow, 'education');
-  useQuietStudy(!!listeningNow);
+  const speakingNow = subtest?.kind === 'speaking' && state?.phase === 'running';
+  useStudyAmbience(!listeningNow && !speakingNow, 'education');
+  useQuietStudy(!!listeningNow || !!speakingNow);
+  // The mic permission dialog belongs on the instruction screen, never mid-timer (§8.4 risk note).
+  const speakingIntro = subtest?.kind === 'speaking' && state?.phase === 'instructions';
+  React.useEffect(() => {
+    if (speakingIntro && gates.mic === 'undetermined') void gates.requestMic();
+    // once per entry to the instruction screen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speakingIntro, gates.mic]);
 
   const quit = React.useCallback(() => {
     Alert.alert('Выйти из экзамена?', 'Прогресс сохранится, таймер продолжит идти по часам.', [
@@ -130,6 +152,7 @@ export function ExamRunScreen() {
     const missing =
       def.kind === 'listening' && run.listening !== null && run.audioMissing.length > 0;
     const checking = def.kind === 'listening' && run.listening === null;
+    const speakingBlocked = def.kind === 'speaking' ? speakingGateMessage(gates) : null;
     return (
       <ExamInstructionScreen
         subtest={def}
@@ -139,15 +162,43 @@ export function ExamRunScreen() {
           devDurationSec,
           typeof __DEV__ !== 'undefined' && __DEV__,
         )}
+        extraFacts={def.kind === 'speaking' ? speakingFacts(def) : undefined}
         blocked={
           missing
             ? 'Скачай аудио по Wi-Fi: без файла экзамен не звучит. Подключись к Wi-Fi, синхронизируй пакет и вернись.'
             : checking
               ? 'Проверяем аудио…'
-              : null
+              : speakingBlocked
+        }
+        blockedAction={
+          speakingBlocked && gates.gate === 'asr-missing'
+            ? { label: 'Открыть настройки речи', onPress: () => router.push('/settings') }
+            : undefined
         }
         onBegin={() => run.send({ type: 'BEGIN', now: Date.now() })}
         onSkip={() => run.send({ type: 'SUBMIT_SUBTEST', now: Date.now() })}
+        onQuit={quit}
+      />
+    );
+  }
+
+  if (def.kind === 'speaking') {
+    return (
+      <ExamSpeakingScreen
+        key={cur.id}
+        packId={run.attempt.packId}
+        attemptId={run.attempt.id}
+        subtest={def}
+        run={state}
+        remainingMs={run.remainingMs}
+        windowMs={speakingWindowMs(state, run.now)}
+        recorder={run.recorder}
+        lookup={dictionaryAllowed({ dictionary: true }, run.prefs)}
+        onAudioEnded={() => run.send({ type: 'AUDIO_ENDED', now: Date.now() })}
+        onChoose={(itemId) => run.send({ type: 'CHOOSE_TOPIC', itemId, now: Date.now() })}
+        onPrepDone={() => run.send({ type: 'PREP_DONE', now: Date.now() })}
+        onSkip={() => run.send({ type: 'SKIP_ITEM', now: Date.now() })}
+        onStopEarly={() => run.recorder.stop('manual')}
         onQuit={quit}
       />
     );

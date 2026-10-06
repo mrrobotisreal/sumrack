@@ -64,12 +64,35 @@ export const ExamSubtestCursorSchema = z.looseObject({
 });
 export type ExamSubtestCursor = z.infer<typeof ExamSubtestCursorSchema>;
 
+export const SPEAKING_PHASES = [
+  'prompt',
+  'listening',
+  'recording',
+  'processing',
+  'choose',
+  'prep',
+  'answer',
+] as const;
+export type SpeakingPhase = (typeof SPEAKING_PHASES)[number];
+
+/**
+ * The speaking subtest's cursor inside the engine state (T71 declared it;
+ * T73 fills it): the task, its phase, the current item, the chosen
+ * monologue topic, and the two wall-clock deadlines — the part's time
+ * budget (300 / 300 / 600 s) and the task-3 prep / answer window.
+ */
 export const ExamSpeakingStateSchema = z.looseObject({
   /** 1 | 2 | 3 — the official task number. */
   task: int.min(1).max(3),
-  phase: z.enum(['prompt', 'listening', 'recording', 'prep', 'answer']),
+  phase: z.enum(SPEAKING_PHASES),
   phaseDeadlineAt: int.optional(),
+  partDeadlineAt: int.optional(),
+  itemId: z.string().min(1).nullable().optional(),
+  chosenId: z.string().min(1).optional(),
+  partIdx: nonNegInt.optional(),
+  partExpired: z.boolean().optional(),
 });
+export type ExamSpeakingState = z.infer<typeof ExamSpeakingStateSchema>;
 
 /**
  * Engine state for resume (`exam_attempts.stateJson`). The repo validates

@@ -1,7 +1,8 @@
 import type { Exam, ExamSubtestKind } from '@sumrak/schema';
 
+import { scoreSpeakingSubtest } from '../grading/speaking';
 import { gradeWritingOffline } from '../grading/writing';
-import { isAnswered, type ExamAnswer, type ExamResults } from '../model';
+import { isAnswered, type ExamAnswer, type ExamResults, type SpeakingAnswer } from '../model';
 import { roundPct, scoreItem, subtestPercent, type ItemOutcome } from '../scoring';
 import { verdict as computeVerdict, type FullVerdict } from '../verdict';
 import { isPlaceholderKind, type ExamRunState } from './exam-machine';
@@ -18,6 +19,11 @@ import { isPlaceholderKind, type ExamRunState } from './exam-machine';
  * letter(s), `provisional: true`, `gradedBy: 'offline'`. The AI grade later
  * rewrites that row through the grading queue (`recomputeResults`). Writing
  * items never enter the deck.
+ *
+ * T73: a submitted SPEAKING subtest is scored the same way — the offline
+ * provisional grade per recorded answer (`scoreSpeakingSubtest`: judge /
+ * coverage / estimate parts rescaled, 25 / 25 / 50 shares), `provisional:
+ * true`, `gradedBy: 'offline'`; speaking items never enter the deck either.
  */
 
 export interface MissedItem {
@@ -79,13 +85,40 @@ export function scoreWritingSubtest(
   };
 }
 
-/** Score ONE subtest from the answers: result + the items that were not full credit (objective kinds; writing → provisional). */
+/** The provisional speaking result of a subtest (T73). */
+export function scoreSpeakingResult(
+  subtest: Exam['subtests'][number],
+  answers: Record<string, ExamAnswer>,
+): ExamResults[string] {
+  const speaking: Record<string, SpeakingAnswer> = {};
+  for (const [id, a] of Object.entries(answers)) {
+    if (
+      a.kind === 'speaking-reply' ||
+      a.kind === 'speaking-situation' ||
+      a.kind === 'speaking-monologue'
+    ) {
+      speaking[id] = a;
+    }
+  }
+  const r = scoreSpeakingSubtest(subtest, speaking);
+  return {
+    points: r.points,
+    maxPoints: r.maxPoints,
+    pct: r.pct,
+    provisional: true,
+    gradedBy: 'offline',
+  };
+}
+
+/** Score ONE subtest from the answers: result + the items that were not full credit (objective kinds; writing / speaking → provisional). */
 export function scoreSubtest(
   subtest: Exam['subtests'][number],
   answers: Record<string, ExamAnswer>,
 ): SubtestScore {
   if (subtest.kind === 'writing')
     return { result: scoreWritingSubtest(subtest, answers), missed: [] };
+  if (subtest.kind === 'speaking')
+    return { result: scoreSpeakingResult(subtest, answers), missed: [] };
   const scored: { points: number }[] = [];
   const missed: MissedItem[] = [];
   let points = 0;
@@ -131,6 +164,7 @@ export function computeFinish(
 ): FinishComputation {
   const results: ExamResults = {};
   const pcts: Partial<Record<ExamSubtestKind, number>> = {};
+  const provisionalKinds: Partial<Record<ExamSubtestKind, boolean>> = {};
   const missed: MissedItem[] = [];
   let scoredSubtests = 0;
   for (const run of state.subtests) {
@@ -140,13 +174,15 @@ export function computeFinish(
     const { result, missed: subtestMissed } = scoreSubtest(subtest, answers);
     results[subtest.id] = result;
     pcts[subtest.kind] = result.pct;
+    if (result.provisional) provisionalKinds[subtest.kind] = true;
     missed.push(...subtestMissed);
     scoredSubtests += 1;
   }
   return {
     results,
     pcts,
-    verdict: scope === 'full' ? computeVerdict(pcts) : null,
+    // T73: the first five-subtest verdict is PROVISIONAL while writing / speaking are offline-graded.
+    verdict: scope === 'full' ? computeVerdict(pcts, provisionalKinds) : null,
     missed,
     scoredSubtests,
   };
