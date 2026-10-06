@@ -793,6 +793,16 @@ export function createExamsRepo(db: SumrakDB) {
       return rows.map((r) => ({ ...toResponse(r.response), packId: r.packId, examId: r.examId }));
     },
 
+    /** One response by id (T72: the retry / self-check paths); null when missing. */
+    async getResponse(responseId: string): Promise<ExamResponse | null> {
+      const rows = await db
+        .select()
+        .from(examResponses)
+        .where(eq(examResponses.id, responseId))
+        .limit(1);
+      return rows[0] ? toResponse(rows[0]) : null;
+    },
+
     /** Write a grading outcome onto a response (any attempt status — grading follows finishing). */
     async setGrading(
       responseId: string,
