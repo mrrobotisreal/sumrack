@@ -1,0 +1,434 @@
+{
+  "id": "a1-torfl-lexicon-fixture",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "ТРКИ: тестовые слова",
+    "en": "TORFL: lexicon fixture"
+  },
+  "level": "A1",
+  "tags": [
+    "torfl",
+    "torfl:lexicon",
+    "torfl:fixture"
+  ],
+  "category": "torfl",
+  "stories": [
+    {
+      "id": "lx-fx-semya",
+      "title": {
+        "ru": "Семья",
+        "en": "Family"
+      },
+      "subtitle": {
+        "ru": "Тема 2",
+        "en": "Topic 2"
+      },
+      "source": {
+        "name": "Сумрак"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "tfxlx-s01",
+          "ru": "Сегодня я иду на ужин к семье Алины.",
+          "en": "Today I'm going to dinner at Alina's family's home.",
+          "tokens": [
+            {
+              "text": "Сегодня",
+              "lemma": "сегодня",
+              "translation": "today",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "иду",
+              "lemma": "идти",
+              "translation": "am going",
+              "pos": "verb",
+              "grammar": "1sg. pres. (impf., unidirectional)",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc. (direction)",
+              "level": "A1"
+            },
+            {
+              "text": "ужин",
+              "lemma": "ужин",
+              "translation": "dinner",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "к",
+              "lemma": "к",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ dat.",
+              "level": "A1"
+            },
+            {
+              "text": "семье",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "grammar": "f.sg. dat.",
+              "level": "A1"
+            },
+            {
+              "text": "Алины",
+              "lemma": "Алина",
+              "translation": "Alina",
+              "pos": "name",
+              "grammar": "f.sg. gen."
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "verbs-of-motion-unidirectional",
+            "accusative-direction",
+            "dative-direction"
+          ]
+        },
+        {
+          "id": "tfxlx-s02",
+          "ru": "Дверь открывает её мама, Ирина Петровна.",
+          "en": "Her mother, Irina Petrovna, opens the door.",
+          "tokens": [
+            {
+              "text": "Дверь",
+              "lemma": "дверь",
+              "translation": "door",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "открывает",
+              "lemma": "открывать",
+              "translation": "opens",
+              "pos": "verb",
+              "grammar": "3sg. pres. (impf.)",
+              "level": "A1"
+            },
+            {
+              "text": "её",
+              "lemma": "её",
+              "translation": "her",
+              "pos": "pron",
+              "grammar": "possessive (indecl.)",
+              "level": "A1"
+            },
+            {
+              "text": "мама",
+              "lemma": "мама",
+              "translation": "mother, mom",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Ирина",
+              "lemma": "Ирина",
+              "translation": "Irina",
+              "pos": "name",
+              "grammar": "f.sg. nom."
+            },
+            {
+              "text": "Петровна",
+              "lemma": "Петровна",
+              "translation": "Petrovna",
+              "pos": "name",
+              "grammar": "f.sg. nom. (patronymic)"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "accusative-direct-object"
+          ]
+        },
+        {
+          "id": "tfxlx-s03",
+          "ru": "— Добрый вечер, Митч! Проходите, пожалуйста.",
+          "en": "\"Good evening, Mitch! Come in, please.\"",
+          "tokens": [
+            {
+              "text": "—",
+              "isPunct": true
+            },
+            {
+              "text": "Добрый",
+              "lemma": "добрый",
+              "translation": "good",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "вечер",
+              "lemma": "вечер",
+              "translation": "evening",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1",
+              "note": "«Добрый вечер!» = Good evening!"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Митч",
+              "lemma": "Митч",
+              "translation": "Mitch",
+              "pos": "name",
+              "grammar": "m. indecl."
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Проходите",
+              "lemma": "проходить",
+              "translation": "come in",
+              "pos": "verb",
+              "grammar": "2pl. imper. (impf.)",
+              "level": "A2",
+              "note": "«Проходите!» = Come in!"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "пожалуйста",
+              "lemma": "пожалуйста",
+              "translation": "please",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "imperative"
+          ]
+        },
+        {
+          "id": "tfxlx-s04",
+          "ru": "У Алины большая семья.",
+          "en": "Alina has a big family.",
+          "tokens": [
+            {
+              "text": "У",
+              "lemma": "у",
+              "translation": "at (possession)",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "Алины",
+              "lemma": "Алина",
+              "translation": "Alina",
+              "pos": "name",
+              "grammar": "f.sg. gen."
+            },
+            {
+              "text": "большая",
+              "lemma": "большой",
+              "translation": "big",
+              "pos": "adj",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "семья",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "possession-u-genitive",
+            "zero-copula"
+          ]
+        },
+        {
+          "id": "tfxlx-s05",
+          "ru": "Её отец — инженер, а мать — учитель.",
+          "en": "Her father is an engineer, and her mother is a teacher.",
+          "tokens": [
+            {
+              "text": "Её",
+              "lemma": "её",
+              "translation": "her",
+              "pos": "pron",
+              "grammar": "possessive (indecl.)",
+              "level": "A1"
+            },
+            {
+              "text": "отец",
+              "lemma": "отец",
+              "translation": "father",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "—",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "инженер",
+              "lemma": "инженер",
+              "translation": "an engineer",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "а",
+              "lemma": "а",
+              "translation": "and (contrast)",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "мать",
+              "lemma": "мать",
+              "translation": "mother",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "—",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "учитель",
+              "lemma": "учитель",
+              "translation": "a teacher",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "zero-copula"
+          ]
+        },
+        {
+          "id": "tfxlx-s06",
+          "ru": "Её родители живут здесь тридцать лет.",
+          "en": "Her parents have lived here for thirty years.",
+          "tokens": [
+            {
+              "text": "Её",
+              "lemma": "её",
+              "translation": "her",
+              "pos": "pron",
+              "grammar": "possessive (indecl.)",
+              "level": "A1"
+            },
+            {
+              "text": "родители",
+              "lemma": "родитель",
+              "translation": "parents",
+              "pos": "noun",
+              "grammar": "m.pl. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "живут",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "3pl. pres. (impf.; present for an ongoing period)",
+              "level": "A1"
+            },
+            {
+              "text": "здесь",
+              "lemma": "здесь",
+              "translation": "here",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "тридцать",
+              "lemma": "тридцать",
+              "translation": "thirty",
+              "pos": "num",
+              "grammar": "acc. (duration)",
+              "level": "A2"
+            },
+            {
+              "text": "лет",
+              "lemma": "год",
+              "translation": "years",
+              "pos": "noun",
+              "grammar": "m.pl. gen. (after тридцать)",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ],
+          "grammarTopics": [
+            "present-tense",
+            "numbers-genitive",
+            "time-expressions"
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ]
+}

@@ -57,6 +57,15 @@ describe('sample pack fixtures', () => {
     expect(family.prompts).toHaveLength(1);
   });
 
+  it('T69 torfl lexicon fixture validates (category torfl + the torfl:lexicon tag, no audio)', () => {
+    const lexicon = loadPack('a1-torfl-lexicon-fixture');
+    expect(lexicon.type).toBe('stories');
+    expect(lexicon.category).toBe('torfl');
+    expect(lexicon.tags).toContain('torfl:lexicon');
+    expect(lexicon.stories).toHaveLength(1);
+    expect(lexicon.stories[0]!.sentences).toHaveLength(6);
+  });
+
   it('M14 fixtures validate, carrying category/genre/subtitle/source exactly as authored', () => {
     const news = loadPack('a2-news-090');
     expect(news.category).toBe('news');
