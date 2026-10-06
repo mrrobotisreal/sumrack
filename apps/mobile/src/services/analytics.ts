@@ -163,6 +163,7 @@ export type AnalyticsEvent =
   | 'daily_session_started'
   | 'daily_session_empty'
   | 'daily_session_composed'
+  | 'daily_torfl_segment'
   | 'daily_item_graded'
   | 'daily_session_finished'
   | 'daily_session_abandoned'

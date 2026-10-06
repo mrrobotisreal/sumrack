@@ -20,6 +20,8 @@ interface DailyPrefsState {
   prefs: DailyPrefs;
   setLength: (length: number) => void;
   setWeight: (key: keyof DailyWeights, value: number) => void;
+  /** M18 (T70): force the TORFL segment on/off; `undefined` = auto (follows the exam date). */
+  setTorfl: (value: boolean | undefined) => void;
 }
 
 function persist(prefs: DailyPrefs, changed: string, value: number) {
@@ -39,6 +41,12 @@ export const useDailyPrefs = create<DailyPrefsState>((set, get) => ({
     const prefs = { ...current, weights: { ...current.weights, [key]: value } };
     set({ prefs });
     persist(prefs, `weight.${key}`, value);
+  },
+  setTorfl: (value) => {
+    const { torfl: _old, ...rest } = get().prefs;
+    const prefs: DailyPrefs = value === undefined ? rest : { ...rest, torfl: value };
+    set({ prefs });
+    persist(prefs, 'torfl', value === undefined ? -1 : value ? 1 : 0);
   },
 }));
 

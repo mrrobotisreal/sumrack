@@ -5,6 +5,11 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { recordExamDeckSession } from '@/features/motivation/service';
+import { DrillItem } from '@/features/torfl/drill/drill-item';
+import { createDrillRecorder, type DrillRecorder } from '@/features/torfl/drill/drill-recorder';
+import { getExamDate } from '@/features/torfl/settings';
+import { track } from '@/services/analytics';
 import { useDailyPrefs } from '@/store/daily-prefs';
 import { useGamePrefs } from '@/store/game-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -24,7 +29,17 @@ import { ClozeView } from '../games/cloze/cloze-view';
 import { ListeningView } from '../games/listening/listening-view';
 import { SbView } from '../games/sentence-builder/sb-view';
 import { useGameSession } from '../games/use-game-session';
-import { buildDailySession, dailyItemCard, type DailyItem } from './session';
+import {
+  buildDailySession,
+  buildTorflSegment,
+  dailyItemCard,
+  type DailyItem,
+  type DailyTorflItem,
+} from './session';
+import { torflSegmentEnabled } from './prefs';
+
+/** The daily session serves card items, then (M18, T70) the TORFL deck block. */
+type ScreenItem = DailyItem | DailyTorflItem;
 
 /**
  * The unified daily session (T14) — Today's default "Start session" action.
@@ -41,22 +56,62 @@ export function DailySessionScreen() {
   // narrows to those items' cards (due-agnostic) instead of the due queue.
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   // Captured once at mount — the session builds once; settings apply next launch.
-  const [build] = React.useState(
-    () => () =>
-      buildDailySession(repos, {
-        length: prefs.length,
-        weights: prefs.weights,
-        unseenAllowed,
-        focusItemIds: focus ? focus.split(',').filter(Boolean) : undefined,
-      }),
-  );
+  const [build] = React.useState(() => async (): Promise<ScreenItem[]> => {
+    const focusItemIds = focus ? focus.split(',').filter(Boolean) : undefined;
+    const cards = await buildDailySession(repos, {
+      length: prefs.length,
+      weights: prefs.weights,
+      unseenAllowed,
+      focusItemIds,
+    });
+    // M18 (T70): the optional TORFL block — default on iff an exam date is set; never in a focused session.
+    if (focusItemIds) return cards;
+    const examDate = await getExamDate();
+    if (!torflSegmentEnabled(prefs, examDate)) return cards;
+    const segment = await buildTorflSegment(repos);
+    if (segment.length > 0) track('daily_torfl_segment', { items: segment.length });
+    return [...cards, ...segment];
+  });
 
-  const session = useGameSession<DailyItem>({
+  // --- the TORFL block's own recorder (deck cards, not `cards`) ---------------
+  const recorderRef = React.useRef<DrillRecorder | null>(null);
+  const torflAnsweredRef = React.useRef(0);
+  const torflClosedRef = React.useRef(false);
+  const getRecorder = () => (recorderRef.current ??= createDrillRecorder(repos.exams));
+
+  const session = useGameSession<ScreenItem>({
     mode: 'review-daily',
     trackPrefix: 'daily',
     resultMode: 'flashcard',
     build,
   });
+
+  const phase = session.phase;
+  React.useEffect(() => {
+    if (phase !== 'summary' || torflClosedRef.current || torflAnsweredRef.current === 0) return;
+    torflClosedRef.current = true;
+    void (async () => {
+      try {
+        await getRecorder().finish();
+        await recordExamDeckSession();
+        track('exam_deck_reviewed', {
+          due: torflAnsweredRef.current,
+          reviewed: torflAnsweredRef.current,
+        });
+      } catch (err) {
+        console.warn('[daily] torfl wrap-up failed', err);
+      }
+    })();
+  }, [phase]);
+  React.useEffect(
+    () => () => {
+      if (!torflClosedRef.current && recorderRef.current) {
+        torflClosedRef.current = true;
+        void recorderRef.current.abandon();
+      }
+    },
+    [],
+  );
 
   if (session.phase === 'loading') {
     return (
@@ -113,6 +168,30 @@ export function DailySessionScreen() {
   }
 
   const item = session.entry!;
+  if (item.mode === 'torfl') {
+    return (
+      <SessionShell current={session.index} total={session.items.length} onQuit={session.quit}>
+        <DrillItem
+          key={item.entry.itemKey}
+          entry={item.entry}
+          last={session.index === session.items.length - 1}
+          onAnswered={(args) => {
+            torflAnsweredRef.current += 1;
+            track('exam_drill_item_answered', {
+              subtestKind: item.entry.subtest.kind,
+              topic: item.entry.item.topic,
+              correct: args.score.outcome === 'full',
+              ms: Math.round(args.ms),
+            });
+            void getRecorder()
+              .answer(item.entry, args.answer, args.score, args.ms)
+              .catch((err) => console.warn('[daily] torfl answer failed', err));
+          }}
+          onNext={session.advance}
+        />
+      </SessionShell>
+    );
+  }
   const card = dailyItemCard(item);
   return (
     <SessionShell current={session.index} total={session.items.length} onQuit={session.quit}>

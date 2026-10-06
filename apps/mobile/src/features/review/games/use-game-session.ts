@@ -105,6 +105,32 @@ export function useGameSession<T>(opts: {
     void queryClient.invalidateQueries({ queryKey: ['review-state'] });
   }, [queryClient]);
 
+  /**
+   * Advance to the next item, or finish the session after the last one.
+   * `grade()` ends with this; hosts that serve a NON-card item (M18 T70: the
+   * daily session's TORFL segment) call it directly after recording their own
+   * answer — no card is graded, no card result is pushed.
+   */
+  const advance = React.useCallback(() => {
+    const next = index + 1;
+    if (next < items.length) {
+      setIndex(next);
+      return;
+    }
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const durationMs = Date.now() - startedAtRef.current;
+    track(`${trackPrefix}_session_finished`, {
+      itemCount: resultsRef.current.length,
+      correctCount: resultsRef.current.filter((r) => r.correct).length,
+      durationMs,
+    });
+    persistSessionEnd();
+    setFinalResults([...resultsRef.current]);
+    setFinalDurationMs(durationMs);
+    setPhase('summary');
+  }, [index, items.length, trackPrefix, persistSessionEnd]);
+
   /** Grade the current item's card and advance (or finish). */
   const grade = React.useCallback(
     (
@@ -124,25 +150,9 @@ export function useGameSession<T>(opts: {
       // key for other meanings and extraProps are spread last).
       track(`${trackPrefix}_item_graded`, { rating, gradeSource: itemMode, ...extraProps });
 
-      const next = index + 1;
-      if (next < items.length) {
-        setIndex(next);
-        return;
-      }
-      if (finishedRef.current) return;
-      finishedRef.current = true;
-      const durationMs = Date.now() - startedAtRef.current;
-      track(`${trackPrefix}_session_finished`, {
-        itemCount: resultsRef.current.length,
-        correctCount: resultsRef.current.filter((r) => r.correct).length,
-        durationMs,
-      });
-      persistSessionEnd();
-      setFinalResults([...resultsRef.current]);
-      setFinalDurationMs(durationMs);
-      setPhase('summary');
+      advance();
     },
-    [index, items.length, mode, trackPrefix, resultMode, persistSessionEnd],
+    [mode, trackPrefix, resultMode, advance],
   );
 
   const quit = React.useCallback(() => {
@@ -190,6 +200,7 @@ export function useGameSession<T>(opts: {
     error,
     retry,
     grade,
+    advance,
     quit,
     router,
   };

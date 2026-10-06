@@ -5,6 +5,12 @@ import { UNIFIED_SESSION_DIRECTIONS, type CardRow } from '@/db/repositories/revi
 import type { Repositories } from '@/db/repositories';
 import { track } from '@/services/analytics';
 
+import {
+  DAILY_DECK_MAX,
+  entryForDeckCard,
+  type DrillEntry,
+} from '@/features/torfl/drill/drill-model';
+
 import { buildMcChoices, spreadSameItem, type SessionItem } from '../session';
 import { buildReadIndex, type ReadIndex } from '../games/sentence-source';
 import { buildClozeItemForCard, type ClozeItem } from '../games/cloze/session';
@@ -55,6 +61,14 @@ export function dailyItemCard(item: DailyItem): CardRow {
 export function dailyItemBankItem(item: DailyItem): BankItemRow {
   return item.entry.item;
 }
+
+/**
+ * M18 (T70): the TORFL segment — due «Работа над ошибками» deck items the
+ * daily screen appends AFTER the card items (a contiguous block, ≤ 10).
+ * They are NOT cards: they grade through the exam deck, never `cards`, and
+ * live OUTSIDE `DailyItem` so the card pipeline's types stay untouched.
+ */
+export type DailyTorflItem = { mode: 'torfl'; entry: DrillEntry };
 
 /** Overfetch factor (T06 pattern): some due cards get skipped (no item, no translation). */
 const OVERFETCH = 3;
@@ -113,6 +127,29 @@ export interface DailySessionOpts {
    * cards still serve first, then weakest). Composition/weights unchanged.
    */
   focusItemIds?: string[];
+}
+
+/**
+ * The TORFL segment (T70): up to `DAILY_DECK_MAX` due, non-suspended deck
+ * items, most overdue first, resolved against the CURRENT exams (an item a
+ * pack update removed is skipped — §12). Never touches `cards`.
+ */
+export async function buildTorflSegment(
+  repos: Repositories,
+  opts: { now?: number; max?: number } = {},
+): Promise<DailyTorflItem[]> {
+  const max = opts.max ?? DAILY_DECK_MAX;
+  const due = await repos.exams.dueItems({ limit: max * 3, now: opts.now });
+  const exams = new Map<string, Awaited<ReturnType<Repositories['exams']['getExam']>>>();
+  const out: DailyTorflItem[] = [];
+  for (const card of due) {
+    const key = `${card.packId}/${card.examId}`;
+    if (!exams.has(key)) exams.set(key, await repos.exams.getExam(card.packId, card.examId));
+    const entry = entryForDeckCard(card, exams.get(key) ?? null);
+    if (entry) out.push({ mode: 'torfl', entry });
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 export async function buildDailySession(

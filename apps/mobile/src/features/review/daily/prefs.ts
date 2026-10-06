@@ -25,6 +25,11 @@ export type DailyWeights = z.infer<typeof DailyWeightsSchema>;
 export const DailyPrefsSchema = z.strictObject({
   length: z.number().int().min(5).max(50),
   weights: DailyWeightsSchema,
+  /**
+   * M18 (T70): the TORFL «Работа над ошибками» segment. Absent = «auto» — on
+   * iff `torfl.examDate` is set; an explicit boolean overrides (TORFL §7.2).
+   */
+  torfl: z.boolean().optional(),
 });
 export type DailyPrefs = z.infer<typeof DailyPrefsSchema>;
 
@@ -45,4 +50,9 @@ export function parseDailyPrefs(raw: unknown): DailyPrefs {
 /** Stored-weight key per mode id (storage uses camelCase, modes use kebab). */
 export function weightForMode(weights: DailyWeights, mode: DailyMode): number {
   return mode === 'sentence-builder' ? weights.sentenceBuilder : weights[mode];
+}
+
+/** Is the TORFL daily segment on? An explicit preference wins; otherwise on iff an exam date is set. */
+export function torflSegmentEnabled(prefs: DailyPrefs, examDate: string | null): boolean {
+  return prefs.torfl ?? examDate !== null;
 }
