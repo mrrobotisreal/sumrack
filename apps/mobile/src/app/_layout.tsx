@@ -150,6 +150,10 @@ export default function RootLayout() {
                 />
                 <Stack.Screen name="torfl/index" options={{ title: 'ТРКИ' }} />
                 <Stack.Screen name="torfl/texts" options={{ title: 'Тексты' }} />
+                <Stack.Screen
+                  name="torfl/drill"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
                 <Stack.Screen name="exam/[packId]/[examId]" options={{ title: 'Экзамен' }} />
                 <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
                 <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />

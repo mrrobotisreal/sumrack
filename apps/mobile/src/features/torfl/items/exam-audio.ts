@@ -43,6 +43,8 @@ export interface ExamPassage {
 export interface ItemAssets {
   passage: ExamPassage | null;
   audio: ExamAudio | null;
+  /** The story the audio belongs to (transcript word lookup needs it). */
+  audioStoryId: string | null;
 }
 
 /** The track a ref plays: the named one, else the story's first. */
@@ -134,6 +136,7 @@ export async function loadItemAssets(
     }
   }
   let audio: ExamAudio | null = null;
+  let audioStoryId: string | null = null;
   const ref = resolveItemAudio(part, itemIdx);
   if (ref) {
     const detail = await content.getStoryDetail(packId, ref.storyId);
@@ -147,7 +150,8 @@ export async function loadItemAssets(
         stamps,
         fileExists,
       });
+      audioStoryId = ref.storyId;
     }
   }
-  return { passage, audio };
+  return { passage, audio, audioStoryId };
 }

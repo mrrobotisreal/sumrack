@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStudyAmbience } from '@/features/ambient-audio/activity';
+import type { AmbientThemeId } from '@/features/ambient-audio/beds';
 import { Text } from '@/components/ui/text';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -17,6 +18,8 @@ interface SessionShellProps {
    * host owns the bg then. Every other caller keeps the opaque default.
    */
   transparentBg?: boolean;
+  /** M18 (T70): the ambient theme this session wants (TORFL drills pass 'education'); omitted = default. */
+  ambientTheme?: AmbientThemeId;
 }
 
 /**
@@ -30,8 +33,9 @@ export function SessionShell({
   onQuit,
   children,
   transparentBg = false,
+  ambientTheme,
 }: SessionShellProps) {
-  useStudyAmbience();
+  useStudyAmbience(true, ambientTheme);
   const insets = useSafeAreaInsets();
   const { tokens } = useAppTheme();
   const progress = total > 0 ? Math.min(1, current / total) : 0;
