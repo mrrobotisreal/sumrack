@@ -154,6 +154,10 @@ export default function RootLayout() {
                   name="torfl/drill"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
                 />
+                <Stack.Screen
+                  name="torfl/writing"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
                 <Stack.Screen name="exam/[packId]/[examId]" options={{ title: 'Экзамен' }} />
                 <Stack.Screen
                   name="exam/run/[attemptId]"
@@ -170,6 +174,10 @@ export default function RootLayout() {
                 />
                 <Stack.Screen
                   name="exam/review/[attemptId]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
+                  name="exam/writing/[attemptId]"
                   options={{ headerShown: false, animation: 'fade' }}
                 />
                 <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />

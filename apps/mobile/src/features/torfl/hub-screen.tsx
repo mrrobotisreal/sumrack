@@ -31,6 +31,7 @@ import { ReadinessBars } from './readiness-bars';
 import { describeStep } from './today';
 import { TextRow } from './text-row';
 import { SUBTEST_LABELS, SUBTEST_ORDER, topicLabel } from './topics';
+import { writingPracticeEntries, writingPracticeHref } from './writing/writing-practice-model';
 
 export type HubOpenedFrom = 'library' | 'today' | 'deeplink';
 
@@ -107,6 +108,8 @@ export function TorflHubScreen({
 
   const nothingInstalled = (exams.data ?? []).length === 0;
   const tabTiles = tiles[tab];
+  // T72: the Письмо tab lists letter tasks (drill sets first, then mocks) as untimed practice.
+  const writingEntries = tab === 'writing' ? writingPracticeEntries(exams.data ?? []) : [];
   const preview = texts.groups.flatMap((g) => g.texts).slice(0, TEXTS_PREVIEW);
 
   return (
@@ -305,7 +308,10 @@ export function TorflHubScreen({
         >
           {SUBTEST_ORDER.map((kind) => {
             const selected = kind === tab;
-            const n = tiles[kind].length;
+            const n =
+              kind === 'writing'
+                ? writingPracticeEntries(exams.data ?? []).length
+                : tiles[kind].length;
             return (
               <Pressable
                 key={kind}
@@ -336,7 +342,34 @@ export function TorflHubScreen({
             );
           })}
         </ScrollView>
-        {tabTiles.length === 0 ? (
+        {tab === 'writing' ? (
+          writingEntries.length === 0 ? (
+            <EmptyLine text="Задания на письмо появятся вместе с экзаменами." />
+          ) : (
+            <View className="gap-2">
+              {writingEntries.map((e) => (
+                <Pressable
+                  key={`${e.packId}/${e.examId}/${e.item.id}`}
+                  onPress={() => router.push(writingPracticeHref(e))}
+                  accessibilityRole="button"
+                  testID={`torfl-writing-${e.item.id}`}
+                  className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+                >
+                  <Ionicons name="create-outline" size={20} color={tokens.accent} />
+                  <View className="flex-1 gap-0.5">
+                    <Text className="font-ui-medium" numberOfLines={2}>
+                      {e.item.task.ru}
+                    </Text>
+                    <Text variant="caption" numberOfLines={1}>
+                      {e.examTitleRu} · {e.item.bullets.length} пункт(ов) · без таймера
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          )
+        ) : tabTiles.length === 0 ? (
           <EmptyLine text={`Тренировок по разделу «${SUBTEST_LABELS[tab].ru}» пока нет.`} />
         ) : (
           <View className="flex-row flex-wrap gap-2">
