@@ -1,0 +1,61 @@
+{
+  "input": {
+    "taskRu": "Ваш друг хочет знать о вашей жизни. Напишите ему письмо.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "как вас зовут"
+      },
+      {
+        "id": "b2",
+        "ru": "где вы живёте"
+      },
+      {
+        "id": "b3",
+        "ru": "где вы работаете"
+      },
+      {
+        "id": "b4",
+        "ru": "что вы любите делать"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 2,
+    "maxQuestions": 5,
+    "modelLetter": null,
+    "letter": "Меня зовут Митч. Я живу в Колорадо с моя невеста. Я работать в компания. Я люблю читать книга. Пока."
+  },
+  "ms": 17334,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-points\", \"score\": 26, \"max\": 30, \"comment\": \"All four points are covered: name (\\\"Меня зовут Митч\\\"), where you live (\\\"в Колорадо\\\"), work (\\\"в компания\\\") and hobby (\\\"читать книга\\\"). Each point gets only one bare sentence, and the work point is vague because it does not say what company or what job.\" },\n    { \"id\": \"task-length\", \"score\": 3, \"max\": 15, \"comment\": \"There are only 4 real sentences against the required minimum of 10, and \\\"Пока.\\\" is a sign-off, not a sentence. There are no questions at all, but the task requires 2–5.\" },\n    { \"id\": \"letter-form\", \"score\": 3, \"max\": 10, \"comment\": \"There is no greeting, such as \\\"Привет, …!\\\", and no signature line. The text reads more like a list of facts than a letter to a friend. The closing \\\"Пока.\\\" earns some credit.\" },\n    { \"id\": \"vocabulary\", \"score\": 12, \"max\": 20, \"comment\": \"The words chosen (живу, невеста, компания, люблю читать) are correct and appropriate for A1. The range is very narrow because the letter is so short.\" },\n    { \"id\": \"grammar\", \"score\": 14, \"max\": 25, \"comment\": \"Three of the four sentences contain errors, and \\\"Пока.\\\" is error-free. The verb is left in the infinitive (\\\"Я работать\\\" instead of \\\"работаю\\\"). The instrumental after \\\"с\\\" is wrong (\\\"с моя невеста\\\"), as is the prepositional after \\\"в\\\" (\\\"в компания\\\"). The accusative after \\\"читать\\\" is missing (\\\"книга\\\"). Meaning stays clear, but these are basic forms.\" }\n  ],\n  \"corrected\": \"Меня зовут Митч. Я живу в Колорадо с моей невестой. Я работаю в компании. Я люблю читать книги. Пока.\",\n  \"changes\": [\n    { \"before\": \"с моя невеста\", \"after\": \"с моей невестой\", \"explanation\": \"The preposition \\\"с\\\" (with) takes the instrumental case. Feminine \\\"моя невеста\\\" becomes \\\"моей невестой\\\".\" },\n    { \"before\": \"Я работать\", \"after\": \"Я работаю\", \"explanation\": \"Verb conjugation: after \\\"я\\\" use the first-person singular present form \\\"работаю\\\", not the infinitive.\" },\n    { \"before\": \"в компания\", \"after\": \"в компании\", \"explanation\": \"\\\"В\\\" meaning location (where?) takes the prepositional case. Nouns ending in -ия change to -ии.\" },\n    { \"before\": \"читать книга\", \"after\": \"читать книги\", \"explanation\": \"The direct object of \\\"читать\\\" goes in the accusative case. When you talk about reading in general, use the plural \\\"книги\\\".\" }\n  ],\n  \"tips\": [\n    \"Count before you finish: write at least 10 sentences and include 2–5 questions to your friend, e.g. \\\"Как ты живёшь?\\\", \\\"Где ты работаешь?\\\", \\\"Что ты любишь делать?\\\"\",\n    \"Give it a letter shape. Start with \\\"Привет, [name]!\\\" and end with \\\"Пока!\\\" plus your name on its own line, e.g. \\\"Твой друг Митч\\\".\",\n    \"Always conjugate verbs after a pronoun (я работаю, я живу), and change the noun ending after prepositions: в + prepositional (в компании), с + instrumental (с невестой).\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1190,
+    "completion_tokens": 1731,
+    "total_tokens": 2921,
+    "cost": 0.03938,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.03938,
+      "upstream_inference_prompt_cost": 0.00476,
+      "upstream_inference_completions_cost": 0.03462
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 591,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

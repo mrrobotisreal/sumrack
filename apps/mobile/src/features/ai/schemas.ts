@@ -226,6 +226,68 @@ export const RescueVerdictSchema = z.object({
 });
 export type RescueVerdict = z.infer<typeof RescueVerdictSchema>;
 
+// --- TORFL exam grading (T72, TORFL_EXAM_PREP §6.2) --------------------------
+
+/** The five writing criteria the prompt pins (Σ max = 100; ids = `WRITING_CRITERIA` in features/torfl/grading/writing.ts). */
+export const EXAM_WRITING_CRITERION_IDS = [
+  'task-points',
+  'task-length',
+  'letter-form',
+  'vocabulary',
+  'grammar',
+] as const;
+
+export const ExamGradeCriterionSchema = z
+  .object({
+    id: z.string().min(1).max(40),
+    score: z.number().min(0),
+    max: z.number().positive(),
+    comment: z.string().max(2000).optional(),
+  })
+  .refine((c) => c.score <= c.max + 1e-9, { message: 'score exceeds max', path: ['score'] });
+
+/**
+ * What the model must return for an exam grading request (writing now,
+ * speaking in T73 — same envelope, different criterion ids). `criteria`
+ * must sum to max 100 so the percent is Σ score / 100 by construction;
+ * duplicate ids are refused.
+ */
+export const ExamGradeSchema = z
+  .object({
+    criteria: z.array(ExamGradeCriterionSchema).min(1).max(12),
+    corrected: z.string().max(40_000).optional(),
+    changes: z.array(FeedbackChangeSchema).max(100).default([]),
+    tips: z.array(z.string().min(1).max(500)).max(10).default([]),
+  })
+  .superRefine((g, ctx) => {
+    const ids = new Set<string>();
+    for (const c of g.criteria) {
+      if (ids.has(c.id))
+        ctx.addIssue({
+          code: 'custom',
+          message: `duplicate criterion "${c.id}"`,
+          path: ['criteria'],
+        });
+      ids.add(c.id);
+    }
+    const max = g.criteria.reduce((n, c) => n + c.max, 0);
+    if (Math.abs(max - 100) > 1e-9) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `criteria max sum to ${max}, expected 100`,
+        path: ['criteria'],
+      });
+    }
+  });
+export type ExamGrade = z.infer<typeof ExamGradeSchema>;
+
+/** Parse a grading completion; null when the model's output does not match the contract. */
+export function parseExamGrade(content: string): ExamGrade | null {
+  const json = extractJsonObject(content);
+  const parsed = ExamGradeSchema.safeParse(json);
+  return parsed.success ? parsed.data : null;
+}
+
 // --- JSON extraction --------------------------------------------------------
 
 /**

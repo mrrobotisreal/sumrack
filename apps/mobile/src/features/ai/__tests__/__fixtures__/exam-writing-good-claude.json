@@ -1,0 +1,61 @@
+{
+  "input": {
+    "taskRu": "Ваш друг хочет знать о вашей жизни. Напишите ему письмо.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "как вас зовут"
+      },
+      {
+        "id": "b2",
+        "ru": "где вы живёте"
+      },
+      {
+        "id": "b3",
+        "ru": "где вы работаете"
+      },
+      {
+        "id": "b4",
+        "ru": "что вы любите делать"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 2,
+    "maxQuestions": 5,
+    "modelLetter": null,
+    "letter": "Привет, Саша!\nМеня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.\nЯ работаю программистом. Это интересная работа.\nЯ люблю читать и слушать музыку. Ещё мне нравится готовить.\nА как ты? Где ты сейчас живёшь? Что ты любишь делать?\nПока! Жду ответа.\nТвой друг Митч"
+  },
+  "ms": 14318,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-points\", \"score\": 26, \"max\": 30, \"comment\": \"Name (\\\"Меня зовут Митч\\\"), place of living (\\\"Я живу в Колорадо\\\") and hobbies (\\\"люблю читать и слушать музыку\\\", \\\"нравится готовить\\\") are clearly covered. The work point is only partly answered: \\\"Я работаю программистом\\\" says what you do, not where you work (e.g. \\\"в компании\\\", \\\"дома\\\"), so a few points were lost.\"},\n    { \"id\": \"task-length\", \"score\": 15, \"max\": 15, \"comment\": \"There are about 10–11 real sentences, counting the three questions and \\\"Жду ответа\\\", which meets the minimum of 10. Three questions are within the required 2–5.\" },\n    { \"id\": \"letter-form\", \"score\": 10, \"max\": 10, \"comment\": \"Clear letter shape: a greeting (\\\"Привет, Саша!\\\"), a logical flow from you to questions about your friend, a closing (\\\"Пока! Жду ответа.\\\") and a signature (\\\"Твой друг Митч\\\").\" },\n    { \"id\": \"vocabulary\", \"score\": 18.5, \"max\": 20, \"comment\": \"Everyday words are all used correctly and appropriately, including \\\"программистом\\\", \\\"интересная работа\\\" and \\\"жду ответа\\\". The range is simple but entirely fitting for A1, and there are no English or invented words.\" },\n    { \"id\": \"grammar\", \"score\": 25, \"max\": 25, \"comment\": \"No errors. Instrumental \\\"работаю программистом\\\", prepositional \\\"в Колорадо\\\", genitive \\\"жду ответа\\\", the number phrase \\\"тридцать шесть лет\\\" and verb forms like \\\"живёшь\\\" and \\\"любишь\\\" are all correct.\" }\n  ],\n  \"corrected\": \"Привет, Саша!\\nМеня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.\\nЯ работаю программистом. Это интересная работа.\\nЯ люблю читать и слушать музыку. Ещё мне нравится готовить.\\nА как ты? Где ты сейчас живёшь? Что ты любишь делать?\\nПока! Жду ответа.\\nТвой друг Митч\",\n  \"changes\": [],\n  \"tips\": [\n    \"Answer each bullet point exactly as asked: for \\\"где вы работаете\\\", name a place, e.g. \\\"Я работаю в компании / в офисе / дома\\\", not only your profession.\",\n    \"Add one or two extra sentences so you are safely above the minimum count, e.g. a detail about your city or why you like your hobby (\\\"Я люблю готовить, потому что это интересно\\\").\",\n    \"Keep using linking words like \\\"ещё\\\", \\\"и\\\" and \\\"потому что\\\". They make the letter flow naturally without making it harder.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1281,
+    "completion_tokens": 1373,
+    "total_tokens": 2654,
+    "cost": 0.032584,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.032584,
+      "upstream_inference_prompt_cost": 0.005124,
+      "upstream_inference_completions_cost": 0.02746
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 431,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "input": {
+    "taskRu": "Ваш друг хочет знать о вашей жизни. Напишите ему письмо.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "как вас зовут"
+      },
+      {
+        "id": "b2",
+        "ru": "где вы живёте"
+      },
+      {
+        "id": "b3",
+        "ru": "где вы работаете"
+      },
+      {
+        "id": "b4",
+        "ru": "что вы любите делать"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 2,
+    "maxQuestions": 5,
+    "modelLetter": null,
+    "letter": "Привет, Саша!\nМеня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.\nЯ работаю программистом. Это интересная работа.\nЯ люблю читать и слушать музыку. Ещё мне нравится готовить.\nА как ты? Где ты сейчас живёшь? Что ты любишь делать?\nПока! Жду ответа.\nТвой друг Митч"
+  },
+  "ms": 15751,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-points\",\n      \"score\": 30,\n      \"max\": 30,\n      \"comment\": \"All four points are clearly covered: your name, where you live, where you work, and what you like doing.\"\n    },\n    {\n      \"id\": \"task-length\",\n      \"score\": 15,\n      \"max\": 15,\n      \"comment\": \"The letter has 11 sentences, excluding the greeting and farewell, and three questions. It meets both requirements.\"\n    },\n    {\n      \"id\": \"letter-form\",\n      \"score\": 10,\n      \"max\": 10,\n      \"comment\": \"The greeting, friendly questions, farewell, and signature make this a natural informal letter.\"\n    },\n    {\n      \"id\": \"vocabulary\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"The everyday vocabulary is appropriate and used correctly; «программистом», «слушать музыку», and «готовить» express your ideas clearly.\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 25,\n      \"max\": 25,\n      \"comment\": \"The sentences are accurate and easy to understand. Forms such as «в Колорадо», «работаю программистом», and «мне нравится готовить» are correct.\"\n    }\n  ],\n  \"corrected\": \"Привет, Саша!\\nМеня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.\\nЯ работаю программистом. Это интересная работа.\\nЯ люблю читать и слушать музыку. Ещё мне нравится готовить.\\nА как ты? Где ты сейчас живёшь? Что ты любишь делать?\\nПока! Жду ответа.\\nТвой друг Митч\",\n  \"changes\": [],\n  \"tips\": [\n    \"Keep covering every bullet point as clearly as you did here.\",\n    \"Continue counting sentences and questions before submitting.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5829,
+    "completion_tokens": 2063,
+    "total_tokens": 7892,
+    "cost": 0.032288,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.032288,
+      "upstream_inference_prompt_cost": 0.011658,
+      "upstream_inference_completions_cost": 0.02063
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 1145,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

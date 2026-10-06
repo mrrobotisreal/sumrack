@@ -1,0 +1,61 @@
+{
+  "input": {
+    "taskRu": "Ваш друг хочет знать о вашей жизни. Напишите ему письмо.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "как вас зовут"
+      },
+      {
+        "id": "b2",
+        "ru": "где вы живёте"
+      },
+      {
+        "id": "b3",
+        "ru": "где вы работаете"
+      },
+      {
+        "id": "b4",
+        "ru": "что вы любите делать"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 2,
+    "maxQuestions": 5,
+    "modelLetter": null,
+    "letter": "Меня зовут Митч. Я живу в Колорадо с моя невеста. Я работать в компания. Я люблю читать книга. Пока."
+  },
+  "ms": 24173,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-points\",\n      \"score\": 28,\n      \"max\": 30,\n      \"comment\": \"All four points are covered: your name, where you live, where you work, and what you like doing. «В компания» communicates the workplace, though it is vague.\"\n    },\n    {\n      \"id\": \"task-length\",\n      \"score\": 5,\n      \"max\": 15,\n      \"comment\": \"There are four sentences of content; «Пока» is a closing, not a fifth sentence. The task requires at least ten sentences and 2–5 questions, but there are no questions.\"\n    },\n    {\n      \"id\": \"letter-form\",\n      \"score\": 5,\n      \"max\": 10,\n      \"comment\": \"The information follows a natural order, and «Пока» works as an informal closing. A greeting and signature are missing.\"\n    },\n    {\n      \"id\": \"vocabulary\",\n      \"score\": 19,\n      \"max\": 20,\n      \"comment\": \"The everyday words are appropriate for A1 and express the intended meaning. The letter uses a limited range, but simple vocabulary is sufficient here.\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 17.5,\n      \"max\": 25,\n      \"comment\": \"The meaning remains clear, but several forms need correction: «с моя невеста», «Я работать», «в компания» and «читать книга».\"\n    }\n  ],\n  \"corrected\": \"Меня зовут Митч. Я живу в Колорадо с моей невестой. Я работаю в компании. Я люблю читать книги. Пока.\",\n  \"changes\": [\n    {\n      \"before\": \"с моя невеста\",\n      \"after\": \"с моей невестой\",\n      \"explanation\": \"The preposition «с» takes the instrumental case here; the possessive and noun must agree.\"\n    },\n    {\n      \"before\": \"Я работать\",\n      \"after\": \"Я работаю\",\n      \"explanation\": \"Use the first-person present-tense verb form after «я», not the infinitive.\"\n    },\n    {\n      \"before\": \"в компания\",\n      \"after\": \"в компании\",\n      \"explanation\": \"Use the prepositional case after «в» when saying where you work.\"\n    },\n    {\n      \"before\": \"читать книга\",\n      \"after\": \"читать книги\",\n      \"explanation\": \"The object of «читать» takes the accusative case; «книги» is the natural plural form for books in general.\"\n    }\n  ],\n  \"tips\": [\n    \"Count your sentences before finishing: this task needs at least ten.\",\n    \"Add 2–5 questions to your friend, plus a greeting and your signature.\",\n    \"Practise present-tense verb forms and cases after «с» and «в».\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6739,
+    "completion_tokens": 3361,
+    "total_tokens": 10100,
+    "cost": 0.047088,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.047088,
+      "upstream_inference_prompt_cost": 0.013478,
+      "upstream_inference_completions_cost": 0.03361
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 2118,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

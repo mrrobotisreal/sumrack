@@ -29,6 +29,10 @@ import {
   type WordProfileInput,
 } from '../src/features/ai/prompts/word-profile';
 import { buildRescueMessages, type RescueInput } from '../src/features/ai/prompts/scenario-rescue';
+import {
+  buildExamWritingMessages,
+  type ExamWritingInput,
+} from '../src/features/ai/prompts/exam-writing';
 
 const MODEL = 'anthropic/claude-sonnet-5';
 const OUT_DIR = join(
@@ -256,6 +260,69 @@ const RESCUE_EXTRAS = {
   usage: { include: true },
 };
 
+/**
+ * T72 exam-writing fixtures (TORFL_EXAM_PREP §6.2): the fixture mock's letter
+ * task (`a1-exam-fixture` / `wr01`) graded for one good and one weak letter,
+ * on BOTH providers of the run-profile table at the «Exam grading» default
+ * notch — Anthropic normal (Opus 5.5) at effort HIGH, and the GPT-class
+ * normal (GPT-6 Sol Pro) at effort high — so the Session log can compare
+ * the two graders' scores for the same letters. Temperature 0.2 = the queue.
+ */
+const EXAM_WRITING_TASK: Omit<ExamWritingInput, 'letter'> = {
+  taskRu: 'Ваш друг хочет знать о вашей жизни. Напишите ему письмо.',
+  bullets: [
+    { id: 'b1', ru: 'как вас зовут' },
+    { id: 'b2', ru: 'где вы живёте' },
+    { id: 'b3', ru: 'где вы работаете' },
+    { id: 'b4', ru: 'что вы любите делать' },
+  ],
+  minSentences: 10,
+  minQuestions: 2,
+  maxQuestions: 5,
+  modelLetter: null,
+};
+const EXAM_WRITING_LETTERS: { name: string; letter: string }[] = [
+  {
+    name: 'good',
+    letter: [
+      'Привет, Саша!',
+      'Меня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.',
+      'Я работаю программистом. Это интересная работа.',
+      'Я люблю читать и слушать музыку. Ещё мне нравится готовить.',
+      'А как ты? Где ты сейчас живёшь? Что ты любишь делать?',
+      'Пока! Жду ответа.',
+      'Твой друг Митч',
+    ].join('\n'),
+  },
+  {
+    name: 'weak',
+    // Short, several real A1 errors, one bullet missing, no question, no greeting.
+    letter:
+      'Меня зовут Митч. Я живу в Колорадо с моя невеста. Я работать в компания. Я люблю читать книга. Пока.',
+  },
+];
+const EXAM_WRITING_MODELS: {
+  tag: string;
+  model: string;
+  extras: Record<string, unknown>;
+}[] = [
+  {
+    tag: 'claude',
+    model: 'anthropic/claude-opus-5.5',
+    extras: {
+      verbosity: 'high',
+      reasoning: { enabled: true, exclude: true },
+      usage: { include: true },
+    },
+  },
+  {
+    tag: 'gpt',
+    model: 'openai/gpt-6-sol-pro',
+    extras: { reasoning: { effort: 'high', exclude: true }, usage: { include: true } },
+  },
+];
+const EXAM_WRITING_MAX_TOKENS = 8_192;
+
 async function chat(
   messages: unknown,
   maxTokens: number,
@@ -412,6 +479,25 @@ async function main() {
       join(OUT_DIR, `${name}.json`),
       JSON.stringify({ input, ...slimWithUsage(raw) }, null, 2),
     );
+  }
+
+  for (const { tag, model, extras } of EXAM_WRITING_MODELS) {
+    for (const { name, letter } of EXAM_WRITING_LETTERS) {
+      const fixtureName = `exam-writing-${name}-${tag}`;
+      if (!wants(fixtureName) && !wants('exam-writing')) continue;
+      console.log(`capturing ${fixtureName} (${model}, effort high)…`);
+      const input: ExamWritingInput = { ...EXAM_WRITING_TASK, letter };
+      const startedAt = Date.now();
+      const raw = await chatWith(model, buildExamWritingMessages(input), EXAM_WRITING_MAX_TOKENS, {
+        temperature: 0.2,
+        extras,
+      });
+      const ms = Date.now() - startedAt;
+      writeFileSync(
+        join(OUT_DIR, `${fixtureName}.json`),
+        JSON.stringify({ input, ms, ...slimWithUsage(raw) }, null, 2),
+      );
+    }
   }
 
   console.log(`done → ${OUT_DIR}`);
