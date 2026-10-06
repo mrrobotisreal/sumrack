@@ -1,6 +1,7 @@
 import type { ExamSubtestKind } from '@sumrak/schema';
 
 import type { ExamResults, ExamVerdict } from './model';
+import { BORDERLINE_PCT, PASS_PCT, predictVerdict } from './verdict';
 import { SUBTEST_LABELS, SUBTEST_ORDER } from './topics';
 
 /**
@@ -25,9 +26,8 @@ export const SHRINK_CORRECT = 15;
 export const SHRINK_N = 30;
 const DAY_MS = 86_400_000;
 
-/** The SPbU lines (§6.3). */
-export const PASS_PCT = 66;
-export const BORDERLINE_PCT = 60;
+/** The SPbU lines (§6.3) live in `verdict.ts`; re-exported for the T70 importers. */
+export { BORDERLINE_PCT, PASS_PCT };
 /** «с запасом»: gold band. */
 export const MARGIN_PCT = 80;
 
@@ -192,38 +192,9 @@ export function computeReadiness(input: ReadinessInput): ReadinessRow[] {
   });
 }
 
-// --- predicted verdict ------------------------------------------------------------
+// --- predicted verdict (T71: the rule lives in verdict.ts; re-exported here) ----------
 
-/**
- * LOCAL COPY of the §6.3 verdict rule (T70). T71 moves it into
- * `features/torfl/verdict.ts` and re-exports it from here — keep the
- * signature `(pcts) → {verdict, retake}` stable so that move is mechanical.
- *
- * every pct ≥ 66 → 'pass'; exactly one pct in [60, 66) and the other four
- * ≥ 66 → 'pass-borderline'; else 'fail' with `retake` = the subtests below
- * 66, except the single best borderline one (the one allowed 60 % is
- * «spent» on it). A `null` pct (unknown) counts as a fail.
- */
-export function predictVerdict(pcts: Partial<Record<ExamSubtestKind, number | null>>): {
-  verdict: ExamVerdict;
-  retake: ExamSubtestKind[];
-} {
-  const values = SUBTEST_ORDER.map((k) => ({ kind: k, pct: pcts[k] ?? null }));
-  const below66 = values.filter((v) => v.pct === null || v.pct < PASS_PCT);
-  if (below66.length === 0) return { verdict: 'pass', retake: [] };
-  const first = below66[0]!;
-  if (below66.length === 1 && first.pct !== null && first.pct >= BORDERLINE_PCT) {
-    return { verdict: 'pass-borderline', retake: [] };
-  }
-  // Fail. At most ONE subtest may sit in [60, 66): the best borderline is
-  // «spent»; every other subtest under 66 (and every unknown) must be retaken.
-  const borderline = below66
-    .filter((v) => v.pct !== null && v.pct >= BORDERLINE_PCT)
-    .sort((a, b) => b.pct! - a.pct!);
-  const spent = borderline[0]?.kind;
-  const retake = below66.filter((v) => v.kind !== spent).map((v) => v.kind);
-  return { verdict: 'fail', retake };
-}
+export { predictVerdict };
 
 export interface PredictedLine {
   verdict: ExamVerdict;
