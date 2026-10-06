@@ -37,6 +37,10 @@ export const XP_TABLE = {
   scenarioCleanBonus: 15,
   /** Per clean turn inside a scenario run (T62). */
   scenarioCleanTurn: 2,
+  /** Finishing a TORFL drill set or «Молния» round (M18/T70, TORFL §7.5) — once per session. */
+  examDrillFinished: 10,
+  /** Finishing a «Работа над ошибками» deck session, or the daily-session torfl segment (T70) — once per session. */
+  examDeckSession: 5,
   /** Bonus for unlocking any achievement. */
   achievementUnlocked: 20,
 } as const;

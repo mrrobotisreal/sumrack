@@ -9,6 +9,7 @@ import {
 import { diffDayKeys, isDayKey } from '@/lib/dates';
 
 import type { ExamMode, ExamResults, ExamVerdict } from './model';
+import type { ReadinessBand } from './readiness';
 import { compareTopics, SUBTEST_ORDER } from './topics';
 
 /**
@@ -63,14 +64,14 @@ export const SPBU_RULE_LINE = 'Сдал: ≥ 66 % в каждом субтест
 // --- readiness (placeholder shape; T70 fills it) -------------------------------
 
 /**
- * One readiness row (§7.4). T69 renders `pct: null` everywhere («—»); T70
- * computes the numbers and the band from `features/torfl/readiness.ts` and
- * passes the same shape — the hub card and the hub section never change.
+ * One readiness row (§7.4): the shape the hub card and the hub section
+ * render. T69 shipped `pct: null` placeholders; T70's `computeReadiness`
+ * (`features/torfl/readiness.ts`) fills it with real numbers + bands.
  */
 export interface ReadinessView {
   kind: ExamSubtestKind;
   pct: number | null;
-  band: 'fail' | 'borderline' | 'pass' | null;
+  band: ReadinessBand | null;
   /** Source line («пробный экзамен 3 дн. назад» / «оценка по тренировкам»), or the empty-state hint. */
   label: string;
 }

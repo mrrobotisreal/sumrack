@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { countdownLabel, placeholderReadiness, type ReadinessView } from './hub-model';
-import { useExamDate } from './hooks';
+import { useExamDate, useTorflToday } from './hooks';
 import { ReadinessBars } from './readiness-bars';
 
 /**
@@ -20,7 +20,8 @@ export function TorflHubCard({ readiness }: { readiness?: readonly ReadinessView
   const router = useRouter();
   const { tokens } = useAppTheme();
   const { date, today } = useExamDate();
-  const rows = readiness ?? placeholderReadiness();
+  const today_ = useTorflToday();
+  const rows = readiness ?? (today_.isPending ? placeholderReadiness() : today_.readiness);
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/torfl', params: { from: 'library' } })}

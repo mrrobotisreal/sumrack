@@ -43,8 +43,10 @@ export function useExamAudio(
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const onEndedRef = React.useRef(opts.onEnded);
   const onPlayRef = React.useRef(opts.onPlay);
-  onEndedRef.current = opts.onEnded;
-  onPlayRef.current = opts.onPlay;
+  React.useEffect(() => {
+    onEndedRef.current = opts.onEnded;
+    onPlayRef.current = opts.onPlay;
+  });
   const [playCount, setPlayCount] = React.useState(0);
   const playCountRef = React.useRef(0);
   const [playing, setPlaying] = React.useState(false);

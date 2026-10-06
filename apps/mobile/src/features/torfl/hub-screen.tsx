@@ -16,18 +16,19 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ExamDateSheet } from './exam-date-sheet';
 import { ExamRow } from './exam-row';
-import { useExamDate, useExamListItems, useExamTexts } from './hooks';
+import { useExamDate, useExamListItems, useExamTexts, useTorflToday } from './hooks';
 import {
   MODE_LABELS,
   SPBU_RULE_LINE,
-  buildTopicTiles,
   countdownLabel,
   overallPct,
   placeholderReadiness,
   ruPlural,
   type ReadinessView,
 } from './hub-model';
+import { drillHref } from './drill/drill-model';
 import { ReadinessBars } from './readiness-bars';
+import { describeStep } from './today';
 import { TextRow } from './text-row';
 import { SUBTEST_LABELS, SUBTEST_ORDER, topicLabel } from './topics';
 
@@ -40,7 +41,8 @@ const TEXTS_PREVIEW = 5;
 /**
  * The «ТРКИ» hub (T69, TORFL_EXAM_PREP §5.3) — a calm study desk, top to
  * bottom: the header (title, countdown → date sheet, the SPbU rule),
- * «Готовность» (placeholders until T70), «Сегодня» (placeholder until T70),
+ * «Готовность» (T70: live bars + the predicted verdict), «Сегодня» (T70: the
+ * recommended next step), «Работа над ошибками» + «Молния» rows (T70),
  * «Пробные экзамены», «Тренировки» (a five-tab strip of topic tiles from
  * drill exams), «Тексты» (a five-row preview → the full browser),
  * «История» (attempts). Works with zero packs installed: every section
@@ -80,7 +82,8 @@ export function TorflHubScreen({
     track('torfl_hub_opened', { from });
   }, [from]);
 
-  const tiles = React.useMemo(() => buildTopicTiles(exams.data ?? []), [exams.data]);
+  const torfl = useTorflToday();
+  const tiles = torfl.tiles;
   const titleOf = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const e of exams.data ?? []) map.set(`${e.packId}/${e.examId}`, e.titleRu);
@@ -154,19 +157,64 @@ export function TorflHubScreen({
       {/* ---- readiness ---- */}
       <Section title="Готовность">
         <View className="rounded-xl border border-border bg-surface px-4 py-4">
-          <ReadinessBars rows={readiness ?? placeholderReadiness()} />
+          <ReadinessBars
+            rows={readiness ?? (torfl.isPending ? placeholderReadiness() : torfl.readiness)}
+          />
+          {!torfl.isPending && torfl.readiness.some((r) => r.pct !== null) && (
+            <Text
+              className={cn(
+                'mt-3 font-ui-medium text-sm',
+                torfl.predicted.verdict === 'fail' ? 'text-text-muted' : 'text-success',
+              )}
+              testID="torfl-predicted"
+            >
+              {torfl.predicted.text}
+            </Text>
+          )}
         </View>
       </Section>
 
       {/* ---- today ---- */}
       <Section title="Сегодня">
-        <View className="flex-row items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3">
-          <Ionicons name="compass-outline" size={18} color={tokens.textMuted} />
-          <Text variant="muted" className="flex-1">
-            Здесь появится следующий шаг: самая слабая тема, карточки «Работы над ошибками» или
-            пробный экзамен.
-          </Text>
-        </View>
+        {torfl.step ? (
+          <Pressable
+            onPress={() => {
+              const action = torfl.action;
+              if (action?.kind === 'drill') {
+                router.push(
+                  action.source === 'deck'
+                    ? drillHref({ source: 'deck' })
+                    : drillHref({
+                        source: 'set',
+                        packId: action.packId,
+                        examId: action.examId,
+                        topic: action.topic,
+                      }),
+                );
+              }
+            }}
+            accessibilityRole="button"
+            testID="torfl-today-step"
+            className="flex-row items-center gap-3 rounded-xl border border-accent/40 bg-surface px-4 py-3 active:bg-surface-2"
+          >
+            <Ionicons name="compass-outline" size={20} color={tokens.accent} />
+            <View className="flex-1 gap-0.5">
+              <Text className="font-ui-medium">{describeStep(torfl.step).title}</Text>
+              <Text variant="caption">{describeStep(torfl.step).caption}</Text>
+            </View>
+            {torfl.action?.kind === 'drill' && (
+              <Ionicons name="play-circle" size={24} color={tokens.accent} />
+            )}
+          </Pressable>
+        ) : (
+          <View className="flex-row items-center gap-3 rounded-xl border border-dashed border-border px-4 py-3">
+            <Ionicons name="compass-outline" size={18} color={tokens.textMuted} />
+            <Text variant="muted" className="flex-1">
+              Решай тренировки — здесь появится следующий шаг: самая слабая тема, карточки «Работы
+              над ошибками» или пробный экзамен.
+            </Text>
+          </View>
+        )}
       </Section>
 
       {/* ---- mocks ---- */}
@@ -186,6 +234,43 @@ export function TorflHubScreen({
 
       {/* ---- drills ---- */}
       <Section title="Тренировки">
+        <View className="mb-3 gap-2">
+          <Pressable
+            onPress={() => router.push(drillHref({ source: 'deck' }))}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: torfl.deckDue === 0 }}
+            testID="torfl-deck-row"
+            className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+          >
+            <Ionicons name="albums-outline" size={20} color={tokens.accent} />
+            <View className="flex-1 gap-0.5">
+              <Text className="font-ui-medium">Работа над ошибками · {torfl.deckDue}</Text>
+              <Text variant="caption">
+                {torfl.deckDue > 0
+                  ? 'Карточки с твоими ошибками — пора повторить'
+                  : torfl.deckTotal > 0
+                    ? `Сегодня повторять нечего · в колоде ${torfl.deckTotal}`
+                    : 'Появится после первой тренировки'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+          </Pressable>
+          {torfl.hasLightning && (
+            <Pressable
+              onPress={() => router.push(drillHref({ source: 'lightning' }))}
+              accessibilityRole="button"
+              testID="torfl-lightning-row"
+              className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+            >
+              <Ionicons name="flash-outline" size={20} color={tokens.accent} />
+              <View className="flex-1 gap-0.5">
+                <Text className="font-ui-medium">Молния</Text>
+                <Text variant="caption">20 заданий в темпе экзамена — 34 секунды на задание</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+            </Pressable>
+          )}
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -233,8 +318,19 @@ export function TorflHubScreen({
             {tabTiles.map((tile) => (
               <Pressable
                 key={tile.topic}
-                onPress={() => openIntro(tile.packId, tile.examId)}
+                onPress={() =>
+                  router.push(
+                    drillHref({
+                      source: 'set',
+                      packId: tile.packId,
+                      examId: tile.examId,
+                      topic: tile.topic,
+                    }),
+                  )
+                }
+                onLongPress={() => openIntro(tile.packId, tile.examId)}
                 accessibilityRole="button"
+                accessibilityHint="Long press for the whole drill set"
                 accessibilityLabel={`${topicLabel(tile.topic).ru}: ${tile.itemCount} ${ruPlural(tile.itemCount, ITEMS)}`}
                 testID={`torfl-topic-${tile.topic}`}
                 className="w-[48.5%] gap-1 rounded-xl border border-border bg-surface px-3 py-3 active:bg-surface-2"
@@ -249,8 +345,11 @@ export function TorflHubScreen({
                   <Text variant="caption">
                     {tile.itemCount} {ruPlural(tile.itemCount, ITEMS)}
                   </Text>
-                  {/* T70 replaces this with the topic's accuracy */}
-                  <Text variant="caption">—</Text>
+                  <Text variant="caption" testID={`torfl-topic-acc-${tile.topic}`}>
+                    {torfl.accuracyByTopic.has(tile.topic)
+                      ? `${torfl.accuracyByTopic.get(tile.topic)}%`
+                      : '—'}
+                  </Text>
                 </View>
               </Pressable>
             ))}

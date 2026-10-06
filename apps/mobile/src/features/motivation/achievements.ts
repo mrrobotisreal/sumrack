@@ -109,6 +109,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: 'layers-outline',
   },
   {
+    id: 'torfl-deck-100',
+    title: 'Работа над ошибками',
+    description: 'Bring 100 TORFL exam-deck items to the FSRS Review state',
+    icon: 'ribbon-outline',
+  },
+  {
     id: 'pron-perfect',
     title: 'Чистое произношение',
     description: 'Score a perfect 100 in pronunciation practice',
@@ -146,3 +152,5 @@ export const LEVEL_ACHIEVEMENTS: { id: string; level: number }[] = [
 export const MASTERED_STABILITY_DAYS = STABILITY_MATURE_MIN;
 export const MASTERED_TARGET = 100;
 export const BANK_TARGET = 100;
+/** `torfl-deck-100` (T70): exam-deck cards in the FSRS Review state. */
+export const EXAM_DECK_TARGET = 100;

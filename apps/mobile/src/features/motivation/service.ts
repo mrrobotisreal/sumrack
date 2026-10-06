@@ -11,6 +11,7 @@ import { useGoalPrefs } from '@/store/goal-prefs';
 import {
   ACHIEVEMENTS_BY_ID,
   BANK_TARGET,
+  EXAM_DECK_TARGET,
   LEVEL_ACHIEVEMENTS,
   MASTERED_STABILITY_DAYS,
   MASTERED_TARGET,
@@ -132,6 +133,8 @@ export async function sweepAchievements(): Promise<void> {
   if (dialogueStats.anyDialogueAllEndingsSeen) await unlock('all-endings-one-dialogue');
   // M17 scenario unlocks ride the same sweep (backfill for free, like T27's).
   await unlockScenarioAchievements();
+  // M18 (T70): `torfl-deck-100` rides the sweep too (counts the exam deck's Review-state cards).
+  if ((await repos.exams.countCardsInReview()) >= EXAM_DECK_TARGET) await unlock('torfl-deck-100');
   const { level } = levelForXp(totalXp);
   for (const { id, level: threshold } of LEVEL_ACHIEVEMENTS) {
     if (level >= threshold) await unlock(id);
@@ -257,6 +260,24 @@ export async function recordScenarioFinished(stats: {
   await unlockScenarioAchievements();
   await evaluateMotivation();
   return xp;
+}
+
+/**
+ * A TORFL drill set / «Молния» round finished (T70, §7.5): 10 XP, once per
+ * session (the caller invokes it once on the summary). The deck-100
+ * achievement is re-checked by the session-end sweep. Returns the XP.
+ */
+export async function recordExamDrillFinished(): Promise<number> {
+  await repos.stats.bumpDailyActivity({ xp: XP_TABLE.examDrillFinished });
+  await evaluateMotivation();
+  return XP_TABLE.examDrillFinished;
+}
+
+/** A «Работа над ошибками» deck session (or the daily torfl segment) finished: 5 XP, once per session (T70). */
+export async function recordExamDeckSession(): Promise<number> {
+  await repos.stats.bumpDailyActivity({ xp: XP_TABLE.examDeckSession });
+  await evaluateMotivation();
+  return XP_TABLE.examDeckSession;
 }
 
 /** Session summary reached — count sweeps + a due-count-fresh replan. */
