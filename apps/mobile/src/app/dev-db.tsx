@@ -499,6 +499,19 @@ export default function DevDbScreen() {
           origin: 'remote',
         });
         let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
+        if (result.counts.exams > 0) {
+          // T70: a planted exam-fixture dir may carry listening audio (adb-pushed) — set each
+          // track's localUri exactly as the Wi-Fi backfill would.
+          let audio = 0;
+          for (const row of await repos.content.listAudioTracksForPack(id)) {
+            const f = new File(packDir(id), ...row.file.split('/'));
+            if (f.exists) {
+              await repos.content.setAudioLocalUri(id, row.file, f.uri);
+              audio += 1;
+            }
+          }
+          if (audio > 0) status += ` · backfilled ${audio} exam audio`;
+        }
         if (result.counts.scenarios > 0) {
           const filled = await backfillFromPackDir(id);
           status += ` · backfilled ${filled.audio} audio / ${filled.scene} scene`;

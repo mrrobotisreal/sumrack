@@ -52,6 +52,7 @@ export function DrillItem({
   const [assets, setAssets] = React.useState<ItemAssets | null>(null);
   const [score, setScore] = React.useState<ItemScore | null>(null);
   const shownAtRef = React.useRef(0);
+  const scrollRef = React.useRef<ScrollView>(null);
   const doneRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -85,6 +86,14 @@ export function DrillItem({
     [onAnswered],
   );
 
+  // Bring the feedback card (and «Дальше») into view as soon as it appears.
+  const hasScore = score !== null;
+  React.useEffect(() => {
+    if (!hasScore) return;
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 280);
+    return () => clearTimeout(t);
+  }, [hasScore]);
+
   if (!assets) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -100,6 +109,7 @@ export function DrillItem({
 
   return (
     <ScrollView
+      ref={scrollRef}
       className="flex-1"
       contentContainerClassName="gap-4 px-4 pb-8 pt-4"
       keyboardShouldPersistTaps="handled"
