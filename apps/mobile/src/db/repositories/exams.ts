@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, ne, sql, type SQL } from 'drizzle-orm';
 import { ExamSchema, type Exam, type ExamSubtestKind } from '@sumrak/schema';
 import { createEmptyCard, Rating, type Card as FsrsCard, type Grade } from 'ts-fsrs';
 import type { z } from 'zod';
@@ -40,8 +40,10 @@ import { reviewScheduler } from './reviews';
  * - Every JSON column is parsed here through `features/torfl/model.ts`; an
  *   unreadable value resolves to `null` and fires ONE `app_error` per row
  *   (the T52/T58 pattern) — never a crash. Writes validate before writing.
- * - At most ONE `active` attempt exists; `startAttempt` refuses another
- *   unless `{ replace: true }`, which abandons the old one first.
+ * - At most ONE `active` MOCK attempt exists; `startAttempt` refuses another
+ *   unless `{ replace: true }`, which abandons the old one first. DRILL
+ *   attempts (scope 'drill', T70) are exempt: they never block, replace or
+ *   resume-collide with a mock (`abandonActiveDrills` sweeps orphans).
  * - Attempts outlive pack versions (§12): nothing here throws on an item a
  *   pack update removed — `topicStats` falls back to the deck row's topic,
  *   then skips.
@@ -371,11 +373,17 @@ export function createExamsRepo(db: SumrakDB) {
     return row;
   }
 
+  /**
+   * The «active attempt» rows the single-active rule + resume read. DRILL
+   * attempts are exempt (T70 decision): a drill never blocks, replaces or is
+   * mistaken for a mock's resumable attempt — see `startAttempt` /
+   * `abandonActiveDrills`.
+   */
   async function activeRows(): Promise<ExamAttemptRow[]> {
     return db
       .select()
       .from(examAttempts)
-      .where(eq(examAttempts.status, 'active'))
+      .where(and(eq(examAttempts.status, 'active'), ne(examAttempts.scope, 'drill')))
       .orderBy(desc(examAttempts.startedAt));
   }
 
@@ -396,6 +404,83 @@ export function createExamsRepo(db: SumrakDB) {
       .where(eq(examItemCards.itemKey, itemKey))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  /**
+   * Scored objective responses joined to their item's topic + subtest kind
+   * (the shared core of `topicStats` / `recentAccuracy`). Resolution order:
+   * the item in the CURRENT exam → its deck card → skipped (§12).
+   */
+  async function objectiveRows(opts: {
+    sinceMs?: number;
+    mode?: ExamMode;
+  }): Promise<
+    { topic: string; kind: string; points: number; maxPoints: number; createdAt: number }[]
+  > {
+    const where: SQL[] = [sql`${examResponses.points} IS NOT NULL`];
+    if (opts.sinceMs !== undefined) where.push(gte(examResponses.createdAt, opts.sinceMs));
+    if (opts.mode) where.push(eq(examAttempts.mode, opts.mode));
+    const rows = await db
+      .select({
+        packId: examAttempts.packId,
+        examId: examAttempts.examId,
+        subtestId: examResponses.subtestId,
+        itemId: examResponses.itemId,
+        points: examResponses.points,
+        maxPoints: examResponses.maxPoints,
+        createdAt: examResponses.createdAt,
+      })
+      .from(examResponses)
+      .innerJoin(examAttempts, eq(examAttempts.id, examResponses.attemptId))
+      .where(and(...where));
+    if (rows.length === 0) return [];
+
+    const examsByKey = new Map<string, Exam | null>();
+    const examFor = async (packId: string, examId: string) => {
+      const key = `${packId}/${examId}`;
+      if (!examsByKey.has(key)) examsByKey.set(key, await getExam(packId, examId));
+      return examsByKey.get(key) ?? null;
+    };
+    const cardRows = await db
+      .select({
+        itemKey: examItemCards.itemKey,
+        topic: examItemCards.topic,
+        subtestKind: examItemCards.subtestKind,
+      })
+      .from(examItemCards);
+    const cardMeta = new Map(cardRows.map((c) => [c.itemKey, c]));
+
+    const out: {
+      topic: string;
+      kind: string;
+      points: number;
+      maxPoints: number;
+      createdAt: number;
+    }[] = [];
+    for (const r of rows) {
+      const exam = await examFor(r.packId, r.examId);
+      const located = exam ? findExamItem(exam, r.itemId, r.subtestId) : null;
+      let topic: string;
+      let kind: string;
+      if (located) {
+        if (!OBJECTIVE_ITEM_KINDS.has(located.item.kind)) continue;
+        topic = located.item.topic;
+        kind = located.subtest.kind;
+      } else {
+        const meta = cardMeta.get(examItemKey(r.packId, r.examId, r.itemId));
+        if (!meta) continue;
+        topic = meta.topic;
+        kind = meta.subtestKind;
+      }
+      out.push({
+        topic,
+        kind,
+        points: r.points ?? 0,
+        maxPoints: r.maxPoints,
+        createdAt: r.createdAt,
+      });
+    }
+    return out;
   }
 
   return {
@@ -431,7 +516,9 @@ export function createExamsRepo(db: SumrakDB) {
       const subtestIds = ExamSubtestIdsSchema.parse(input.subtestIds);
       const state = ExamAttemptStateSchema.parse(input.state);
       const now = input.now ?? Date.now();
-      const active = await activeRows();
+      // T70: drill attempts (scope 'drill') are EXEMPT from the single-active
+      // rule — they neither throw ExamAttemptActiveError nor abandon a mock.
+      const active = input.scope === 'drill' ? [] : await activeRows();
       if (active.length > 0) {
         if (!opts.replace) throw new ExamAttemptActiveError(active[0]!.id);
         await db
@@ -554,6 +641,21 @@ export function createExamsRepo(db: SumrakDB) {
         .where(eq(examAttempts.id, attemptId));
     },
 
+    /**
+     * T70: close every `active` DRILL attempt as `abandoned` — orphans of a
+     * session the OS killed mid-drill (a drill session finishes/abandons its
+     * own attempts on exit). Called once when a drill/deck/daily-segment
+     * session starts. Never touches mock attempts. Returns the count.
+     */
+    async abandonActiveDrills(now = Date.now()): Promise<number> {
+      const rows = await db
+        .update(examAttempts)
+        .set({ status: 'abandoned', finishedAt: now })
+        .where(and(eq(examAttempts.status, 'active'), eq(examAttempts.scope, 'drill')))
+        .returning({ id: examAttempts.id });
+      return rows.length;
+    },
+
     /** Abandon an active attempt (responses stay — history/readiness still read them). */
     async abandonAttempt(attemptId: string, now = Date.now()): Promise<void> {
       await getActiveRowOrThrow(attemptId);
@@ -633,64 +735,46 @@ export function createExamsRepo(db: SumrakDB) {
     async topicStats(
       opts: { sinceMs?: number; subtestKind?: ExamSubtestKind; mode?: ExamMode } = {},
     ): Promise<ExamTopicStat[]> {
-      const where: SQL[] = [sql`${examResponses.points} IS NOT NULL`];
-      if (opts.sinceMs !== undefined) where.push(gte(examResponses.createdAt, opts.sinceMs));
-      if (opts.mode) where.push(eq(examAttempts.mode, opts.mode));
-      const rows = await db
-        .select({
-          packId: examAttempts.packId,
-          examId: examAttempts.examId,
-          subtestId: examResponses.subtestId,
-          itemId: examResponses.itemId,
-          points: examResponses.points,
-          maxPoints: examResponses.maxPoints,
-        })
-        .from(examResponses)
-        .innerJoin(examAttempts, eq(examAttempts.id, examResponses.attemptId))
-        .where(and(...where));
-      if (rows.length === 0) return [];
-
-      const examsByKey = new Map<string, Exam | null>();
-      const examFor = async (packId: string, examId: string) => {
-        const key = `${packId}/${examId}`;
-        if (!examsByKey.has(key)) examsByKey.set(key, await getExam(packId, examId));
-        return examsByKey.get(key) ?? null;
-      };
-      const cardRows = await db
-        .select({
-          itemKey: examItemCards.itemKey,
-          topic: examItemCards.topic,
-          subtestKind: examItemCards.subtestKind,
-        })
-        .from(examItemCards);
-      const cardMeta = new Map(cardRows.map((c) => [c.itemKey, c]));
-
+      const rows = await objectiveRows(opts);
       const stats = new Map<string, ExamTopicStat>();
       for (const r of rows) {
-        const exam = await examFor(r.packId, r.examId);
-        const located = exam ? findExamItem(exam, r.itemId, r.subtestId) : null;
-        let topic: string;
-        let kind: string;
-        if (located) {
-          if (!OBJECTIVE_ITEM_KINDS.has(located.item.kind)) continue;
-          topic = located.item.topic;
-          kind = located.subtest.kind;
-        } else {
-          const meta = cardMeta.get(examItemKey(r.packId, r.examId, r.itemId));
-          if (!meta) continue;
-          topic = meta.topic;
-          kind = meta.subtestKind;
-        }
-        if (opts.subtestKind && kind !== opts.subtestKind) continue;
-        const s = stats.get(topic) ?? { topic, answered: 0, correct: 0, points: 0, maxPoints: 0 };
-        const points = r.points ?? 0;
+        if (opts.subtestKind && r.kind !== opts.subtestKind) continue;
+        const s = stats.get(r.topic) ?? {
+          topic: r.topic,
+          answered: 0,
+          correct: 0,
+          points: 0,
+          maxPoints: 0,
+        };
         s.answered += 1;
-        if (points >= r.maxPoints - 1e-9) s.correct += 1;
-        s.points += points;
+        if (r.points >= r.maxPoints - 1e-9) s.correct += 1;
+        s.points += r.points;
         s.maxPoints += r.maxPoints;
-        stats.set(topic, s);
+        stats.set(r.topic, s);
       }
       return [...stats.values()].sort((a, b) => a.topic.localeCompare(b.topic));
+    },
+
+    /**
+     * T70 readiness input (TORFL §7.4): per subtest kind, the LAST `limit`
+     * (default 200) scored objective responses, newest first — `answered` +
+     * `correct` (full credit). Same item/kind resolution as `topicStats`.
+     */
+    async recentAccuracy(
+      opts: { limit?: number } = {},
+    ): Promise<Partial<Record<ExamSubtestKind, { answered: number; correct: number }>>> {
+      const limit = opts.limit ?? 200;
+      const rows = await objectiveRows({});
+      rows.sort((a, b) => b.createdAt - a.createdAt);
+      const out: Partial<Record<ExamSubtestKind, { answered: number; correct: number }>> = {};
+      for (const r of rows) {
+        const kind = r.kind as ExamSubtestKind;
+        const acc = (out[kind] ??= { answered: 0, correct: 0 });
+        if (acc.answered >= limit) continue;
+        acc.answered += 1;
+        if (r.points >= r.maxPoints - 1e-9) acc.correct += 1;
+      }
+      return out;
     },
 
     /** The AI grading queue (§6.2, T72): `pending-ai` responses, oldest first. */
@@ -833,6 +917,23 @@ export function createExamsRepo(db: SumrakDB) {
         t.due += r.due;
       }
       return out;
+    },
+
+    /**
+     * T70 `torfl-deck-100`: non-suspended exam cards in the FSRS Review
+     * state (2) — «cleared» items. Suspended cards don't count.
+     */
+    async countCardsInReview(): Promise<number> {
+      const rows = await db
+        .select({ n: sql<number>`COUNT(*)` })
+        .from(examItemCards)
+        .where(
+          and(
+            eq(examItemCards.suspended, false),
+            sql`json_extract(${examItemCards.fsrsJson}, '$.state') = 2`,
+          ),
+        );
+      return rows[0]?.n ?? 0;
     },
 
     /** Suspend (default) or unsuspend a card; suspended cards never come due. */

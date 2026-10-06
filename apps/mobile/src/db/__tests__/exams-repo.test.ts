@@ -123,10 +123,41 @@ describe('attempt lifecycle', () => {
     expect((await repos.exams.getActiveAttempt())?.id).toBe(a.id);
   });
 
+  it('T70: drill attempts are exempt — never block, replace or shadow a mock', async () => {
+    const mock = await startMock();
+    const d1 = await startDrill(T0 + MIN);
+    const d2 = await startDrill(T0 + 2 * MIN); // two drills at once is fine too
+    expect((await repos.exams.getActiveAttempt())?.id).toBe(mock.id);
+    expect((await repos.exams.getAttempt(mock.id))!.status).toBe('active');
+    // a replacing mock start abandons the old MOCK only, never a drill
+    await startMock({ replace: true, now: T0 + 3 * MIN });
+    expect((await repos.exams.getAttempt(mock.id))!.status).toBe('abandoned');
+    expect((await repos.exams.getAttempt(d1.id))!.status).toBe('active');
+    // orphan sweep: drills only, mocks untouched
+    expect(await repos.exams.abandonActiveDrills(T0 + 4 * MIN)).toBe(2);
+    expect((await repos.exams.getAttempt(d2.id))!.status).toBe('abandoned');
+    expect((await repos.exams.getActiveAttempt())?.status).toBe('active');
+    // and a drill can still record responses while it is active
+    const d3 = await startDrill(T0 + 5 * MIN);
+    await expect(
+      repos.exams.recordResponse({
+        attemptId: d3.id,
+        subtestId: 'lexgram',
+        itemId: 'dr01',
+        answer: { kind: 'choice', index: 0 },
+        points: 1,
+        maxPoints: 1,
+        gradingStatus: 'scored',
+      }),
+    ).resolves.toBeTruthy();
+  });
+
   it('single-active rule: a second start is refused; replace abandons the old one', async () => {
     const first = await startMock();
-    await expect(startDrill(T0 + MIN)).rejects.toBeInstanceOf(ExamAttemptActiveError);
-    await expect(startDrill(T0 + MIN)).rejects.toMatchObject({ activeAttemptId: first.id });
+    await expect(startMock({ now: T0 + MIN })).rejects.toBeInstanceOf(ExamAttemptActiveError);
+    await expect(startMock({ now: T0 + MIN })).rejects.toMatchObject({
+      activeAttemptId: first.id,
+    });
     expect(await repos.exams.listAttempts()).toHaveLength(1);
 
     const second = await startMock({ replace: true, now: T0 + 2 * MIN });
