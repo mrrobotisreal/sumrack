@@ -52,14 +52,24 @@ import {
   storyRowCaption,
 } from '@/features/library/library-filter';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
+import { ExamRow } from '@/features/torfl/exam-row';
+import type { ExamListItem } from '@/features/torfl/hub-model';
+import { useExamListItems } from '@/features/torfl/hooks';
+import { TorflHubCard } from '@/features/torfl/torfl-hub-card';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
 import { useLibraryPrefs } from '@/store/library-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-/** T27: dialogue packs shelve beside stories — one row union per pack. */
+/**
+ * T27: dialogue packs shelve beside stories — one row union per pack.
+ * M18 (T69): an exam pack's rows are its EXAMS (TORFL §5.2 item 3) — its
+ * stories are never Library rows (decision 3; still searchable).
+ */
 type LibraryRow =
-  { kind: 'story'; story: StoryListItem } | { kind: 'dialogue'; dialogue: DialogueListItem };
+  | { kind: 'story'; story: StoryListItem }
+  | { kind: 'dialogue'; dialogue: DialogueListItem }
+  | { kind: 'exam'; exam: ExamListItem };
 
 interface LibrarySection {
   pack: PackRow;
@@ -100,6 +110,7 @@ export function LibraryScreen() {
   const progressList = useStoryProgressList();
   const bookmarkedKeys = useBookmarkedStoryKeys();
   const importedMeta = useImportedPackMeta();
+  const examItems = useExamListItems();
   // M14 (T45): the persisted shelf selection — category chips + genre sub-row.
   const category = useLibraryPrefs((s) => s.category);
   const genre = useLibraryPrefs((s) => s.genre);
@@ -175,14 +186,19 @@ export function LibraryScreen() {
     }
     const build = (pack: PackRow): LibrarySection => ({
       pack,
-      data: [
-        ...stories.data
-          .filter((s) => s.packId === pack.id)
-          .map((story): LibraryRow => ({ kind: 'story', story })),
-        ...(dialogues.data ?? [])
-          .filter((d) => d.packId === pack.id)
-          .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
-      ],
+      data:
+        pack.type === 'exam'
+          ? examItems.items
+              .filter((e) => e.packId === pack.id)
+              .map((exam): LibraryRow => ({ kind: 'exam', exam }))
+          : [
+              ...stories.data
+                .filter((s) => s.packId === pack.id)
+                .map((story): LibraryRow => ({ kind: 'story', story })),
+              ...(dialogues.data ?? [])
+                .filter((d) => d.packId === pack.id)
+                .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
+            ],
     });
     const remoteAll = packs.data
       .filter((p) => p.origin !== 'local')
@@ -206,7 +222,7 @@ export function LibraryScreen() {
       }));
     if (local[0]) local[0] = { ...local[0], shelfHeader: 'Импортировано' };
     return { remoteAll, local };
-  }, [packs.data, stories.data, dialogues.data, importedMeta.data]);
+  }, [packs.data, stories.data, dialogues.data, importedMeta.data, examItems.items]);
 
   // M14 (T45): chip data — counts over every remote pack; the genre sub-row
   // only when ≥2 distinct genre values are installed under «Истории».
@@ -415,6 +431,13 @@ export function LibraryScreen() {
             testID="library-genre-chips"
           />
         )}
+        {/* M18 (T69): the pinned hub card — under «ТРКИ» only, above the
+            sections AND inside the empty state (the hub works before sync). */}
+        {category === 'torfl' && (
+          <View className="px-4">
+            <TorflHubCard />
+          </View>
+        )}
         {emptyCategory && <EmptyCategory category={category} />}
       </View>
     ),
@@ -474,7 +497,9 @@ export function LibraryScreen() {
       keyExtractor={(item) =>
         item.kind === 'story'
           ? `story/${item.story.packId}/${item.story.id}`
-          : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
+          : item.kind === 'exam'
+            ? `exam/${item.exam.packId}/${item.exam.examId}`
+            : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
       }
       stickySectionHeadersEnabled={false}
       contentContainerClassName="px-4 pb-12 pt-2"
@@ -507,7 +532,17 @@ export function LibraryScreen() {
         </View>
       )}
       renderItem={({ item }) =>
-        item.kind === 'story' ? (
+        item.kind === 'exam' ? (
+          <ExamRow
+            item={item.exam}
+            onPress={() =>
+              router.push({
+                pathname: '/exam/[packId]/[examId]',
+                params: { packId: item.exam.packId, examId: item.exam.examId },
+              })
+            }
+          />
+        ) : item.kind === 'story' ? (
           <StoryRow
             story={item.story}
             progress={progressByStory.get(`${item.story.packId}/${item.story.id}`)}
@@ -550,7 +585,9 @@ function EmptyCategory({ category }: { category: string }) {
       <Ionicons name={icon} size={40} color={tokens.textMuted} />
       <Text className="font-reading-bold text-xl">Пока пусто</Text>
       <Text variant="muted" className="text-center">
-        Материалы для этой полки появятся после синхронизации.
+        {category === 'torfl'
+          ? 'Материалы ТРКИ появятся после синхронизации — подготовка к экзамену уже открыта выше.'
+          : 'Материалы для этой полки появятся после синхронизации.'}
       </Text>
     </View>
   );

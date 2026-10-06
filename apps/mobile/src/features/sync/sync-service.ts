@@ -241,6 +241,8 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
       queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+      // T69: the «ТРКИ» shelf/hub read exams through their own query root.
+      queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
     ]);
   }
 
@@ -380,5 +382,6 @@ export async function removeInstalledPack(packId: string): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
     queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
   ]);
 }
