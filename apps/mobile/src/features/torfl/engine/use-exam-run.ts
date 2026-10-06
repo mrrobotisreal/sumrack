@@ -327,6 +327,13 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
         setPrefs(loadedPrefs);
         setState(hydrated);
         setLoad({ status: 'ready' });
+        // A fresh attempt (phase 'intro') opens its first subtest's instruction screen.
+        if (hydrated.phase === 'intro') {
+          const t = reduce(ctxRef.current, hydrated, { type: 'START', now: Date.now() });
+          stateRef.current = t.state;
+          setState(t.state);
+          perform(t.effects);
+        }
         // A stored run that was already running when we opened it is a RESUME.
         if (hydrated.phase === 'running') {
           const cur = hydrated.subtests[hydrated.current];

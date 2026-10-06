@@ -59,6 +59,7 @@ export function ExamResultsScreen({ attemptId }: { attemptId: string }) {
       attemptId={attemptId}
       exam={exam.data}
       attempt={attempt.data}
+      top={insets.top}
       bottom={insets.bottom}
     />
   );
@@ -68,11 +69,13 @@ function ResultsBody({
   attemptId,
   exam,
   attempt,
+  top,
   bottom,
 }: {
   attemptId: string;
   exam: Exam;
   attempt: NonNullable<ReturnType<typeof useExamAttempt>['data']>;
+  top: number;
   bottom: number;
 }) {
   const { tokens } = useAppTheme();
@@ -102,8 +105,8 @@ function ResultsBody({
   return (
     <ScrollView
       className="flex-1 bg-bg"
-      contentContainerClassName="gap-6 px-4 pt-3"
-      contentContainerStyle={{ paddingBottom: bottom + 40 }}
+      contentContainerClassName="gap-6 px-4"
+      contentContainerStyle={{ paddingTop: top + 12, paddingBottom: bottom + 40 }}
       testID="exam-results"
     >
       <View className="flex-row items-center gap-3">
@@ -283,7 +286,7 @@ function VerdictCard({ v, xp }: { v: ReturnType<typeof computeVerdict>; xp: numb
 
 function SubtestRow({ row }: { row: ResultRow }) {
   const band = row.pct !== null ? bandFor(row.pct) : null;
-  const used = formatUsed(row.timeUsedSec);
+  const used = row.status === 'scored' ? formatUsed(row.timeUsedSec) : '';
   return (
     <View className="gap-1.5" testID={`result-${row.kind}`}>
       <View className="flex-row items-center gap-2">
@@ -296,7 +299,11 @@ function SubtestRow({ row }: { row: ResultRow }) {
           </Text>
         ) : (
           <Text variant="caption" testID={`result-${row.kind}-skipped`}>
-            {row.status === 'skipped' ? 'пропущено · скоро' : 'не сдано'}
+            {row.status === 'skipped'
+              ? row.kind === 'writing' || row.kind === 'speaking'
+                ? 'пропущено · скоро'
+                : 'пропущено'
+              : 'не сдано'}
           </Text>
         )}
       </View>
