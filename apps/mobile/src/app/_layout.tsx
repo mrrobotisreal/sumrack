@@ -148,6 +148,9 @@ export default function RootLayout() {
                   name="dialogue/[packId]/[dialogueId]"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
                 />
+                <Stack.Screen name="torfl/index" options={{ title: 'ТРКИ' }} />
+                <Stack.Screen name="torfl/texts" options={{ title: 'Тексты' }} />
+                <Stack.Screen name="exam/[packId]/[examId]" options={{ title: 'Экзамен' }} />
                 <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
                 <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
                 <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />

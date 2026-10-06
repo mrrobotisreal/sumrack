@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 import { normalizeRu, toFtsQuery } from '../normalize';
 import {
@@ -156,6 +156,19 @@ export function createContentRepo(db: SumrakDB) {
         sentences: sentenceRows.map((s) => ({ ...s, tokens: bySentence.get(s.id) ?? [] })),
         audio,
       };
+    },
+
+    /**
+     * T69 «Тексты»: `packId/storyId` keys of the stories that carry at least
+     * one audio track, across the given packs (the audio icon on a text row).
+     */
+    async listStoryKeysWithAudio(packIds: readonly string[]): Promise<Set<string>> {
+      if (packIds.length === 0) return new Set();
+      const rows = await db
+        .selectDistinct({ packId: audioTracks.packId, storyId: audioTracks.storyId })
+        .from(audioTracks)
+        .where(inArray(audioTracks.packId, [...packIds]));
+      return new Set(rows.map((r) => `${r.packId}/${r.storyId}`));
     },
 
     /** All audio tracks of a pack — sync (T07) uses this to find not-yet-downloaded audio. */
