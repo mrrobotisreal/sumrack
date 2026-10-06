@@ -392,7 +392,11 @@ export function estimateSentences(
     speechMs = Math.max(0, stamps[0]!.e - stamps[0]!.s);
   }
   const cap = Math.max(1, verbs + VERB_SLACK);
-  const sentences = stamps && stamps.length > 1 ? Math.min(clauses, cap) : Math.max(1, verbs);
+  // Device finding (T73, S25): Zipformer stamps are CONTIGUOUS (each word's end = the next
+  // word's start), so no pause is ever visible and `clauses` stays 1 — the verb count is then
+  // the only signal. A pause-split only counts when the stamps actually show pauses.
+  const sentences =
+    stamps && stamps.length > 1 && clauses > 1 ? Math.min(clauses, cap) : Math.max(1, verbs);
   const wpm = speechMs > 0 ? Math.round((words / (speechMs / 60_000)) * 10) / 10 : 0;
   return { sentences, clauses, verbs, words, speechMs, longestPauseMs, wpm };
 }

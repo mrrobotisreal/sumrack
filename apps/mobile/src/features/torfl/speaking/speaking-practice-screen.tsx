@@ -135,7 +135,7 @@ export function SpeakingPracticeScreen() {
             answer,
             points: offlineSpeakingPoints(grade, share),
             maxPoints: share,
-            gradingStatus: online && hasText ? 'pending-ai' : 'provisional',
+            gradingStatus: !hasText ? 'scored' : online ? 'pending-ai' : 'provisional',
             grading,
             durationMs: answer.durationMs,
           });
@@ -230,7 +230,9 @@ export function SpeakingPracticeScreen() {
   const gate = speakingGateMessage(gates);
   const entry =
     phase.kind === 'done' && response.data
-      ? speakingDebriefEntries(exam.data, located.subtest.id, [response.data])[0]
+      ? (speakingDebriefEntries(exam.data, located.subtest.id, [response.data]).find(
+          (e) => e.item.id === item.id,
+        ) ?? null)
       : null;
   const sending = useGradingQueue.getState().sending;
 

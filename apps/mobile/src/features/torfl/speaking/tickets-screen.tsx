@@ -179,7 +179,7 @@ export function TicketsScreen() {
             answer,
             points: offlineSpeakingPoints(grade, share),
             maxPoints: share,
-            gradingStatus: online && hasText ? 'pending-ai' : 'provisional',
+            gradingStatus: !hasText ? 'scored' : online ? 'pending-ai' : 'provisional',
             grading,
             durationMs: answer.durationMs,
           });
@@ -328,6 +328,7 @@ export function TicketsScreen() {
             <View className="items-center py-6">
               <View style={{ width: 280, height: 180 }}>
                 <Animated.View
+                  pointerEvents={faceUp ? 'none' : 'auto'}
                   style={[
                     { position: 'absolute', inset: 0, backfaceVisibility: 'hidden' },
                     frontStyle,
@@ -350,6 +351,7 @@ export function TicketsScreen() {
                   </Pressable>
                 </Animated.View>
                 <Animated.View
+                  pointerEvents={faceUp ? 'auto' : 'none'}
                   style={[
                     { position: 'absolute', inset: 0, backfaceVisibility: 'hidden' },
                     backStyle,
@@ -509,7 +511,9 @@ export function TicketsScreen() {
             )?.exam;
             const entry =
               exam && response.data
-                ? speakingDebriefEntries(exam, phase.ticket.subtestId, [response.data])[0]
+                ? (speakingDebriefEntries(exam, phase.ticket.subtestId, [response.data]).find(
+                    (e) => e.item.id === phase.ticket.item.id,
+                  ) ?? null)
                 : null;
             return (
               <>

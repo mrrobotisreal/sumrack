@@ -281,7 +281,8 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                       answer,
                       points: offlineSpeakingPoints(grade, share),
                       maxPoints: share,
-                      gradingStatus: online && hasText ? 'pending-ai' : 'provisional',
+                      // An empty answer is FINAL at 0 (nothing to send); a spoken one waits for the AI.
+                      gradingStatus: !hasText ? 'scored' : online ? 'pending-ai' : 'provisional',
                       grading,
                       durationMs: answer.durationMs,
                     });

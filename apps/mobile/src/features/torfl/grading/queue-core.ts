@@ -225,8 +225,15 @@ export async function processGradingQueue(deps: GradingQueueDeps): Promise<numbe
 export interface ResponseLike {
   subtestId: string;
   points: number | null;
+  /** The row's own max (absent in older callers → the subtest's max is used). */
+  maxPoints?: number;
   gradingStatus: string;
   grading: ExamGrading | null;
+}
+
+/** A `scored` row with 0 points and no AI block = an empty answer scored final at 0 (T73). */
+function isEmptyScored(r: ResponseLike): boolean {
+  return r.gradingStatus === 'scored' && (r.points ?? 0) === 0 && !r.grading?.ai;
 }
 
 /**
@@ -253,12 +260,25 @@ export function recomputeResults(
     const graded = rows.filter((r) => r.grading?.ai || r.grading?.self || r.grading?.offline);
     if (graded.length === 0) continue;
     const points = rows.reduce((n, r) => n + (r.points ?? 0), 0);
-    const allAi = rows.every((r) => r.gradingStatus === 'scored' && r.grading?.ai);
+    // T73: a row is FINAL when the AI graded it, the learner self-graded it, or it is an empty
+    // answer recorded `scored` at 0 (nothing to send — it must never hold the subtest provisional).
+    const isFinal = (r: ResponseLike) =>
+      (r.gradingStatus === 'scored' &&
+        (!!r.grading?.ai || !r.grading?.offline || isEmptyScored(r))) ||
+      (r.gradingStatus === 'self-graded' && !!r.grading?.self);
+    const allFinal = rows.every(isFinal);
+    const anyAi = rows.some((r) => r.gradingStatus === 'scored' && r.grading?.ai);
     const allSelf = rows.every((r) => r.gradingStatus === 'self-graded' && r.grading?.self);
-    const gradedBy = allAi ? 'ai' : allSelf ? 'self' : 'offline';
-    const provisional = !(allAi || allSelf);
-    const pct = Math.min(100, Math.max(0, Math.round((points / subtest.maxPoints) * 1000) / 10));
-    results[subtest.id] = { points, maxPoints: subtest.maxPoints, pct, provisional, gradedBy };
+    const gradedBy = !allFinal ? 'offline' : allSelf ? 'self' : anyAi ? 'ai' : 'offline';
+    const provisional = !allFinal;
+    // A drill-scope attempt (practice: one letter / one spoken answer) is worth its rows' own
+    // max, never the whole subtest's (T73 device finding: a 50-point monologue read as 49.8 %).
+    const maxPoints =
+      scope === 'drill'
+        ? rows.reduce((n, r) => n + (r.maxPoints ?? 0), 0) || subtest.maxPoints
+        : subtest.maxPoints;
+    const pct = Math.min(100, Math.max(0, Math.round((points / maxPoints) * 1000) / 10));
+    results[subtest.id] = { points, maxPoints, pct, provisional, gradedBy };
   }
   const pcts: Partial<Record<ExamSubtestKind, number>> = {};
   const provisionalKinds: Partial<Record<ExamSubtestKind, boolean>> = {};
