@@ -1,16 +1,23 @@
 import type { Exam, ExamSubtestKind } from '@sumrak/schema';
 
+import { gradeWritingOffline } from '../grading/writing';
 import { isAnswered, type ExamAnswer, type ExamResults } from '../model';
-import { scoreItem, subtestPercent, type ItemOutcome } from '../scoring';
+import { roundPct, scoreItem, subtestPercent, type ItemOutcome } from '../scoring';
 import { verdict as computeVerdict, type FullVerdict } from '../verdict';
 import { isPlaceholderKind, type ExamRunState } from './exam-machine';
 
 /**
  * Finishing a mock (T71) — PURE: from the exam, the final run state and the
  * answers, compute what `finishAttempt` stores: one result per SCORED
- * objective subtest (placeholders recorded skipped are excluded — not 0 %),
- * the pcts by kind, the SPbU verdict (full scope only, null until all five
- * exist), and the items that must enter the deck as misses.
+ * subtest (placeholders recorded skipped are excluded — not 0 %), the pcts
+ * by kind, the SPbU verdict (full scope only, null until all five exist),
+ * and the items that must enter the deck as misses.
+ *
+ * T72: a submitted WRITING subtest is scored here too — the offline
+ * provisional grade (`gradeWritingOffline`, 55 → 100 rescaled) over its
+ * letter(s), `provisional: true`, `gradedBy: 'offline'`. The AI grade later
+ * rewrites that row through the grading queue (`recomputeResults`). Writing
+ * items never enter the deck.
  */
 
 export interface MissedItem {
@@ -45,11 +52,40 @@ export interface SubtestScore {
   missed: MissedItem[];
 }
 
-/** Score ONE subtest from the answers (objective kinds only): result + the items that were not full credit. */
+/** The provisional writing result of a subtest: each writing item is worth an equal share of `maxPoints`. */
+export function scoreWritingSubtest(
+  subtest: Exam['subtests'][number],
+  answers: Record<string, ExamAnswer>,
+): ExamResults[string] {
+  const items = subtest.parts.flatMap((p) => p.items).filter((i) => i.kind === 'writing');
+  const share = items.length > 0 ? subtest.maxPoints / items.length : 0;
+  let points = 0;
+  for (const item of items) {
+    if (item.kind !== 'writing') continue;
+    const a = answers[item.id];
+    const text = a?.kind === 'writing' ? a.text : '';
+    points += (gradeWritingOffline(item, text).pct / 100) * share;
+  }
+  points = Math.round(points * 10) / 10;
+  return {
+    points,
+    maxPoints: subtest.maxPoints,
+    pct:
+      subtest.maxPoints > 0
+        ? Math.min(100, Math.max(0, roundPct((points / subtest.maxPoints) * 100)))
+        : 0,
+    provisional: true,
+    gradedBy: 'offline',
+  };
+}
+
+/** Score ONE subtest from the answers: result + the items that were not full credit (objective kinds; writing → provisional). */
 export function scoreSubtest(
   subtest: Exam['subtests'][number],
   answers: Record<string, ExamAnswer>,
 ): SubtestScore {
+  if (subtest.kind === 'writing')
+    return { result: scoreWritingSubtest(subtest, answers), missed: [] };
   const scored: { points: number }[] = [];
   const missed: MissedItem[] = [];
   let points = 0;

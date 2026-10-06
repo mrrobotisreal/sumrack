@@ -1,5 +1,4 @@
 import type { Exam, ExamSubtest, ExamSubtestKind } from '@sumrak/schema';
-import { OBJECTIVE_SUBTEST_KINDS } from '@sumrak/schema';
 
 import {
   ExamAttemptStateSchema,
@@ -27,8 +26,12 @@ import { buildLayout, flatIndexOf } from './layout';
  *   → 2 → locked; a text interrupted by a kill/background counts as heard
  *   (the interrupted-play rule: it resumes as the NEXT play). Back-navigation
  *   is refused in the reducer; `GOTO` only moves inside the current group.
- * - Writing / speaking open a `placeholder` phase («скоро», T72/T73) whose
- *   `SUBMIT_SUBTEST` records them skipped (excluded, never 0 %).
+ * - Writing (T72) runs like an objective subtest: instructions → BEGIN →
+ *   `running` with the letter editor; every edit is an `ANSWER` (persisted at
+ *   once), `SUBMIT_SUBTEST` / the deadline emit `SCORE_SUBTEST` (the executor
+ *   grades offline + enqueues the AI grade). Speaking still opens the
+ *   `placeholder` phase («скоро», T73) whose `SUBMIT_SUBTEST` records it
+ *   skipped (excluded, never 0 %).
  */
 
 /** Gap between a listening text's two plays (§8.2). */
@@ -140,8 +143,9 @@ export interface Transition {
 
 const NOOP = (state: ExamRunState): Transition => ({ state, effects: [] });
 
+/** Kinds without a runner yet: only speaking (T73). Writing became real in T72. */
 export function isPlaceholderKind(kind: ExamSubtestKind): boolean {
-  return !OBJECTIVE_SUBTEST_KINDS.includes(kind);
+  return kind === 'speaking';
 }
 
 // --- construction / persistence ------------------------------------------------------

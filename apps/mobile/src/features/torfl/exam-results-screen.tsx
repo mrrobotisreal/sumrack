@@ -300,7 +300,7 @@ function SubtestRow({ row }: { row: ResultRow }) {
         ) : (
           <Text variant="caption" testID={`result-${row.kind}-skipped`}>
             {row.status === 'skipped'
-              ? row.kind === 'writing' || row.kind === 'speaking'
+              ? row.kind === 'speaking'
                 ? 'пропущено · скоро'
                 : 'пропущено'
               : 'не сдано'}

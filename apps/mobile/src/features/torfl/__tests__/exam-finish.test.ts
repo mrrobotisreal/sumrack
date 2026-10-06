@@ -13,12 +13,14 @@ const EXAM: Exam = ExamSchema.parse(PACK.exams!.find((e) => e.id === 'a1-mock-fx
 const T0 = 1_790_000_000_000;
 const choice = (index: number | null): ExamAnswer => ({ kind: 'choice', index });
 
-function submitted(ids: string[]): ExamRunState {
+/** Drive every subtest to submitted; `skip` names subtests submitted from their instruction screen (recorded skipped). */
+function submitted(ids: string[], skip: string[] = []): ExamRunState {
   let state = initialRunState(EXAM, ids);
   const ctx = { exam: EXAM, breakBetween: false };
   state = reduce(ctx, state, { type: 'START', now: T0 }).state;
   for (let i = 0; i < ids.length; i++) {
-    if (state.phase === 'instructions')
+    const cur = state.subtests[state.current]!;
+    if (state.phase === 'instructions' && !skip.includes(cur.id))
       state = reduce(ctx, state, { type: 'BEGIN', now: T0 }).state;
     state = reduce(ctx, state, { type: 'SUBMIT_SUBTEST', now: T0 + 1000 }).state;
   }
@@ -62,12 +64,54 @@ describe('computeFinish', () => {
         if (item.kind === 'choice') answers[item.id] = choice(item.answer);
       }
     }
-    const f = computeFinish(EXAM, submitted(all), answers, 'full');
+    const f = computeFinish(EXAM, submitted(all, ['writing']), answers, 'full');
     expect(Object.keys(f.results).sort()).toEqual(['listening', 'lexgram', 'reading'].sort());
     expect(f.pcts).toEqual({ lexgram: 100, reading: 100, listening: 100 });
     expect(f.verdict?.verdict).toBeNull();
     expect(f.verdict?.missing).toEqual(['writing', 'speaking']);
     expect(f.missed).toEqual([]);
+  });
+
+  it('T72: a submitted writing subtest is scored offline → provisional, gradedBy offline, no deck entries', () => {
+    const letter = [
+      'Привет, Саша!',
+      'Меня зовут Митч. Мне тридцать шесть лет. Я живу в Колорадо.',
+      'Я работаю программистом. Это интересная работа.',
+      'Я люблю читать и слушать музыку. Ещё мне нравится готовить.',
+      'А как ты? Где ты сейчас живёшь? Что ты любишь делать?',
+      'Пока! Жду ответа.',
+    ].join('\n');
+    const f = computeFinish(
+      EXAM,
+      submitted(['writing']),
+      { wr01: { kind: 'writing', text: letter } },
+      'subtest',
+    );
+    expect(f.results.writing).toEqual({
+      points: 100,
+      maxPoints: 100,
+      pct: 100,
+      provisional: true,
+      gradedBy: 'offline',
+    });
+    expect(f.missed).toEqual([]);
+    // An empty letter is a real 0 % (not skipped): the candidate sat the subtest.
+    const empty = computeFinish(EXAM, submitted(['writing']), {}, 'subtest');
+    expect(empty.results.writing).toMatchObject({ pct: 0, provisional: true });
+    // Four scored + writing provisional → verdict still null (speaking missing), provisional flag carried.
+    const all = EXAM.subtests.map((s) => s.id);
+    const answers: Record<string, ExamAnswer> = { wr01: { kind: 'writing', text: letter } };
+    for (const s of EXAM.subtests) {
+      for (const item of s.parts.flatMap((p) => p.items)) {
+        if (item.kind === 'choice') answers[item.id] = choice(item.answer);
+      }
+    }
+    const full = computeFinish(EXAM, submitted(all), answers, 'full');
+    expect(Object.keys(full.results).sort()).toEqual(
+      ['writing', 'lexgram', 'reading', 'listening'].sort(),
+    );
+    expect(full.verdict?.verdict).toBeNull();
+    expect(full.verdict?.missing).toEqual(['speaking']);
   });
 
   it('an unsubmitted subtest is not scored', () => {

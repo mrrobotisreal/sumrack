@@ -13,12 +13,13 @@ import { useExamRun } from './engine/use-exam-run';
 import { ExamBreakScreen, ExamPlaceholderScreen } from './exam-break-screen';
 import { ExamInstructionScreen } from './exam-instruction-screen';
 import { ExamObjectiveScreen } from './exam-objective-screen';
+import { ExamWritingScreen } from './exam-writing-screen';
 
 /**
  * The mock runner route body (T71) — `/exam/run/[attemptId]`, full-screen,
  * gesture disabled. A thin switch over `useExamRun`: it renders the phase the
- * pure engine is in (instructions → objective runner → break → placeholder)
- * and forwards user intent as engine events. Quit = confirm → «Сохранить и
+ * pure engine is in (instructions → objective / writing runner → break →
+ * placeholder) and forwards user intent as engine events. Quit = confirm → «Сохранить и
  * выйти» (stays resumable) / «Завершить попытку» (abandon).
  */
 export function ExamRunScreen() {
@@ -147,6 +148,21 @@ export function ExamRunScreen() {
         }
         onBegin={() => run.send({ type: 'BEGIN', now: Date.now() })}
         onSkip={() => run.send({ type: 'SUBMIT_SUBTEST', now: Date.now() })}
+        onQuit={quit}
+      />
+    );
+  }
+
+  if (def.kind === 'writing') {
+    return (
+      <ExamWritingScreen
+        key={cur.id}
+        subtest={def}
+        run={state}
+        remainingMs={run.remainingMs}
+        prefs={run.prefs}
+        onAnswer={(itemId, answer) => run.send({ type: 'ANSWER', itemId, answer, now: Date.now() })}
+        onSubmit={() => run.send({ type: 'SUBMIT_SUBTEST', now: Date.now() })}
         onQuit={quit}
       />
     );

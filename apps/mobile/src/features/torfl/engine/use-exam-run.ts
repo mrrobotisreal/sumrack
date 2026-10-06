@@ -11,7 +11,11 @@ import { recordExamFinished } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
-import type { ExamAnswer } from '../model';
+import { hasApiKey } from '@/features/ai/config';
+
+import { gradeWritingOffline, offlineItemScore } from '../grading/writing';
+import { pumpGradingQueue } from '../grading/queue';
+import type { ExamAnswer, ExamGrading } from '../model';
 import { getTorflPrefs } from '../settings';
 import { DEFAULT_TORFL_PREFS, type TorflPrefs } from '../settings-core';
 import { fileExists } from '../drill/drill-item';
@@ -68,7 +72,10 @@ export interface ExamRun {
  *  - `PERSIST_STATE` → `saveState`, throttled ≤ 1 / 5 s unless `urgent`,
  *    and flushed when the app backgrounds,
  *  - `SCORE_SUBTEST` → T70 scoring (`scoreSubtest`) → the per-response
- *    `points` + the analytics row `exam_subtest_submitted`,
+ *    `points` + the analytics row `exam_subtest_submitted`; a WRITING
+ *    subtest (T72) gets the offline provisional grade per letter and goes
+ *    `pending-ai` (a key exists → the grading queue pumps at once) or stays
+ *    `provisional`,
  *  - `FINISH` → `finalizeAttempt` (results, verdict, XP, deck entries after
  *    finish) → the results route,
  *  - `ABANDON` → `abandonAttempt`.
@@ -147,8 +154,12 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                 answer: e.answer,
                 // Scored at SCORE_SUBTEST — never stored (and never shown) during the sitting.
                 points: null,
-                maxPoints: subtest.pointsPerItem ?? item.points ?? 1,
-                gradingStatus: 'scored',
+                maxPoints:
+                  item.kind === 'writing'
+                    ? subtest.maxPoints
+                    : (subtest.pointsPerItem ?? item.points ?? 1),
+                // T72: a letter draft is `provisional` until the subtest closes (kill-safe autosave).
+                gradingStatus: item.kind === 'writing' ? 'provisional' : 'scored',
               }),
             );
             break;
@@ -178,6 +189,45 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
               timeUsedSec: e.timeUsedSec,
             });
             if (!subtest) break;
+            if (subtest.kind === 'writing') {
+              // T72: the offline provisional grade per letter, then the AI queue when a key exists.
+              void enqueue(async () => {
+                const online = await hasApiKey();
+                for (const part of subtest.parts) {
+                  for (const item of part.items) {
+                    if (item.kind !== 'writing') continue;
+                    const given = answers[item.id];
+                    const text = given?.kind === 'writing' ? given.text : '';
+                    const grade = gradeWritingOffline(item, text);
+                    const score = offlineItemScore(grade, subtest.maxPoints);
+                    const grading: ExamGrading = {
+                      v: 1,
+                      offline: { criteria: grade.criteria, details: { ...grade.details } },
+                    };
+                    await repos.exams.recordResponse({
+                      attemptId: a.id,
+                      subtestId: subtest.id,
+                      itemId: item.id,
+                      answer: { kind: 'writing', text },
+                      points: score.points,
+                      maxPoints: subtest.maxPoints,
+                      gradingStatus:
+                        online && text.trim().length > 0 ? 'pending-ai' : 'provisional',
+                      grading,
+                    });
+                    track('exam_writing_scored', {
+                      source: 'offline',
+                      pct: grade.pct,
+                      sentences: grade.details.sentences,
+                      questions: grade.details.questions,
+                      pointsCovered: grade.details.pointsCovered,
+                    });
+                  }
+                }
+                if (online) void pumpGradingQueue();
+              });
+              break;
+            }
             // Write the per-response points now that the subtest is closed (review reads them).
             void enqueue(async () => {
               const detail = await repos.exams.getAttempt(a.id);

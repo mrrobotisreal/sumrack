@@ -64,14 +64,38 @@ describe('layout', () => {
 });
 
 describe('start / begin / deadlines (wall clock)', () => {
-  it('START opens the first subtest; objective → instructions, writing → placeholder', () => {
+  it('START opens the first subtest; objective + writing → instructions, speaking → placeholder', () => {
     const lex = run(['lexgram']);
     lex.send({ type: 'START', now: T0 });
     expect(lex.state.phase).toBe('instructions');
     expect(lex.state.subtests[0]!.status).toBe('intro');
     const writing = run(['writing']);
     writing.send({ type: 'START', now: T0 });
-    expect(writing.state.phase).toBe('placeholder');
+    expect(writing.state.phase).toBe('instructions');
+    const speaking = run(['speaking']);
+    speaking.send({ type: 'START', now: T0 });
+    expect(speaking.state.phase).toBe('placeholder');
+  });
+
+  it('writing (T72): BEGIN → running with the 30 min deadline; a letter ANSWER persists; SUBMIT scores', () => {
+    const r = run(['writing']);
+    r.send({ type: 'START', now: T0 });
+    r.send({ type: 'BEGIN', now: T0 });
+    expect(r.state.phase).toBe('running');
+    expect(r.state.subtests[0]!.deadlineAt).toBe(T0 + 30 * MIN);
+    const fx = r.send({
+      type: 'ANSWER',
+      itemId: 'wr01',
+      answer: { kind: 'writing', text: 'Привет!' },
+      now: T0 + 1000,
+    });
+    expect(types(fx)).toEqual(['PERSIST_RESPONSE']);
+    const sub = r.send({ type: 'SUBMIT_SUBTEST', now: T0 + 2000 });
+    expect(sub.find((e) => e.type === 'SCORE_SUBTEST')).toMatchObject({
+      kind: 'writing',
+      answered: 1,
+      total: 1,
+    });
   });
 
   it('BEGIN sets deadlineAt = now + durationMin and emits SUBTEST_STARTED + a state write', () => {
@@ -364,7 +388,7 @@ describe('listening with several groups (linear across groups)', () => {
 
 describe('placeholders, breaks, finish', () => {
   it('SUBMIT on a placeholder records it skipped, with NO score effect', () => {
-    const r = run(['writing']);
+    const r = run(['speaking']);
     r.send({ type: 'START', now: T0 });
     const fx = r.send({ type: 'SUBMIT_SUBTEST', now: T0 + 1000 });
     expect(types(fx)).not.toContain('SCORE_SUBTEST');
@@ -383,12 +407,11 @@ describe('placeholders, breaks, finish', () => {
     expect(r.state.subtests[r.state.current]!.id).toBe('listening');
   });
 
-  it('a full mock: writing(skipped) → lexgram → reading → listening → speaking(skipped) → FINISH', () => {
+  it('a full mock: writing → lexgram → reading → listening → speaking(skipped) → FINISH', () => {
     const r = run(ALL, false);
     r.send({ type: 'START', now: T0 });
-    expect(r.state.phase).toBe('placeholder');
-    r.send({ type: 'SUBMIT_SUBTEST', now: T0 });
-    for (const id of ['lexgram', 'reading', 'listening']) {
+    expect(r.state.phase).toBe('instructions');
+    for (const id of ['writing', 'lexgram', 'reading', 'listening']) {
       expect(r.state.subtests[r.state.current]!.id).toBe(id);
       expect(r.state.phase).toBe('instructions');
       r.send({ type: 'BEGIN', now: T0 });
@@ -398,7 +421,7 @@ describe('placeholders, breaks, finish', () => {
     expect(r.state.subtests[r.state.current]!.id).toBe('speaking');
     r.send({ type: 'SUBMIT_SUBTEST', now: T0 });
     expect(r.state.phase).toBe('done');
-    expect(r.effects.filter((e) => e.type === 'SCORE_SUBTEST')).toHaveLength(3);
+    expect(r.effects.filter((e) => e.type === 'SCORE_SUBTEST')).toHaveLength(4);
     expect(r.effects.filter((e) => e.type === 'FINISH')).toHaveLength(1);
   });
 
