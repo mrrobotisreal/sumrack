@@ -231,7 +231,8 @@ function PracticeResult({
   const [selfOpen, setSelfOpen] = React.useState(false);
   const sending = useGradingQueue((s) => s.sending);
   const status = response?.gradingStatus ?? 'provisional';
-  const inFlight = status === 'pending-ai' || (response ? sending[response.id] === true : false);
+  const inFlight = response ? sending[response.id] === true : false;
+  const waiting = status === 'pending-ai' && !inFlight;
   const letter = response?.answer?.kind === 'writing' ? response.answer.text : '';
   const ai = response?.grading?.ai;
   const pct =
@@ -291,28 +292,30 @@ function PracticeResult({
             {offline.details.greeting ? ' · приветствие ✓' : ' · без приветствия'}
             {offline.details.signOff ? ' · прощание ✓' : ' · без прощания'}
           </Text>
-          {(status === 'ai-failed' || status === 'provisional') && !inFlight && response && (
-            <View className="mt-1 flex-row flex-wrap gap-2">
-              <Pressable
-                onPress={() => void requestGrading(response.id).then(onRefetch)}
-                accessibilityRole="button"
-                testID="practice-retry"
-                className="flex-row items-center gap-1.5 rounded-full bg-accent px-4 py-2 active:opacity-80"
-              >
-                <Ionicons name="refresh" size={14} color={tokens.bg} />
-                <Text className="font-ui-medium text-sm text-bg">Повторить оценку</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setSelfOpen(true)}
-                accessibilityRole="button"
-                testID="practice-self-check"
-                className="flex-row items-center gap-1.5 rounded-full border border-accent px-4 py-2 active:bg-accent-soft"
-              >
-                <Ionicons name="checkbox-outline" size={14} color={tokens.accent} />
-                <Text className="font-ui-medium text-sm text-accent">Самопроверка</Text>
-              </Pressable>
-            </View>
-          )}
+          {(status === 'ai-failed' || status === 'provisional' || waiting) &&
+            !inFlight &&
+            response && (
+              <View className="mt-1 flex-row flex-wrap gap-2">
+                <Pressable
+                  onPress={() => void requestGrading(response.id).then(onRefetch)}
+                  accessibilityRole="button"
+                  testID="practice-retry"
+                  className="flex-row items-center gap-1.5 rounded-full bg-accent px-4 py-2 active:opacity-80"
+                >
+                  <Ionicons name="refresh" size={14} color={tokens.bg} />
+                  <Text className="font-ui-medium text-sm text-bg">Повторить оценку</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setSelfOpen(true)}
+                  accessibilityRole="button"
+                  testID="practice-self-check"
+                  className="flex-row items-center gap-1.5 rounded-full border border-accent px-4 py-2 active:bg-accent-soft"
+                >
+                  <Ionicons name="checkbox-outline" size={14} color={tokens.accent} />
+                  <Text className="font-ui-medium text-sm text-accent">Самопроверка</Text>
+                </Pressable>
+              </View>
+            )}
         </View>
 
         {criteria.length > 0 && (

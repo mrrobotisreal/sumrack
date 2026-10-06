@@ -84,7 +84,9 @@ export function WritingReviewScreen({ attemptId }: { attemptId: string }) {
   const letter = response.answer?.kind === 'writing' ? response.answer.text : '';
   const g = response.grading;
   const status = response.gradingStatus;
-  const inFlight = status === 'pending-ai' || sending[response.id] === true;
+  // In flight = the pump is sending it now; a `pending-ai` row with no sender is WAITING (offline / no key).
+  const inFlight = sending[response.id] === true;
+  const waiting = status === 'pending-ai' && !inFlight;
   const criteria = mergedCriteria(response);
   const pct = a.results?.[writingSubtest.id]?.pct ?? null;
   const gradedBy = a.results?.[writingSubtest.id]?.gradedBy ?? 'offline';
@@ -143,6 +145,10 @@ export function WritingReviewScreen({ attemptId }: { attemptId: string }) {
               <ActivityIndicator size="small" color={tokens.accent} />
               <Text variant="muted">ИИ оценивает письмо…</Text>
             </View>
+          ) : waiting ? (
+            <Text variant="muted" testID="writing-waiting">
+              Ждёт связи: ИИ оценит письмо, когда появится интернет. Пока — предварительная оценка.
+            </Text>
           ) : status === 'ai-failed' ? (
             <>
               <Text className="font-ui-medium text-danger" testID="writing-ai-failed">
@@ -165,7 +171,7 @@ export function WritingReviewScreen({ attemptId }: { attemptId: string }) {
               {g?.ai?.costUsd !== undefined ? ` · $${g.ai.costUsd.toFixed(3)}` : ''}
             </Text>
           )}
-          {(status === 'ai-failed' || status === 'provisional') && !inFlight && (
+          {(status === 'ai-failed' || status === 'provisional' || waiting) && !inFlight && (
             <View className="mt-1 flex-row flex-wrap gap-2">
               <Pressable
                 onPress={() => void retry()}

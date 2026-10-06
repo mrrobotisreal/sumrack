@@ -67,7 +67,9 @@ function SelfCheckBody({
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-scrim/50" onPress={onClose} accessibilityLabel="Закрыть" />
       <View
-        className="max-h-[88%] rounded-t-2xl border-t border-border bg-surface px-5 pt-4"
+        // A FIXED height (not max-h) so the ScrollView is bounded and the save button never
+        // overlaps the last visible row (S25 finding: a «½» tap hit «Сохранить»).
+        className="h-[88%] rounded-t-2xl border-t border-border bg-surface px-5 pt-4"
         style={{ paddingBottom: insets.bottom + 16 }}
         testID="self-check"
       >
@@ -82,7 +84,7 @@ function SelfCheckBody({
           ИИ не оценил письмо. Сравни своё письмо с образцом и оцени четыре пункта честно — 0, ½ или
           1. Оценка станет окончательной.
         </Text>
-        <ScrollView contentContainerClassName="gap-3 pb-3">
+        <ScrollView className="flex-1" contentContainerClassName="gap-3 pb-3">
           {modelLetter ? (
             <View className="rounded-2xl border border-border bg-bg px-4 py-3">
               <Pressable
