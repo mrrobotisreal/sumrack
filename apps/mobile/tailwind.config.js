@@ -28,6 +28,8 @@ module.exports = {
         // accents on track sections; soft = selection/highlight wash
         'track-warm': 'rgb(var(--track-warm) / <alpha-value>)',
         'track-warm-soft': 'rgb(var(--track-warm) / 0.15)',
+        // Readiness «с запасом» band (T70) — ≥ 80 %
+        gold: 'rgb(var(--gold) / <alpha-value>)',
         // CEFR chip hue ramp (A1 coolest → C1 ember) — used via LevelChip only
         'level-a1': 'rgb(var(--level-a1) / <alpha-value>)',
         'level-a2': 'rgb(var(--level-a2) / <alpha-value>)',
