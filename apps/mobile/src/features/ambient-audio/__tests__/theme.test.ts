@@ -9,6 +9,8 @@ describe('resolveAmbientTheme', () => {
     ['news', 'comedy', 'news'],
     ['education', null, 'education'],
     ['education', 'action', 'education'],
+    ['torfl', null, 'education'],
+    ['torfl', 'horror', 'education'],
     ['stories', 'comedy', 'comedy'],
     ['stories', 'action', 'action'],
     ['stories', 'horror', 'horror'],

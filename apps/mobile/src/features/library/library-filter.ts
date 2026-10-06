@@ -95,10 +95,10 @@ export function categoryCounts(packs: readonly FilterablePack[]): Record<string,
 }
 
 /**
- * Category chip items: always all six known shelves in CATEGORY_ORDER with
+ * Category chip items: always all seven known shelves in CATEGORY_ORDER with
  * their counts (0 when empty). Recorded T45 decision for an UNKNOWN installed
  * category (a pack authored with a slug the app doesn't know yet, e.g.
- * `recipes`): append a chip with the raw slug + generic icon after the six,
+ * `recipes`): append a chip with the raw slug + generic icon after the seven,
  * per §1.2 ("unknown values render with their raw slug and a generic icon").
  * The persisted selection is included the same way even at count 0 so the
  * selected chip is never invisible.

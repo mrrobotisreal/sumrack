@@ -22,9 +22,10 @@ export interface SlugLabel {
   icon: IoniconName;
 }
 
-export type CategorySlug = 'stories' | 'news' | 'education' | 'podcast' | 'documentary' | 'travel';
+export type CategorySlug =
+  'stories' | 'news' | 'education' | 'podcast' | 'documentary' | 'travel' | 'torfl';
 
-/** Chip order — always all six visible (§3). */
+/** Chip order — always all seven visible (§3; «ТРКИ» appended last by M18/T69). */
 export const CATEGORY_ORDER: readonly CategorySlug[] = [
   'stories',
   'news',
@@ -32,6 +33,7 @@ export const CATEGORY_ORDER: readonly CategorySlug[] = [
   'podcast',
   'documentary',
   'travel',
+  'torfl',
 ];
 
 export const CATEGORIES: Record<CategorySlug, SlugLabel> = {
@@ -41,6 +43,7 @@ export const CATEGORIES: Record<CategorySlug, SlugLabel> = {
   podcast: { ru: 'Подкасты', en: 'Podcasts', icon: 'mic-outline' },
   documentary: { ru: 'Документалки', en: 'Documentaries', icon: 'film-outline' },
   travel: { ru: 'Путешествия', en: 'Travel', icon: 'airplane-outline' },
+  torfl: { ru: 'ТРКИ', en: 'TORFL', icon: 'ribbon-outline' },
 };
 
 /** Genre chip order inside «Истории» (only installed genres are shown, §3). */
@@ -107,6 +110,7 @@ export interface Classified {
  * | explicit `category` / `genre`          | as authored | as authored (or null) |
  * | none; type `stories` or `course-unit`  | `stories`   | `horror`              |
  * | none; type `dialogue`                  | `stories`   | none                  |
+ * | none; type `exam` (M18, T69)           | `torfl`     | none                  |
  *
  * `origin: 'local'` packs never go through the chip filter (always the
  * «Импортировано» shelf) — they still classify as `stories/null` so badges
@@ -122,6 +126,8 @@ export function classifyPack(
   if (p.category) return { category: p.category, genre };
   if (p.origin === 'local') return { category: 'stories', genre };
   if (p.type === 'dialogue') return { category: 'stories', genre }; // genre-less unless authored
+  // M18 (T69): an exam pack only ever shelves under «ТРКИ», authored category or not.
+  if (p.type === 'exam') return { category: 'torfl', genre };
   return { category: 'stories', genre: genre ?? 'horror' }; // stories, course-unit (and anything else)
 }
 

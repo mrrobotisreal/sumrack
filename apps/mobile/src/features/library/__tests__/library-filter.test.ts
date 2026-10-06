@@ -179,8 +179,8 @@ describe('categoryCounts', () => {
   });
 });
 
-describe('categoryChipItems — six known chips always, unknown installed categories appended', () => {
-  it('renders all six known categories with counts (0 when nothing is installed)', () => {
+describe('categoryChipItems — seven known chips always, unknown installed categories appended', () => {
+  it('renders all seven known categories with counts (0 when nothing is installed)', () => {
     const items = categoryChipItems({ stories: 22, news: 1, podcast: 1 });
     expect(items.map((i) => i.key)).toEqual([
       'stories',
@@ -189,12 +189,13 @@ describe('categoryChipItems — six known chips always, unknown installed catego
       'podcast',
       'documentary',
       'travel',
+      'torfl',
     ]);
-    expect(items.map((i) => i.count)).toEqual([22, 1, 0, 1, 0, 0]);
+    expect(items.map((i) => i.count)).toEqual([22, 1, 0, 1, 0, 0, 0]);
     expect(items[0]).toEqual({ key: 'stories', label: 'Истории', icon: 'book-outline', count: 22 });
   });
 
-  it('adds a seventh chip for an unknown installed category with its raw slug + generic icon', () => {
+  it('adds an eighth chip for an unknown installed category with its raw slug + generic icon', () => {
     const items = categoryChipItems({ recipes: 1, stories: 3 });
     expect(items.map((i) => i.key)).toEqual([
       'stories',
@@ -203,9 +204,10 @@ describe('categoryChipItems — six known chips always, unknown installed catego
       'podcast',
       'documentary',
       'travel',
+      'torfl',
       'recipes',
     ]);
-    expect(items[6]).toEqual({
+    expect(items[7]).toEqual({
       key: 'recipes',
       label: 'recipes',
       icon: 'albums-outline',

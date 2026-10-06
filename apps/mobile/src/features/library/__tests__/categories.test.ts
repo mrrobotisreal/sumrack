@@ -93,6 +93,19 @@ describe('classifyPack — the §2.4 default table', () => {
     });
   });
 
+  it('M18 (T69): none; type exam → torfl/null («ТРКИ» is the only shelf an exam pack can sit on)', () => {
+    expect(classifyPack(pack({ type: 'exam' }))).toEqual({ category: 'torfl', genre: null });
+    // the authored category (CT packs carry `category: torfl`) wins as for any pack
+    expect(classifyPack(pack({ type: 'exam', category: 'torfl' }))).toEqual({
+      category: 'torfl',
+      genre: null,
+    });
+  });
+
+  it('a torfl STORY pack (the lexicon) classifies by its authored category', () => {
+    expect(classifyPack(pack({ category: 'torfl' }))).toEqual({ category: 'torfl', genre: null });
+  });
+
   it('none; type dialogue → stories/null (genre-less unless authored)', () => {
     expect(classifyPack(pack({ type: 'dialogue' }))).toEqual({ category: 'stories', genre: null });
   });
@@ -168,7 +181,7 @@ describe('labels', () => {
 });
 
 describe('sets & order', () => {
-  it('isKnownCategory matches exactly the six slugs', () => {
+  it('isKnownCategory matches exactly the seven slugs (six M14 + torfl, T69)', () => {
     for (const slug of CATEGORY_ORDER) expect(isKnownCategory(slug)).toBe(true);
     expect(isKnownCategory('all')).toBe(false);
     expect(isKnownCategory('horror')).toBe(false);
@@ -183,8 +196,10 @@ describe('sets & order', () => {
       'podcast',
       'documentary',
       'travel',
+      'torfl',
     ]);
     expect(new Set(CATEGORY_ORDER)).toEqual(new Set(Object.keys(CATEGORIES)));
+    expect(CATEGORIES.torfl).toEqual({ ru: 'ТРКИ', en: 'TORFL', icon: 'ribbon-outline' });
   });
 
   it('GENRE_ORDER is exactly the table keys, horror first', () => {
