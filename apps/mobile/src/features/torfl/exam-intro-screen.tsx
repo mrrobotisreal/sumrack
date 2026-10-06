@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { Exam } from '@sumrak/schema';
 import * as React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -34,6 +34,10 @@ export type ExamStartScope =
 export interface ExamStartHandlers {
   onStartDrill?: (exam: Exam, packId: string) => void;
   onStartMock?: (exam: Exam, packId: string, scope: ExamStartScope) => void;
+  /** T71: continue the active attempt of this exam («Продолжить»). */
+  onResumeMock?: (attemptId: string) => void;
+  /** T71: abandon the active attempt and begin the chosen scope fresh («Начать заново»). */
+  onRestartMock?: (exam: Exam, packId: string, scope: ExamStartScope) => void;
 }
 
 /**
@@ -49,6 +53,8 @@ export function ExamIntroScreen({
   examId,
   onStartDrill,
   onStartMock,
+  onResumeMock,
+  onRestartMock,
 }: { packId: string; examId: string } & ExamStartHandlers) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -85,6 +91,8 @@ export function ExamIntroScreen({
     active.data.packId === packId &&
     active.data.examId === examId;
   const startHandler = mock ? onStartMock : onStartDrill;
+  // A mock with an active attempt of THIS exam resumes through the banner; the Start button
+  // stays for a different scope (it offers resume / restart in the route's conflict dialog).
   const start = () => {
     if (mock) onStartMock?.(data, packId, scope);
     else onStartDrill?.(data, packId);
@@ -116,12 +124,49 @@ export function ExamIntroScreen({
         {resumable && (
           <View
             testID="exam-resume-banner"
-            className="flex-row items-center gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3"
+            className="gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3"
           >
-            <Ionicons name="play-circle-outline" size={20} color={tokens.accent} />
-            <Text className="flex-1">
-              Есть незаконченная попытка. Продолжить можно будет скоро.
-            </Text>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="play-circle-outline" size={20} color={tokens.accent} />
+              <Text className="flex-1">
+                Есть незаконченная попытка. Таймер идёт по часам — продолжай с того же места.
+              </Text>
+            </View>
+            {onResumeMock && active.data ? (
+              <View className="flex-row gap-2">
+                <Pressable
+                  onPress={() => onResumeMock(active.data!.id)}
+                  accessibilityRole="button"
+                  testID="exam-resume"
+                  className="flex-1 items-center rounded-full bg-accent py-2.5 active:opacity-80"
+                >
+                  <Text className="font-ui-bold text-bg">Продолжить</Text>
+                </Pressable>
+                {onRestartMock && (
+                  <Pressable
+                    onPress={() =>
+                      Alert.alert(
+                        'Начать заново?',
+                        'Незаконченная попытка будет прервана; её ответы останутся в истории.',
+                        [
+                          { text: 'Отмена', style: 'cancel' },
+                          {
+                            text: 'Начать заново',
+                            style: 'destructive',
+                            onPress: () => onRestartMock(data, packId, scope),
+                          },
+                        ],
+                      )
+                    }
+                    accessibilityRole="button"
+                    testID="exam-restart"
+                    className="flex-1 items-center rounded-full border border-border py-2.5 active:bg-surface-2"
+                  >
+                    <Text className="font-ui-medium">Начать заново</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : null}
           </View>
         )}
 

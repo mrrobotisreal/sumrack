@@ -217,6 +217,8 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
             void enqueue(async () => {
               const s = stateRef.current;
               if (!s) return;
+              // The FINAL engine state first (skipped / timeUsedSec / autoSubmitted feed the results screen).
+              await repos.exams.saveState(a.id, toPersisted(s));
               const out = await finalizeAttempt(
                 {
                   exams: repos.exams,
