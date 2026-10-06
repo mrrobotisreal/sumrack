@@ -38,6 +38,11 @@ export function createRepositories(db: SumrakDB) {
         // T19: bank-size achievements listen on the bus (repos stay feature-free).
         emitMotivationEvent('bank-item-added');
       },
+      // T69 bulk «bank a topic»: cards inside the transaction, ONE sweep after commit.
+      withinBulkAdd: async (item) => {
+        await reviews.ensureCards(item.id);
+      },
+      afterBulkAdd: () => emitMotivationEvent('bank-item-added'),
     }),
     reviews,
     bookmarks: createBookmarksRepo(db),

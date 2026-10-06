@@ -22,6 +22,7 @@ import {
   type Classified,
 } from '@/features/library/categories';
 import { recordReading, recordStoryFinished } from '@/features/motivation/service';
+import { bankTopicToast, canBankTopic, topicSlugOfStory } from '@/features/torfl/bank-topic';
 
 import { AudioBar } from './audio-bar';
 import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
@@ -430,6 +431,45 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     },
   ]);
 
+  // ---- bank a topic (T69, TORFL §5.4) ----------------------------------------
+  // Only on `torfl:lexicon` stories: one transaction banks every content
+  // lemma not yet in the Словарь; the toast reports «+N слов».
+  const showBankTopic = !!detail.data && canBankTopic(detail.data.pack);
+  const [bankToast, setBankToast] = React.useState<string | null>(null);
+  const bankBusyRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!bankToast) return;
+    const t = setTimeout(() => setBankToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [bankToast]);
+  const bankTopic = React.useCallback(() => {
+    if (bankBusyRef.current) return;
+    bankBusyRef.current = true;
+    void repos.bank
+      .bankLemmasFromStory(packId, storyId)
+      .then(({ words, added }) => {
+        track('torfl_topic_banked', {
+          topic: topicSlugOfStory(storyId),
+          words,
+          newWords: added,
+        });
+        setBankToast(bankTopicToast(added));
+        for (const key of [
+          'bank-items',
+          'bank-count',
+          'bank-word-status',
+          'bank-item',
+          'due-count',
+        ]) {
+          void queryClient.invalidateQueries({ queryKey: [key] });
+        }
+      })
+      .catch(() => setBankToast('Не удалось добавить слова'))
+      .finally(() => {
+        bankBusyRef.current = false;
+      });
+  }, [packId, storyId, queryClient]);
+
   // ---- bookmarks (T24) ---------------------------------------------------
   const storyBookmarked = React.useMemo(
     () => (bookmarks.data ?? []).some((b) => b.kind === 'story'),
@@ -656,6 +696,14 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
           tint={tokens.text}
         />
         <View className="flex-row gap-2">
+          {showBankTopic && (
+            <ChromeButton
+              icon="add-circle-outline"
+              label="Добавить все слова в Словарь"
+              onPress={bankTopic}
+              tint={tokens.text}
+            />
+          )}
           <ChromeButton
             icon={storyBookmarked ? 'bookmark' : 'bookmark-outline'}
             label={storyBookmarked ? 'Remove story bookmark' : 'Bookmark this story'}
@@ -678,6 +726,21 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
       </View>
 
       {narration.available && <AudioBar narration={narration} />}
+
+      {bankToast && (
+        <View
+          pointerEvents="none"
+          className="absolute left-0 right-0 items-center px-6"
+          style={{ top: insets.top + 56 }}
+        >
+          <View
+            accessibilityLiveRegion="polite"
+            className="rounded-full border border-accent/40 bg-surface px-4 py-2"
+          >
+            <Text className="font-ui-medium text-accent">{bankToast}</Text>
+          </View>
+        </View>
+      )}
 
       <TypeSettingsSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} />
       <WordPopup

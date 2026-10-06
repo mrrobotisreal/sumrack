@@ -4,7 +4,7 @@ import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN, type MasteryBand } from '@/l
 
 import { newId } from '../ids';
 import { normalizePhrase, normalizeRu } from '../normalize';
-import { bankItems, encounters, type ProfileKind } from '../schema';
+import { bankItems, encounters, sentences, tokens, type ProfileKind } from '../schema';
 import type { SumrakDB } from '../types';
 
 export type BankItemRow = typeof bankItems.$inferSelect;
@@ -123,6 +123,26 @@ export interface BankRepoHooks {
    * gets cards without knowing about the reviews repo.
    */
   afterAdd?: (item: BankItemRow, created: boolean) => Promise<void>;
+  /**
+   * T69 bulk path (`bankLemmasFromStory`): runs INSIDE the bulk transaction
+   * for every newly created item — DB writes only (FSRS cards), so a
+   * rollback takes them with it.
+   */
+  withinBulkAdd?: (item: BankItemRow) => Promise<void>;
+  /** T69: once, after the bulk transaction commits with ≥ 1 new item (bus events). */
+  afterBulkAdd?: (items: BankItemRow[]) => void;
+}
+
+/** Token POS values «Добавить все слова в Словарь» banks (TORFL §5.4). */
+export const CONTENT_POS: readonly string[] = ['noun', 'verb', 'adj', 'adv', 'num', 'phrase'];
+
+export interface BulkBankResult {
+  /** Distinct content lemmas in the story. */
+  words: number;
+  /** Lemmas newly banked (one item + one encounter each). */
+  added: number;
+  /** Lemmas already in the bank — untouched (no new encounter). */
+  skipped: number;
 }
 
 /**
@@ -427,6 +447,102 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
       const item = (await getById(row.id))!;
       await hooks.afterAdd?.(item, true);
       return { item, created: true, encounter };
+    },
+
+    /**
+     * «Добавить все слова в Словарь» (T69, TORFL §5.4): bank every content
+     * lemma (CONTENT_POS) of a story that is not banked yet — one word item
+     * per lemma with ONE encounter, the first sentence (story order) it
+     * occurs in — in a single transaction. Already-banked lemmas are skipped
+     * untouched, so a second run adds 0. Dedup = the addWord rule (ё/е- and
+     * case-tolerant `lemmaNorm`).
+     */
+    async bankLemmasFromStory(packId: string, storyId: string): Promise<BulkBankResult> {
+      const rows = await db
+        .select({
+          sentenceId: tokens.sentenceId,
+          text: tokens.text,
+          lemma: tokens.lemma,
+          lemmaNorm: tokens.lemmaNorm,
+          translation: tokens.translation,
+          grammar: tokens.grammar,
+          pos: tokens.pos,
+          level: tokens.level,
+          note: tokens.note,
+        })
+        .from(tokens)
+        .innerJoin(
+          sentences,
+          and(
+            eq(sentences.packId, tokens.packId),
+            eq(sentences.storyId, tokens.storyId),
+            eq(sentences.id, tokens.sentenceId),
+          ),
+        )
+        .where(
+          and(
+            eq(tokens.packId, packId),
+            eq(tokens.storyId, storyId),
+            eq(tokens.isPunct, false),
+            inArray(tokens.pos, [...CONTENT_POS]),
+          ),
+        )
+        .orderBy(asc(sentences.orderIdx), asc(tokens.tokenIndex));
+      // First occurrence per lemma, story order.
+      const firstByLemma = new Map<string, (typeof rows)[number] & { lemma: string }>();
+      for (const row of rows) {
+        if (!row.lemma) continue;
+        const key = normalizeRu(row.lemma);
+        if (!firstByLemma.has(key)) firstByLemma.set(key, { ...row, lemma: row.lemma });
+      }
+      const lemmaNorms = [...firstByLemma.keys()];
+      if (lemmaNorms.length === 0) return { words: 0, added: 0, skipped: 0 };
+      const banked = new Set<string>();
+      // Chunked IN (SQLite's variable limit) — a topic story has ~100 lemmas.
+      for (let i = 0; i < lemmaNorms.length; i += 500) {
+        const chunk = lemmaNorms.slice(i, i + 500);
+        const existing = await db
+          .select({ lemmaNorm: bankItems.lemmaNorm })
+          .from(bankItems)
+          .where(and(eq(bankItems.kind, 'word'), inArray(bankItems.lemmaNorm, chunk)));
+        for (const e of existing) if (e.lemmaNorm) banked.add(e.lemmaNorm);
+      }
+      const created: BankItemRow[] = [];
+      const now = Date.now();
+      await db.run(sql`BEGIN`);
+      try {
+        for (const [lemmaNorm, tok] of firstByLemma) {
+          if (banked.has(lemmaNorm)) continue;
+          const row: typeof bankItems.$inferInsert = {
+            id: newId(),
+            kind: 'word',
+            lemma: tok.lemma,
+            lemmaNorm,
+            surface: tok.text,
+            normalized: normalizePhrase(tok.text),
+            translation: tok.translation ?? '',
+            grammar: tok.grammar ?? null,
+            pos: tok.pos ?? null,
+            level: tok.level ?? null,
+            sourceSentenceId: tok.sentenceId,
+            sourceStoryId: storyId,
+            note: tok.note ?? null,
+            needsEnrichment: !tok.translation,
+            createdAt: now,
+          };
+          await db.insert(bankItems).values(row);
+          await insertEncounter(row.id, tok.text, { sentenceId: tok.sentenceId });
+          const item = (await getById(row.id))!;
+          await hooks.withinBulkAdd?.(item);
+          created.push(item);
+        }
+        await db.run(sql`COMMIT`);
+      } catch (err) {
+        await db.run(sql`ROLLBACK`);
+        throw err;
+      }
+      if (created.length > 0) hooks.afterBulkAdd?.(created);
+      return { words: lemmaNorms.length, added: created.length, skipped: banked.size };
     },
 
     /** Record an additional encounter for an existing item. */
