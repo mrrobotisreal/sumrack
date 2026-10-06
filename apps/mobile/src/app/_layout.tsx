@@ -180,6 +180,18 @@ export default function RootLayout() {
                   name="exam/writing/[attemptId]"
                   options={{ headerShown: false, animation: 'fade' }}
                 />
+                <Stack.Screen
+                  name="exam/speaking/[attemptId]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
+                  name="torfl/speak"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
+                  name="torfl/tickets"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
                 <Stack.Screen name="dashboard/index" options={{ title: 'Progress' }} />
                 <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
                 <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />

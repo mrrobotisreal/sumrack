@@ -31,6 +31,12 @@ import { ReadinessBars } from './readiness-bars';
 import { describeStep } from './today';
 import { TextRow } from './text-row';
 import { SUBTEST_LABELS, SUBTEST_ORDER, topicLabel } from './topics';
+import {
+  monologueTickets,
+  speakingPracticeEntries,
+  speakingPracticeHref,
+  ticketHref,
+} from './speaking/tickets-model';
 import { writingPracticeEntries, writingPracticeHref } from './writing/writing-practice-model';
 
 export type HubOpenedFrom = 'library' | 'today' | 'deeplink';
@@ -110,6 +116,9 @@ export function TorflHubScreen({
   const tabTiles = tiles[tab];
   // T72: the Письмо tab lists letter tasks (drill sets first, then mocks) as untimed practice.
   const writingEntries = tab === 'writing' ? writingPracticeEntries(exams.data ?? []) : [];
+  // T73: the Говорение tab lists task-1 / task-2 items for one-by-one practice; «Билеты» = task 3.
+  const speakingEntries = tab === 'speaking' ? speakingPracticeEntries(exams.data ?? []) : [];
+  const ticketCount = monologueTickets(exams.data ?? []).length;
   const preview = texts.groups.flatMap((g) => g.texts).slice(0, TEXTS_PREVIEW);
 
   return (
@@ -298,6 +307,23 @@ export function TorflHubScreen({
               <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
             </Pressable>
           )}
+          {ticketCount > 0 && (
+            <Pressable
+              onPress={() => router.push(ticketHref())}
+              accessibilityRole="button"
+              testID="torfl-tickets-row"
+              className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+            >
+              <Ionicons name="mic-outline" size={20} color={tokens.accent} />
+              <View className="flex-1 gap-0.5">
+                <Text className="font-ui-medium">Билеты · {ticketCount}</Text>
+                <Text variant="caption">
+                  Тянешь тему монолога — 8 минут подготовки, 2 минуты ответа, запись
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+            </Pressable>
+          )}
         </View>
         <ScrollView
           horizontal
@@ -311,7 +337,9 @@ export function TorflHubScreen({
             const n =
               kind === 'writing'
                 ? writingPracticeEntries(exams.data ?? []).length
-                : tiles[kind].length;
+                : kind === 'speaking'
+                  ? speakingPracticeEntries(exams.data ?? []).length
+                  : tiles[kind].length;
             return (
               <Pressable
                 key={kind}
@@ -362,6 +390,39 @@ export function TorflHubScreen({
                     </Text>
                     <Text variant="caption" numberOfLines={1}>
                       {e.examTitleRu} · {e.item.bullets.length} пункт(ов) · без таймера
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          )
+        ) : tab === 'speaking' ? (
+          speakingEntries.length === 0 ? (
+            <EmptyLine text="Задания на говорение появятся вместе с экзаменами." />
+          ) : (
+            <View className="gap-2">
+              {speakingEntries.map((e) => (
+                <Pressable
+                  key={`${e.packId}/${e.examId}/${e.item.id}`}
+                  onPress={() => router.push(speakingPracticeHref(e))}
+                  accessibilityRole="button"
+                  testID={`torfl-speaking-${e.item.id}`}
+                  className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+                >
+                  <Ionicons name="mic-outline" size={20} color={tokens.accent} />
+                  <View className="flex-1 gap-0.5">
+                    <Text className="font-ui-medium" numberOfLines={2}>
+                      {e.item.kind === 'speaking-situation' && e.item.situation
+                        ? e.item.situation.ru
+                        : e.item.expect.accept[0]}
+                    </Text>
+                    <Text variant="caption" numberOfLines={1}>
+                      {e.examTitleRu} ·{' '}
+                      {e.item.kind === 'speaking-reply'
+                        ? 'задание 1 · ответ'
+                        : 'задание 2 · ситуация'}{' '}
+                      · без таймера
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />

@@ -157,22 +157,25 @@ function ResultsBody({
               key={r.subtestId}
               row={r}
               onOpen={
-                r.kind === 'writing' && r.status === 'scored' && !active
+                r.status === 'scored' && !active && (r.kind === 'writing' || r.kind === 'speaking')
                   ? () =>
                       router.push({
-                        pathname: '/exam/writing/[attemptId]',
+                        pathname:
+                          r.kind === 'writing'
+                            ? '/exam/writing/[attemptId]'
+                            : '/exam/speaking/[attemptId]',
                         params: { attemptId },
                       })
                   : undefined
               }
               pending={
-                r.kind === 'writing' &&
+                (r.kind === 'writing' || r.kind === 'speaking') &&
                 attempt.responses.some(
                   (x) => x.subtestId === r.subtestId && x.gradingStatus === 'pending-ai',
                 )
               }
               failed={
-                r.kind === 'writing' &&
+                (r.kind === 'writing' || r.kind === 'speaking') &&
                 attempt.responses.some(
                   (x) => x.subtestId === r.subtestId && x.gradingStatus === 'ai-failed',
                 )
@@ -340,7 +343,8 @@ function SubtestRow({
         ? {
             onPress: onOpen,
             accessibilityRole: 'button' as const,
-            accessibilityHint: 'Открыть разбор письма',
+            accessibilityHint:
+              row.kind === 'speaking' ? 'Открыть разбор говорения' : 'Открыть разбор письма',
           }
         : {})}
     >
@@ -354,11 +358,7 @@ function SubtestRow({
           </Text>
         ) : (
           <Text variant="caption" testID={`result-${row.kind}-skipped`}>
-            {row.status === 'skipped'
-              ? row.kind === 'speaking'
-                ? 'пропущено · скоро'
-                : 'пропущено'
-              : 'не сдано'}
+            {row.status === 'skipped' ? 'пропущено' : 'не сдано'}
           </Text>
         )}
       </View>
