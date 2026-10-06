@@ -103,6 +103,8 @@ export type ExamEvent =
   | { type: 'AUTO_SUBMIT'; now: number }
   | { type: 'AUDIO_ENDED'; now: number }
   | { type: 'RESUME'; now: number }
+  /** The app left the foreground: a play in progress counts as heard (interrupted-play rule). */
+  | { type: 'APP_BACKGROUND'; now: number }
   | { type: 'BREAK_DONE' }
   | { type: 'ABANDON' }
   /** Reserved for T73 (speaking recorder). */
@@ -359,7 +361,9 @@ function submit(ctx: ExamCtx, state: ExamRunState, now: number, auto: boolean): 
   const subtest = currentSubtest(ctx, state);
   if (!cur || !subtest) return NOOP(state);
   const effects: ExamEffect[] = [{ type: 'STOP_AUDIO' }];
-  const placeholder = cur.status === 'intro' && state.phase === 'placeholder';
+  // A subtest submitted before BEGIN (a «скоро» placeholder, or a listening subtest whose audio
+  // is not downloaded and the candidate chose to skip it) is recorded SKIPPED, never scored.
+  const placeholder = cur.status === 'intro';
   const timeUsedSec =
     cur.startedAt !== undefined ? Math.max(0, Math.round((now - cur.startedAt) / 1000)) : 0;
   let next = patchSubtest(state, state.current, {
@@ -533,7 +537,11 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
     }
 
     case 'SUBMIT_SUBTEST': {
-      if (state.phase === 'running' || state.phase === 'placeholder') {
+      if (
+        state.phase === 'running' ||
+        state.phase === 'placeholder' ||
+        state.phase === 'instructions'
+      ) {
         return submit(ctx, state, event.now, false);
       }
       return NOOP(state);
@@ -573,7 +581,8 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
           },
           effects: [
             { type: 'PLAY_AUDIO', subtestId: subtest.id, audioKey: key, playNo },
-            { type: 'PERSIST_STATE', urgent: false },
+            // urgent: a kill right after play #2 starts must never see count 1 (a 3rd hearing)
+            { type: 'PERSIST_STATE', urgent: true },
           ],
         };
       }
@@ -596,6 +605,14 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
       }
       return {
         state: next,
+        effects: [{ type: 'STOP_AUDIO' }, { type: 'PERSIST_STATE', urgent: true }],
+      };
+    }
+
+    case 'APP_BACKGROUND': {
+      if (state.phase !== 'running') return NOOP(state);
+      return {
+        state: interruptAudio(ctx, state, event.now),
         effects: [{ type: 'STOP_AUDIO' }, { type: 'PERSIST_STATE', urgent: true }],
       };
     }

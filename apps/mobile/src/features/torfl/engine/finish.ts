@@ -40,6 +40,53 @@ function answerArg(
   return { index: answer?.kind === 'choice' ? answer.index : null };
 }
 
+export interface SubtestScore {
+  result: ExamResults[string];
+  missed: MissedItem[];
+}
+
+/** Score ONE subtest from the answers (objective kinds only): result + the items that were not full credit. */
+export function scoreSubtest(
+  subtest: Exam['subtests'][number],
+  answers: Record<string, ExamAnswer>,
+): SubtestScore {
+  const scored: { points: number }[] = [];
+  const missed: MissedItem[] = [];
+  let points = 0;
+  for (const part of subtest.parts) {
+    for (const item of part.items) {
+      const answer = answers[item.id];
+      const score = scoreItem(
+        item,
+        answerArg(item.kind, answer && isAnswered(answer) ? answer : undefined),
+        subtest,
+      );
+      if (!score) continue;
+      scored.push({ points: score.points });
+      points += score.points;
+      if (score.outcome !== 'full') {
+        missed.push({
+          subtestId: subtest.id,
+          itemId: item.id,
+          topic: item.topic,
+          kind: subtest.kind,
+          outcome: score.outcome,
+        });
+      }
+    }
+  }
+  return {
+    result: {
+      points,
+      maxPoints: subtest.maxPoints,
+      pct: subtestPercent(scored, subtest),
+      provisional: false,
+      gradedBy: 'offline',
+    },
+    missed,
+  };
+}
+
 export function computeFinish(
   exam: Exam,
   state: Pick<ExamRunState, 'subtests'>,
@@ -54,39 +101,10 @@ export function computeFinish(
     if (run.status !== 'submitted' || run.skipped || isPlaceholderKind(run.kind)) continue;
     const subtest = exam.subtests.find((s) => s.id === run.id);
     if (!subtest) continue;
-    const scored: { points: number }[] = [];
-    let points = 0;
-    for (const part of subtest.parts) {
-      for (const item of part.items) {
-        const answer = answers[item.id];
-        const score = scoreItem(
-          item,
-          answerArg(item.kind, answer && isAnswered(answer) ? answer : undefined),
-          subtest,
-        );
-        if (!score) continue;
-        scored.push({ points: score.points });
-        points += score.points;
-        if (score.outcome !== 'full') {
-          missed.push({
-            subtestId: subtest.id,
-            itemId: item.id,
-            topic: item.topic,
-            kind: subtest.kind,
-            outcome: score.outcome,
-          });
-        }
-      }
-    }
-    const pct = subtestPercent(scored, subtest);
-    results[subtest.id] = {
-      points,
-      maxPoints: subtest.maxPoints,
-      pct,
-      provisional: false,
-      gradedBy: 'offline',
-    };
-    pcts[subtest.kind] = pct;
+    const { result, missed: subtestMissed } = scoreSubtest(subtest, answers);
+    results[subtest.id] = result;
+    pcts[subtest.kind] = result.pct;
+    missed.push(...subtestMissed);
     scoredSubtests += 1;
   }
   return {

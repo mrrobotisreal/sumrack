@@ -20,15 +20,47 @@ export function TypedItemView({
   feedback,
   onSubmit,
   result,
+  initialText = '',
 }: {
   item: TypedItem;
   feedback: ItemFeedback;
   onSubmit: (text: string) => void;
+  /** Mock mode: the answer already given (the view remounts per item). */
+  initialText?: string;
   /** The scored result once submitted (drills) — drives the verdict block. */
   result?: ItemScore | null;
 }) {
   const { tokens } = useAppTheme();
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState(initialText);
+  const mock = feedback === 'none';
+  // Mock mode (T71): there is no «Проверить» — every edit is recorded (debounced) and on blur.
+  const textRef = React.useRef(text);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSubmitRef = React.useRef(onSubmit);
+  React.useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  });
+  const flush = React.useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    onSubmitRef.current(textRef.current);
+  }, []);
+  React.useEffect(
+    () => () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        onSubmitRef.current(textRef.current);
+      }
+    },
+    [],
+  );
+  const change = (next: string) => {
+    setText(next);
+    if (!mock) return;
+    textRef.current = next;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(flush, 500);
+  };
   const submitted = result != null;
   const tone =
     result?.outcome === 'full'
@@ -50,7 +82,8 @@ export function TypedItemView({
       <View className="gap-2">
         <TextInput
           value={text}
-          onChangeText={setText}
+          onChangeText={change}
+          onBlur={mock ? flush : undefined}
           editable={!(submitted && feedback === 'instant')}
           autoCapitalize="none"
           autoCorrect={false}
@@ -69,7 +102,7 @@ export function TypedItemView({
           Включи русскую клавиатуру (ё и е считаются одинаково). / Switch to the Cyrillic keyboard.
         </Text>
       </View>
-      {!submitted && (
+      {!submitted && !mock && (
         <Pressable
           onPress={submit}
           disabled={text.trim().length === 0}

@@ -280,6 +280,22 @@ describe('listening: twice only, 3 s gap, linear', () => {
     expect(r.effects.filter((e) => e.type === 'PLAY_AUDIO')).toHaveLength(2);
   });
 
+  it('APP_BACKGROUND mid-play counts the play as heard, stops audio, persists now; return → gap → play #2', () => {
+    const r = listening();
+    const fx = r.send({ type: 'APP_BACKGROUND', now: T0 + 4000 });
+    expect(types(fx)).toEqual(['STOP_AUDIO', 'PERSIST_STATE']);
+    expect(r.state.audio.phase).toBe('gap');
+    expect(r.state.playCounts.ls01).toBe(1);
+    r.send({ type: 'RESUME', now: T0 + 60_000 });
+    expect(r.state.audio).toEqual({
+      key: 'ls01',
+      phase: 'gap',
+      gapUntil: T0 + 60_000 + AUDIO_GAP_MS,
+    });
+    r.send({ type: 'TICK', now: T0 + 60_000 + AUDIO_GAP_MS });
+    expect(r.state.playCounts.ls01).toBe(2);
+  });
+
   it('hydrating a killed listening run never grants a 3rd play', () => {
     const r = listening();
     r.send({ type: 'AUDIO_ENDED', now: T0 + 10_000 });
@@ -354,6 +370,17 @@ describe('placeholders, breaks, finish', () => {
     expect(types(fx)).not.toContain('SCORE_SUBTEST');
     expect(types(fx)).toContain('FINISH');
     expect(r.state.subtests[0]).toMatchObject({ status: 'submitted', skipped: true });
+  });
+
+  it('SUBMIT on the instruction screen (e.g. audio not downloaded) records the subtest skipped, unscored', () => {
+    const r = run(['reading', 'listening']);
+    r.send({ type: 'START', now: T0 });
+    expect(r.state.phase).toBe('instructions');
+    const fx = r.send({ type: 'SUBMIT_SUBTEST', now: T0 });
+    expect(types(fx)).not.toContain('SCORE_SUBTEST');
+    expect(r.state.subtests[0]).toMatchObject({ status: 'submitted', skipped: true });
+    expect(r.state.phase).toBe('instructions');
+    expect(r.state.subtests[r.state.current]!.id).toBe('listening');
   });
 
   it('a full mock: writing(skipped) → lexgram → reading → listening → speaking(skipped) → FINISH', () => {
