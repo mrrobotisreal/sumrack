@@ -82,6 +82,12 @@ export interface ExamCtx {
   exam: Exam;
   /** `torfl.prefs.breakBetweenSubtests` — and the scope must have another subtest to break before. */
   breakBetween: boolean;
+  /**
+   * DEV ONLY (`?devDurationSec=`): replaces every subtest's duration at BEGIN.
+   * The route resolves it through `devDurationOverrideSec`, which is `undefined`
+   * unless `__DEV__` — a release build can never reach this field.
+   */
+  durationOverrideSec?: number;
 }
 
 export type ExamEvent =
@@ -434,7 +440,11 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
         ...patchSubtest(state, state.current, {
           status: 'running',
           startedAt: event.now,
-          deadlineAt: event.now + subtest.durationMin * MIN_MS,
+          deadlineAt:
+            event.now +
+            (ctx.durationOverrideSec !== undefined
+              ? ctx.durationOverrideSec * 1000
+              : subtest.durationMin * MIN_MS),
           flat: 0,
           partIdx: 0,
           itemIdx: 0,
@@ -575,8 +585,15 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
       if (cur.deadlineAt !== undefined && event.now >= cur.deadlineAt) {
         return submit(ctx, state, event.now, true);
       }
-      // Interrupted-play rule: a play cut by a kill / background counts as heard.
-      const next = interruptAudio(ctx, state, event.now);
+      // Interrupted-play rule: a play cut by a kill / background counts as heard; a text waiting
+      // out its 3 s gap gets a fresh gap (the candidate was away, not listening).
+      let next = interruptAudio(ctx, state, event.now);
+      if (next.audio.phase === 'gap' && next.audio.key !== null) {
+        next = {
+          ...next,
+          audio: { key: next.audio.key, phase: 'gap', gapUntil: event.now + AUDIO_GAP_MS },
+        };
+      }
       return {
         state: next,
         effects: [{ type: 'STOP_AUDIO' }, { type: 'PERSIST_STATE', urgent: true }],

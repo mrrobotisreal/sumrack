@@ -2,6 +2,12 @@ import { repos } from '@/db';
 import type { Grade } from '@/db/repositories/reviews';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 import { localDateKey } from '@/db/repositories/stats';
+import {
+  examAchievements,
+  examXp,
+  type ExamAchievementId,
+  type ExamRewardInput,
+} from '@/features/torfl/rewards';
 import { queryClient } from '@/lib/query-client';
 import { computeStreak, gapNeedingFreezes } from '@/lib/streak';
 import { track } from '@/services/analytics';
@@ -278,6 +284,59 @@ export async function recordExamDeckSession(): Promise<number> {
   await repos.stats.bumpDailyActivity({ xp: XP_TABLE.examDeckSession });
   await evaluateMotivation();
   return XP_TABLE.examDeckSession;
+}
+
+/**
+ * A TORFL mock finished (T71, §7.5): 15 XP per scored subtest, +60 for a
+ * full mock, +100 the first time a verdict is pass / pass-borderline; the
+ * achievements `torfl-first-mock` / `torfl-lexgram-90` and — when all five
+ * subtests are scored — `torfl-would-pass` / `torfl-margin`. XP lands in ONE
+ * `bumpDailyActivity` (the caller invokes this once per attempt and stores
+ * the returned XP on the attempt). T72/T73 call {@link recordExamVerdictUnlocks}
+ * (and this) once the first five-subtest verdict exists.
+ */
+export async function recordExamFinished(
+  input: Omit<ExamRewardInput, 'firstPass'>,
+  opts: { excludeAttemptId?: string } = {},
+): Promise<{ xp: number; achievements: ExamAchievementId[] }> {
+  let firstPass = false;
+  if (input.verdict === 'pass' || input.verdict === 'pass-borderline') {
+    const earlier = await repos.exams.listAttempts({ status: 'finished', limit: 500 });
+    firstPass = !earlier.some(
+      (a) =>
+        a.id !== opts.excludeAttemptId &&
+        a.mode === 'mock' &&
+        (a.verdict === 'pass' || a.verdict === 'pass-borderline'),
+    );
+  }
+  const full: ExamRewardInput = { ...input, firstPass };
+  const xp = examXp(full);
+  if (xp > 0) await repos.stats.bumpDailyActivity({ xp });
+  const achievements = examAchievements(full);
+  for (const id of achievements) await unlock(id);
+  await evaluateMotivation();
+  return { xp, achievements };
+}
+
+/**
+ * The verdict-gated unlocks only (`torfl-would-pass`, `torfl-margin`) — for
+ * the T72/T73 completion path, where the first five-subtest verdict can
+ * appear on an attempt that already paid its XP. Idempotent.
+ */
+export async function recordExamVerdictUnlocks(
+  pcts: ExamRewardInput['pcts'],
+  verdict: ExamRewardInput['verdict'],
+): Promise<void> {
+  const ids = examAchievements({
+    scope: 'full',
+    scoredSubtests: 5,
+    pcts,
+    verdict,
+    firstPass: false,
+  });
+  for (const id of ids) {
+    if (id === 'torfl-would-pass' || id === 'torfl-margin') await unlock(id);
+  }
 }
 
 /** Session summary reached — count sweeps + a due-count-fresh replan. */

@@ -115,6 +115,30 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: 'ribbon-outline',
   },
   {
+    id: 'torfl-first-mock',
+    title: 'Первый вариант',
+    description: 'Finish your first TORFL mock exam',
+    icon: 'document-text-outline',
+  },
+  {
+    id: 'torfl-would-pass',
+    title: 'Сдал бы!',
+    description: 'A full TORFL mock whose verdict is a pass',
+    icon: 'ribbon-outline',
+  },
+  {
+    id: 'torfl-margin',
+    title: 'С запасом',
+    description: 'All five TORFL subtests at 80 % or better in one mock',
+    icon: 'trophy-outline',
+  },
+  {
+    id: 'torfl-lexgram-90',
+    title: 'Без словаря',
+    description: 'Score 90 % or more on Лексика. Грамматика (no dictionary allowed)',
+    icon: 'extension-puzzle-outline',
+  },
+  {
     id: 'pron-perfect',
     title: 'Чистое произношение',
     description: 'Score a perfect 100 in pronunciation practice',

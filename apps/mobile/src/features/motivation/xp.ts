@@ -41,6 +41,12 @@ export const XP_TABLE = {
   examDrillFinished: 10,
   /** Finishing a «Работа над ошибками» deck session, or the daily-session torfl segment (T70) — once per session. */
   examDeckSession: 5,
+  /** A TORFL mock subtest scored (M18/T71, TORFL §7.5) — once per scored subtest, credited when the attempt finishes. */
+  examSubtestFinished: 15,
+  /** A full TORFL mock finished (T71). */
+  examFullFinished: 60,
+  /** The first pass / pass-borderline verdict ever (T71). */
+  examFirstPass: 100,
   /** Bonus for unlocking any achievement. */
   achievementUnlocked: 20,
 } as const;
