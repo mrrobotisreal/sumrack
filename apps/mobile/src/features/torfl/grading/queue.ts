@@ -17,6 +17,7 @@ import {
   type GradingJobInput,
   type KindGrader,
 } from './queue-core';
+import { speakingGrader } from './speaking-grader';
 import type { OfflineWritingDetails } from './writing';
 import { writingGrader } from './writing-grader';
 
@@ -32,7 +33,7 @@ import { writingGrader } from './writing-grader';
  * grader stays pending (never fails, never drops).
  */
 
-const graders: KindGrader[] = [writingGrader];
+const graders: KindGrader[] = [writingGrader, speakingGrader];
 
 export function registerGrader(grader: KindGrader): void {
   const idx = graders.findIndex((g) => g.kind === grader.kind);
@@ -161,8 +162,18 @@ export function pumpGradingQueue(): Promise<number> {
     isOnline,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: () => Date.now(),
-    onScored: (_job, write) => {
-      const d = write.grading.offline?.details as Partial<OfflineWritingDetails> | undefined;
+    onScored: (job, write) => {
+      const d = write.grading.offline?.details as
+        (Partial<OfflineWritingDetails> & { task?: number }) | undefined;
+      if (
+        job.answer &&
+        job.answer.kind !== 'choice' &&
+        job.answer.kind !== 'typed' &&
+        job.answer.kind !== 'writing'
+      ) {
+        track('exam_speaking_scored', { task: d?.task ?? 0, source: 'ai', pct: write.pct });
+        return;
+      }
       track('exam_writing_scored', {
         source: 'ai',
         pct: write.pct,
@@ -172,10 +183,12 @@ export function pumpGradingQueue(): Promise<number> {
       });
     },
     onFailed: (job, code) => {
-      track('exam_grading_failed', {
-        kind: job.subtestId === 'speaking' ? 'speaking' : 'writing',
-        code,
-      });
+      const speaking =
+        !!job.answer &&
+        job.answer.kind !== 'choice' &&
+        job.answer.kind !== 'typed' &&
+        job.answer.kind !== 'writing';
+      track('exam_grading_failed', { kind: speaking ? 'speaking' : 'writing', code });
     },
   }).finally(() => {
     pumpInFlight = null;
@@ -201,7 +214,9 @@ export async function requestGrading(responseId: string): Promise<boolean> {
     grading: kept,
   });
   useGradingQueue.setState((s) => ({ sending: { ...s.sending, [responseId]: true } }));
-  track('ai_request_queued', { feature: 'exam-writing' });
+  const speaking =
+    row.answer.kind !== 'choice' && row.answer.kind !== 'typed' && row.answer.kind !== 'writing';
+  track('ai_request_queued', { feature: speaking ? 'exam-speaking' : 'exam-writing' });
   void invalidateExams();
   void pumpGradingQueue();
   return true;

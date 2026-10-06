@@ -1,0 +1,50 @@
+{
+  "input": {
+    "task": "monologue",
+    "promptRu": "О себе",
+    "questionsRu": [
+      "Как вас зовут?",
+      "Откуда вы?",
+      "Где вы живёте?",
+      "Что вы любите делать?"
+    ],
+    "minSentences": 10,
+    "maxSentences": 12,
+    "transcript": "меня зовут митч мне тридцать шесть лет я из америки я родился в аризона сейчас я живу в колорадо я работаю программист я люблю читать и слушать музыка ещё я учу русский язык потому что моя невеста украинка мы хотим поехать в киев",
+    "assistTranscript": "Меня зовут Митч, мне тридцать шесть лет. Я из Америки, я родился в Аризона. Сейчас я живу в Колорадо. Я работаю программист. Я люблю читать и слушать музыка. Ещё я учу русский язык, потому что моя невеста украинка. Мы хотим поехать в Киев.",
+    "modelAnswer": null
+  },
+  "ms": 24061,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"coverage\",\n      \"score\": 40,\n      \"max\": 40,\n      \"comment\": \"All four questions are answered: name, origin, current home, and activities the candidate enjoys. The extra details about age, work, and family remain on topic.\"\n    },\n    {\n      \"id\": \"length\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"There are about ten meaningful clauses, meeting the required 10–12 when counted by sense.\"\n    },\n    {\n      \"id\": \"fluency\",\n      \"score\": 10,\n      \"max\": 10,\n      \"comment\": \"The answer progresses naturally and uses links such as «сейчас», «ещё» and «потому что». There are no apparent restarts or word lists.\"\n    },\n    {\n      \"id\": \"lexis-grammar\",\n      \"score\": 25.5,\n      \"max\": 30,\n      \"comment\": \"The vocabulary and sentence structures communicate clearly at A1 level. Three case errors occur in «в Аризона», «работаю программист» and «слушать музыка», but none obscures the meaning.\"\n    }\n  ],\n  \"corrected\": \"Меня зовут Митч. Мне тридцать шесть лет. Я из Америки. Я родился в Аризоне. Сейчас я живу в Колорадо. Я работаю программистом. Я люблю читать и слушать музыку. Ещё я учу русский язык, потому что моя невеста украинка. Мы хотим поехать в Киев.\",\n  \"changes\": [\n    {\n      \"before\": \"в Аризона\",\n      \"after\": \"в Аризоне\",\n      \"explanation\": \"Use the prepositional case after «в» when stating where something happened.\"\n    },\n    {\n      \"before\": \"работаю программист\",\n      \"after\": \"работаю программистом\",\n      \"explanation\": \"A profession after «работать» takes the instrumental case.\"\n    },\n    {\n      \"before\": \"слушать музыка\",\n      \"after\": \"слушать музыку\",\n      \"explanation\": \"The direct object of «слушать» takes the accusative case.\"\n    }\n  ],\n  \"tips\": [\n    \"Practise place names after «в»: «в Аризоне», «в Колорадо».\",\n    \"Review cases in common phrases: «работаю программистом», «слушаю музыку».\",\n    \"Add one more short, separate sentence to make the 10–12-sentence target unmistakable.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 7502,
+    "completion_tokens": 3443,
+    "total_tokens": 10945,
+    "cost": 0.0481015,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 1025,
+      "cache_write_tokens": 1025,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0481015,
+      "upstream_inference_prompt_cost": 0.0136715,
+      "upstream_inference_completions_cost": 0.03443
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 2295,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

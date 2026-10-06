@@ -237,6 +237,19 @@ export const EXAM_WRITING_CRITERION_IDS = [
   'grammar',
 ] as const;
 
+/** T73: the speaking criteria per task (Σ max = 100; ids = `SPEAKING_*_CRITERIA` in features/torfl/grading/speaking.ts). */
+export const EXAM_SPEAKING_TURN_CRITERION_IDS = [
+  'task-response',
+  'completeness',
+  'grammar',
+] as const;
+export const EXAM_SPEAKING_MONOLOGUE_CRITERION_IDS = [
+  'coverage',
+  'length',
+  'fluency',
+  'lexis-grammar',
+] as const;
+
 export const ExamGradeCriterionSchema = z
   .object({
     id: z.string().min(1).max(40),
@@ -247,10 +260,10 @@ export const ExamGradeCriterionSchema = z
   .refine((c) => c.score <= c.max + 1e-9, { message: 'score exceeds max', path: ['score'] });
 
 /**
- * What the model must return for an exam grading request (writing now,
- * speaking in T73 — same envelope, different criterion ids). `criteria`
- * must sum to max 100 so the percent is Σ score / 100 by construction;
- * duplicate ids are refused.
+ * What the model must return for an exam grading request (writing and,
+ * since T73, speaking — the same envelope, different criterion ids).
+ * `criteria` must sum to max 100 so the percent is Σ score / 100 by
+ * construction; duplicate ids are refused.
  */
 export const ExamGradeSchema = z
   .object({

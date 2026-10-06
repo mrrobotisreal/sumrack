@@ -1,0 +1,42 @@
+{
+  "input": {
+    "task": "reply",
+    "promptRu": "Где вы сейчас живёте?",
+    "transcript": "я сейчас живу в колорадо с моя невеста она украинка",
+    "assistTranscript": "Я сейчас живу в Колорадо с моя невеста, она украинка.",
+    "modelAnswer": "Я сейчас живу в Москве."
+  },
+  "ms": 10594,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-response\",\n      \"score\": 60,\n      \"max\": 60,\n      \"comment\": \"«Я сейчас живу в Колорадо» directly answers where you live.\"\n    },\n    {\n      \"id\": \"completeness\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"This is a full answer with a verb and a place; the additional sentence is clear.\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 17,\n      \"max\": 20,\n      \"comment\": \"After «с», both «моя» and «невеста» need instrumental forms. The error does not obscure the meaning.\"\n    }\n  ],\n  \"corrected\": \"Я сейчас живу в Колорадо с моей невестой. Она украинка.\",\n  \"changes\": [\n    {\n      \"before\": \"с моя невеста\",\n      \"after\": \"с моей невестой\",\n      \"explanation\": \"When с means “with,” the possessive and noun take the instrumental case.\"\n    }\n  ],\n  \"tips\": [\n    \"After с (“with”), check the endings on both words: с моей невестой.\",\n    \"Keep answering with a full sentence that names the place, as you did here.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5330,
+    "completion_tokens": 1249,
+    "total_tokens": 6579,
+    "cost": 0.02315,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.02315,
+      "upstream_inference_prompt_cost": 0.01066,
+      "upstream_inference_completions_cost": 0.01249
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 642,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

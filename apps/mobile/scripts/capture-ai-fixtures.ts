@@ -33,6 +33,10 @@ import {
   buildExamWritingMessages,
   type ExamWritingInput,
 } from '../src/features/ai/prompts/exam-writing';
+import {
+  buildExamSpeakingMessages,
+  type ExamSpeakingInput,
+} from '../src/features/ai/prompts/exam-speaking';
 
 const MODEL = 'anthropic/claude-sonnet-5';
 const OUT_DIR = join(
@@ -323,6 +327,40 @@ const EXAM_WRITING_MODELS: {
 ];
 const EXAM_WRITING_MAX_TOKENS = 8_192;
 
+/**
+ * T73 exam-speaking fixtures (TORFL §6.2): one task-1 reply and one task-3
+ * monologue, as ASR-style transcripts (no punctuation, one plausible
+ * mis-hearing each), graded by the same two models at effort high.
+ */
+const EXAM_SPEAKING_CASES: { name: string; input: ExamSpeakingInput }[] = [
+  {
+    name: 'reply',
+    input: {
+      task: 'reply',
+      promptRu: 'Где вы сейчас живёте?',
+      transcript: 'я сейчас живу в колорадо с моя невеста она украинка',
+      assistTranscript: 'Я сейчас живу в Колорадо с моя невеста, она украинка.',
+      modelAnswer: 'Я сейчас живу в Москве.',
+    },
+  },
+  {
+    name: 'monologue',
+    input: {
+      task: 'monologue',
+      promptRu: 'О себе',
+      questionsRu: ['Как вас зовут?', 'Откуда вы?', 'Где вы живёте?', 'Что вы любите делать?'],
+      minSentences: 10,
+      maxSentences: 12,
+      transcript:
+        'меня зовут митч мне тридцать шесть лет я из америки я родился в аризона сейчас я живу в колорадо я работаю программист я люблю читать и слушать музыка ещё я учу русский язык потому что моя невеста украинка мы хотим поехать в киев',
+      assistTranscript:
+        'Меня зовут Митч, мне тридцать шесть лет. Я из Америки, я родился в Аризона. Сейчас я живу в Колорадо. Я работаю программист. Я люблю читать и слушать музыка. Ещё я учу русский язык, потому что моя невеста украинка. Мы хотим поехать в Киев.',
+      modelAnswer: null,
+    },
+  },
+];
+const EXAM_SPEAKING_MAX_TOKENS = 6_144;
+
 async function chat(
   messages: unknown,
   maxTokens: number,
@@ -492,6 +530,26 @@ async function main() {
         temperature: 0.2,
         extras,
       });
+      const ms = Date.now() - startedAt;
+      writeFileSync(
+        join(OUT_DIR, `${fixtureName}.json`),
+        JSON.stringify({ input, ms, ...slimWithUsage(raw) }, null, 2),
+      );
+    }
+  }
+
+  for (const { tag, model, extras } of EXAM_WRITING_MODELS) {
+    for (const { name, input } of EXAM_SPEAKING_CASES) {
+      const fixtureName = `exam-speaking-${name}-${tag}`;
+      if (!wants(fixtureName) && !wants('exam-speaking')) continue;
+      console.log(`capturing ${fixtureName} (${model}, effort high)…`);
+      const startedAt = Date.now();
+      const raw = await chatWith(
+        model,
+        buildExamSpeakingMessages(input),
+        EXAM_SPEAKING_MAX_TOKENS,
+        { temperature: 0.2, extras },
+      );
       const ms = Date.now() - startedAt;
       writeFileSync(
         join(OUT_DIR, `${fixtureName}.json`),

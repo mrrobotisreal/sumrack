@@ -1,0 +1,50 @@
+{
+  "input": {
+    "task": "monologue",
+    "promptRu": "О себе",
+    "questionsRu": [
+      "Как вас зовут?",
+      "Откуда вы?",
+      "Где вы живёте?",
+      "Что вы любите делать?"
+    ],
+    "minSentences": 10,
+    "maxSentences": 12,
+    "transcript": "меня зовут митч мне тридцать шесть лет я из америки я родился в аризона сейчас я живу в колорадо я работаю программист я люблю читать и слушать музыка ещё я учу русский язык потому что моя невеста украинка мы хотим поехать в киев",
+    "assistTranscript": "Меня зовут Митч, мне тридцать шесть лет. Я из Америки, я родился в Аризона. Сейчас я живу в Колорадо. Я работаю программист. Я люблю читать и слушать музыка. Ещё я учу русский язык, потому что моя невеста украинка. Мы хотим поехать в Киев.",
+    "modelAnswer": null
+  },
+  "ms": 18398,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"coverage\", \"score\": 38, \"max\": 40, \"comment\": \"All four guiding questions are answered: name (\\\"Меня зовут Митч\\\"), origin (\\\"Я из Америки\\\"), where you live (\\\"Сейчас я живу в Колорадо\\\"), and hobbies (\\\"Я люблю читать и слушать музыку\\\"). You also added your age, job and why you study Russian. The hobbies question gets only one short sentence and could be developed more.\" },\n    { \"id\": \"length\", \"score\": 18, \"max\": 20, \"comment\": \"Counted by sense, there are about 10 clauses, which reaches the 10–12 range. One of them is the subordinate \\\"потому что моя невеста украинка\\\", so the answer sits right at the minimum.\" },\n    { \"id\": \"fluency\", \"score\": 9, \"max\": 10, \"comment\": \"This reads as continuous, connected speech with no restarts. Linking words like \\\"сейчас\\\", \\\"ещё\\\" and \\\"потому что\\\" give it a natural flow, and it ends logically with \\\"Мы хотим поехать в Киев\\\".\" },\n    { \"id\": \"lexis-grammar\", \"score\": 24, \"max\": 30, \"comment\": \"Vocabulary is appropriate and accurate for A1, and verb forms are correct (\\\"родился\\\", \\\"живу\\\", \\\"учу\\\", \\\"хотим поехать\\\"). There are three case errors, though none obscures meaning: \\\"в Аризона\\\" (should be prepositional \\\"в Аризоне\\\"), \\\"работаю программист\\\" (should be instrumental \\\"программистом\\\") and \\\"слушать музыка\\\" (should be accusative \\\"музыку\\\").\" }\n  ],\n  \"corrected\": \"Меня зовут Митч, мне тридцать шесть лет. Я из Америки, я родился в Аризоне. Сейчас я живу в Колорадо. Я работаю программистом. Я люблю читать и слушать музыку. Ещё я учу русский язык, потому что моя невеста украинка. Мы хотим поехать в Киев.\",\n  \"changes\": [\n    { \"before\": \"в аризона\", \"after\": \"в Аризоне\", \"explanation\": \"Prepositional case after \\\"в\\\" for location: feminine -а becomes -е. \\\"Колорадо\\\" is indeclinable, so it stays unchanged.\" },\n    { \"before\": \"работаю программист\", \"after\": \"работаю программистом\", \"explanation\": \"Instrumental case after \\\"работать\\\" when naming a profession: работать кем? → программистом.\" },\n    { \"before\": \"слушать музыка\", \"after\": \"слушать музыку\", \"explanation\": \"Direct object takes the accusative case: feminine -а becomes -у (слушать что? → музыку).\" }\n  ],\n  \"tips\": [\n    \"Learn these fixed patterns: \\\"жить/родиться в + prepositional\\\" (в Аризоне, в Москве), \\\"работать + instrumental\\\" (программистом, врачом) and \\\"любить/слушать + accusative\\\" (музыку, книгу).\",\n    \"Develop the hobbies question with one or two more sentences, e.g. \\\"Я люблю читать детективы\\\" or \\\"Я часто слушаю рок\\\". This adds length and coverage.\",\n    \"Aim for 11–12 sentences so you stay safely inside the required range rather than right at the minimum.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1537,
+    "completion_tokens": 1656,
+    "total_tokens": 3193,
+    "cost": 0.039268,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.039268,
+      "upstream_inference_prompt_cost": 0.006148,
+      "upstream_inference_completions_cost": 0.03312
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 560,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}
