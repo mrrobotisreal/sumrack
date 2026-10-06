@@ -158,7 +158,10 @@ export const OPTION_LETTERS = ['А', 'Б', 'В', 'Г'] as const;
  * whole story; ids no longer in the story (a pack update) are dropped; an
  * empty result means the ref no longer resolves.
  */
-export function refSentenceIds(ref: StoryRef, storySentenceIds: readonly string[]): string[] {
+export function refSentenceIds(
+  ref: Pick<StoryRef, 'sentenceIds'>,
+  storySentenceIds: readonly string[],
+): string[] {
   if (!ref.sentenceIds) return [...storySentenceIds];
   const wanted = new Set(ref.sentenceIds);
   return storySentenceIds.filter((id) => wanted.has(id));

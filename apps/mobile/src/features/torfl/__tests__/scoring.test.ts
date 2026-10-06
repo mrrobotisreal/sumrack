@@ -195,9 +195,9 @@ describe('stem + refs helpers', () => {
   });
   it('refSentenceIds: whole story, a run, and ids a pack update removed', () => {
     const all = ['s1', 's2', 's3', 's4'];
-    expect(refSentenceIds({ storyId: 'x' }, all)).toEqual(all);
-    expect(refSentenceIds({ storyId: 'x', sentenceIds: ['s2', 's3'] }, all)).toEqual(['s2', 's3']);
-    expect(refSentenceIds({ storyId: 'x', sentenceIds: ['gone'] }, all)).toEqual([]);
+    expect(refSentenceIds({}, all)).toEqual(all);
+    expect(refSentenceIds({ sentenceIds: ['s2', 's3'] }, all)).toEqual(['s2', 's3']);
+    expect(refSentenceIds({ sentenceIds: ['gone'] }, all)).toEqual([]);
   });
   it('resolveAudioSpan: first stamp − 150, last stamp + 250, clamped; whole track when no ids', () => {
     const stamps = [
