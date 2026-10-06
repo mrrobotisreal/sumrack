@@ -25,7 +25,7 @@ export const TRAIL_MS: Record<EndpointSensitivity, number> = {
   normal: 1100,
   patient: 1600,
 };
-/** Absolute cap on one attempt (§7.1). */
+/** Absolute cap on one attempt (§7.1). T73 overrides it per exam task via `endpointConfig(…, {capMs})`. */
 export const CAP_MS = 20_000;
 /** Armed with no speech for this long ⇒ `no-speech` (§7.1). */
 export const NO_SPEECH_MS = 6000;

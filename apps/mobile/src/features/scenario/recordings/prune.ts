@@ -5,6 +5,7 @@ import { logError } from '@/services/error-log';
 
 import { attemptFile, deleteRunDir, listRunDirs } from './paths';
 import { planPrune, type PruneCandidate } from './prune-core';
+import { pruneExamRecordings } from './prune-exam';
 import { getRecordingsSettings, setRecordingsSettings } from './recordings-settings';
 
 /**
@@ -26,9 +27,15 @@ let inFlight: Promise<PruneResult> | null = null;
 
 export function pruneRecordings(reason: 'start' | 'post-run' | 'manual'): Promise<PruneResult> {
   if (inFlight) return inFlight;
-  inFlight = doPrune(reason).finally(() => {
-    inFlight = null;
-  });
+  // T73: the exam root is pruned by the same policy right after the scenario root (§8.5).
+  inFlight = doPrune(reason)
+    .then(async (r) => {
+      await pruneExamRecordings(reason);
+      return r;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
   return inFlight;
 }
 

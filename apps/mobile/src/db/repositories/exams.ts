@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, like, lte, ne, sql, type SQL } from 'drizzle-orm';
 import { ExamSchema, type Exam, type ExamSubtestKind } from '@sumrak/schema';
 import { createEmptyCard, Rating, type Card as FsrsCard, type Grade } from 'ts-fsrs';
 import type { z } from 'zod';
@@ -801,6 +801,76 @@ export function createExamsRepo(db: SumrakDB) {
         .where(eq(examResponses.id, responseId))
         .limit(1);
       return rows[0] ? toResponse(rows[0]) : null;
+    },
+
+    /**
+     * T73: the exam transcode queue's rewrite of a speaking answer's
+     * `recordingPath` (`t1-sp01.wav` → `.ogg`), or null once pruned (§8.5).
+     * Any attempt status — the transcode finishes after the sitting. A
+     * response whose answer is not a speaking answer is left alone.
+     */
+    async setRecordingPath(responseId: string, name: string | null): Promise<void> {
+      const rows = await db
+        .select()
+        .from(examResponses)
+        .where(eq(examResponses.id, responseId))
+        .limit(1);
+      const row = rows[0] ? toResponse(rows[0]) : null;
+      if (!row || !row.answer || row.answer.kind === 'choice') return;
+      if (row.answer.kind === 'typed' || row.answer.kind === 'writing') return;
+      const answer = ExamAnswerSchema.parse({ ...row.answer, recordingPath: name });
+      await db
+        .update(examResponses)
+        .set({ answerJson: JSON.stringify(answer) })
+        .where(eq(examResponses.id, responseId));
+    },
+
+    /**
+     * T73 (prune): attempts whose speaking responses still point at a
+     * recording — joined to the on-disk `recordings/exam/` dirs by the prune
+     * service. Mirrors `scenarios.listRunsWithLocalMedia`.
+     */
+    async listAttemptsWithRecordings(): Promise<ExamAttempt[]> {
+      const rows = await db
+        .selectDistinct({ attempt: examAttempts })
+        .from(examResponses)
+        .innerJoin(examAttempts, eq(examAttempts.id, examResponses.attemptId))
+        .where(like(examResponses.answerJson, '%"recordingPath":"%'));
+      return rows.map((r) => toAttempt(r.attempt));
+    },
+
+    /** Rows for a set of attempt ids (the prune service joins on-disk dirs to rows). */
+    async getAttemptsByIds(attemptIds: string[]): Promise<ExamAttempt[]> {
+      if (attemptIds.length === 0) return [];
+      const rows = await db.select().from(examAttempts).where(inArray(examAttempts.id, attemptIds));
+      return rows.map(toAttempt);
+    },
+
+    /** T73 (prune): every speaking response of `attemptIds` forgets its recording (rows stay). */
+    async markRecordingsPruned(attemptIds: string[]): Promise<number> {
+      if (attemptIds.length === 0) return 0;
+      const rows = await db
+        .select()
+        .from(examResponses)
+        .where(
+          and(
+            inArray(examResponses.attemptId, attemptIds),
+            like(examResponses.answerJson, '%"recordingPath":"%'),
+          ),
+        );
+      let n = 0;
+      for (const row of rows) {
+        const parsed = ExamAnswerSchema.safeParse(parseJsonText(row.answerJson));
+        if (!parsed.success) continue;
+        const a = parsed.data;
+        if (a.kind === 'choice' || a.kind === 'typed' || a.kind === 'writing') continue;
+        await db
+          .update(examResponses)
+          .set({ answerJson: JSON.stringify({ ...a, recordingPath: null }) })
+          .where(eq(examResponses.id, row.id));
+        n += 1;
+      }
+      return n;
     },
 
     /** Write a grading outcome onto a response (any attempt status — grading follows finishing). */

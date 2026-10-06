@@ -9,7 +9,14 @@ import {
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
-import { attemptFile, attemptFileName, ensureRunDir, withExt } from './paths';
+import {
+  attemptFile,
+  attemptFileName,
+  ensureRunDir,
+  examRecordingName,
+  withExt,
+  type RecordingsRoot,
+} from './paths';
 
 /**
  * The background WAV → Ogg/Opus queue (T63, SPEAKING_SCENARIOS §10.1).
@@ -26,26 +33,35 @@ import { attemptFile, attemptFileName, ensureRunDir, withExt } from './paths';
  *
  * `whenIdle()` lets the bundle service wait for a run's transcodes before
  * packing (bundles are immutable, so they must contain the final files).
+ *
+ * T73: a job carries its ROOT (`'scenario'` default — every M17 call is
+ * unchanged — or `'exam'`): under `exam/` the "run" is an exam attempt, the
+ * "attempt" is a response row, and success rewrites the response's
+ * `answer.recordingPath` instead of `scenario_attempts.audioFile`.
  */
 
 const MAX_RETRIES = 2;
 
 export interface TranscodeJob {
+  /** Scenario run id, or (root `exam`) the exam attempt id. */
   runId: string;
+  /** Scenario attempt id, or (root `exam`) the exam response id. */
   attemptId: string;
   /** Relative WAV name inside the run dir. */
   wavName: string;
+  /** Recordings root; absent = `'scenario'`. */
+  root?: RecordingsRoot;
   tries: number;
 }
 
 interface QueueDeps {
   encode: (wavPath: string, outPath: string, opts: { inBytes: number }) => Promise<unknown>;
   isUnsupported: (err: unknown) => boolean;
-  setAudioFile: (attemptId: string, name: string) => Promise<void>;
+  setAudioFile: (attemptId: string, name: string, root: RecordingsRoot) => Promise<void>;
   fileExists: (uri: string) => boolean;
   fileSize: (uri: string) => number;
   deleteFile: (uri: string) => void;
-  filePath: (runId: string, name: string) => string;
+  filePath: (runId: string, name: string, root: RecordingsRoot) => string;
   onUnsupported?: () => void;
 }
 
@@ -67,7 +83,10 @@ const defaultDeps: QueueDeps = {
     return encodeWavToOpus(wav, out, opts);
   },
   isUnsupported: isOpusUnsupported,
-  setAudioFile: (attemptId, name) => repos.scenarios.setAttemptAudioFile(attemptId, name),
+  setAudioFile: (attemptId, name, root) =>
+    root === 'exam'
+      ? repos.exams.setRecordingPath(attemptId, name)
+      : repos.scenarios.setAttemptAudioFile(attemptId, name),
   fileExists: (uri) => {
     try {
       return new File(uri).exists;
@@ -90,7 +109,7 @@ const defaultDeps: QueueDeps = {
       /* best effort */
     }
   },
-  filePath: (runId, name) => attemptFile(runId, name).uri,
+  filePath: (runId, name, root) => attemptFile(runId, name, root).uri,
 };
 
 export type TranscodeOutcome = 'encoded' | 'unsupported' | 'failed' | 'missing';
@@ -114,14 +133,15 @@ export function createTranscodeQueue(deps: QueueDeps = defaultDeps) {
   }
 
   async function runOne(job: TranscodeJob): Promise<TranscodeOutcome> {
-    const wavUri = deps.filePath(job.runId, job.wavName);
+    const root: RecordingsRoot = job.root ?? 'scenario';
+    const wavUri = deps.filePath(job.runId, job.wavName, root);
     if (!deps.fileExists(wavUri)) return 'missing';
     if (unsupported) return 'unsupported';
     const oggName = withExt(job.wavName, 'ogg');
-    const oggUri = deps.filePath(job.runId, oggName);
+    const oggUri = deps.filePath(job.runId, oggName, root);
     try {
       await deps.encode(wavUri, oggUri, { inBytes: deps.fileSize(wavUri) });
-      await deps.setAudioFile(job.attemptId, oggName);
+      await deps.setAudioFile(job.attemptId, oggName, root);
       deps.deleteFile(wavUri);
       return 'encoded';
     } catch (err) {
@@ -213,6 +233,32 @@ export function stashAttemptWav(
     ensureRunDir(runId);
     const name = attemptFileName(turnOrder, attemptNo, 'wav');
     const dest = attemptFile(runId, name);
+    if (dest.exists) dest.delete();
+    src.moveSync(dest);
+    return name;
+  } catch (err) {
+    logError('manual', err);
+    return null;
+  }
+}
+
+/**
+ * T73: the exam twin of `stashAttemptWav` — the recorder's cache WAV moves
+ * into `recordings/exam/<attemptId>/t<task>-<itemId>.wav`; returns the
+ * relative name (`answer.recordingPath`) or null when the WAV is gone.
+ */
+export function stashExamWav(
+  attemptId: string,
+  task: 1 | 2 | 3,
+  itemId: string,
+  cacheWavUri: string,
+): string | null {
+  try {
+    const src = new File(cacheWavUri);
+    if (!src.exists) return null;
+    ensureRunDir(attemptId, 'exam');
+    const name = examRecordingName(task, itemId, 'wav');
+    const dest = attemptFile(attemptId, name, 'exam');
     if (dest.exists) dest.delete();
     src.moveSync(dest);
     return name;

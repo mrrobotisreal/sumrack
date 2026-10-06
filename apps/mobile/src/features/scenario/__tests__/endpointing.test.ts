@@ -146,3 +146,47 @@ describe('endpointStep', () => {
     return (i + 1) * TICK;
   }
 });
+
+describe('capMs override (T73 exam tasks)', () => {
+  it('the default cap is unchanged at 20 s; an override moves only the cap', () => {
+    expect(endpointConfig('patient').capMs).toBe(CAP_MS);
+    const cfg30 = endpointConfig('patient', { capMs: 30_000 });
+    expect(cfg30.capMs).toBe(30_000);
+    expect(cfg30.sensitivity).toBe('patient');
+    expect(cfg30.noSpeechMs).toBe(NO_SPEECH_MS);
+    expect(cfg30.startLevel).toBe(START_LEVEL);
+  });
+
+  it('continuous speech stops at the configured cap: 20 s by default, 30 s / 40 s when raised', () => {
+    const d = runEndpointStream(stream('s'.repeat(ticks(45_000))), endpointConfig('patient'));
+    expect(d.stop?.reason).toBe('cap');
+    expect(d.state.elapsedMs).toBeGreaterThanOrEqual(CAP_MS);
+    expect(d.state.elapsedMs).toBeLessThan(CAP_MS + TICK);
+
+    const d30 = runEndpointStream(
+      stream('s'.repeat(ticks(45_000))),
+      endpointConfig('patient', { capMs: 30_000 }),
+    );
+    expect(d30.stop?.reason).toBe('cap');
+    expect(d30.state.elapsedMs).toBeGreaterThanOrEqual(30_000);
+    expect(d30.state.elapsedMs).toBeLessThan(30_000 + TICK);
+
+    const d40 = runEndpointStream(
+      stream('s'.repeat(ticks(45_000))),
+      endpointConfig('patient', { capMs: 40_000 }),
+    );
+    expect(d40.stop?.reason).toBe('cap');
+    expect(d40.state.elapsedMs).toBeGreaterThanOrEqual(40_000);
+  });
+
+  it('a raised cap does not change trailing-silence endpointing', () => {
+    const base = runEndpointStream(stream('ss' + 'q'.repeat(20)), endpointConfig('patient'));
+    const raised = runEndpointStream(
+      stream('ss' + 'q'.repeat(20)),
+      endpointConfig('patient', { capMs: 40_000 }),
+    );
+    expect(base.stop?.reason).toBe('silence');
+    expect(raised.stop).toEqual(base.stop);
+    expect(raised.stoppedAtIndex).toBe(base.stoppedAtIndex);
+  });
+});
