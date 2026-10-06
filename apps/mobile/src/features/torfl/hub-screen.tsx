@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { useExamAttempts, useExams } from '@/db/hooks';
@@ -55,6 +56,7 @@ export function TorflHubScreen({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
 
   const exams = useExams();
@@ -104,7 +106,11 @@ export function TorflHubScreen({
   const preview = texts.groups.flatMap((g) => g.texts).slice(0, TEXTS_PREVIEW);
 
   return (
-    <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-7 px-4 pb-16 pt-4">
+    <ScrollView
+      className="flex-1 bg-bg"
+      contentContainerClassName="gap-7 px-4 pt-4"
+      contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
+    >
       {/* ---- header ---- */}
       <View className="gap-3 rounded-2xl border border-border bg-surface px-4 py-4">
         <View className="flex-row items-center gap-3">

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Exam } from '@sumrak/schema';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { useActiveExamAttempt, useExam } from '@/db/hooks';
@@ -50,6 +51,7 @@ export function ExamIntroScreen({
   onStartMock,
 }: { packId: string; examId: string } & ExamStartHandlers) {
   const { tokens } = useAppTheme();
+  const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
   const exam = useExam(packId, examId);
   const active = useActiveExamAttempt();
@@ -235,7 +237,10 @@ export function ExamIntroScreen({
         )}
       </ScrollView>
 
-      <View className="absolute bottom-0 left-0 right-0 border-t border-border bg-bg px-4 pb-8 pt-3">
+      <View
+        className="absolute bottom-0 left-0 right-0 border-t border-border bg-bg px-4 pt-3"
+        style={{ paddingBottom: insets.bottom + 16 }}
+      >
         <Pressable
           onPress={start}
           disabled={!startHandler}

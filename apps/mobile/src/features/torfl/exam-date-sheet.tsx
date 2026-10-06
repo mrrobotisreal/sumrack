@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
 import { Modal, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { addDaysToKey } from '@/lib/dates';
@@ -39,10 +40,15 @@ export function ExamDateSheet({
   );
 
   const cells = monthGrid(month);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-scrim/50" onPress={onClose} accessibilityLabel="Закрыть" />
-      <View className="rounded-t-2xl border-t border-border bg-surface px-5 pb-10 pt-4">
+      <View
+        className="rounded-t-2xl border-t border-border bg-surface px-5 pt-4"
+        style={{ paddingBottom: insets.bottom + 24 }}
+      >
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="font-ui-medium text-lg">Дата экзамена</Text>
           <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Закрыть">
@@ -84,38 +90,44 @@ export function ExamDateSheet({
             </Text>
           ))}
         </View>
-        <View className="mt-1 flex-row flex-wrap">
-          {cells.map((day, i) => {
-            if (day === null) return <View key={`pad-${i}`} className="h-11 w-[14.2857%]" />;
-            const past = day < today;
-            const selected = day === picked;
-            return (
-              <View key={day} className="h-11 w-[14.2857%] items-center justify-center">
-                <Pressable
-                  onPress={() => setPicked(day)}
-                  disabled={past}
-                  accessibilityRole="button"
-                  accessibilityLabel={day}
-                  accessibilityState={{ selected, disabled: past }}
-                  className={cn(
-                    'h-9 w-9 items-center justify-center rounded-full',
-                    selected ? 'bg-accent' : 'active:bg-surface-2',
-                    day === today && !selected && 'border border-border',
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      'font-ui text-sm',
-                      selected && 'font-ui-bold text-bg',
-                      past && 'text-border',
-                    )}
-                  >
-                    {Number(day.slice(8))}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          })}
+        {/* explicit week rows: percentage widths in one flex-wrap row round
+            past 100 % on device and wrap at 6 (found on the S25) */}
+        <View className="mt-1">
+          {weeks.map((week, w) => (
+            <View key={`w-${w}`} className="flex-row">
+              {week.map((day, i) => {
+                if (day === null) return <View key={`pad-${w}-${i}`} className="h-11 flex-1" />;
+                const past = day < today;
+                const selected = day === picked;
+                return (
+                  <View key={day} className="h-11 flex-1 items-center justify-center">
+                    <Pressable
+                      onPress={() => setPicked(day)}
+                      disabled={past}
+                      accessibilityRole="button"
+                      accessibilityLabel={day}
+                      accessibilityState={{ selected, disabled: past }}
+                      className={cn(
+                        'h-9 w-9 items-center justify-center rounded-full',
+                        selected ? 'bg-accent' : 'active:bg-surface-2',
+                        day === today && !selected && 'border border-border',
+                      )}
+                    >
+                      <Text
+                        className={cn(
+                          'font-ui text-sm',
+                          selected && 'font-ui-bold text-bg',
+                          past && 'text-border',
+                        )}
+                      >
+                        {Number(day.slice(8))}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
         </View>
 
         <View className="mt-4 flex-row gap-3">
