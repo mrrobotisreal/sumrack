@@ -137,15 +137,22 @@ export const ChoiceAnswerSchema = z.object({
 });
 export const TypedAnswerSchema = z.object({ kind: z.literal('typed'), text: z.string() });
 export const WritingAnswerSchema = z.object({ kind: z.literal('writing'), text: z.string() });
+/** T73: one ASR word with its stamps (ms from the recording start) — the sentence estimate's input. */
+export const SpeakingWordStampSchema = z.object({ w: z.string(), s: nonNegInt, e: nonNegInt });
+export type SpeakingWordStamp = z.infer<typeof SpeakingWordStampSchema>;
+
 export const SpeakingAnswerSchema = z.object({
   kind: z.enum(['speaking-reply', 'speaking-situation', 'speaking-monologue']),
   transcript: z.string(),
   /** The Whisper assist re-decode, when installed (§6.2: keep the higher judge score). */
   assistTranscript: z.string().optional(),
+  /** T73: the primary (Zipformer) transcript's word stamps — lets the pure grader + debrief run from the row. */
+  words: z.array(SpeakingWordStampSchema).optional(),
   /** Relative to the exam recordings root; null once pruned (§8.5). */
   recordingPath: z.string().nullable(),
   durationMs: nonNegInt,
 });
+export type SpeakingAnswer = z.infer<typeof SpeakingAnswerSchema>;
 
 export const ExamAnswerSchema = z.discriminatedUnion('kind', [
   ChoiceAnswerSchema,
