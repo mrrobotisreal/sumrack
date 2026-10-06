@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { drillHref } from './drill/drill-model';
+import { useGradingQueue } from './grading/queue';
 import { MODE_LABELS } from './hub-model';
 import { BAND_BAR_CLASS, BAND_TEXT_CLASS, BORDERLINE_PCT, PASS_PCT, bandFor } from './readiness';
 import {
@@ -39,6 +40,12 @@ export function ExamResultsScreen({ attemptId }: { attemptId: string }) {
   const insets = useSafeAreaInsets();
   const attempt = useExamAttempt(attemptId);
   const exam = useExam(attempt.data?.packId, attempt.data?.examId);
+  // T72: an AI / self grade landing re-renders the results in place (provisional → final).
+  const gradedVersion = useGradingQueue((s) => s.gradedVersion);
+  const refetch = attempt.refetch;
+  React.useEffect(() => {
+    if (gradedVersion > 0) void refetch();
+  }, [gradedVersion, refetch]);
 
   if (attempt.isPending || (attempt.data && exam.isPending)) {
     return (
@@ -146,7 +153,31 @@ function ResultsBody({
         <SectionTitle>Субтесты</SectionTitle>
         <View className="gap-4 rounded-2xl border border-border bg-surface px-4 py-4">
           {rows.map((r) => (
-            <SubtestRow key={r.subtestId} row={r} />
+            <SubtestRow
+              key={r.subtestId}
+              row={r}
+              onOpen={
+                r.kind === 'writing' && r.status === 'scored' && !active
+                  ? () =>
+                      router.push({
+                        pathname: '/exam/writing/[attemptId]',
+                        params: { attemptId },
+                      })
+                  : undefined
+              }
+              pending={
+                r.kind === 'writing' &&
+                attempt.responses.some(
+                  (x) => x.subtestId === r.subtestId && x.gradingStatus === 'pending-ai',
+                )
+              }
+              failed={
+                r.kind === 'writing' &&
+                attempt.responses.some(
+                  (x) => x.subtestId === r.subtestId && x.gradingStatus === 'ai-failed',
+                )
+              }
+            />
           ))}
         </View>
         <Text variant="caption" className="px-1">
@@ -284,11 +315,35 @@ function VerdictCard({ v, xp }: { v: ReturnType<typeof computeVerdict>; xp: numb
   );
 }
 
-function SubtestRow({ row }: { row: ResultRow }) {
+function SubtestRow({
+  row,
+  onOpen,
+  pending = false,
+  failed = false,
+}: {
+  row: ResultRow;
+  /** T72: the writing row opens its review. */
+  onOpen?: () => void;
+  /** T72: an AI grade is on its way / failed (the row says so under the badge). */
+  pending?: boolean;
+  failed?: boolean;
+}) {
+  const { tokens } = useAppTheme();
   const band = row.pct !== null ? bandFor(row.pct) : null;
   const used = row.status === 'scored' ? formatUsed(row.timeUsedSec) : '';
+  const Wrap = onOpen ? Pressable : View;
   return (
-    <View className="gap-1.5" testID={`result-${row.kind}`}>
+    <Wrap
+      className="gap-1.5"
+      testID={`result-${row.kind}`}
+      {...(onOpen
+        ? {
+            onPress: onOpen,
+            accessibilityRole: 'button' as const,
+            accessibilityHint: 'Открыть разбор письма',
+          }
+        : {})}
+    >
       <View className="flex-row items-center gap-2">
         <Text className="flex-1 font-ui-medium" numberOfLines={1}>
           {row.titleRu}
@@ -309,18 +364,27 @@ function SubtestRow({ row }: { row: ResultRow }) {
       </View>
       <Bar pct={row.pct} band={band} />
       <View className="flex-row items-center justify-between">
-        <Text variant="caption" className="text-xs">
+        <Text variant="caption" className="text-xs" testID={`result-${row.kind}-points`}>
           {row.status === 'scored' && row.points !== null
             ? `${Math.round(row.points * 10) / 10} из ${row.maxPoints} б.`
             : `${row.maxPoints} б.`}
-          {row.provisional ? ' · предварительно' : ''}
+          {row.provisional
+            ? pending
+              ? ' · предварительно · ИИ оценивает…'
+              : failed
+                ? ' · предварительно · оценка ИИ не удалась'
+                : ' · предварительно'
+            : ''}
         </Text>
-        <Text variant="caption" className="text-xs">
-          {used}
-          {row.autoSubmitted ? ' · сдано по таймеру' : ''}
-        </Text>
+        <View className="flex-row items-center gap-1">
+          <Text variant="caption" className="text-xs">
+            {used}
+            {row.autoSubmitted ? ' · сдано по таймеру' : ''}
+          </Text>
+          {onOpen ? <Ionicons name="chevron-forward" size={14} color={tokens.textMuted} /> : null}
+        </View>
       </View>
-    </View>
+    </Wrap>
   );
 }
 
