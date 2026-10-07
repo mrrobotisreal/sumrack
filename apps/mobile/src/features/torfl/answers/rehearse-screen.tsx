@@ -287,13 +287,19 @@ export function RehearseScreen() {
           pass={screen.pass}
           sentence={sentences[screen.index]!}
           corrected={text.corrected}
+          bottomInset={insets.bottom}
           onDone={(score) => advance(screen.pass, screen.index, score)}
           onSkipPass={screen.pass === 'without-text' ? skipToSummary : undefined}
         />
       )}
 
       {screen.kind === 'summary' && (
-        <SummaryCard summary={screen.summary} sentences={sentences} onDone={quit} />
+        <SummaryCard
+          summary={screen.summary}
+          sentences={sentences}
+          bottomInset={insets.bottom}
+          onDone={quit}
+        />
       )}
     </View>
   );
@@ -303,12 +309,15 @@ function SentenceView({
   pass,
   sentence,
   corrected,
+  bottomInset,
   onDone,
   onSkipPass,
 }: {
   pass: RehearsalPass;
   sentence: string;
   corrected: boolean;
+  /** Safe-area bottom (the S25's nav bar covered «Дальше» on the first device walk). */
+  bottomInset: number;
   onDone: (bestScore: number) => void;
   onSkipPass?: () => void;
 }) {
@@ -378,7 +387,11 @@ function SentenceView({
     phase === 'recording' ? 'recording' : phase === 'processing' ? 'processing' : 'idle';
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="flex-grow px-6 pt-6">
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="flex-grow px-6 pt-6"
+      contentContainerStyle={{ paddingBottom: bottomInset + 16 }}
+    >
       <View className="items-center gap-3">
         <Text variant="caption" className="uppercase tracking-wider">
           {PASS_LABEL[pass].title}
@@ -564,10 +577,12 @@ function SentenceView({
 function SummaryCard({
   summary,
   sentences,
+  bottomInset,
   onDone,
 }: {
   summary: RehearsalSummary;
   sentences: readonly string[];
+  bottomInset: number;
   onDone: () => void;
 }) {
   const { tokens } = useAppTheme();
@@ -575,7 +590,8 @@ function SummaryCard({
   return (
     <ScrollView
       className="flex-1"
-      contentContainerClassName="flex-grow gap-5 px-6 pt-8 pb-10"
+      contentContainerClassName="flex-grow gap-5 px-6 pt-8"
+      contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
       testID="rehearse-summary"
     >
       <View className="items-center gap-1">

@@ -197,7 +197,7 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
             {downloading
               ? 'Скачиваю записи…'
               : localFiles > 0
-                ? `Записи на устройстве · ${formatBytes(runDirBytes(a.id, 'exam'))}${
+                ? `Записи на устройстве · ${formatKb(runDirBytes(a.id, 'exam'))}${
                     bundle?.state === 'uploaded'
                       ? ' · в резервной копии'
                       : bundle?.state === 'pending'
@@ -562,4 +562,10 @@ export function EntryCard({
       </View>
     </View>
   );
+}
+
+/** Recordings are tens of KB — `formatBytes` would print «0.0 MB» (S25 finding, T74). */
+function formatKb(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(0, Math.round(bytes / 1024))} KB`;
+  return formatBytes(bytes);
 }
