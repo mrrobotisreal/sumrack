@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Switch, TextInput, View } from 'react-nat
 
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
+import { countExamBundles } from '@/features/torfl/media-state';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 import { pumpBundles } from '@/features/scenario/recordings/bundle-service';
 import { track } from '@/services/analytics';
@@ -85,7 +86,13 @@ export function BackupSettingsSection() {
       setPrefs(await getBackupPrefs());
       setLastGithub(await getLastBackup(SETTING_KEYS.lastBackupGithub));
       setLastLocal(await getLastBackup(SETTING_KEYS.lastBackupLocal));
-      setMedia(await repos.scenarios.countBundles());
+      // T63 scenario runs + T74 exam attempts, one line.
+      const [runs, exams] = await Promise.all([repos.scenarios.countBundles(), countExamBundles()]);
+      setMedia({
+        uploaded: runs.uploaded + exams.uploaded,
+        pending: runs.pending + exams.pending,
+        failed: runs.failed + exams.failed,
+      });
       setLoaded(true);
     })();
   }, []);

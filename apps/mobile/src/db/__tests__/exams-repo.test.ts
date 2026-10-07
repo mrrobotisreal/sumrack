@@ -552,6 +552,73 @@ describe('topicStats + grading queue', () => {
   });
 });
 
+describe('T74 — recordings prune + lazy restore on the rows', () => {
+  async function speakingRows() {
+    const m = await startMock();
+    for (const [itemId, kind, path] of [
+      ['sp01', 'speaking-reply', 't1-sp01.ogg'],
+      ['sp02', 'speaking-situation', 't2-sp02.wav'],
+      ['sp03', 'speaking-monologue', null],
+    ] as const) {
+      await repos.exams.recordResponse({
+        attemptId: m.id,
+        subtestId: 'speaking',
+        itemId,
+        answer: { kind, transcript: 'я живу в колорадо', recordingPath: path, durationMs: 4000 },
+        points: 1,
+        maxPoints: 1,
+        gradingStatus: 'scored',
+        now: T0,
+      });
+    }
+    return m;
+  }
+
+  it('markRecordingsPruned nulls every recordingPath of the attempt; the rows stay', async () => {
+    const m = await speakingRows();
+    expect((await repos.exams.listAttemptsWithRecordings()).map((a) => a.id)).toEqual([m.id]);
+    expect(await repos.exams.markRecordingsPruned([m.id])).toBe(2);
+    expect(await repos.exams.listAttemptsWithRecordings()).toEqual([]);
+    const detail = await repos.exams.getAttempt(m.id);
+    expect(detail!.responses).toHaveLength(3);
+    for (const r of detail!.responses) {
+      expect(r.answer && 'recordingPath' in r.answer ? r.answer.recordingPath : null).toBeNull();
+    }
+  });
+
+  it('restoreRecordingPaths re-points speaking answers by item from the bundle file names, preferring .ogg', async () => {
+    const m = await speakingRows();
+    await repos.exams.markRecordingsPruned([m.id]);
+    const n = await repos.exams.restoreRecordingPaths(m.id, [
+      't1-sp01.wav',
+      't1-sp01.ogg',
+      't2-sp02.wav',
+      'notes.txt',
+      't3-sp99.ogg',
+    ]);
+    expect(n).toBe(2);
+    const byItem = new Map(
+      (await repos.exams.getAttempt(m.id))!.responses.map((r) => [
+        r.itemId,
+        r.answer && 'recordingPath' in r.answer ? r.answer.recordingPath : null,
+      ]),
+    );
+    expect(byItem.get('sp01')).toBe('t1-sp01.ogg');
+    expect(byItem.get('sp02')).toBe('t2-sp02.wav');
+    expect(byItem.get('sp03')).toBeNull();
+    expect((await repos.exams.listAttemptsWithRecordings()).map((a) => a.id)).toEqual([m.id]);
+  });
+
+  it('setPinned flips the attempt pin both ways', async () => {
+    const m = await startMock();
+    expect(m.pinned).toBe(false);
+    await repos.exams.setPinned(m.id, true);
+    expect((await repos.exams.getAttemptsByIds([m.id]))[0]!.pinned).toBe(true);
+    await repos.exams.setPinned(m.id, false);
+    expect((await repos.exams.getAttemptsByIds([m.id]))[0]!.pinned).toBe(false);
+  });
+});
+
 describe('the exam deck (FSRS, separate from cards/review_log)', () => {
   const KEY = `${PACK_ID}:${DRILL}:dr01`;
   const input = {

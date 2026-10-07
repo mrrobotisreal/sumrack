@@ -8,6 +8,8 @@ import { repos } from '@/db';
 import { invalidateExams } from '@/db/hooks';
 import type { ExamAttempt } from '@/db/repositories/exams';
 import { recordExamFinished } from '@/features/motivation/service';
+import { scheduleExamBundle } from '@/features/scenario/recordings/bundle-service';
+import { pruneRecordings } from '@/features/scenario/recordings/prune';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
@@ -403,6 +405,12 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
               void invalidateExams();
               void queryClient.invalidateQueries({ queryKey: ['daily-activity'] });
               void queryClient.invalidateQueries({ queryKey: ['motivation'] });
+              // T74 (§8.5): the attempt's media bundle (after its transcodes) + the post-run
+              // prune — both off the queue, neither blocks the results screen.
+              if (Object.values(s.answers).some((ans) => ans.kind.startsWith('speaking-'))) {
+                scheduleExamBundle(a.id);
+              }
+              void pruneRecordings('post-run');
               setFinishedAttemptId(a.id);
               setFinishing(false);
             });

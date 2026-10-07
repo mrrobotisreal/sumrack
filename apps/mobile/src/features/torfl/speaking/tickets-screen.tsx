@@ -20,6 +20,7 @@ import { useClipPlayer } from '@/features/scenario/debrief/use-clip-player';
 import { useHubGates } from '@/features/scenario/hub-gates';
 import { MicButton } from '@/features/scenario/stage/mic-button';
 import { recordExamDrillFinished } from '@/features/motivation/service';
+import { scheduleExamBundle } from '@/features/scenario/recordings/bundle-service';
 import { useReduceMotion } from '@/store/motion-prefs';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
@@ -202,6 +203,7 @@ export function TicketsScreen() {
           );
           track('exam_speaking_scored', { task: 3, source: 'offline', pct: grade.pct });
           await recordExamDrillFinished().catch(() => 0);
+          scheduleExamBundle(p.attemptId);
           void invalidateExams();
           setPhase({
             kind: 'done',

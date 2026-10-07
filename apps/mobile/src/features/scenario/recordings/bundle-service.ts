@@ -14,6 +14,8 @@ import {
 } from '@/features/backup/crypto';
 import { BackupError, toBackupError } from '@/features/backup/errors';
 import { mediaFileName } from '@/features/backup/naming';
+import { getExamBundle, listExamBundleIds, setExamBundle } from '@/features/torfl/media-state';
+import { examBundleStem } from '@/features/torfl/media-state-core';
 import { githubBackupPath, MEDIA_DIR, utf8Bytes } from '@/features/backup/service';
 import type { BackupTargetId } from '@/features/backup/store';
 import { SyncdClient } from '@/features/backup/syncd-client';
@@ -27,7 +29,14 @@ import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import { packMediaBundle, unpackMediaBundle, type BundleInput } from './media-bundle';
-import { attemptFile, attemptStem, ensureRunDir, runDir } from './paths';
+import {
+  attemptFile,
+  attemptStem,
+  ensureRunDir,
+  listRunFiles,
+  runDir,
+  type RecordingsRoot,
+} from './paths';
 import { transcodeQueue } from './transcode-queue';
 
 /**
@@ -49,6 +58,100 @@ import { transcodeQueue } from './transcode-queue';
 
 export type BundleState = 'pending' | 'uploaded' | 'failed';
 
+/**
+ * T74 (TORFL §8.5): the same pack → seal → upload → lazy-restore path serves
+ * two sources — a scenario RUN (`scenario_runs` bundle columns, T63) and an
+ * exam ATTEMPT (`recordings/exam/<attemptId>/`, state in the `torfl.media`
+ * ledger). A source knows its id, its root, its bundle NAME on the targets
+ * (`sumrak-media-<runId>.json` · `sumrak-media-exam-<attemptid>.json` — the
+ * attempt id LOWERCASED for the syncd `MediaFileRe`), how to read / write
+ * its state and which files to pack.
+ */
+export type BundleSourceKind = 'scenario' | 'exam';
+
+interface BundleSource {
+  kind: BundleSourceKind;
+  /** The run id or the attempt id (the `runId` inside the SMB1 header). */
+  id: string;
+  root: RecordingsRoot;
+  name: string;
+  /** Finished + has local media ⇒ bundle-able. Null when there is nothing to do. */
+  ready: () => Promise<{ state: BundleState | null; mediaLocal: boolean } | null>;
+  setState: (state: BundleState) => Promise<void>;
+  /** Names of the files to pack, in order (the manifest). */
+  fileNames: () => Promise<string[]>;
+  /** After a download: point the rows at the restored files. */
+  restored: (files: readonly BundleInput[]) => Promise<void>;
+}
+
+function scenarioSource(runId: string): BundleSource {
+  return {
+    kind: 'scenario',
+    id: runId,
+    root: 'scenario',
+    name: mediaFileName(runId),
+    ready: async () => {
+      const run = await repos.scenarios.getRun(runId);
+      if (!run || run.finishedAt === null) return null;
+      return { state: run.mediaBundleState as BundleState | null, mediaLocal: run.mediaLocal };
+    },
+    setState: (state) => repos.scenarios.setMediaBundle(runId, state, mediaFileName(runId)),
+    fileNames: async () => {
+      const attempts = await repos.scenarios.listAttemptsWithAudio(runId);
+      return [...new Set(attempts.map((a) => a.audioFile!))];
+    },
+    restored: async (files) => {
+      // Re-point the attempts (the prune nulled `audioFile`): an attempt row
+      // knows its turn + attemptNo, the file stem is `tNN-aM` with NN = the
+      // turn's orderIdx — rebuilt from the scenario's turn table.
+      const run = await repos.scenarios.getRun(runId);
+      if (!run) return;
+      const debrief = await repos.scenarios.getRunDebrief(runId);
+      const byStem = new Map(files.map((f) => [f.name.replace(/\.(wav|ogg)$/, ''), f.name]));
+      const orders = await repos.scenarios.getTurnOrders(run.packId, run.scenarioId);
+      const updates: { attemptId: string; name: string }[] = [];
+      for (const turn of debrief?.turns ?? []) {
+        const orderIdx = orders.get(turn.turnId);
+        if (orderIdx === undefined) continue;
+        for (const a of turn.attempts) {
+          const file = byStem.get(attemptStem(orderIdx, a.attemptNo));
+          if (file) updates.push({ attemptId: a.id, name: file });
+        }
+      }
+      await repos.scenarios.markMediaRestored(runId, updates);
+    },
+  };
+}
+
+function examSource(attemptId: string): BundleSource {
+  const name = mediaFileName(examBundleStem(attemptId));
+  return {
+    kind: 'exam',
+    id: attemptId,
+    root: 'exam',
+    name,
+    ready: async () => {
+      const [attempt] = await repos.exams.getAttemptsByIds([attemptId]);
+      if (!attempt || attempt.finishedAt === null) return null;
+      const entry = await getExamBundle(attemptId);
+      // «media local» = the attempt dir still has files (the prune clears both).
+      return {
+        state: entry?.state ?? null,
+        mediaLocal: listRunFiles(attemptId, 'exam').length > 0,
+      };
+    },
+    setState: (state) => setExamBundle(attemptId, state, name),
+    fileNames: async () => listRunFiles(attemptId, 'exam').filter((n) => /\.(wav|ogg)$/.test(n)),
+    restored: async (files) => {
+      // Exam answers point at `t<task>-<itemId>.<ext>` by name — restore each by its stem.
+      await repos.exams.restoreRecordingPaths(
+        attemptId,
+        files.map((f) => f.name),
+      );
+    },
+  };
+}
+
 /** Bundles are only worth it while a target exists; without one, recordings stay local (§12). */
 async function bundlingPossible(): Promise<boolean> {
   const kdf = await getKdfConfig();
@@ -59,16 +162,13 @@ async function bundlingPossible(): Promise<boolean> {
 
 let warnedWav = false;
 
-async function readRunFiles(runId: string): Promise<{ files: BundleInput[]; wavCount: number }> {
-  const attempts = await repos.scenarios.listAttemptsWithAudio(runId);
+async function readSourceFiles(
+  source: BundleSource,
+): Promise<{ files: BundleInput[]; wavCount: number }> {
   const files: BundleInput[] = [];
   let wavCount = 0;
-  const seen = new Set<string>();
-  for (const a of attempts) {
-    const name = a.audioFile!;
-    if (seen.has(name)) continue;
-    seen.add(name);
-    const f = attemptFile(runId, name);
+  for (const name of await source.fileNames()) {
+    const f = attemptFile(source.id, name, source.root);
     if (!f.exists) continue;
     if (name.endsWith('.wav')) wavCount += 1;
     files.push({ name, data: await f.bytes() });
@@ -113,32 +213,42 @@ const uploading = new Set<string>();
  * pump retries); `failed` means a target rejected the file for a
  * non-transient reason.
  */
-export async function bundleRun(runId: string): Promise<BundleState | null> {
-  if (uploading.has(runId)) return null;
-  uploading.add(runId);
+export function bundleRun(runId: string): Promise<BundleState | null> {
+  return bundleSource(scenarioSource(runId));
+}
+
+/** T74: the exam counterpart — one finished attempt's `recordings/exam/<attemptId>/` dir. */
+export function bundleExamAttempt(attemptId: string): Promise<BundleState | null> {
+  return bundleSource(examSource(attemptId));
+}
+
+async function bundleSource(source: BundleSource): Promise<BundleState | null> {
+  const lockKey = `${source.kind}:${source.id}`;
+  if (uploading.has(lockKey)) return null;
+  uploading.add(lockKey);
   try {
-    const run = await repos.scenarios.getRun(runId);
-    if (!run || run.finishedAt === null) return null;
-    if (run.mediaBundleState === 'uploaded') return 'uploaded';
-    if (!run.mediaLocal) return run.mediaBundleState as BundleState | null;
+    const ready = await source.ready();
+    if (!ready) return null;
+    if (ready.state === 'uploaded') return 'uploaded';
+    if (!ready.mediaLocal) return ready.state;
     if (!(await bundlingPossible())) return null;
     const key = await getBackupKey();
     if (!key) return null;
     const kdf = (await getKdfConfig())!;
 
-    await transcodeQueue().whenIdle(runId);
-    const { files, wavCount } = await readRunFiles(runId);
+    await transcodeQueue().whenIdle(source.id);
+    const { files, wavCount } = await readSourceFiles(source);
     if (files.length === 0) return null;
     if (wavCount > 0 && !warnedWav) {
       warnedWav = true;
       console.warn('[media-bundle] bundling WAV recordings (no Opus encoder) — ~10× larger');
-      track('media_bundle_wav_warning', { files: wavCount });
+      track('media_bundle_wav_warning', { files: wavCount, root: source.root });
     }
 
-    const name = mediaFileName(runId);
-    await repos.scenarios.setMediaBundle(runId, 'pending', name);
+    const name = source.name;
+    await source.setState('pending');
 
-    const blob = packMediaBundle(runId, files);
+    const blob = packMediaBundle(source.id, files);
     const envelope = encryptBackupBytes(blob, key, {
       saltB64: kdf.saltB64,
       iterations: kdf.iterations,
@@ -160,7 +270,12 @@ export async function bundleRun(runId: string): Promise<BundleState | null> {
       try {
         await put();
         anyOk = true;
-        track('media_bundle_uploaded', { bytes: json.length, target, files: files.length });
+        track('media_bundle_uploaded', {
+          bytes: json.length,
+          target,
+          files: files.length,
+          root: source.root,
+        });
       } catch (err) {
         if (isAlreadyThere(err)) {
           anyOk = true;
@@ -169,6 +284,7 @@ export async function bundleRun(runId: string): Promise<BundleState | null> {
             target,
             files: files.length,
             dup: true,
+            root: source.root,
           });
           return;
         }
@@ -180,7 +296,13 @@ export async function bundleRun(runId: string): Promise<BundleState | null> {
         if (transient) anyTransient = true;
         else anyHard = true;
         console.warn(`[media-bundle] ${target} failed: ${e.code}`);
-        track('media_bundle_failed', { bytes: json.length, target, code: e.code, transient });
+        track('media_bundle_failed', {
+          bytes: json.length,
+          target,
+          code: e.code,
+          transient,
+          root: source.root,
+        });
       }
     };
     if (targets.github)
@@ -207,13 +329,13 @@ export async function bundleRun(runId: string): Promise<BundleState | null> {
     // safe somewhere; T21 targets are independent). A hard rejection with
     // no success ⇒ failed; only transient trouble ⇒ pending.
     const state: BundleState = anyOk ? 'uploaded' : anyHard && !anyTransient ? 'failed' : 'pending';
-    await repos.scenarios.setMediaBundle(runId, state, name);
+    await source.setState(state);
     return state;
   } catch (err) {
     logError('manual', err);
     return null;
   } finally {
-    uploading.delete(runId);
+    uploading.delete(lockKey);
   }
 }
 
@@ -223,6 +345,11 @@ export async function bundleRun(runId: string): Promise<BundleState | null> {
  */
 export function scheduleBundle(runId: string): void {
   void bundleRun(runId);
+}
+
+/** T74: fire-and-forget after an exam attempt with recordings finishes (waits for its transcodes). */
+export function scheduleExamBundle(attemptId: string): void {
+  void bundleExamAttempt(attemptId);
 }
 
 let pumpInFlight: Promise<void> | null = null;
@@ -244,6 +371,18 @@ export function pumpBundles(): Promise<void> {
         ...(await repos.scenarios.listRunsByBundleState(null, { limit: 10 })),
       ].filter((r) => r.mediaLocal);
       for (const run of batch) await bundleRun(run.id);
+      // T74: exam attempts — pending / failed from the ledger, then finished attempts with
+      // recordings on disk and no ledger entry yet (a kill before scheduling).
+      const examIds = new Set<string>([
+        ...(await listExamBundleIds('pending')).slice(0, 10),
+        ...(await listExamBundleIds('failed')).slice(0, 5),
+      ]);
+      const known = new Set((await listExamBundleIds('uploaded')).concat([...examIds]));
+      for (const a of await repos.exams.listAttemptsWithRecordings()) {
+        if (a.finishedAt !== null && !known.has(a.id)) examIds.add(a.id);
+        if (examIds.size >= 25) break;
+      }
+      for (const id of examIds) await bundleExamAttempt(id);
     } catch (err) {
       logError('manual', err);
     }
@@ -267,7 +406,21 @@ export interface DownloadResult {
 export async function downloadBundle(runId: string): Promise<DownloadResult> {
   const run = await repos.scenarios.getRun(runId);
   if (!run) throw new BackupError('unknown', 'run not found');
-  const name = run.mediaBundleName ?? mediaFileName(runId);
+  return downloadSource(scenarioSource(runId), run.mediaBundleName ?? mediaFileName(runId));
+}
+
+/** T74: the speaking debrief's «Скачать запись» — the attempt's bundle back into `recordings/exam/`. */
+export async function downloadExamBundle(attemptId: string): Promise<DownloadResult> {
+  const [attempt] = await repos.exams.getAttemptsByIds([attemptId]);
+  if (!attempt) throw new BackupError('unknown', 'attempt not found');
+  const entry = await getExamBundle(attemptId);
+  return downloadSource(
+    examSource(attemptId),
+    entry?.name ?? mediaFileName(examBundleStem(attemptId)),
+  );
+}
+
+async function downloadSource(source: BundleSource, name: string): Promise<DownloadResult> {
   const key = await getBackupKey();
   if (!key) {
     throw new BackupError(
@@ -308,35 +461,25 @@ export async function downloadBundle(runId: string): Promise<DownloadResult> {
   }
   const blob = decryptBackupBytes(envelope, key);
   const { header, files } = unpackMediaBundle(blob);
-  if (header.runId !== runId) {
+  if (header.runId !== source.id) {
     throw new BackupError('invalid-envelope', 'bundle belongs to a different run');
   }
 
-  ensureRunDir(runId);
+  ensureRunDir(source.id, source.root);
   let bytes = 0;
   for (const f of files) {
-    const dest = new File(runDir(runId), f.name);
+    const dest = new File(runDir(source.id, source.root), f.name);
     if (dest.exists) dest.delete();
     dest.write(f.data);
     bytes += f.data.length;
   }
-  // Re-point the attempts (the prune nulled `audioFile`): an attempt row
-  // knows its turn + attemptNo, the file stem is `tNN-aM` with NN = the
-  // turn's orderIdx — rebuilt from the scenario's turn table.
-  const debrief = await repos.scenarios.getRunDebrief(runId);
-  const byStem = new Map(files.map((f) => [f.name.replace(/\.(wav|ogg)$/, ''), f.name]));
-  const orders = await repos.scenarios.getTurnOrders(run.packId, run.scenarioId);
-  const updates: { attemptId: string; name: string }[] = [];
-  for (const turn of debrief?.turns ?? []) {
-    const orderIdx = orders.get(turn.turnId);
-    if (orderIdx === undefined) continue;
-    for (const a of turn.attempts) {
-      const file = byStem.get(attemptStem(orderIdx, a.attemptNo));
-      if (file) updates.push({ attemptId: a.id, name: file });
-    }
-  }
-  await repos.scenarios.markMediaRestored(runId, updates);
-  track('media_bundle_downloaded', { bytes, target: from, files: files.length });
+  await source.restored(files);
+  track('media_bundle_downloaded', {
+    bytes,
+    target: from,
+    files: files.length,
+    root: source.root,
+  });
   return { files: files.length, bytes, target: from };
 }
 

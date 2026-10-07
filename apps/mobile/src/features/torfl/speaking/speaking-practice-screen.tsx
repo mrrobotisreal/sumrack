@@ -17,6 +17,7 @@ import { useClipPlayer } from '@/features/scenario/debrief/use-clip-player';
 import { useHubGates } from '@/features/scenario/hub-gates';
 import { MicButton } from '@/features/scenario/stage/mic-button';
 import { recordExamDrillFinished } from '@/features/motivation/service';
+import { scheduleExamBundle } from '@/features/scenario/recordings/bundle-service';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -158,6 +159,7 @@ export function SpeakingPracticeScreen() {
           );
           track('exam_speaking_scored', { task, source: 'offline', pct: grade.pct });
           await recordExamDrillFinished().catch(() => 0);
+          scheduleExamBundle(attemptId);
           void invalidateExams();
           setPhase({ kind: 'done', attemptId, responseId: row.id, grade });
           if (online) void pumpGradingQueue();

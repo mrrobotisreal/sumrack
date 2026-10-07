@@ -873,6 +873,42 @@ export function createExamsRepo(db: SumrakDB) {
       return n;
     },
 
+    /**
+     * T74 (lazy restore): after a media bundle download, point every speaking
+     * response of the attempt whose item has a file in `names`
+     * (`t<task>-<itemId>.<ext>`) back at it. Returns the count re-pointed.
+     */
+    async restoreRecordingPaths(attemptId: string, names: readonly string[]): Promise<number> {
+      const byItem = new Map<string, string>();
+      for (const name of names) {
+        const m = /^t[123]-(.+)\.(wav|ogg)$/.exec(name);
+        if (!m) continue;
+        const prev = byItem.get(m[1]!);
+        // Prefer the Opus file when both exist (the transcode's output).
+        if (!prev || (prev.endsWith('.wav') && name.endsWith('.ogg'))) byItem.set(m[1]!, name);
+      }
+      if (byItem.size === 0) return 0;
+      const rows = await db
+        .select()
+        .from(examResponses)
+        .where(eq(examResponses.attemptId, attemptId));
+      let n = 0;
+      for (const row of rows) {
+        const file = byItem.get(row.itemId);
+        if (!file) continue;
+        const parsed = ExamAnswerSchema.safeParse(parseJsonText(row.answerJson));
+        if (!parsed.success) continue;
+        const a = parsed.data;
+        if (a.kind === 'choice' || a.kind === 'typed' || a.kind === 'writing') continue;
+        await db
+          .update(examResponses)
+          .set({ answerJson: JSON.stringify({ ...a, recordingPath: file }) })
+          .where(eq(examResponses.id, row.id));
+        n += 1;
+      }
+      return n;
+    },
+
     /** Write a grading outcome onto a response (any attempt status — grading follows finishing). */
     async setGrading(
       responseId: string,

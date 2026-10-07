@@ -11,9 +11,12 @@ import { repos } from '@/db';
 import { useExam, useExamAttempt, useScenarios } from '@/db/hooks';
 import { FeedbackView } from '@/features/ai/feedback-view';
 import { AiError, friendlyAiMessage } from '@/features/ai/errors';
+import { friendlyBackupMessage } from '@/features/backup/errors';
 import { useClipPlayer } from '@/features/scenario/debrief/use-clip-player';
 import { formatDuration } from '@/features/scenario/debrief/debrief-core';
-import { attemptFile } from '@/features/scenario/recordings/paths';
+import { downloadExamBundle } from '@/features/scenario/recordings/bundle-service';
+import { attemptFile, listRunFiles, runDirBytes } from '@/features/scenario/recordings/paths';
+import { formatBytes } from '@/features/tts/catalog';
 import { cn } from '@/lib/cn';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -23,6 +26,9 @@ import { requestGrading, useGradingQueue } from '../grading/queue';
 import { TASK_LABEL, speakingCriterionLabel } from '../grading/speaking';
 import { loadRefAudio, type ExamAudio } from '../items/exam-audio';
 import { useExamAudio } from '../items/use-exam-audio';
+import { getExamBundle } from '../media-state';
+import type { ExamBundleEntry } from '../media-state-core';
+import { PinButton } from './pin-button';
 import {
   examScenarioRung,
   speakingDebriefEntries,
@@ -54,6 +60,46 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
   const scenarios = useScenarios();
   const clips = useClipPlayer();
   const [error, setError] = React.useState<string | null>(null);
+  // T74 (§8.5): the attempt's recordings on disk + its media-bundle ledger entry → the media line.
+  const [bundle, setBundle] = React.useState<ExamBundleEntry | null>(null);
+  const [mediaTick, setMediaTick] = React.useState(0);
+  const [downloading, setDownloading] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let live = true;
+    void getExamBundle(attemptId).then((b) => {
+      if (live) setBundle(b);
+    });
+    return () => {
+      live = false;
+    };
+  }, [attemptId, mediaTick]);
+  const localFiles = React.useMemo(
+    () => listRunFiles(attemptId, 'exam').length,
+    // re-read after a download / pin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [attemptId, mediaTick],
+  );
+  const download = React.useCallback(() => {
+    if (downloading) return;
+    setDownloading(true);
+    setDownloadError(null);
+    clips.stop();
+    void downloadExamBundle(attemptId)
+      .then(() => attempt.refetch())
+      .catch((err) => {
+        setDownloadError(friendlyBackupMessage(err));
+        track('exam_debrief_download_failed', {
+          code: (err as { code?: string })?.code ?? 'unknown',
+        });
+      })
+      .finally(() => {
+        setDownloading(false);
+        setMediaTick((n) => n + 1);
+      });
+    // attempt.refetch is stable per query
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attemptId, clips, downloading]);
 
   React.useEffect(() => {
     if (gradedVersion > 0) void attempt.refetch();
@@ -121,11 +167,70 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
             {provisional ? ' · предварительно' : gradedBy === 'ai' ? ' · оценка ИИ' : ''}
           </Text>
         </View>
+        <PinButton
+          attemptId={a.id}
+          pinned={a.pinned}
+          onChanged={() => {
+            void attempt.refetch();
+            setMediaTick((n) => n + 1);
+          }}
+        />
       </View>
       <ScrollView
         contentContainerClassName="gap-5 px-4"
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
+        {/* the media line (T74 §8.5): on device · archived (Download) · deleted */}
+        <View className="flex-row items-center gap-2 px-1" testID="speaking-media-line">
+          <Ionicons
+            name={
+              localFiles > 0
+                ? 'mic-outline'
+                : bundle?.state === 'uploaded'
+                  ? 'cloud-download-outline'
+                  : 'mic-off-outline'
+            }
+            size={14}
+            color={tokens.textMuted}
+          />
+          <Text variant="caption" className="flex-1">
+            {downloading
+              ? 'Скачиваю записи…'
+              : localFiles > 0
+                ? `Записи на устройстве · ${formatBytes(runDirBytes(a.id, 'exam'))}${
+                    bundle?.state === 'uploaded'
+                      ? ' · в резервной копии'
+                      : bundle?.state === 'pending'
+                        ? ' · копия ждёт связи'
+                        : bundle?.state === 'failed'
+                          ? ' · копия не загрузилась'
+                          : ''
+                  }${a.pinned ? ' · закреплена' : ''}`
+                : bundle?.state === 'uploaded'
+                  ? 'Записи в резервной копии'
+                  : entries.some((e) => e.answer)
+                    ? 'Записи удалены (не было резервной копии)'
+                    : 'Записей нет'}
+          </Text>
+          {localFiles === 0 && bundle?.state === 'uploaded' && !downloading ? (
+            <Pressable
+              onPress={download}
+              accessibilityRole="button"
+              accessibilityLabel="Скачать запись"
+              testID="speaking-download"
+              className="rounded-full bg-accent px-3 py-1.5 active:opacity-80"
+            >
+              <Text variant="caption" className="text-bg">
+                Скачать запись
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {downloadError ? (
+          <Text variant="caption" className="text-danger">
+            {downloadError}
+          </Text>
+        ) : null}
         {error ? (
           <Text variant="caption" className="text-danger">
             {error}
