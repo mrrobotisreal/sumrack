@@ -2,7 +2,7 @@
   "expo": {
     "name": "\u0421\u0443\u043c\u0440\u0430\u043a",
     "slug": "sumrak",
-    "version": "1.6.2",
+    "version": "1.7.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "sumrak",
@@ -23,7 +23,7 @@
           "data": [{ "mimeType": "text/plain" }]
         }
       ],
-      "versionCode": 10
+      "versionCode": 11
     },
     "plugins": [
       "expo-router",
