@@ -66,6 +66,17 @@ describe('sample pack fixtures', () => {
     expect(lexicon.stories[0]!.sentences).toHaveLength(6);
   });
 
+  it('T74 torfl prompts fixture validates (a prompts pack in category torfl; every prompt tagged torfl)', () => {
+    const prompts = loadPack('a1-torfl-prompts-fixture');
+    expect(prompts.type).toBe('prompts');
+    expect(prompts.category).toBe('torfl');
+    expect(prompts.prompts).toHaveLength(4);
+    for (const p of prompts.prompts ?? []) expect(p.tags).toContain('torfl');
+    expect(
+      prompts.prompts!.filter((p) => p.tags?.some((t) => t.startsWith('torfl:'))),
+    ).toHaveLength(3);
+  });
+
   it('M14 fixtures validate, carrying category/genre/subtitle/source exactly as authored', () => {
     const news = loadPack('a2-news-090');
     expect(news.category).toBe('news');

@@ -1,0 +1,51 @@
+{
+  "id": "a1-torfl-prompts-fixture",
+  "version": 1,
+  "type": "prompts",
+  "title": {
+    "ru": "ТРКИ: мои ответы (тест)",
+    "en": "TORFL: my answers (fixture)"
+  },
+  "level": "A1",
+  "tags": ["torfl", "torfl:prompts", "torfl:fixture"],
+  "category": "torfl",
+  "stories": [],
+  "prompts": [
+    {
+      "id": "tf-fx-letter-01",
+      "level": "A1",
+      "prompt": {
+        "ru": "Напиши письмо родителям Алины: расскажи о себе — как тебя зовут, сколько тебе лет, откуда ты, где ты живёшь и работаешь.",
+        "en": "Write a letter to Alina's parents: introduce yourself — your name, age, where you are from, where you live and work."
+      },
+      "tags": ["torfl", "torfl:write-letter"]
+    },
+    {
+      "id": "tf-fx-mono-01",
+      "level": "A1",
+      "prompt": {
+        "ru": "Расскажи о своей семье: кто твоя невеста, откуда она, кто её родители, что вы любите делать вместе.",
+        "en": "Talk about your family: who your fiancée is, where she is from, who her parents are, what you like doing together."
+      },
+      "tags": ["torfl", "torfl:speak-monologue"]
+    },
+    {
+      "id": "tf-fx-mono-02",
+      "level": "A1",
+      "prompt": {
+        "ru": "Расскажи бабушке Алины о своём городе: где он, какая там погода, что там есть.",
+        "en": "Tell Alina's grandmother about your city: where it is, what the weather is like, what is there."
+      },
+      "tags": ["torfl", "torfl:speak-monologue"]
+    },
+    {
+      "id": "tf-fx-other-01",
+      "level": "A1",
+      "prompt": {
+        "ru": "Что ты обычно делаешь вечером? Напиши пять предложений.",
+        "en": "What do you usually do in the evening? Write five sentences."
+      },
+      "tags": ["torfl"]
+    }
+  ]
+}

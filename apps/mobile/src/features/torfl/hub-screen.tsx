@@ -14,6 +14,7 @@ import { cn } from '@/lib/cn';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { useAnswers } from './answers/use-answers';
 import { ExamDateSheet } from './exam-date-sheet';
 import { ExamRow } from './exam-row';
 import { useExamDate, useExamListItems, useExamTexts, useTorflToday } from './hooks';
@@ -73,6 +74,7 @@ export function TorflHubScreen({
   const texts = useExamTexts();
   const attempts = useExamAttempts({ limit: 20 });
   const activeAttempt = useActiveExamAttempt();
+  const answers = useAnswers();
   const { date, today, setDate } = useExamDate();
   const [dateOpen, setDateOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ExamSubtestKind>('lexgram');
@@ -474,6 +476,34 @@ export function TorflHubScreen({
             ))}
           </View>
         )}
+      </Section>
+
+      {/* ---- my answers (T74) ---- */}
+      <Section
+        title="Мои ответы"
+        action={{ label: 'Все', onPress: () => router.push('/torfl/answers') }}
+      >
+        <Pressable
+          onPress={() => router.push('/torfl/answers')}
+          accessibilityRole="button"
+          testID="torfl-answers-row"
+          className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+        >
+          <Ionicons name="chatbubbles-outline" size={20} color={tokens.accent} />
+          <View className="flex-1 gap-0.5">
+            <Text className="font-ui-medium">
+              {answers.data && answers.data.entryCount > 0
+                ? `Мои ответы · ${answers.data.entryCount}`
+                : 'Мои ответы'}
+            </Text>
+            <Text variant="caption">
+              {answers.data && answers.data.promptCount > 0
+                ? `Твои ответы на ${answers.data.promptCount} ${ruPlural(answers.data.promptCount, ['тему', 'темы', 'тем'])} экзамена — напиши и отрепетируй вслух`
+                : 'Свои ответы на темы экзамена: написать, получить правку, отрепетировать вслух'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+        </Pressable>
       </Section>
 
       {/* ---- texts ---- */}

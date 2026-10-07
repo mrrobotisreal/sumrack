@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { newId } from '../ids';
 import { toFtsQuery } from '../normalize';
@@ -47,6 +47,20 @@ export function createJournalRepo(db: SumrakDB) {
 
     async listEntries(limit = 100): Promise<JournalEntryRow[]> {
       return db.select().from(journalEntries).orderBy(desc(journalEntries.createdAt)).limit(limit);
+    },
+
+    /**
+     * T74 («Мои ответы», TORFL §9): every entry written against one of the
+     * given prompt ids, newest first — the answer bank joins these to the
+     * installed `torfl` prompts. Empty input → empty output (no full scan).
+     */
+    async listEntriesForPrompts(promptIds: readonly string[]): Promise<JournalEntryRow[]> {
+      if (promptIds.length === 0) return [];
+      return db
+        .select()
+        .from(journalEntries)
+        .where(inArray(journalEntries.promptId, [...promptIds]))
+        .orderBy(desc(journalEntries.createdAt));
     },
 
     /** Entries awaiting AI feedback — the T16 queue is derived from this, oldest first. */
