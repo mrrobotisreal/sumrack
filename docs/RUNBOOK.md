@@ -594,3 +594,152 @@ Calibration on Mitch's own voice is still open (the lab's chips are the tool).
 ElevenLabs characters come off the monthly plan; the rescue rides the
 OpenRouter key from Settings → AI (a phone without a key simply plays
 offline — same game, slightly stricter).
+
+## 9. TORFL exam prep (M18)
+
+«ТРКИ» — Mitch's prep for the SPbU online **ТРКИ-А1 (ТЭУ)**: a Library
+category + hub, drills with an exam FSRS deck and readiness bars, and
+faithful **timed mock exams** of the five-subtest format (Письмо →
+Лексика. Грамматика → Чтение → Аудирование → Говорение). Design
+`../../docs/design/TORFL_EXAM_PREP.md`, decision ADR-0020 (workspace root).
+Entry points: Библиотека → the **ТРКИ** chip (the pinned hub card),
+Today's «ТРКИ» card, `sumrak://torfl`.
+
+### 9.1 What is where
+
+- **Hub** (`/torfl`): header + exam-date countdown (tap → month sheet →
+  `torfl.examDate`), the SPbU pass rule, **Готовность** (five bars with the
+  60 % / 66 % ticks + the predicted verdict), **Сегодня** (the recommended
+  next step), **Пробные экзамены**, **Тренировки** (a five-tab strip of topic
+  tiles + «Работа над ошибками · N» + «Молния» + «Билеты · N»), **Мои ответы**,
+  **Тексты**, **История**.
+- **Content** = `type: exam` packs (`a1-torfl-*`): items reference stories in
+  the same pack (passages, listening scripts, examiner lines, model
+  answers). Those stories are **not Library rows**: reach them from the hub's
+  «Тексты», an item's review, or global search. The lexicon
+  (`a1-torfl-lexicon-001`, `torfl:lexicon`) is an ordinary story pack whose
+  reader has the **«Добавить все слова в Словарь»** chrome button.
+- **Gate B (content publishing):** a `type: exam` manifest row is rejected
+  whole by any build older than T67/T68, so an exam pack publishes only once
+  **every syncing phone** runs a build with migration `0015_exams` (v1.6.2
+  (10) or later — v1.7.0 (11) is the M18 release).
+
+### 9.2 Scoring and the verdict
+
+Objective subtests score per item (`choice` full or 0; `typed` full / half /
+0 by the `accept` / `half` lists after NFC + lower + ё→е + punctuation
+stripping); Лексика 70 × 1, Чтение 25 × 4, Аудирование 20 × 5; subtest pct =
+Σ points / maxPoints, one decimal, unanswered = 0. **Verdict (SPbU):** pass
+iff every subtest ≥ 66 %; **one** subtest in [60, 66) is still a pass («на
+грани»); otherwise fail with the subtests to retake named. A provisional
+writing/speaking pct makes the verdict **provisional** until the AI grades
+land (the results screen flips in place).
+
+**Dictionary rule** (the paper exam allows a bilingual dictionary): tap
+lookup is **on** in Чтение passages, the Письмо editor («Словарь» sheet) and
+speaking task 3's prep; **off** in Лексика, Аудирование and tasks 1–2
+(Settings → ТРКИ → «Lookup in mock reading» can turn even reading off).
+Drills always allow lookup.
+
+### 9.3 Grading Письмо and Говорение (offline → AI → self)
+
+1. **Offline provisional** at submission: writing = bullets covered + length
+   / questions + letter form (55 of 100 points rescaled); speaking = the
+   M17 judge on tasks 1–2 (60 / 20 of 100) and cue coverage + sentence
+   estimate + fluency on task 3 (70 of 100), rescaled.
+2. **AI rubric** through the durable queue (`exam_responses.gradingStatus`
+   `pending-ai`) using **Settings → AI → «Exam grading»** (default Anthropic ·
+   normal = Claude Opus 5.5 · effort **high**; measured ≈ $0.02–0.04 and
+   10–20 s per response). Offline it simply waits; two failures →
+   `ai-failed` with **«Повторить оценку»** on the row.
+3. **Самопроверка** (writing): never online? Four 0 / ½ / 1 questions
+   against the model letter split the 45 AI-only points → `gradedBy: 'self'`.
+
+Fixture calibration (tests): Opus 5.5 is the stricter grader (weak letter 58
+vs GPT-6 Sol Pro 74.5; speaking reply 96 / monologue 89 vs 97 / 95.5).
+
+### 9.4 Mocks: timers, resume, listening, break
+
+Every subtest runs on **wall-clock deadlines** (30 / 40 / 40 / 30 / 20 min)
+persisted in the attempt — a kill mid-subtest resumes with the true remaining
+time (hub banner + intro); a deadline passed while closed **auto-submits**
+the answers as they were. Листening plays **exactly twice**, automatically,
+with a 3 s gap and no controls; a play cut by a kill counts as heard and the
+text plays again as the next play, never a third. A mock **never falls back
+to TTS**: missing audio (Wi-Fi-gated, not downloaded) → «Скачай аудио по
+Wi-Fi» and the subtest can be skipped. Skipped subtests are excluded from
+the verdict (never 0 %). Settings → ТРКИ: English under the RU instructions,
+the optional break screen between subtests, the drill timer.
+
+Dev builds only: `sumrak://exam/run/<attemptId>?devDurationSec=45` shrinks
+every subtest to N seconds (`devDurationOverrideSec` ignores it in release —
+`exam-finish.test.ts` pins that; re-run it before any release build).
+
+### 9.5 Speaking recordings, pins, media bundles (§8.5 for exams)
+
+Every speaking answer is recorded (16 kHz WAV → **Ogg/Opus** by the shared
+queue) under `files/recordings/exam/<attemptId>/t<task>-<itemId>.ogg`; the
+response row stores the relative name. **Retention** = the scenario rules
+over the exam root, chained after the scenario prune (Settings → Speech
+recognition → **Recordings** shows «N KB scenarios · M KB exams», one «Keep
+for» / «Storage cap» policy for both, «Prune now», the trash = both roots):
+
+1. unpinned attempts older than `pruneDays` lose their files;
+2. over `capBytes`, the oldest unpinned finished attempts go next;
+3. **pinned attempts are never pruned** — the 📌 sits on the results screen
+   header and on the speaking debrief;
+4. while a backup target is configured, an attempt whose media bundle is not
+   uploaded yet is spared by rule 1 (not rule 2).
+
+Pruning deletes files only; the rows (transcript, points, AI comments) stay.
+**Media bundles**: after a finished attempt's transcodes, its dir is packed as
+`SMB1`, sealed with the backup key (`kind: 'media'`) and uploaded to both
+targets as **`sumrak-media-exam-<attemptid>.json`** — the attempt id
+**lowercased**, because syncd's `MediaFileRe` (SumrakAPI
+`internal/naming/naming.go:24`) accepts lowercase stems only; no API change.
+State lives in the **`torfl.media`** settings row (`{ v:1, attempts: { id: {
+state, name } } }` — `exam_attempts` has no bundle columns and T74 shipped no
+migration), so it rides the snapshot. The pump (launch / foreground /
+background / Backup card «Media: N bundles») retries pending + failed and
+picks up never-bundled finished attempts. **Lazy restore:** after a snapshot
+restore the files are gone but the ledger knows — the speaking debrief's
+media line reads «Записи в резервной копии» with **«Скачать запись»** (syncd
+first, then GitHub; sha-verified; the answers are re-pointed by item). The
+Backup card's media line counts scenario runs + exam attempts together.
+
+### 9.6 «Мои ответы» and rehearsal
+
+Hub → **Мои ответы** (`/torfl/answers`): every installed journal prompt
+tagged `torfl` (the `a1-torfl-prompts-001` pack; `torfl:<topic>` = the §3.4
+topic label) with Mitch's entries for it, newest first. **«Написать ответ»**
+opens the ordinary journal editor pre-filled with the prompt (same AI
+feedback). Each entry has **«Отрепетировать вслух»** (`/torfl/rehearse`): the
+AI-corrected text when present (labelled «исправленный текст»), else his
+own, split into sentences — pass 1 **«С текстом»** (read → record → per-word
+✓/✗ + score, the T12 loop; «Ещё раз» is free, best counts), pass 2 **«Без
+текста»** (the sentence hidden; «Показать» peeks), then a summary (average per
+pass, the weakest lines). One `game_sessions` row (mode `torfl-rehearsal`,
+no FSRS) + `torfl_rehearsal_finished {topic, score}`. Needs the Russian ASR
+model (Settings → Speech recognition); the screen says so otherwise.
+
+### 9.7 Troubleshooting
+
+| Symptom                                     | Cause → fix                                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Speaking subtest blocked at its instruction | no ASR model or mic denied → Settings link on the screen, or «Пропустить этот субтест» (excluded from the verdict)                |
+| «Скачай аудио по Wi-Fi» before Аудирование  | the pack's audio is Wi-Fi-gated and not yet downloaded → Settings → Content → download, or skip the subtest                       |
+| Result row stuck «ждёт оценки ИИ»           | offline (waits for reconnect) or no OpenRouter key (Settings → AI); «Повторить оценку» after `ai-failed`; Самопроверка for Письмо |
+| Mock disappeared after a kill               | it did not — the hub shows «Продолжить пробный экзамен»; a passed deadline auto-submitted the subtest                             |
+| Debrief ▶ is grey                           | the recording was pruned; «Скачать запись» when a bundle exists, else «Записи удалены»                                            |
+| Exam pack missing after sync                | the phone's build predates `0015_exams` (Gate B) → install ≥ v1.6.2 (10) and sync again                                           |
+| «Мои ответы» is empty                       | no `torfl`-tagged prompts installed → sync the prompts pack (dev: import `a1-torfl-prompts-fixture`)                              |
+
+### 9.8 Dev tools
+
+Settings → Developer → **DB debug**: import the `a1-exam-fixture` (a 5-subtest
+mock + a drill set), `a1-torfl-lexicon-fixture` and `a1-torfl-prompts-fixture`
+packs, start a dev attempt, read the exam readout (exams / attempts /
+responses by grading status / deck counts), and **«Delete exam fixture»**
+(every attempt + response + deck row + the three packs + `sync_state` +
+staged dirs — the device-hygiene cleanup). The T73 device walk used
+`?devDurationSec=45` for a full five-subtest mock in a few minutes.
