@@ -8,6 +8,7 @@ import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { deleteAllRecordings, pruneRecordings, recordingsTotalBytes } from './prune';
+import { deleteAllExamRecordings, examRecordingsTotalBytes } from './prune-exam';
 import {
   CAP_BYTE_OPTIONS,
   DEFAULT_RECORDINGS_SETTINGS,
@@ -18,15 +19,17 @@ import {
 } from './recordings-settings';
 
 /**
- * Settings → Speech → «Recordings» (T63, SPEAKING_SCENARIOS §10.1): how much
- * the scenario recordings take on disk, the two prune knobs (days · cap),
- * a «Prune now» and «Delete all recordings». Pinned runs are never pruned;
- * deleting never touches the debrief text — only the audio.
+ * Settings → Speech → «Recordings» (T63, SPEAKING_SCENARIOS §10.1; T74 adds
+ * the exam root, TORFL §8.5): how much the scenario + exam recordings take
+ * on disk, the two prune knobs (days · cap — one policy for both roots), a
+ * «Prune now» and «Delete all recordings». Pinned runs / attempts are never
+ * pruned; deleting never touches a debrief's text — only the audio.
  */
 export function RecordingsSettingsSection() {
   const { tokens } = useAppTheme();
   const [settings, setSettings] = React.useState<RecordingsSettings>(DEFAULT_RECORDINGS_SETTINGS);
   const [bytes, setBytes] = React.useState<number>(0);
+  const [examBytes, setExamBytes] = React.useState<number>(0);
   const [busy, setBusy] = React.useState(false);
   const [note, setNote] = React.useState<string | null>(null);
 
@@ -34,6 +37,7 @@ export function RecordingsSettingsSection() {
     void getRecordingsSettings().then((next) => {
       setSettings(next);
       setBytes(recordingsTotalBytes());
+      setExamBytes(examRecordingsTotalBytes());
     });
   }, []);
   React.useEffect(() => {
@@ -53,11 +57,14 @@ export function RecordingsSettingsSection() {
   const pruneNow = React.useCallback(() => {
     if (busy) return;
     setBusy(true);
+    const before = recordingsTotalBytes() + examRecordingsTotalBytes();
     void pruneRecordings('manual')
       .then((r) => {
+        // The exam root is pruned inside the same call (T73 chain); report both roots' bytes.
+        const freed = Math.max(0, before - (recordingsTotalBytes() + examRecordingsTotalBytes()));
         setNote(
-          r.runs > 0
-            ? `Pruned ${r.runs} run${r.runs === 1 ? '' : 's'} · ${formatKb(r.bytes)} freed`
+          r.runs > 0 || freed > 0
+            ? `Pruned ${r.runs} run${r.runs === 1 ? '' : 's'} · ${formatKb(freed)} freed`
             : 'Nothing to prune',
         );
         reload();
@@ -68,7 +75,7 @@ export function RecordingsSettingsSection() {
   const confirmDeleteAll = React.useCallback(() => {
     Alert.alert(
       'Delete all recordings?',
-      `Frees ${formatKb(bytes)}. Your debriefs keep every word and score — only the audio goes. Runs already backed up can be downloaded again from the debrief.`,
+      `Frees ${formatKb(bytes + examBytes)}. Your debriefs keep every word and score — only the audio goes. Runs and exam attempts already backed up can be downloaded again from their debrief.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -76,9 +83,11 @@ export function RecordingsSettingsSection() {
           style: 'destructive',
           onPress: () => {
             setBusy(true);
-            void deleteAllRecordings()
-              .then((r) => {
-                setNote(`Deleted ${r.runs} run${r.runs === 1 ? '' : 's'} · ${formatKb(r.bytes)}`);
+            void Promise.all([deleteAllRecordings(), deleteAllExamRecordings()])
+              .then(([r, e]) => {
+                setNote(
+                  `Deleted ${r.runs} run${r.runs === 1 ? '' : 's'} · ${e.attempts} exam attempt${e.attempts === 1 ? '' : 's'} · ${formatKb(r.bytes + e.bytes)}`,
+                );
                 reload();
               })
               .finally(() => setBusy(false));
@@ -86,7 +95,7 @@ export function RecordingsSettingsSection() {
         },
       ],
     );
-  }, [bytes, reload]);
+  }, [bytes, examBytes, reload]);
 
   return (
     <View className="mt-3 overflow-hidden rounded-xl border border-border bg-surface">
@@ -94,21 +103,21 @@ export function RecordingsSettingsSection() {
         <View className="flex-1 gap-0.5 pr-3">
           <Text className="font-ui-medium">Recordings</Text>
           <Text variant="caption">
-            Every scenario attempt you speak is kept as audio for the debrief · {formatKb(bytes)} on
-            device
+            Every scenario attempt and exam answer you speak is kept as audio for its debrief ·{' '}
+            {formatKb(bytes)} scenarios · {formatKb(examBytes)} exams
           </Text>
         </View>
         <Pressable
           onPress={confirmDeleteAll}
           hitSlop={8}
-          disabled={busy || bytes === 0}
+          disabled={busy || bytes + examBytes === 0}
           accessibilityRole="button"
           accessibilityLabel="Delete all recordings"
         >
           <Ionicons
             name="trash-outline"
             size={18}
-            color={bytes === 0 ? tokens.border : tokens.textMuted}
+            color={bytes + examBytes === 0 ? tokens.border : tokens.textMuted}
           />
         </Pressable>
       </View>
@@ -116,7 +125,8 @@ export function RecordingsSettingsSection() {
       <View className="border-t border-border px-4 py-3.5">
         <Text className="font-ui-medium">Keep for</Text>
         <Text variant="caption" className="mt-0.5">
-          Audio older than this is removed (pinned runs never are). Words and scores stay.
+          Audio older than this is removed (pinned runs and attempts never are). Words and scores
+          stay.
         </Text>
         <View className="mt-3 flex-row gap-2">
           {PRUNE_DAY_OPTIONS.map((d) => (
@@ -134,7 +144,7 @@ export function RecordingsSettingsSection() {
       <View className="border-t border-border px-4 py-3.5">
         <Text className="font-ui-medium">Storage cap</Text>
         <Text variant="caption" className="mt-0.5">
-          Beyond this, the oldest unpinned runs lose their audio first.
+          Beyond this, the oldest unpinned runs and exam attempts lose their audio first.
         </Text>
         <View className="mt-3 flex-row gap-2">
           {CAP_BYTE_OPTIONS.map((c) => (

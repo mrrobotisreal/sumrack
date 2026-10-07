@@ -1,4 +1,6 @@
 import { repos } from '@/db';
+import { isBackupConfigured } from '@/features/backup/config';
+import { getExamMediaLedger } from '@/features/torfl/media-state';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
@@ -13,8 +15,10 @@ import { getRecordingsSettings } from './recordings-settings';
  * attempts until the folder fits `capBytes`; pinned attempts are never
  * planned. The rows stay (transcript, points, grading); only the speaking
  * answers' `recordingPath` flips to null. A dir with no attempt row is
- * deleted outright. `protectUnbundled` is off until T74 ships exam media
- * bundles (there is nothing to protect yet). Never throws.
+ * deleted outright. T74: `protectUnbundled` reads the `torfl.media` ledger
+ * exactly as the scenario prune reads `mediaBundleState` — while a backup
+ * target is configured, an attempt whose bundle is not `uploaded` is spared
+ * by the age rule (not the cap rule). Never throws.
  */
 export interface ExamPruneResult {
   attempts: number;
@@ -33,6 +37,7 @@ export async function pruneExamRecordings(
     const settings = await getRecordingsSettings();
     const rows = await repos.exams.getAttemptsByIds(dirs.map((d) => d.runId));
     const byId = new Map(rows.map((r) => [r.id, r]));
+    const ledger = await getExamMediaLedger();
     const orphans = dirs.filter((d) => !byId.has(d.runId));
     const candidates: PruneCandidate[] = dirs
       .filter((d) => byId.has(d.runId))
@@ -44,13 +49,13 @@ export async function pruneExamRecordings(
           finishedAt: r.finishedAt,
           pinned: r.pinned,
           bytes: d.bytes,
-          bundleState: null,
+          bundleState: ledger.attempts[r.id]?.state ?? null,
         };
       });
     const plan = planPrune(candidates, {
       pruneDays: settings.pruneDays,
       capBytes: settings.capBytes,
-      protectUnbundled: false,
+      protectUnbundled: await isBackupConfigured(),
     });
     let bytes = 0;
     for (const o of orphans) if (deleteRunDir(o.runId, 'exam')) bytes += o.bytes;
@@ -69,7 +74,7 @@ export async function pruneExamRecordings(
         bytes,
         orphans: orphans.length,
         reason,
-        protectedCount: 0,
+        protectedCount: plan.protectedCount,
         root: 'exam',
       });
     }
@@ -86,6 +91,33 @@ async function reconcileMissingExamMedia(attemptIdsWithFiles: Set<string>): Prom
   const missing = believers.filter((a) => !attemptIdsWithFiles.has(a.id)).map((a) => a.id);
   if (missing.length > 0) await repos.exams.markRecordingsPruned(missing);
   return missing.length;
+}
+
+/** Settings → «Delete all recordings» (T74): every exam attempt dir, rows kept. */
+export async function deleteAllExamRecordings(): Promise<ExamPruneResult> {
+  const dirs = listRunDirs('exam');
+  let bytes = 0;
+  const gone: string[] = [];
+  for (const d of dirs) {
+    if (deleteRunDir(d.runId, 'exam')) {
+      gone.push(d.runId);
+      bytes += d.bytes;
+    }
+  }
+  const known = new Set((await repos.exams.getAttemptsByIds(gone)).map((a) => a.id));
+  const knownIds = gone.filter((id) => known.has(id));
+  if (knownIds.length > 0) await repos.exams.markRecordingsPruned(knownIds);
+  if (gone.length > 0) {
+    track('recordings_pruned', {
+      runs: knownIds.length,
+      bytes,
+      orphans: gone.length - knownIds.length,
+      reason: 'delete-all',
+      protectedCount: 0,
+      root: 'exam',
+    });
+  }
+  return { attempts: knownIds.length, bytes };
 }
 
 /** Total bytes under `recordings/exam/` (the Settings row, T74). */

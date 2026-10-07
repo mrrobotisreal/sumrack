@@ -199,6 +199,14 @@ export const SETTING_KEYS = {
    * field-by-field like `ai.grammarPreset`.
    */
   torflGradingPreset: 'torfl.gradingPreset',
+  /**
+   * Exam media-bundle ledger (M18 §8.5, T74; healed by `features/torfl/
+   * media-state-core.ts`): { v: 1, attempts: { [attemptId]: { state:
+   * 'pending' | 'uploaded' | 'failed', name } } } — `exam_attempts` has no
+   * bundle columns and T74 ships no migration, so the per-attempt bundle
+   * state rides this one settings row (and the snapshot with it).
+   */
+  torflMedia: 'torfl.media',
 } as const;
 
 /** Key-value settings, JSON-encoded values. */

@@ -24,6 +24,7 @@ import {
   topicBreakdown,
   type ResultRow,
 } from './results-model';
+import { PinButton } from './speaking/pin-button';
 import { SUBTEST_LABELS, topicLabel } from './topics';
 import { verdict as computeVerdict, verdictHeadline } from './verdict';
 
@@ -68,6 +69,7 @@ export function ExamResultsScreen({ attemptId }: { attemptId: string }) {
       attempt={attempt.data}
       top={insets.top}
       bottom={insets.bottom}
+      onPinChanged={() => void refetch()}
     />
   );
 }
@@ -78,12 +80,14 @@ function ResultsBody({
   attempt,
   top,
   bottom,
+  onPinChanged,
 }: {
   attemptId: string;
   exam: Exam;
   attempt: NonNullable<ReturnType<typeof useExamAttempt>['data']>;
   top: number;
   bottom: number;
+  onPinChanged: () => void;
 }) {
   const { tokens } = useAppTheme();
   const router = useRouter();
@@ -101,6 +105,11 @@ function ResultsBody({
   const topics = topicBreakdown(exam, scoredIds, answers);
   const weak = topics.filter((t) => t.accuracy < 1).slice(0, 6);
   const active = attempt.status === 'active';
+  // T74 (§8.5): the pin keeps this attempt's speaking recordings from the prune — shown only
+  // when the attempt has (or had) recordings.
+  const hasRecordings = responses.some(
+    (r) => r.answer && 'recordingPath' in r.answer && r.answer.recordingPath !== undefined,
+  );
 
   const when = new Date(attempt.finishedAt ?? attempt.startedAt).toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -133,8 +142,12 @@ function ResultsBody({
           <Text variant="caption">
             {MODE_LABELS[attempt.mode]} · {when}
             {attempt.status === 'abandoned' ? ' · прервана' : ''}
+            {attempt.pinned ? ' · закреплена' : ''}
           </Text>
         </View>
+        {hasRecordings ? (
+          <PinButton attemptId={attemptId} pinned={attempt.pinned} onChanged={onPinChanged} />
+        ) : null}
       </View>
 
       {full && v ? <VerdictCard v={v} xp={attempt.xpAwarded} /> : null}

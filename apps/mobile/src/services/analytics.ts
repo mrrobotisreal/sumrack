@@ -463,6 +463,8 @@ export type AnalyticsEvent =
   // source, pct} · exam_grading_failed {kind, code} · exam_recording_saved {task, ms} ·
   // torfl_rehearsal_finished {topic, score} · torfl_ticket_drawn {topic}.
   // ai_request_* gain feature 'exam-writing' | 'exam-speaking' via the AiFeature union.
+  // T74 (§8.5): exam_attempt_pinned {pinned} · exam_debrief_download_failed {code}; the T63
+  // recordings_pruned / media_bundle_* events gain `root: 'exam'` for the exam root.
   | 'torfl_hub_opened'
   | 'torfl_exam_date_set'
   | 'torfl_topic_banked'
@@ -485,7 +487,9 @@ export type AnalyticsEvent =
   | 'exam_grading_failed'
   | 'exam_recording_saved'
   | 'torfl_rehearsal_finished'
-  | 'torfl_ticket_drawn';
+  | 'torfl_ticket_drawn'
+  | 'exam_attempt_pinned'
+  | 'exam_debrief_download_failed';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
