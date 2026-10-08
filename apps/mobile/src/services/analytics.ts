@@ -238,6 +238,19 @@ export type AnalyticsEvent =
   | 'assessment_completed'
   | 'assessment_failed'
   | 'assessment_screen_opened'
+  // T38 progress science. Props are counts / levels / kinds only — never
+  // lemma text: core_coverage_viewed {levels, a1Pct?, a2Pct?},
+  // core_gaps_opened {level, gaps}, forecast_viewed {today, overdue,
+  // next30}, forecast_day_selected {offset, total}, heatmap_viewed
+  // {activeDays}, leech_inbox_opened {count, from},
+  // leech_action {action: explain|note|drill|dismiss, direction, againCount}.
+  | 'core_coverage_viewed'
+  | 'core_gaps_opened'
+  | 'forecast_viewed'
+  | 'forecast_day_selected'
+  | 'heatmap_viewed'
+  | 'leech_inbox_opened'
+  | 'leech_action'
   // T19 streaks, goals, XP, achievements, notifications. All local — the
   // notification events log delivery *scheduling* and taps, never content.
   | 'daily_goal_changed'

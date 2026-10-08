@@ -671,6 +671,19 @@ export const examItemCards = sqliteTable(
   ],
 );
 
+/**
+ * Acknowledged leeches (T38). A card whose recent history trips the leech
+ * rule (features/dashboard/leeches.ts) can be dismissed from the inbox; it
+ * stays suppressed until it earns an `Again` reviewed AFTER `dismissedAt`
+ * (re-dismissing overwrites the stamp). Cascades with its card.
+ */
+export const leechDismissals = sqliteTable('leech_dismissals', {
+  cardId: text('card_id')
+    .primaryKey()
+    .references(() => cards.id, { onDelete: 'cascade' }),
+  dismissedAt: integer('dismissed_at').notNull(),
+});
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),

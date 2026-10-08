@@ -175,7 +175,21 @@ describe('migrations from empty DB', () => {
   it('0015_exams: fresh DB has the exams content table + three user tables with their indexes', async () => {
     const db = createTestDb();
     await expectExamTables(db);
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 15, tag: '0015_exams' });
+    expect(journal.entries.find((e: { idx: number }) => e.idx === 15)).toMatchObject({
+      tag: '0015_exams',
+    });
+  });
+
+  it('0016_core-lemmas: fresh DB has core_lemmas (content) + leech_dismissals (user)', async () => {
+    const db = createTestDb();
+    expect(await columnNames(db, 'core_lemmas')).toEqual(
+      expect.arrayContaining(['pack_id', 'list_id', 'level', 'entry_idx', 'lemma', 'lemma_norm']),
+    );
+    expect(await indexNames(db, 'core_lemmas')).toEqual(
+      expect.arrayContaining(['core_lemmas_norm_idx', 'core_lemmas_level_idx']),
+    );
+    expect(await columnNames(db, 'leech_dismissals')).toEqual(['card_id', 'dismissed_at']);
+    expect(journal.entries.at(-1)).toMatchObject({ idx: 16, tag: '0016_core-lemmas' });
   });
 });
 

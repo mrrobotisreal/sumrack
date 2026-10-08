@@ -39,12 +39,19 @@ const NotePayloadSchema = z.object({
 const UNTITLED = 'Заметка';
 
 /** Route-level wrapper — same remount-per-target pattern as the entry editor. */
-export function NoteEditorScreen({ id }: { id: string }) {
+export function NoteEditorScreen({
+  id,
+  prefill,
+}: {
+  id: string;
+  /** T38: initial title/body for a NEW note (never applied to an existing one). */
+  prefill?: { title?: string; body?: string };
+}) {
   const router = useRouter();
   const isNew = id === 'new';
   const existing = useNote(isNew ? undefined : id);
 
-  if (isNew) return <NoteEditor key="new" note={null} />;
+  if (isNew) return <NoteEditor key="new" note={null} prefill={prefill} />;
 
   if (existing.isPending) {
     return (
@@ -88,15 +95,23 @@ export function NoteEditorScreen({ id }: { id: string }) {
  * reading surface: it hosts the same highlight-to-bank gesture as the
  * journal's read mode, through MarkdownView's selectable text blocks.
  */
-function NoteEditor({ note }: { note: NoteRow | null }) {
+function NoteEditor({
+  note,
+  prefill,
+}: {
+  note: NoteRow | null;
+  prefill?: { title?: string; body?: string };
+}) {
   const router = useRouter();
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
 
   const isNew = note === null;
-  const [title, setTitle] = React.useState(note && note.title !== UNTITLED ? note.title : '');
-  const [body, setBody] = React.useState(note?.body ?? '');
+  const initialTitle = note ? (note.title !== UNTITLED ? note.title : '') : (prefill?.title ?? '');
+  const initialBody = note ? note.body : (prefill?.body ?? '');
+  const [title, setTitle] = React.useState(initialTitle);
+  const [body, setBody] = React.useState(initialBody);
   const [noteId, setNoteId] = React.useState<string | null>(note?.id ?? null);
   const [preview, setPreview] = React.useState(false);
   const [selecting, setSelecting] = React.useState(false);
@@ -106,8 +121,8 @@ function NoteEditor({ note }: { note: NoteRow | null }) {
   const stateRef = React.useRef({
     noteId: note?.id ?? null,
     saved: note ? JSON.stringify({ title: note.title, body: note.body }) : '',
-    title: note && note.title !== UNTITLED ? note.title : '',
-    body: note?.body ?? '',
+    title: initialTitle,
+    body: initialBody,
     deleted: false,
   });
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);

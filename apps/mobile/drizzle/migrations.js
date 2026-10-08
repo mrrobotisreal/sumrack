@@ -17,6 +17,7 @@ import m0012 from './0012_review-source.sql';
 import m0013 from './0013_word-profiles.sql';
 import m0014 from './0014_scenarios.sql';
 import m0015 from './0015_exams.sql';
+import m0016 from './0016_core-lemmas.sql';
 
 export default {
   journal,
@@ -37,5 +38,6 @@ export default {
     m0013,
     m0014,
     m0015,
+    m0016,
   },
 };

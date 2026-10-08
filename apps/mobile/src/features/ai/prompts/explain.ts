@@ -26,6 +26,12 @@ export type ExplainTarget =
       pos?: string;
       /** An example sentence the learner met the word in. */
       exampleRu?: string;
+      /**
+       * T38 leech framing: the card keeps failing — the same template plus a
+       * "why might this be hard + memory hooks" request (prompt reuse, not a
+       * new template; recorded).
+       */
+      leech?: { againCount: number; windowSize: number; direction: string };
     };
 
 const SYSTEM = `You are a Russian tutor for an English-speaking adult learner (~A1–B1). Explain clearly and concisely in English, in markdown.
@@ -53,6 +59,11 @@ export function buildExplainMessages(target: ExplainTarget): ChatMessage[] {
       parts.push(`Saved grammar note: ${target.grammar}`);
     }
     if (target.exampleRu) parts.push(`I met it in: «${target.exampleRu}»`);
+    if (target.leech) {
+      parts.push(
+        `This card is a leech for me: I answered "Again" ${target.leech.againCount} times in my last ${target.leech.windowSize} reviews (direction ${target.leech.direction}). Start with why this word might be hard for an English speaker (look-alikes, confusable forms, stress, aspect), then give one or two concrete memory hooks.`,
+      );
+    }
     user = parts.join('\n');
   }
   return [

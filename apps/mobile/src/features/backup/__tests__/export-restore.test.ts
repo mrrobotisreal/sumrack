@@ -17,6 +17,7 @@ import {
   encounters,
   examAttempts,
   examItemCards,
+  leechDismissals,
   examResponses,
   frozenDays,
   gameSessions,
@@ -141,6 +142,8 @@ async function seedSource(db: SumrakDB) {
       createdAt: NOW - 5000,
     },
   ]);
+  // T38: one acknowledged leech.
+  await db.insert(leechDismissals).values({ cardId: 'card-1', dismissedAt: NOW - 1000 });
   await db.insert(reviewLog).values({
     id: 'rl-1',
     cardId: 'card-1',
@@ -609,6 +612,7 @@ async function selectAllUserTables(db: SumrakDB) {
     examAttempts: await db.select().from(examAttempts),
     examResponses: await db.select().from(examResponses),
     examItemCards: await db.select().from(examItemCards),
+    leechDismissals: await db.select().from(leechDismissals),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),
@@ -1012,6 +1016,8 @@ describe('user-table drift guard', () => {
       'scenario_assets',
       // T68 exam content table (rebuilt from packs, never backed up).
       'exams',
+      // T38 reference lemma lists (rebuilt from packs, never backed up).
+      'core_lemmas',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');

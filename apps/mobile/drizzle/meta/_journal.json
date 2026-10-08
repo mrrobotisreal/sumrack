@@ -113,6 +113,13 @@
       "when": 1791242828746,
       "tag": "0015_exams",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1791501343913,
+      "tag": "0016_core-lemmas",
+      "breakpoints": true
     }
   ]
 }

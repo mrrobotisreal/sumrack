@@ -14,6 +14,7 @@ import { eq, sql } from 'drizzle-orm';
 import { normalizeRu } from './normalize';
 import {
   audioTracks,
+  coreLemmas,
   dialogueChoices,
   dialogueEndings,
   dialogueNodeAudio,
@@ -54,6 +55,8 @@ export interface ImportResult {
     scenarios: number;
     /** T68: `exams` rows (exam packs' stories count under `stories`). */
     exams: number;
+    /** T38: `core_lemmas` rows (every entry of every reference lemma list). */
+    lemmas: number;
     sentences: number;
     tokens: number;
   };
@@ -228,6 +231,7 @@ function countContent(pack: Pack) {
     dialogues: pack.dialogues?.length ?? 0,
     scenarios: pack.scenarios?.length ?? 0,
     exams: pack.exams?.length ?? 0,
+    lemmas: (pack.lemmaLists ?? []).reduce((n, l) => n + l.lemmas.length, 0),
     sentences: sentenceCount,
     tokens: tokenCount,
   };
@@ -456,6 +460,25 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       titleEn: exam.title.en,
       json: JSON.stringify(exam),
     });
+  }
+
+  // T38: reference lemma lists → `core_lemmas`, one row per entry with the
+  // T03 fold so coverage joins are ё/е-tolerant. Batched — a core list is
+  // ~1k rows and one INSERT per row would dominate the import.
+  for (const list of pack.lemmaLists ?? []) {
+    const rows = list.lemmas.map((entry, entryIdx) => ({
+      packId: pack.id,
+      listId: list.id,
+      level: list.level,
+      entryIdx,
+      lemma: entry.lemma,
+      lemmaNorm: normalizeRu(entry.lemma),
+      pos: entry.pos ?? null,
+      translation: entry.translation ?? null,
+    }));
+    for (let i = 0; i < rows.length; i += 100) {
+      await db.insert(coreLemmas).values(rows.slice(i, i + 100));
+    }
   }
 }
 

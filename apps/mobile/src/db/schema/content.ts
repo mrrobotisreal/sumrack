@@ -18,10 +18,18 @@ export const packs = sqliteTable('packs', {
   // 'dialogue' joined the pack types in T25 (type-level only — dialogue
   // content tables + importer support landed in T26); 'scenario' in T56
   // (type-level only — scenario content tables + importer land in T58);
-  // 'exam' in T67 (type-level; the `exams` table + importer landed in T68).
+  // 'exam' in T67 (type-level; the `exams` table + importer landed in T68);
+  // 'reference' in T38 (lemma lists → `core_lemmas`).
   type: text('type')
     .$type<
-      'stories' | 'course-unit' | 'checkpoint' | 'prompts' | 'dialogue' | 'scenario' | 'exam'
+      | 'stories'
+      | 'course-unit'
+      | 'checkpoint'
+      | 'prompts'
+      | 'dialogue'
+      | 'scenario'
+      | 'exam'
+      | 'reference'
     >()
     .notNull(),
   titleRu: text('title_ru').notNull(),
@@ -620,4 +628,33 @@ export const exams = sqliteTable(
     json: text('json').notNull(),
   },
   (t) => [primaryKey({ columns: [t.packId, t.examId] }), index('exams_mode_idx').on(t.mode)],
+);
+
+/**
+ * Reference lemma lists (T38, V2 §7.7) — one row per list entry of a
+ * `reference` pack's `lemmaLists`. `lemmaNorm` is the T03 fold (NFC +
+ * lowercase + ё→е) so the coverage join against `tokens.lemma_norm` /
+ * `bank_items.lemma_norm` is ё/е-tolerant by construction. `entryIdx` keeps
+ * the authored order and makes the key unique even when a lemma is listed
+ * under two POS.
+ */
+export const coreLemmas = sqliteTable(
+  'core_lemmas',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    listId: text('list_id').notNull(),
+    level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
+    entryIdx: integer('entry_idx').notNull(),
+    lemma: text('lemma').notNull(),
+    lemmaNorm: text('lemma_norm').notNull(),
+    pos: text('pos'),
+    translation: text('translation'),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.listId, t.entryIdx] }),
+    index('core_lemmas_norm_idx').on(t.lemmaNorm),
+    index('core_lemmas_level_idx').on(t.level),
+  ],
 );

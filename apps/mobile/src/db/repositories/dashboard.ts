@@ -128,8 +128,192 @@ const REVIEWED_LEMMAS = sql`
       AND c.direction IN ('ru-en', 'en-ru') AND c.reps > 0
   )`;
 
+/** T38 core coverage, one row per CEFR level that has an installed list. */
+export interface CoreCoverage {
+  level: Cefr;
+  /** Distinct (ё-folded) core lemmas across every installed list at this level. */
+  total: number;
+  /** ∩ T18 encountered (read sentences ∪ collected). */
+  encountered: number;
+  /** ∩ bank word items. */
+  collected: number;
+  /** ∩ mature band (weakest reviewed ru-en/en-ru card ≥ 30 d). */
+  mastered: number;
+}
+
+export interface CoreGapLemma {
+  lemma: string;
+  pos: string | null;
+  translation: string | null;
+}
+
+export interface LeechCandidate {
+  cardId: string;
+  bankItemId: string;
+  direction: string;
+  lemma: string | null;
+  surface: string;
+  translation: string;
+  kind: string;
+  againCount: number;
+  windowSize: number;
+  lastReviewedAt: number;
+  lastAgainAt: number | null;
+  dismissedAt: number | null;
+}
+
+/** T38 leech window (features/dashboard/science/leeches.ts owns the constants). */
+const LEECH_SQL_WINDOW = 10;
+
+/** Core lemmas joined to the T18 encountered universe — shared by coverage + gaps. */
+const CORE_JOIN = sql`
+  core AS (
+    SELECT DISTINCT level, lemma_norm FROM core_lemmas
+  ),
+  seen AS (
+    SELECT DISTINCT t.lemma_norm
+    FROM tokens t
+    JOIN read_sent rs ON rs.pack_id = t.pack_id AND rs.sentence_id = t.sentence_id
+    WHERE t.is_punct = 0 AND t.lemma_norm IS NOT NULL
+  ),
+  bank_words AS (
+    SELECT b.lemma_norm,
+           MIN((SELECT MIN(c.stability) FROM cards c
+                 WHERE c.bank_item_id = b.id
+                   AND c.direction IN ('ru-en', 'en-ru') AND c.reps > 0)) AS min_stab
+    FROM bank_items b
+    WHERE b.kind = 'word' AND b.lemma_norm IS NOT NULL
+    GROUP BY b.lemma_norm
+  )`;
+
 export function createDashboardRepo(db: SumrakDB) {
   return {
+    /**
+     * Core-vocabulary coverage (T38, V2 §7.7): each installed reference
+     * list's lemmas ∩ T18's definitions — encountered (read ∪ collected),
+     * collected (bank word items), mastered (mature band). Joined on the
+     * T03 `lemma_norm` fold, so a core «ещё» matches a banked «еще».
+     * Several lists at one level union by folded lemma.
+     */
+    async getCoreCoverage(): Promise<CoreCoverage[]> {
+      const rows = await db.all<{
+        level: Cefr;
+        total: number;
+        encountered: number;
+        collected: number;
+        mastered: number;
+      }>(sql`
+        WITH ${READ_SENTENCES}, ${CORE_JOIN}
+        SELECT core.level AS level,
+               COUNT(*) AS total,
+               SUM(CASE WHEN s.lemma_norm IS NOT NULL OR bw.lemma_norm IS NOT NULL
+                        THEN 1 ELSE 0 END) AS encountered,
+               SUM(CASE WHEN bw.lemma_norm IS NOT NULL THEN 1 ELSE 0 END) AS collected,
+               SUM(CASE WHEN bw.min_stab >= ${STABILITY_MATURE_MIN} THEN 1 ELSE 0 END) AS mastered
+        FROM core
+        LEFT JOIN seen s ON s.lemma_norm = core.lemma_norm
+        LEFT JOIN bank_words bw ON bw.lemma_norm = core.lemma_norm
+        GROUP BY core.level
+      `);
+      return rows
+        .map((r) => ({ ...r }))
+        .sort((a, b) => CEFR_ORDER.indexOf(a.level) - CEFR_ORDER.indexOf(b.level));
+    },
+
+    /**
+     * The gap list (T38): core lemmas at `level` that are NOT encountered —
+     * never in a read sentence and not in the bank. One row per folded
+     * lemma (first authored entry wins for display), authored order.
+     */
+    async getCoreGaps(level: Cefr): Promise<CoreGapLemma[]> {
+      return db.all<CoreGapLemma>(sql`
+        WITH ${READ_SENTENCES}, ${CORE_JOIN},
+        first_entry AS (
+          SELECT cl.lemma_norm, cl.lemma, cl.pos, cl.translation,
+                 ROW_NUMBER() OVER (PARTITION BY cl.lemma_norm
+                                    ORDER BY cl.pack_id, cl.list_id, cl.entry_idx) AS rn,
+                 MIN(cl.pack_id || '|' || cl.list_id || '|' || printf('%06d', cl.entry_idx))
+                   OVER (PARTITION BY cl.lemma_norm) AS ord
+          FROM core_lemmas cl
+          WHERE cl.level = ${level}
+        )
+        SELECT fe.lemma, fe.pos, fe.translation
+        FROM first_entry fe
+        LEFT JOIN seen s ON s.lemma_norm = fe.lemma_norm
+        LEFT JOIN bank_words bw ON bw.lemma_norm = fe.lemma_norm
+        WHERE fe.rn = 1 AND s.lemma_norm IS NULL AND bw.lemma_norm IS NULL
+        ORDER BY fe.ord
+      `);
+    },
+
+    /** Every card the forecast counts (T38): the review queue's active directions. */
+    async getForecastCards(): Promise<{ dueAt: number; direction: string }[]> {
+      return db.all<{ dueAt: number; direction: string }>(sql`
+        SELECT due_at AS dueAt, direction FROM cards
+        WHERE direction IN ('ru-en', 'en-ru', 'production', 'listening')
+      `);
+    },
+
+    /** `daily_activity` rows on/after `since` ('YYYY-MM-DD') for the year heatmap (T38). */
+    async getActivitySince(since: string): Promise<
+      {
+        date: string;
+        xp: number;
+        reviewsDone: number;
+        readingMs: number;
+        storiesFinished: number;
+      }[]
+    > {
+      return db.all(sql`
+        SELECT date, xp, reviews_done AS reviewsDone, reading_ms AS readingMs,
+               stories_finished AS storiesFinished
+        FROM daily_activity WHERE date >= ${since} ORDER BY date
+      `);
+    },
+
+    /**
+     * Leech candidates (T38): every card with ≥ `minAgain` Agains among its
+     * last ${LEECH_SQL_WINDOW} review_log rows, with its dismissal stamp. The
+     * visibility rule (dismissed → hidden until a newer Again) is applied by
+     * the pure `isVisibleLeech` so the SQL and the unit tests share one rule.
+     */
+    async getLeechCandidates(minAgain: number): Promise<LeechCandidate[]> {
+      return db.all<LeechCandidate>(sql`
+        WITH ranked AS (
+          SELECT card_id, rating, reviewed_at,
+                 ROW_NUMBER() OVER (PARTITION BY card_id ORDER BY reviewed_at DESC, id DESC) AS rn
+          FROM review_log
+        ),
+        win AS (
+          SELECT card_id,
+                 SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS again_count,
+                 COUNT(*) AS window_size,
+                 MAX(reviewed_at) AS last_reviewed_at,
+                 MAX(CASE WHEN rating = 1 THEN reviewed_at END) AS last_again_at
+          FROM ranked WHERE rn <= ${LEECH_SQL_WINDOW}
+          GROUP BY card_id
+        )
+        SELECT c.id AS cardId, b.id AS bankItemId, c.direction, b.lemma, b.surface,
+               b.translation, b.kind, w.again_count AS againCount, w.window_size AS windowSize,
+               w.last_reviewed_at AS lastReviewedAt, w.last_again_at AS lastAgainAt,
+               ld.dismissed_at AS dismissedAt
+        FROM win w
+        JOIN cards c ON c.id = w.card_id
+        JOIN bank_items b ON b.id = c.bank_item_id
+        LEFT JOIN leech_dismissals ld ON ld.card_id = c.id
+        WHERE w.again_count >= ${minAgain}
+        ORDER BY w.again_count DESC, w.last_again_at DESC
+      `);
+    },
+
+    /** Dismiss (acknowledge) a leech — overwrites an earlier dismissal (T38). */
+    async dismissLeech(cardId: string, now = Date.now()): Promise<void> {
+      await db.run(sql`
+        INSERT INTO leech_dismissals (card_id, dismissed_at) VALUES (${cardId}, ${now})
+        ON CONFLICT(card_id) DO UPDATE SET dismissed_at = excluded.dismissed_at
+      `);
+    },
+
     /** Vocab-by-level rollup (§7.6) — one row per CEFR level with lemmas. */
     async getVocabByLevel(): Promise<VocabLevelStats[]> {
       const rows = await db.all<{

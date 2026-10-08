@@ -15,6 +15,7 @@ import {
   encounters,
   examAttempts,
   examItemCards,
+  leechDismissals,
   examResponses,
   frozenDays,
   gameSessions,
@@ -85,6 +86,8 @@ const INSERT_ORDER: [UserTableKey, SQLiteTable][] = [
   ['examAttempts', examAttempts],
   ['examResponses', examResponses],
   ['examItemCards', examItemCards],
+  // T38: after cards (FK → cards).
+  ['leechDismissals', leechDismissals],
   ['settings', settings],
   ['syncState', syncState],
   ['analyticsEvents', analyticsEvents],

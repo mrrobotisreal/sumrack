@@ -66,6 +66,7 @@ describe('dialogue pack import', () => {
       dialogues: 1,
       scenarios: 0,
       exams: 0,
+      lemmas: 0,
       sentences: 17,
       tokens: 91,
     });
