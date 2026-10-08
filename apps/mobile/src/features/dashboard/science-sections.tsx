@@ -230,10 +230,11 @@ export function ForecastSection({
 
 /**
  * The sequential heatmap ramp, derived from the accent per theme and
- * validated with the dataviz ordinal check (one hue, monotone lightness,
- * light end ≥ 2:1 vs the surface) — recorded in the T38 notes:
- * dark  #833328 · #B3402F · #c06a5c · #ce9389 (on #141419, light → dark reads dim → bright)
- * light #cb9289 · #b56457 · #A03828 · #712e25 (on #FFFFFF)
+ * validated with the dataviz ordinal check (one hue, monotone lightness)
+ * AND the T22 contrast bar: every active step ≥ 3:1 vs the card surface
+ * (WCAG 1.4.11 non-text) — recorded in the T38 notes:
+ * dark  #B3402F 3.2 · #be6153 4.4 · #c88277 6.1 · #d4a79f 8.6 (on #141419)
+ * light #b86a5e 4.0 · #A03828 6.8 · #782f25 9.4 · #502623 12.8 (on #FFFFFF)
  * Level 0 (no activity) is the near-neutral track, so "nothing" never
  * reads as "a little".
  */
@@ -244,18 +245,18 @@ export function useHeatRamp(): Record<HeatLevel, string> {
     if (scheme === 'dark') {
       return {
         0: empty,
-        1: mixHex(tokens.accent, tokens.surface, 0.7),
-        2: tokens.accent,
-        3: mixHex(tokens.text, tokens.accent, 0.25),
-        4: mixHex(tokens.text, tokens.accent, 0.5),
+        1: tokens.accent,
+        2: mixHex(tokens.text, tokens.accent, 0.2),
+        3: mixHex(tokens.text, tokens.accent, 0.4),
+        4: mixHex(tokens.text, tokens.accent, 0.62),
       };
     }
     return {
       0: empty,
-      1: mixHex(tokens.accent, tokens.surface, 0.55),
-      2: mixHex(tokens.accent, tokens.surface, 0.78),
-      3: tokens.accent,
-      4: mixHex(tokens.text, tokens.accent, 0.35),
+      1: mixHex(tokens.accent, tokens.surface, 0.75),
+      2: tokens.accent,
+      3: mixHex(tokens.text, tokens.accent, 0.3),
+      4: mixHex(tokens.text, tokens.accent, 0.6),
     };
   }, [tokens, scheme]);
 }
