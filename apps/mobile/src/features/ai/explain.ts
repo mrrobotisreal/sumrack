@@ -1,4 +1,5 @@
 import { buildExplainMessages, type ExplainTarget } from './prompts/explain';
+import { isOnline } from './connectivity';
 import { runChat } from './runner';
 import { AiError } from './errors';
 import { ExplainResponseSchema } from './schemas';
@@ -21,6 +22,9 @@ export async function explain(target: ExplainTarget): Promise<string> {
   const key = cacheKey(target);
   const cached = cache.get(key);
   if (cached) return cached;
+  // T38 S25 finding: in airplane mode the fetch failed as a generic error;
+  // check first so the sheet can say «offline» plainly.
+  if (!(await isOnline())) throw new AiError('offline', 'No connection.');
 
   const result = await runChat('explain', {
     messages: buildExplainMessages(target),

@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { friendlyAiMessage } from './errors';
+import { AiError, friendlyAiMessage } from './errors';
 import { explain, type ExplainTarget } from './explain';
 
 /**
@@ -40,7 +40,16 @@ function ExplainSheetInner({ target, onClose }: { target: ExplainTarget; onClose
     () =>
       explain(target)
         .then((markdown) => setState({ phase: 'done', markdown }))
-        .catch((err) => setState({ phase: 'error', message: friendlyAiMessage(err) })),
+        .catch((err) =>
+          setState({
+            phase: 'error',
+            // explain is transient (nothing queues) — say so, not «will send»
+            message:
+              err instanceof AiError && err.code === 'offline'
+                ? 'Offline — Explain needs a connection. Tap to retry once you’re back online.'
+                : friendlyAiMessage(err),
+          }),
+        ),
     [target],
   );
 

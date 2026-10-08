@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { LevelChip } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
@@ -260,7 +260,6 @@ export function useHeatRamp(): Record<HeatLevel, string> {
   }, [tokens, scheme]);
 }
 
-const CELL_GAP = 2;
 const WEEKDAY_ROWS = ['пн', '', 'ср', '', 'пт', '', ''];
 
 function prettyDate(date: string): string {
@@ -278,9 +277,15 @@ export function YearHeatmapSection({ layout }: { layout: HeatmapLayout }) {
   const ramp = useHeatRamp();
   const [width, setWidth] = React.useState(0);
   const [picked, setPicked] = React.useState<{ date: string; value: number } | null>(null);
-  const labelW = 16;
+  const labelW = 18;
   const cols = layout.weeks.length;
-  const cell = width > 0 ? Math.max(3, Math.floor((width - labelW - CELL_GAP * cols) / cols)) : 0;
+  // S25 finding: 53 columns squeezed into ~300 dp gave 5 dp dots and clipped
+  // weekday labels. Cells keep a ≥ 10 dp floor; when the year does not fit,
+  // the grid scrolls horizontally and opens on the most recent weeks.
+  const CELL_GAP = 2;
+  const fit = width > 0 ? Math.floor((width - labelW) / cols - CELL_GAP) : 0;
+  const cell = width > 0 ? Math.max(10, fit) : 0;
+  const scrollRef = React.useRef<ScrollView>(null);
 
   return (
     <SectionCard title="Year of activity">
@@ -291,54 +296,70 @@ export function YearHeatmapSection({ layout }: { layout: HeatmapLayout }) {
       <View className="mt-3" onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {cell > 0 && (
           <>
-            <View className="flex-row" style={{ marginLeft: labelW, height: 12 }}>
-              {layout.monthLabels.map((m) => (
-                <Text
-                  key={`${m.col}-${m.label}`}
-                  variant="caption"
-                  style={{ position: 'absolute', left: m.col * (cell + CELL_GAP), fontSize: 9 }}
-                >
-                  {m.label}
-                </Text>
-              ))}
-            </View>
-            <View className="mt-1 flex-row">
-              <View style={{ width: labelW, rowGap: CELL_GAP }}>
+            <View className="flex-row">
+              <View style={{ width: labelW, marginTop: 16, rowGap: CELL_GAP }}>
                 {WEEKDAY_ROWS.map((l, i) => (
                   <Text
                     key={i}
                     variant="caption"
-                    style={{ height: cell, fontSize: 8, lineHeight: cell }}
+                    style={{ height: cell, fontSize: 8, lineHeight: cell + 1 }}
+                    numberOfLines={1}
                   >
                     {l}
                   </Text>
                 ))}
               </View>
-              <View className="flex-row" style={{ columnGap: CELL_GAP }}>
-                {layout.weeks.map((week, col) => (
-                  <View key={col} style={{ rowGap: CELL_GAP }}>
-                    {week.map((c) => (
-                      <Pressable
-                        key={c.date}
-                        disabled={c.future}
-                        onPress={() => setPicked({ date: c.date, value: c.value })}
-                        accessibilityLabel={`${c.date}: ${c.value} XP`}
+              <ScrollView
+                ref={scrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+              >
+                <View>
+                  <View className="flex-row" style={{ height: 12 }}>
+                    {layout.monthLabels.map((m) => (
+                      <Text
+                        key={`${m.col}-${m.label}`}
+                        variant="caption"
                         style={{
-                          width: cell,
-                          height: cell,
-                          borderRadius: 2,
-                          backgroundColor: c.future ? 'transparent' : ramp[c.level],
+                          position: 'absolute',
+                          left: m.col * (cell + CELL_GAP),
+                          fontSize: 9,
                         }}
-                      />
+                      >
+                        {m.label}
+                      </Text>
                     ))}
                   </View>
-                ))}
-              </View>
+                  <View className="mt-1 flex-row">
+                    <View className="flex-row" style={{ columnGap: CELL_GAP }}>
+                      {layout.weeks.map((week, col) => (
+                        <View key={col} style={{ rowGap: CELL_GAP }}>
+                          {week.map((c) => (
+                            <Pressable
+                              key={c.date}
+                              disabled={c.future}
+                              onPress={() => setPicked({ date: c.date, value: c.value })}
+                              accessibilityLabel={`${c.date}: ${c.value} XP`}
+                              style={{
+                                width: cell,
+                                height: cell,
+                                borderRadius: 2,
+                                backgroundColor: c.future ? 'transparent' : ramp[c.level],
+                              }}
+                            />
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
             </View>
           </>
         )}
       </View>
-      <View className="mt-2 flex-row items-center justify-between">
+      <View className="mt-2 gap-1.5">
         <Text variant="caption" style={tabular}>
           {picked
             ? `${prettyDate(picked.date)} · ${picked.value} XP`
@@ -346,9 +367,9 @@ export function YearHeatmapSection({ layout }: { layout: HeatmapLayout }) {
               ? `Best day ${prettyDate(layout.max.date)} · ${layout.max.value} XP`
               : 'No activity yet'}
         </Text>
-        <View className="flex-row items-center gap-1">
+        <View className="flex-row items-center gap-1 self-end">
           <Text variant="caption" style={{ fontSize: 9 }}>
-            0
+            0 XP
           </Text>
           {([0, 1, 2, 3, 4] as const).map((l) => (
             <View

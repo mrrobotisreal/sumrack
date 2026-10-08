@@ -57,6 +57,10 @@ const FIXTURE_PACKS = [
   // T74 (M18): four `torfl`-tagged journal prompts («Мои ответы» on the S25) — never published;
   // «Delete exam fixture» removes it too (entries written against it are restored with the pre-DB).
   { id: 'a1-torfl-prompts-fixture', note: 'prompts/torfl · 4 prompts · torfl:<topic>' },
+  // T38: a 15-lemma `reference` pack (core-a1 10 + core-a2 5) — dev import only. A planted
+  // files/packs/core-lemmas-fixture/pack.json (e.g. the real core-lemmas-001 before its
+  // push) wins over the bundled copy, like the exam fixture.
+  { id: 'core-lemmas-fixture', note: 'reference · core-a1 10 · core-a2 5 lemmas' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -71,6 +75,8 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
     require('@sumrak/schema/fixtures/packs/a1-torfl-lexicon-fixture/pack.json'),
   'a1-torfl-prompts-fixture': () =>
     require('@sumrak/schema/fixtures/packs/a1-torfl-prompts-fixture/pack.json'),
+  'core-lemmas-fixture': () =>
+    require('@sumrak/schema/fixtures/packs/core-lemmas-fixture/pack.json'),
 };
 
 const EXAM_FIXTURE_ID = 'a1-exam-fixture';
@@ -506,6 +512,8 @@ export default function DevDbScreen() {
           origin: 'remote',
         });
         let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
+        if (result.counts.lemmas > 0)
+          status += ` · ${result.packId} · ${result.counts.lemmas} lemmas`;
         if (result.counts.exams > 0) {
           // T70: a planted exam-fixture dir may carry listening audio (adb-pushed) — set each
           // track's localUri exactly as the Wi-Fi backfill would.
