@@ -19,6 +19,8 @@ export type CefrLevel = z.infer<typeof CefrLevelSchema>;
  *   SPEAKING_SCENARIOS §2)
  * - `exam` — structured tests (mock ТРКИ exams + drills) whose items reference
  *   stories in the same pack (T67, M18, TORFL_EXAM_PREP §3)
+ * - `reference` — stories-free reference data: lemma lists the progress
+ *   engine measures against (T38, V2 §7.7 — the core A1/A2 vocabulary)
  */
 export const PackTypeSchema = z.enum([
   'stories',
@@ -28,6 +30,7 @@ export const PackTypeSchema = z.enum([
   'dialogue',
   'scenario',
   'exam',
+  'reference',
 ]);
 export type PackType = z.infer<typeof PackTypeSchema>;
 

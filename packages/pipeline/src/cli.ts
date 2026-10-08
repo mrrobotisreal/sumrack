@@ -43,7 +43,9 @@ Usage:
                             (its frontmatter then carries the "pack:" meta)
 
   pipeline validate <pack.json> [more.json ...]
-      Validate existing pack.json file(s) against the schema.
+      Validate existing pack.json file(s) against the schema. Reference
+      packs (T38) print a census line per lemma list; they are hand-
+      assembled JSON (no annotate) and publish like any pack
 
   pipeline audio <draft.md> [more-drafts.md ...] -o <pack-dir> [options]
       Render narration via ElevenLabs (needs ELEVENLABS_API_KEY in the env or
@@ -177,6 +179,22 @@ function printExamReports(pack: Pack): void {
   for (const report of renderExamReports(pack)) console.log(`\n${report}`);
 }
 
+/** T38: one census line per reference lemma list (count + POS mix). */
+function printReferenceReports(pack: Pack): void {
+  for (const list of pack.lemmaLists ?? []) {
+    const byPos = new Map<string, number>();
+    for (const l of list.lemmas) byPos.set(l.pos ?? '—', (byPos.get(l.pos ?? '—') ?? 0) + 1);
+    const mix = [...byPos.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([pos, n]) => `${pos} ${n}`)
+      .join(' · ');
+    const glossed = list.lemmas.filter((l) => l.translation).length;
+    console.log(
+      `  lemma list "${list.id}" (${list.level}): ${list.lemmas.length} lemmas, ${glossed} glossed — ${mix}`,
+    );
+  }
+}
+
 function validateCommand(args: string[]): void {
   if (args.length === 0 || args.some((a) => a.startsWith('-'))) {
     fail(`validate needs one or more pack.json paths\n\n${USAGE}`, 2);
@@ -191,6 +209,7 @@ function validateCommand(args: string[]): void {
       }
       printScenarioReports(result.pack);
       printExamReports(result.pack);
+      printReferenceReports(result.pack);
     } else {
       failed = true;
       console.error(`✗ ${file}: invalid pack`);

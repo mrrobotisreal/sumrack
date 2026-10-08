@@ -8,6 +8,7 @@ import {
 } from './common';
 import { DialogueSchema } from './dialogue';
 import { ExamSchema, examStoryRefs } from './exam';
+import { LemmaListSchema } from './reference';
 import { ScenarioSchema, scenarioLines } from './scenario';
 import { SentenceSchema, WordStampSchema, type Sentence } from './sentence';
 
@@ -232,7 +233,7 @@ export type PackTheme = z.infer<typeof PackThemeSchema>;
  *   and ends within the track duration (dialogue node audio is checked on the
  *   node itself — see DialogueNodeSchema);
  * - pack `type` implies required sections (stories / lesson / exercises /
- *   prompts / dialogues / scenarios / exams);
+ *   prompts / dialogues / scenarios / exams / lemmaLists);
  * - exam ids unique; every exam story ref resolves (TORFL §3.2 invariant 7):
  *   the story exists, `sentenceIds` exist in it as a contiguous in-order run,
  *   `trackId` exists on it, and once any story in the pack has audio every
@@ -264,6 +265,11 @@ export const PackSchema = z
      * this pack's `stories`, referenced by id (resolved below).
      */
     exams: z.array(ExamSchema).optional(),
+    /**
+     * Reference lemma lists (T38, V2 §7.7). Required ≥1 for `reference`
+     * packs; list ids unique within the pack.
+     */
+    lemmaLists: z.array(LemmaListSchema).optional(),
     /** Markdown grammar mini-lesson (course-unit packs). */
     lesson: LessonSchema.optional(),
     /** Authored exercise overrides (checkpoints mainly). */
@@ -356,6 +362,25 @@ export const PackSchema = z
         message: 'an "exam" pack must contain at least one exam',
       });
     }
+
+    if (pack.type === 'reference' && (pack.lemmaLists?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['lemmaLists'],
+        message: 'a "reference" pack must contain at least one lemma list',
+      });
+    }
+    const listIds = new Set<string>();
+    (pack.lemmaLists ?? []).forEach((list, li) => {
+      if (listIds.has(list.id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['lemmaLists', li, 'id'],
+          message: `duplicate lemma list id "${list.id}"`,
+        });
+      }
+      listIds.add(list.id);
+    });
 
     // id uniqueness
     const storyIds = new Set<string>();

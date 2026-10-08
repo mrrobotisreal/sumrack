@@ -1,0 +1,40 @@
+{
+  "id": "core-lemmas-fixture",
+  "version": 1,
+  "type": "reference",
+  "title": { "ru": "Базовая лексика (тест)", "en": "Core vocabulary (fixture)" },
+  "level": "A1",
+  "tags": ["reference", "core-lemmas", "fixture"],
+  "stories": [],
+  "lemmaLists": [
+    {
+      "id": "core-a1",
+      "level": "A1",
+      "title": { "ru": "Ядро A1", "en": "Core A1" },
+      "lemmas": [
+        { "lemma": "дом", "pos": "noun", "translation": "house, home" },
+        { "lemma": "ещё", "pos": "adv", "translation": "still, more" },
+        { "lemma": "ночь", "pos": "noun", "translation": "night" },
+        { "lemma": "стена", "pos": "noun", "translation": "wall" },
+        { "lemma": "я", "pos": "pron", "translation": "I" },
+        { "lemma": "жить", "pos": "verb", "translation": "to live" },
+        { "lemma": "один", "pos": "num", "translation": "one" },
+        { "lemma": "что-то", "pos": "pron", "translation": "something" },
+        { "lemma": "чёрный", "pos": "adj", "translation": "black" },
+        { "lemma": "окно", "pos": "noun", "translation": "window" }
+      ]
+    },
+    {
+      "id": "core-a2",
+      "level": "A2",
+      "title": { "ru": "Ядро A2 (сверх A1)", "en": "Core A2 (beyond A1)" },
+      "lemmas": [
+        { "lemma": "тишина", "pos": "noun", "translation": "silence" },
+        { "lemma": "шёпот", "pos": "noun", "translation": "whisper" },
+        { "lemma": "вдруг", "pos": "adv", "translation": "suddenly" },
+        { "lemma": "стучать", "pos": "verb", "translation": "to knock" },
+        { "lemma": "страшный", "pos": "adj", "translation": "scary" }
+      ]
+    }
+  ]
+}
