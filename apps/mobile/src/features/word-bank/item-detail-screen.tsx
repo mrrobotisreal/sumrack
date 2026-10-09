@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import {
@@ -15,6 +15,7 @@ import { LevelChip } from '@/components/level-chip';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import {
+  queryKeys,
   useBankItemDetail,
   useItemReviewState,
   useLessonCounts,
@@ -24,14 +25,17 @@ import type { CardRow, ReviewLogRow } from '@/db/repositories/reviews';
 import type { CardDirection } from '@/db/schema';
 import { ExplainSheet } from '@/features/ai/explain-sheet';
 import { ChipRow } from '@/features/library/category-chips';
+import { dashboardKeys } from '@/features/dashboard/hooks';
 import type { ChipItem } from '@/features/library/library-filter';
 import { FormsTab } from '@/features/word-forms/forms-tab';
 import { LessonsTab } from '@/features/word-forms/lessons-tab';
+import { applyCardAction, type CardActionKind } from '@/features/review/card-actions';
 import { DIRECTION_LABELS, formatDue, ratingName, stateName } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { speak } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { CardActionsSheet } from './card-actions-sheet';
 import { EditItemSheet } from './edit-item-sheet';
 
 /** All four FSRS directions (design §5); listening/production activate in T14/T12. */
@@ -291,9 +295,18 @@ function ReviewStateSection({ bankItemId }: { bankItemId: string }) {
     <>
       <View className="overflow-hidden rounded-xl border border-border bg-surface">
         {DIRECTIONS.map((d, i) => (
-          <DirectionRow key={d} direction={d} card={cardByDirection.get(d)} first={i === 0} />
+          <DirectionRow
+            key={d}
+            bankItemId={bankItemId}
+            direction={d}
+            card={cardByDirection.get(d)}
+            first={i === 0}
+          />
         ))}
       </View>
+      <Text variant="caption" className="mt-2 px-1">
+        Suspend a direction to stop practicing it (e.g. listening) while the others keep going.
+      </Text>
 
       {log.length > 0 && (
         <>
@@ -316,38 +329,120 @@ function ReviewStateSection({ bankItemId }: { bankItemId: string }) {
   );
 }
 
+/**
+ * Card-management invalidation (T39): the item's review state, every due and
+ * dashboard count (suspend/bury/reset move them), and the bank item rows.
+ */
+function invalidateCardQueries(queryClient: QueryClient, bankItemId: string) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.itemReviewState(bankItemId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.dueCount });
+  void queryClient.invalidateQueries({ queryKey: ['bank-item', bankItemId] });
+  void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+}
+
 function DirectionRow({
+  bankItemId,
   direction,
   card,
   first,
 }: {
+  bankItemId: string;
   direction: CardDirection;
   card: CardRow | undefined;
   first: boolean;
 }) {
+  const { tokens: theme } = useAppTheme();
+  const queryClient = useQueryClient();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  // Snapshot clock (same pattern as tickets-screen): set at mount, refreshed
+  // whenever the menu opens. Keeps render pure while badges stay current.
+  const [now, setNow] = React.useState(() => Date.now());
+  const suspended = card?.suspendedAt != null;
+  const buried = card != null && card.buriedUntil != null && card.buriedUntil > now;
+
+  const run = React.useCallback(
+    (kind: CardActionKind) => {
+      if (!card) return;
+      setMenuOpen(false);
+      void applyCardAction(kind, card, 'item-detail')
+        .then(() => invalidateCardQueries(queryClient, bankItemId))
+        .catch((err: unknown) => {
+          Alert.alert(
+            'Could not update the card',
+            err instanceof Error ? err.message : 'Something went wrong.',
+          );
+        });
+    },
+    [card, bankItemId, queryClient],
+  );
+
   return (
     <View
       className={`flex-row items-center justify-between px-4 py-3 ${first ? '' : 'border-t border-border'}`}
     >
-      <Text className="text-sm">{DIRECTION_LABELS[direction]}</Text>
-      {card ? (
-        <View className="items-end">
-          <Text className="text-sm">
-            {stateName(card.state)} · {formatDue(card.dueAt)}
-          </Text>
-          {card.reps > 0 && (
-            <Text variant="caption" className="mt-0.5 text-xs">
-              {card.reps} {card.reps === 1 ? 'rep' : 'reps'}
-              {card.lapses > 0 ? ` · ${card.lapses} ${card.lapses === 1 ? 'lapse' : 'lapses'}` : ''}
-              {card.stability > 0 ? ` · stability ${card.stability.toFixed(1)}d` : ''}
+      <View className="flex-1 gap-1 pr-2">
+        <Text className="text-sm">{DIRECTION_LABELS[direction]}</Text>
+        {(suspended || buried) && (
+          <View className="flex-row flex-wrap gap-1.5">
+            {suspended && <StatusPill label="Suspended" />}
+            {buried && <StatusPill label="Buried until tomorrow" />}
+          </View>
+        )}
+      </View>
+      <View className="flex-row items-center gap-2">
+        {card ? (
+          <View className="items-end">
+            <Text className={`text-sm ${suspended ? 'text-text-muted' : ''}`}>
+              {stateName(card.state)} · {formatDue(card.dueAt)}
             </Text>
-          )}
-        </View>
-      ) : (
-        <Text variant="caption">
-          {direction === 'listening' ? 'activates with T14' : 'activates with T12'}
-        </Text>
+            {card.reps > 0 && (
+              <Text variant="caption" className="mt-0.5 text-xs">
+                {card.reps} {card.reps === 1 ? 'rep' : 'reps'}
+                {card.lapses > 0
+                  ? ` · ${card.lapses} ${card.lapses === 1 ? 'lapse' : 'lapses'}`
+                  : ''}
+                {card.stability > 0 ? ` · stability ${card.stability.toFixed(1)}d` : ''}
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text variant="caption">No card yet</Text>
+        )}
+        {card && (
+          <Pressable
+            onPress={() => {
+              setNow(Date.now());
+              setMenuOpen(true);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${DIRECTION_LABELS[direction]} card actions`}
+            className="h-9 w-9 items-center justify-center rounded-full active:bg-surface-2"
+          >
+            <Ionicons name="ellipsis-horizontal" size={18} color={theme.textMuted} />
+          </Pressable>
+        )}
+      </View>
+      {card && (
+        <CardActionsSheet
+          open={menuOpen}
+          directionLabel={DIRECTION_LABELS[direction]}
+          card={card}
+          now={now}
+          onAction={run}
+          onClose={() => setMenuOpen(false)}
+        />
       )}
+    </View>
+  );
+}
+
+function StatusPill({ label }: { label: string }) {
+  return (
+    <View className="rounded-full border border-border bg-surface-2 px-2 py-0.5">
+      <Text variant="caption" className="text-xs">
+        {label}
+      </Text>
     </View>
   );
 }

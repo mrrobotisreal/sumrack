@@ -743,3 +743,67 @@ responses by grading status / deck counts), and **«Delete exam fixture»**
 (every attempt + response + deck row + the three packs + `sync_state` +
 staged dirs — the device-hygiene cleanup). The T73 device walk used
 `?devDurationSec=45` for a full five-subtest mock in a few minutes.
+
+## 10. FSRS optimizer (T39)
+
+The app schedules with ts-fsrs's FSRS-6 default weights. This section fits
+the 21 weights to **your own** review history, offline, on the Mac. The
+fitter is the official fsrs-rs binding (`@open-spaced-repetition/binding`
+0.5.0, pinned in `apps/mobile`), driven by `apps/mobile/scripts/fsrs-optimize.mjs`
+(logic in `fsrs-optimize-core.mjs`, tests in
+`src/features/review/__tests__/fsrs-optimize-core.test.ts`). Nothing runs on
+the phone; the phone only imports numbers. Only numbers leave the Mac: the
+output file has no lemmas or text.
+
+### 10.1 Procedure
+
+1. **Get the review history.**
+   - **Route A (preferred, no cable tricks).** On the phone: Settings →
+     Scheduling → **«Export review history»**. It writes
+     `sumrak-review-log-<date>.json` into the app's backup folder (the SAF
+     backup directory). Copy that file to the Mac (e.g. `~/Downloads/`).
+   - **Route B (dev only, debuggable build).** Pull the DB:
+     ```
+     adb shell am force-stop io.winapps.sumrak
+     adb exec-out run-as io.winapps.sumrak cat files/SQLite/sumrak.db > sumrak.db
+     adb exec-out run-as io.winapps.sumrak cat files/SQLite/sumrak.db-wal > sumrak.db-wal
+     adb exec-out run-as io.winapps.sumrak cat files/SQLite/sumrak.db-shm > sumrak.db-shm
+     cp sumrak.db sumrak-copy.db && cp sumrak.db-wal sumrak-copy.db-wal
+     sqlite3 sumrak-copy.db 'PRAGMA wal_checkpoint(TRUNCATE)'
+     ```
+     Checkpoint a **copy** so the pulled original stays untouched. `run-as`
+     is refused on the release build; use Route A there. Route B reads the
+     DB directly and needs no export file (the timezone defaults to this
+     Mac's).
+2. **Run the optimizer** from the app directory:
+   ```
+   cd apps/mobile && node scripts/fsrs-optimize.mjs ~/Downloads/sumrak-review-log-<date>.json
+   ```
+   Options: `--out <file>` (default `fsrs-params-<YYYY-MM-DD>.json` in the
+   current directory), `--tz America/Denver` (default: the export's timezone,
+   else this Mac's), `--next-day-hour 4` (the day boundary, default 4 am).
+   For Route B: `node scripts/fsrs-optimize.mjs sumrak-copy.db`.
+3. **Read the summary.** The fitted log loss should be **≤ the default log
+   loss**; the script prints a note if it is not, and in that case choose
+   «Revert to defaults» (step 5) rather than importing. If a
+   `WARNING: Only N reviews …` line prints (fewer than 1000 reviews), the
+   result is still written but may overfit; consider waiting until more
+   reviews exist and re-running. Exit code 2 means not enough data: nothing
+   is written.
+4. **Import.** Settings → Scheduling → Optimizer → **«Import parameters»** →
+   paste the **whole** JSON file (the one line the script prints last, or
+   the file's contents) → **Apply**. The row then reads «Optimized · <date>
+   · N reviews».
+5. **Revert.** Settings → Scheduling → Optimizer → the same row → **«Revert to
+   defaults»**.
+
+### 10.2 Notes
+
+- Changing the parameters or the retention target affects **future**
+  scheduling only. Each card reschedules at its **next** review; no reset is
+  needed.
+- Re-run roughly **monthly**, once the history has grown.
+- The file contains only numbers (`v`, `kind`, 21 weights, and loss / count
+  summaries); no lemmas, no review text.
+- Weights are checked against ts-fsrs's own bounds before the file is
+  written, so an out-of-range fit fails loudly instead of being written.

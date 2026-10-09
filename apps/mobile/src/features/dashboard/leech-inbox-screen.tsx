@@ -6,10 +6,12 @@ import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
+import { queryKeys } from '@/db/hooks';
 import { repos } from '@/db';
 import type { LeechCandidate } from '@/db/repositories/dashboard';
 import { ExplainSheet } from '@/features/ai/explain-sheet';
 import type { ExplainTarget } from '@/features/ai/explain';
+import { applyCardAction } from '@/features/review/card-actions';
 import { DIRECTION_LABELS } from '@/features/review/format';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -21,8 +23,8 @@ import { LEECH_AGAIN_MIN, LEECH_WINDOW } from './science/leeches';
  * The leeches inbox (T38, V2 §7.7): cards with ≥ 4 `Again` in their last 10
  * reviews, minus acknowledged ones. Per item: AI explain (online, T16's
  * explain-this with a leech framing), add note (prefilled, linked to the
- * lemma in its text), drill now (the T18 `focus` route), dismiss.
- * Suspend is T39 — omitted here, not stubbed (recorded).
+ * lemma in its text), drill now (the T18 `focus` route), suspend (T39 —
+ * stops this direction; the repo drops it from the inbox), dismiss.
  */
 export function LeechInboxScreen() {
   const router = useRouter();
@@ -46,7 +48,7 @@ export function LeechInboxScreen() {
   );
 
   const act = React.useCallback(
-    (action: 'explain' | 'note' | 'drill' | 'dismiss', l: LeechCandidate) => {
+    (action: 'explain' | 'note' | 'drill' | 'suspend' | 'dismiss', l: LeechCandidate) => {
       track('leech_action', { action, direction: l.direction, againCount: l.againCount });
       const headword = l.lemma ?? l.surface;
       if (action === 'explain') {
@@ -63,6 +65,18 @@ export function LeechInboxScreen() {
         router.push({ pathname: '/notes/[id]', params: { id: 'new', title, body } });
       } else if (action === 'drill') {
         router.push(`/review/daily?focus=${l.bankItemId}`);
+      } else if (action === 'suspend') {
+        void applyCardAction(
+          'suspend',
+          { id: l.cardId, direction: l.direction },
+          'leech-inbox',
+        ).then(() => {
+          void queryClient.invalidateQueries({ queryKey: dashboardKeys.leeches });
+          void queryClient.invalidateQueries({ queryKey: dashboardKeys.forecast });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.dueCount });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.dueCountMixed });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.dueCountProduction });
+        });
       } else {
         void repos.dashboard.dismissLeech(l.cardId).then(() => {
           void queryClient.invalidateQueries({ queryKey: dashboardKeys.leeches });
@@ -121,7 +135,7 @@ function LeechRow({
   onAction,
 }: {
   leech: LeechCandidate;
-  onAction: (a: 'explain' | 'note' | 'drill' | 'dismiss', l: LeechCandidate) => void;
+  onAction: (a: 'explain' | 'note' | 'drill' | 'suspend' | 'dismiss', l: LeechCandidate) => void;
 }) {
   const { tokens } = useAppTheme();
   const last = new Date(leech.lastReviewedAt);
@@ -160,6 +174,12 @@ function LeechRow({
           icon="play-circle-outline"
           label="Drill now"
           onPress={() => onAction('drill', leech)}
+          color={tokens.accent}
+        />
+        <ActionChip
+          icon="pause-circle-outline"
+          label="Suspend"
+          onPress={() => onAction('suspend', leech)}
           color={tokens.accent}
         />
         <ActionChip

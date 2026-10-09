@@ -110,6 +110,18 @@ export const cards = sqliteTable(
     /** ts-fsrs State enum: 0 New · 1 Learning · 2 Review · 3 Relearning. */
     state: integer('state').notNull(),
     lastReviewAt: integer('last_review_at'),
+    /**
+     * T39: suspended cards are never served by any queue, count, or forecast
+     * and are never graded (`getGradableCard`). Non-null = epoch ms of the
+     * suspension; null = active. A scheduling state, not knowledge.
+     */
+    suspendedAt: integer('suspended_at'),
+    /**
+     * T39: bury until the start of the next local day. Hidden from queues
+     * while `buried_until > now`; graded normally if answered elsewhere.
+     * Null = not buried.
+     */
+    buriedUntil: integer('buried_until'),
     createdAt: integer('created_at').notNull(),
   },
   (t) => [

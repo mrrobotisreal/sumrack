@@ -11,13 +11,13 @@ import {
 import { graph } from './engine-fixtures';
 
 const findWordByLemma = vi.hoisted(() => vi.fn());
-const getCard = vi.hoisted(() => vi.fn());
+const getGradableCard = vi.hoisted(() => vi.fn());
 const gradeCard = vi.hoisted(() => vi.fn());
 const recordReviewOutcome = vi.hoisted(() => vi.fn());
 vi.mock('@/db', () => ({
   repos: {
     bank: { findWordByLemma },
-    reviews: { getCard, gradeCard },
+    reviews: { getGradableCard, gradeCard },
   },
 }));
 vi.mock('@/features/motivation/service', () => ({ recordReviewOutcome }));
@@ -72,14 +72,14 @@ describe('producedLemmas', () => {
 describe('gradeSpokenTurn', () => {
   beforeEach(() => {
     findWordByLemma.mockReset();
-    getCard.mockReset();
+    getGradableCard.mockReset();
     gradeCard.mockReset();
     recordReviewOutcome.mockReset();
   });
 
   it('grades the production card of a banked lemma with source scenario + the motivation bump', async () => {
     findWordByLemma.mockResolvedValue({ id: 'item-1' });
-    getCard.mockResolvedValue({ id: 'card-1' });
+    getGradableCard.mockResolvedValue({ id: 'card-1' });
     const n = await gradeSpokenTurn(t03, {
       verdict: 'matched',
       score: 100,
@@ -87,7 +87,7 @@ describe('gradeSpokenTurn', () => {
     });
     expect(n).toBe(1);
     expect(findWordByLemma).toHaveBeenCalledWith('плохо');
-    expect(getCard).toHaveBeenCalledWith('item-1', 'production');
+    expect(getGradableCard).toHaveBeenCalledWith('item-1', 'production');
     expect(gradeCard).toHaveBeenCalledWith('card-1', Rating.Good, { source: 'scenario' });
     expect(recordReviewOutcome).toHaveBeenCalledWith(Rating.Good);
   });
@@ -99,12 +99,12 @@ describe('gradeSpokenTurn', () => {
     ).toBe(0);
     expect(gradeCard).not.toHaveBeenCalled();
     findWordByLemma.mockResolvedValueOnce({ id: 'item-2' });
-    getCard.mockResolvedValueOnce(null);
+    getGradableCard.mockResolvedValueOnce(null);
     expect(
       await gradeSpokenTurn(t03, { verdict: 'matched', score: 60, slots: { mood: 'good' } }),
     ).toBe(0);
     findWordByLemma.mockResolvedValueOnce({ id: 'item-2' });
-    getCard.mockResolvedValueOnce({ id: 'card-2' });
+    getGradableCard.mockResolvedValueOnce({ id: 'card-2' });
     expect(
       await gradeSpokenTurn(t03, { verdict: 'matched', score: 60, slots: { mood: 'good' } }),
     ).toBe(1);

@@ -248,9 +248,11 @@ export function createDashboardRepo(db: SumrakDB) {
 
     /** Every card the forecast counts (T38): the review queue's active directions. */
     async getForecastCards(): Promise<{ dueAt: number; direction: string }[]> {
+      // T39: suspended cards are absent; a buried card lands on its unbury day.
       return db.all<{ dueAt: number; direction: string }>(sql`
-        SELECT due_at AS dueAt, direction FROM cards
+        SELECT MAX(due_at, COALESCE(buried_until, 0)) AS dueAt, direction FROM cards
         WHERE direction IN ('ru-en', 'en-ru', 'production', 'listening')
+          AND suspended_at IS NULL
       `);
     },
 
@@ -301,7 +303,7 @@ export function createDashboardRepo(db: SumrakDB) {
         JOIN cards c ON c.id = w.card_id
         JOIN bank_items b ON b.id = c.bank_item_id
         LEFT JOIN leech_dismissals ld ON ld.card_id = c.id
-        WHERE w.again_count >= ${minAgain}
+        WHERE w.again_count >= ${minAgain} AND c.suspended_at IS NULL
         ORDER BY w.again_count DESC, w.last_again_at DESC
       `);
     },
@@ -588,6 +590,7 @@ export function createDashboardRepo(db: SumrakDB) {
         WHERE b.kind = 'word'
           AND c.direction IN ('ru-en', 'en-ru')
           AND c.reps > 0 AND c.stability < ${STABILITY_MATURE_MIN}
+          AND c.suspended_at IS NULL
         GROUP BY b.id
         ORDER BY rank_score ASC
         LIMIT ${limit}
@@ -621,7 +624,7 @@ export function createDashboardRepo(db: SumrakDB) {
         SELECT b.id, b.surface, b.lemma, b.translation, c.stability
         FROM bank_items b
         JOIN cards c ON c.bank_item_id = b.id
-        WHERE c.direction = 'production' AND c.reps > 0
+        WHERE c.direction = 'production' AND c.reps > 0 AND c.suspended_at IS NULL
         ORDER BY c.stability ASC
         LIMIT ${limit}
       `);
@@ -680,6 +683,9 @@ export function createDashboardRepo(db: SumrakDB) {
         JOIN tokens t ON t.lemma_norm = b.lemma_norm AND t.is_punct = 0
         JOIN topic_sent ts ON ts.pack_id = t.pack_id AND ts.sentence_id = t.sentence_id
         WHERE b.kind = 'word' AND b.lemma_norm IS NOT NULL
+          AND EXISTS (SELECT 1 FROM cards sc WHERE sc.bank_item_id = b.id
+                      AND sc.direction IN ('ru-en', 'en-ru', 'production', 'listening')
+                      AND sc.suspended_at IS NULL)
         GROUP BY b.id
         ORDER BY (SELECT MIN(c.stability) FROM cards c
                    WHERE c.bank_item_id = b.id AND c.direction IN ('ru-en', 'en-ru')) ASC

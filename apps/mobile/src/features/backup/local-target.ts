@@ -114,3 +114,28 @@ export async function readLocalBackup(uri: string): Promise<string> {
     throw new BackupError('file-error', err instanceof Error ? err.message : 'cannot read file');
   }
 }
+
+/**
+ * Write one plain text/JSON file into the chosen backup folder (T39 review-log
+ * export). Same SAF path as `exportBackupToLocalFile` — the folder grant, the
+ * `createFileAsync` extension rule and the error mapping are shared. Does NOT
+ * touch the `lastBackupLocal` row: this is an export, not a backup snapshot.
+ */
+export async function writeTextToBackupDir(
+  name: string,
+  text: string,
+): Promise<{ name: string; uri: string }> {
+  const dirUri = await ensureSafDir();
+  try {
+    const fileUri = await SAF.createFileAsync(
+      dirUri,
+      name.replace(/\.json$/, ''),
+      'application/json',
+    );
+    await SAF.writeAsStringAsync(fileUri, text);
+    return { name, uri: fileUri };
+  } catch (err) {
+    if (err instanceof BackupError) throw err;
+    throw new BackupError('file-error', err instanceof Error ? err.message : 'write failed');
+  }
+}

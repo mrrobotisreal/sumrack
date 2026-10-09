@@ -67,6 +67,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@open-spaced-repetition/binding": "0.5.0",
     "@sumrak/pipeline": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.13.3",

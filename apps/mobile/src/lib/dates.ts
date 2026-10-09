@@ -37,3 +37,13 @@ export function addDaysToKey(key: string, days: number): string {
 export function diffDayKeys(a: string, b: string): number {
   return Math.round((keyToUtcNoon(a) - keyToUtcNoon(b)) / 86_400_000);
 }
+
+/**
+ * T39: epoch ms of the start of the LOCAL day after `now` (device timezone,
+ * same convention as `localDateKey` in the stats repo). A card buried at
+ * 23:59 comes back at the next midnight, not 24 h later.
+ */
+export function startOfNextLocalDay(now: number): number {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0).getTime();
+}

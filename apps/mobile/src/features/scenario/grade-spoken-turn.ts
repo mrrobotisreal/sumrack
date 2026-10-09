@@ -61,7 +61,7 @@ export async function gradeSpokenTurn(
   for (const lemma of producedLemmas(turn, judge)) {
     const item = await repos.bank.findWordByLemma(lemma);
     if (!item) continue;
-    const card = await repos.reviews.getCard(item.id, 'production');
+    const card = await repos.reviews.getGradableCard(item.id, 'production');
     if (!card) continue;
     await repos.reviews.gradeCard(card.id, rating, { source: 'scenario' });
     await recordReviewOutcome(rating);

@@ -10,6 +10,7 @@ import { hydrateTtsFromDb } from '@/features/tts/service';
 import { hydrateAmbientCursorsFromDb } from '@/store/ambient-cursors';
 import { hydrateAmbientPrefsFromDb } from '@/store/ambient-prefs';
 import { hydrateDailyPrefsFromDb } from '@/store/daily-prefs';
+import { hydrateFsrsPrefsFromDb } from '@/store/fsrs-prefs';
 import { pruneRecordings } from '@/features/scenario/recordings/prune';
 import { hydrateScenarioPrefsFromDb } from '@/features/scenario/store/scenario-prefs';
 import { hydrateGamePrefsFromDb } from '@/store/game-prefs';
@@ -47,6 +48,8 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
       try {
         await runBootstrap(db, repos);
         await hydrateThemeFromDb();
+        // T39: configures the live FSRS scheduler — must precede any grading.
+        await hydrateFsrsPrefsFromDb();
         await hydrateReaderPrefsFromDb();
         await hydrateLibraryPrefsFromDb();
         await hydrateBankPrefsFromDb();
