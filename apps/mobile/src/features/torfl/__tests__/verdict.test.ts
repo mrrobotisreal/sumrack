@@ -117,3 +117,25 @@ describe('verdictHeadline', () => {
     expect(verdictHeadline('fail', ['reading'])).toBe('Нужно пересдать');
   });
 });
+
+describe('level (T75)', () => {
+  const sets: Record<string, Record<ExamSubtestKind, number>> = {
+    'all 66': all(66),
+    'one at 62, rest 70': { ...all(70), reading: 62 },
+    'one at 59': { ...all(70), listening: 59 },
+    'two at 62': { ...all(70), writing: 62, speaking: 62 },
+  };
+
+  it('predictVerdict(p, "A2") ≡ predictVerdict(p) ≡ predictVerdict(p, "A1") (same rule)', () => {
+    for (const p of Object.values(sets)) {
+      expect(predictVerdict(p, 'A2')).toEqual(predictVerdict(p));
+      expect(predictVerdict(p, 'A1')).toEqual(predictVerdict(p));
+    }
+  });
+
+  it('verdict(p, {}, "A2") ≡ verdict(p)', () => {
+    for (const p of Object.values(sets)) {
+      expect(verdict(p, {}, 'A2')).toEqual(verdict(p));
+    }
+  });
+});

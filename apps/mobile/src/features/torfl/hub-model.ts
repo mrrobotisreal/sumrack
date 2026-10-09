@@ -8,6 +8,7 @@ import {
 
 import { diffDayKeys, isDayKey } from '@/lib/dates';
 
+import { ruleLine } from './level-profile';
 import type { ExamMode, ExamResults, ExamVerdict } from './model';
 import type { ReadinessBand } from './readiness';
 import { compareTopics, SUBTEST_ORDER } from './topics';
@@ -59,7 +60,7 @@ export function daysOutProp(examDate: string | null, todayKey: string): number {
 }
 
 /** The SPbU rule in one line (§6.3, the hub header). */
-export const SPBU_RULE_LINE = 'Сдал: ≥ 66 % в каждом субтесте; один субтест — ≥ 60 %';
+export const SPBU_RULE_LINE = ruleLine('A1');
 
 // --- readiness (placeholder shape; T70 fills it) -------------------------------
 

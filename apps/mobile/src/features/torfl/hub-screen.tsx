@@ -16,11 +16,17 @@ import { useAppTheme } from '@/theme/use-app-theme';
 
 import { useAnswers } from './answers/use-answers';
 import { ExamDateSheet } from './exam-date-sheet';
+import {
+  hubSubtitle,
+  lightningCaption,
+  profileFor,
+  ruleLine,
+  type TorflLevel,
+} from './level-profile';
 import { ExamRow } from './exam-row';
 import { useExamDate, useExamListItems, useExamTexts, useTorflToday } from './hooks';
 import {
   MODE_LABELS,
-  SPBU_RULE_LINE,
   countdownLabel,
   overallPct,
   placeholderReadiness,
@@ -68,6 +74,9 @@ export function TorflHubScreen({
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
+  // T75: the hub still shows A1; a later phase reads `?level=` into this.
+  const level: TorflLevel = 'A1';
+  const profile = profileFor(level);
 
   const exams = useExams();
   const mocks = useExamListItems('mock');
@@ -136,8 +145,8 @@ export function TorflHubScreen({
             <Ionicons name="ribbon-outline" size={22} color={tokens.accent} />
           </View>
           <View className="flex-1">
-            <Text className="font-ui-bold text-lg">ТРКИ-А1</Text>
-            <Text variant="caption">Элементарный уровень · онлайн-экзамен СПбГУ</Text>
+            <Text className="font-ui-bold text-lg">{profile.chipLabel}</Text>
+            <Text variant="caption">{hubSubtitle(level)}</Text>
           </View>
         </View>
         <Pressable
@@ -156,7 +165,7 @@ export function TorflHubScreen({
             {countdownLabel(date, today)}
           </Text>
         </Pressable>
-        <Text variant="caption">{SPBU_RULE_LINE}</Text>
+        <Text variant="caption">{ruleLine(level)}</Text>
       </View>
 
       {nothingInstalled && (
@@ -304,7 +313,7 @@ export function TorflHubScreen({
               <Ionicons name="flash-outline" size={20} color={tokens.accent} />
               <View className="flex-1 gap-0.5">
                 <Text className="font-ui-medium">Молния</Text>
-                <Text variant="caption">20 заданий в темпе экзамена — 34 секунды на задание</Text>
+                <Text variant="caption">{lightningCaption(level)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
             </Pressable>

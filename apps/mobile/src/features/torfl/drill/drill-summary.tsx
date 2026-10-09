@@ -9,6 +9,7 @@ import { invalidateExams } from '@/db/hooks';
 import { cn } from '@/lib/cn';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { lightningPaceNote } from '../level-profile';
 import { LIGHTNING_PACE_SEC } from '../pace';
 import { SUBTEST_LABELS } from '../topics';
 import type { DrillOutcome } from './use-drill-session';
@@ -92,7 +93,7 @@ export function DrillSummary({ outcome, onDone }: { outcome: DrillOutcome; onDon
             Твой темп: {avgSec.toLocaleString('ru-RU')} с на задание
           </Text>
           <Text variant="caption">
-            Темп экзамена — {LIGHTNING_PACE_SEC} с (40 минут на 70 заданий).{' '}
+            {lightningPaceNote('A1')}{' '}
             {onPace ? 'Ты укладываешься!' : 'Нужно быстрее — тренируй «Молнию» чаще.'}
           </Text>
         </View>
