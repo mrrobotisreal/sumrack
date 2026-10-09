@@ -34,6 +34,7 @@ import { ShareIntentGate } from '@/features/import/share-gate';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
 import { NotificationRouter } from '@/features/motivation/notification-router';
 import { ReminderReplanner } from '@/features/motivation/reminder-replanner';
+import { WidgetLinkTracker } from '@/features/motivation/widget-link-tracker';
 import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
 import { installGlobalErrorLogging } from '@/services/error-log';
@@ -256,6 +257,7 @@ export default function RootLayout() {
               <ShareIntentGate />
               <NotificationRouter />
               <ReminderReplanner />
+              <WidgetLinkTracker />
               <AchievementToastHost />
               {!introDone && <AnimatedSplash onDone={() => setIntroDone(true)} />}
             </CrashGuard>
