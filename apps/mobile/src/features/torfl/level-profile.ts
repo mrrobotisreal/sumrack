@@ -18,12 +18,23 @@
 export const TORFL_LEVELS = ['A1', 'A2'] as const;
 export type TorflLevel = (typeof TORFL_LEVELS)[number];
 
-/** The four level-scoped verdict achievements (A2-11). `torfl-deck-100` is cross-level and not here. */
+/** The eight level-scoped mock achievement ids (A2-11); `torfl-deck-100` is cross-level and not here. */
+export type TorflAchievementId =
+  | 'torfl-first-mock'
+  | 'torfl-would-pass'
+  | 'torfl-margin'
+  | 'torfl-lexgram-90'
+  | 'torfl-a2-first-mock'
+  | 'torfl-a2-would-pass'
+  | 'torfl-a2-margin'
+  | 'torfl-a2-lexgram-90';
+
+/** The four level-scoped verdict achievements of one level (A2-11). */
 export interface TorflAchievementIds {
-  firstMock: string;
-  wouldPass: string;
-  margin: string;
-  lexgram90: string;
+  firstMock: TorflAchievementId;
+  wouldPass: TorflAchievementId;
+  margin: TorflAchievementId;
+  lexgram90: TorflAchievementId;
 }
 
 export interface TorflLevelProfile {
