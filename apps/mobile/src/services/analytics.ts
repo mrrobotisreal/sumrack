@@ -264,6 +264,8 @@ export type AnalyticsEvent =
   | 'notifications_replanned'
   | 'notification_new_content'
   | 'notification_tapped'
+  // T40 widget: a home-screen tap-through landed (props: screen, from).
+  | 'widget_opened'
   | 'notification_prompt_accepted'
   | 'notification_prompt_dismissed'
   // T20 backup & restore. Props carry trigger/code/counts/bytes ONLY —

@@ -1,6 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
-import { storyProgress } from '../schema';
+import { stories, storyProgress } from '../schema';
 import type { SumrakDB } from '../types';
 
 export type StoryProgressRow = typeof storyProgress.$inferSelect;
@@ -62,6 +62,29 @@ export function createReadingRepo(db: SumrakDB) {
             updatedAt: now,
           },
         });
+    },
+
+    /**
+     * The Today «Continue reading» target (T40 widget): the most recently
+     * updated UNFINISHED progress row whose story still exists — the same rule
+     * as today-screen's `continueTarget`, with the title joined in one query.
+     */
+    async getContinueTarget(): Promise<{ packId: string; storyId: string; title: string } | null> {
+      const rows = await db
+        .select({
+          packId: storyProgress.packId,
+          storyId: storyProgress.storyId,
+          title: stories.titleRu,
+        })
+        .from(storyProgress)
+        .innerJoin(
+          stories,
+          and(eq(stories.packId, storyProgress.packId), eq(stories.id, storyProgress.storyId)),
+        )
+        .where(isNull(storyProgress.finishedAt))
+        .orderBy(desc(storyProgress.updatedAt))
+        .limit(1);
+      return rows[0] ?? null;
     },
 
     /** Idempotent — returns true only on the first finish (for stats/analytics). */

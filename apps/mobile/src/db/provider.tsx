@@ -4,6 +4,8 @@ import { Text, View } from 'react-native';
 
 import migrations from '../../drizzle/migrations';
 import { initMotivation } from '@/features/motivation/service';
+import { setWidgetRefresher } from '@/features/motivation/widget-bus';
+import { refreshWidgetSnapshot } from '@/features/motivation/widget-sync';
 import { refreshInstalledAsr } from '@/features/pronunciation/asr-manager';
 import { refreshInstalledAssist } from '@/features/pronunciation/assist-manager';
 import { hydrateTtsFromDb } from '@/features/tts/service';
@@ -74,6 +76,8 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         void pruneRecordings('start');
         // T19: register the motivation bus, consume freezes for days missed
         // while the app was closed, sweep achievements, replan reminders.
+        // T40: install the widget snapshot writer before the boot evaluation requests a refresh.
+        setWidgetRefresher(refreshWidgetSnapshot);
         await initMotivation();
         if (!cancelled) setReady(true);
       } catch (err) {

@@ -33,6 +33,9 @@ import { generateProfile } from '@/features/word-forms/profile-service';
 import { detectRuDatePath, formatRuDate } from '@/lib/ru-date';
 import { syncQueryKeys } from '@/features/sync/hooks';
 import { track } from '@/services/analytics';
+import { requireOptionalNativeModule } from 'expo';
+import { buildWidgetSnapshot } from '@/features/motivation/widget-snapshot';
+import { refreshWidgetSnapshot } from '@/features/motivation/widget-sync';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /**
@@ -474,6 +477,38 @@ export default function DevDbScreen() {
   }, [forceUnsupported]);
   // --- T58 backup self-check (dev only): export → restore the same payload.
   const [backupLog, setBackupLog] = React.useState<string | null>(null);
+  // T40 widget: write the home-screen snapshot directly (demo every state on the device).
+  const [widgetLog, setWidgetLog] = React.useState<string | null>(null);
+  const writeWidget = React.useCallback((label: string, json: string | null) => {
+    const native = requireOptionalNativeModule<{ writeSnapshot(j: string): void }>('SumrakWidget');
+    if (!native) {
+      setWidgetLog(`${label}: native module missing (rebuild the dev client)`);
+      return;
+    }
+    try {
+      native.writeSnapshot(json ?? '');
+      setWidgetLog(`${label}: written`);
+    } catch (err) {
+      setWidgetLog(`${label}: failed — ${String(err)}`);
+    }
+  }, []);
+  const writeWidgetNow = React.useCallback(() => {
+    refreshWidgetSnapshot();
+    setWidgetLog('Write snapshot now: refresh requested from live data');
+  }, []);
+  const writeWidgetStale = React.useCallback(() => {
+    const snap = buildWidgetSnapshot({
+      streak: 4,
+      dueCount: 7,
+      reviewsDone: 12,
+      readingMs: 5 * 60_000,
+      goal: { reviews: 20, readingMin: 10 },
+      goalMet: false,
+      continueReading: null,
+      now: Date.now() - 48 * 3600_000,
+    });
+    writeWidget('Write stale snapshot (−48 h)', JSON.stringify(snap));
+  }, [writeWidget]);
   const backupSelfCheck = React.useCallback(async () => {
     if (!__DEV__) return;
     try {
@@ -743,6 +778,64 @@ export default function DevDbScreen() {
                 'Ten finished runs aged 31–40 days, one 20 KB fake .ogg each, #1 pinned.'}
             </Text>
           </Pressable>
+        )}
+        {__DEV__ && <Text className="mt-4 font-ui-medium">Widget (T40)</Text>}
+        {__DEV__ && (
+          <Pressable
+            onPress={writeWidgetNow}
+            accessibilityRole="button"
+            accessibilityLabel="Write snapshot now"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Write snapshot now</Text>
+            <Text variant="caption" selectable>
+              Refreshes the snapshot from live data.
+            </Text>
+          </Pressable>
+        )}
+        {__DEV__ && (
+          <Pressable
+            onPress={writeWidgetStale}
+            accessibilityRole="button"
+            accessibilityLabel="Write stale snapshot (−48 h)"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Write stale snapshot (−48 h)</Text>
+            <Text variant="caption" selectable>
+              Stale state: numbers dim + «открой приложение».
+            </Text>
+          </Pressable>
+        )}
+        {__DEV__ && (
+          <Pressable
+            onPress={() => writeWidget('Write corrupt snapshot', '{"v":1,"streak":"oops"')}
+            accessibilityRole="button"
+            accessibilityLabel="Write corrupt snapshot"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Write corrupt snapshot</Text>
+            <Text variant="caption" selectable>
+              Malformed JSON: widget shows the fallback, never crashes.
+            </Text>
+          </Pressable>
+        )}
+        {__DEV__ && (
+          <Pressable
+            onPress={() => writeWidget('Clear snapshot', null)}
+            accessibilityRole="button"
+            accessibilityLabel="Clear snapshot"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Clear snapshot</Text>
+            <Text variant="caption" selectable>
+              Empty string → Missing: «Открой Сумрак» placeholder.
+            </Text>
+          </Pressable>
+        )}
+        {__DEV__ && widgetLog && (
+          <Text variant="caption" selectable className="mt-1">
+            {widgetLog}
+          </Text>
         )}
         {__DEV__ && (
           <Pressable

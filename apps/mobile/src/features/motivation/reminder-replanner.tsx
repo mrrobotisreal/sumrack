@@ -2,6 +2,7 @@ import * as React from 'react';
 import { AppState } from 'react-native';
 
 import { replanReminders } from './notifications';
+import { requestWidgetRefresh } from './widget-bus';
 
 /**
  * Keeps scheduled reminders honest (T19): local notifications carry content
@@ -15,8 +16,12 @@ export function ReminderReplanner() {
     // Mount = app just became ready (cold start ends here too — AppState may
     // never emit 'active' for a launch that starts active).
     void replanReminders();
+    requestWidgetRefresh();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void replanReminders();
+      if (state === 'active') {
+        void replanReminders();
+        requestWidgetRefresh();
+      }
     });
     return () => sub.remove();
   }, []);

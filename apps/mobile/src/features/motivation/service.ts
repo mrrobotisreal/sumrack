@@ -26,6 +26,7 @@ import {
 import { earnsFreeze, parseFreezeState, type FreezeState } from './freeze';
 import { goalIsMet } from './goal-prefs';
 import { replanReminders } from './notifications';
+import { requestWidgetRefresh } from './widget-bus';
 import { useAchievementToasts } from './toast-store';
 import { levelForXp, XP_TABLE, xpForRating, xpForReading, xpForScenarioRun } from './xp';
 
@@ -111,6 +112,8 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   // would hammer the notification scheduler 20× per session for nothing.
   // Session ends and app foregrounds replan unconditionally (due counts).
   if (stateChanged) void replanReminders();
+  // T40: the widget snapshot follows every activity change (write-path trigger).
+  requestWidgetRefresh();
 }
 
 /** The three scenario unlocks (T62 §9.4) from `getScenarioStats` — sweep + finish share it. */
@@ -343,6 +346,7 @@ export async function recordExamVerdictUnlocks(
 export async function onSessionEnded(): Promise<void> {
   await sweepAchievements();
   void replanReminders();
+  requestWidgetRefresh();
 }
 
 /**
@@ -369,4 +373,6 @@ export async function initMotivation(): Promise<void> {
   // cold start may follow a timezone/day change (or a TZ-stale alarm set) —
   // the schedule must be rebuilt against the CURRENT local clock every boot.
   void replanReminders();
+  // T40: boot refresh (the widget may be a day stale after a closed-app gap).
+  requestWidgetRefresh();
 }
