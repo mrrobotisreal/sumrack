@@ -1,5 +1,6 @@
 import type { Exam, ExamItem, ExamPart, ExamSubtest, ExamSubtestKind } from '@sumrak/schema';
 
+import type { TorflLevel } from '../level-profile';
 import { examItemKey, findExamItem } from '../model';
 import { LIGHTNING_ITEMS } from '../pace';
 import { topicLabel } from '../topics';
@@ -243,10 +244,13 @@ export function drillHref(opts: {
   packId?: string;
   examId?: string;
   topic?: string;
+  /** T75: the deck / «Молния» sources are level-scoped; absent = A1 (back-compat). */
+  level?: TorflLevel;
 }): { pathname: '/torfl/drill'; params: Record<string, string> } {
   const params: Record<string, string> = { source: opts.source };
   if (opts.packId) params.packId = opts.packId;
   if (opts.examId) params.examId = opts.examId;
   if (opts.topic) params.topic = opts.topic;
+  if (opts.level) params.level = opts.level;
   return { pathname: '/torfl/drill', params };
 }

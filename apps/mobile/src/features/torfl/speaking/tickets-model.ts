@@ -1,6 +1,7 @@
 import type { Exam, SpeakingMonologueItem, SpeakingTurnItem } from '@sumrak/schema';
 
 import type { ExamSummaryLike } from '../hub-model';
+import type { TorflLevel } from '../level-profile';
 
 /**
  * Speaking practice catalogs (T73, TORFL §10 + the hub «Тренировки →
@@ -101,8 +102,14 @@ export function drawTicket(
   return tickets[tickets.length - 1]!;
 }
 
-export function ticketHref(): { pathname: '/torfl/tickets' } {
-  return { pathname: '/torfl/tickets' };
+/** «Билеты» for one level; A1 keeps the bare route (back-compat). */
+export function ticketHref(level: TorflLevel = 'A1'): {
+  pathname: '/torfl/tickets';
+  params?: { level: TorflLevel };
+} {
+  return level === 'A1'
+    ? { pathname: '/torfl/tickets' }
+    : { pathname: '/torfl/tickets', params: { level } };
 }
 
 export function speakingPracticeHref(
