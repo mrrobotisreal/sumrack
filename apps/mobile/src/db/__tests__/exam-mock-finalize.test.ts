@@ -163,10 +163,14 @@ describe('a mock run end to end', () => {
     expect((await repos.exams.getAttempt(attempt.id))!.results).toBeNull();
 
     await send({ type: 'SUBMIT_SUBTEST', now: back });
+    const seen: { level?: string }[] = [];
     const out = await finalizeAttempt(
       {
         exams: repos.exams,
-        rewards: async () => ({ xp: 15 }),
+        rewards: async (input) => {
+          seen.push(input);
+          return { xp: 15 };
+        },
         now: back + 1,
       },
       {
@@ -180,6 +184,8 @@ describe('a mock run end to end', () => {
       },
     );
     expect(out.results.lexgram).toMatchObject({ points: 1, maxPoints: 5, pct: 20 });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.level).toBe('A1');
     expect(out.verdict).toBeNull();
     expect(out.xp).toBe(15);
     expect(out.deckAdded).toBe(4);
