@@ -1,5 +1,6 @@
 import { ExamSchema, type Pack } from '@sumrak/schema';
 import examPackJson from '@sumrak/schema/fixtures/packs/a1-exam-fixture/pack.json';
+import a2ExamPackJson from '@sumrak/schema/fixtures/packs/a2-exam-fixture/pack.json';
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
@@ -157,5 +158,36 @@ describe('exam pack import (T68)', () => {
     expect(await db.select().from(exams)).toEqual([]);
     expect(await db.select().from(stories).where(eq(stories.packId, PACK.id))).toEqual([]);
     expect(await userCounts(db)).toEqual({ attempts: 1, responses: 1, cards: 1 });
+  });
+
+  it('T75: the A2 fixture imports — exams rows carry level A2; both fixtures coexist', async () => {
+    const db = createTestDb();
+    await importPack(db, examPackJson);
+    const a2 = await importPack(db, a2ExamPackJson);
+    expect(a2.action).toBe('installed');
+
+    const a1Rows = await db
+      .select()
+      .from(exams)
+      .where(eq(exams.packId, PACK.id))
+      .orderBy(asc(exams.orderIdx));
+    const a2Rows = await db
+      .select()
+      .from(exams)
+      .where(eq(exams.packId, (a2ExamPackJson as unknown as Pack).id))
+      .orderBy(asc(exams.orderIdx));
+    expect(a1Rows.map((r) => r.level)).toEqual(['A1', 'A1']);
+    expect(a2Rows.map((r) => r.level)).toEqual(['A2', 'A2', 'A2']);
+    expect(a2Rows.map((r) => r.examId)).toEqual([
+      'a2-drill-fx-time',
+      'a2-drill-fx-info',
+      'a2-mock-fx',
+    ]);
+
+    const packRows = await db.select().from(packs);
+    const byId = Object.fromEntries(packRows.map((p) => [p.id, p.category]));
+    expect(byId[PACK.id]).toBe('torfl');
+    expect(byId['a2-exam-fixture']).toBe('torfl-a2');
+    expect(await db.select().from(exams)).toHaveLength(5);
   });
 });

@@ -1,0 +1,33 @@
+{
+  "id": "a2-torfl-prompts-fixture",
+  "version": 1,
+  "type": "prompts",
+  "title": {
+    "ru": "ТРКИ-А2: мои ответы (тест)",
+    "en": "TORFL A2: my answers (fixture)"
+  },
+  "level": "A2",
+  "tags": ["torfl", "torfl-a2", "torfl:prompts", "torfl:fixture"],
+  "category": "torfl-a2",
+  "stories": [],
+  "prompts": [
+    {
+      "id": "tf2-fx-note-01",
+      "level": "A2",
+      "prompt": {
+        "ru": "Напиши сообщение Артёму, брату Алины: предложи встретиться в субботу. Укажи причину, день, время и место.",
+        "en": "Write a message to Artem, Alina's brother: propose meeting on Saturday. Give the reason, the day, the time and the place."
+      },
+      "tags": ["torfl", "torfl:write-note"]
+    },
+    {
+      "id": "tf2-fx-mono-01",
+      "level": "A2",
+      "prompt": {
+        "ru": "Расскажи о своём любимом фильме: как он называется, о чём он, кто в нём играет, почему он тебе нравится. Скажи 12–15 предложений.",
+        "en": "Talk about your favourite film: what it is called, what it is about, who acts in it, why you like it. Say 12–15 sentences."
+      },
+      "tags": ["torfl", "torfl:speak-monologue"]
+    }
+  ]
+}
