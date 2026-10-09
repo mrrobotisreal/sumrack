@@ -324,6 +324,18 @@ describe('a2-exam-fixture round-trip (T75)', () => {
     expect(renderMatrixMap(a2Mock())).not.toContain('✗');
     expect(renderRefTable(a2Mock(), a2Pack()).broken).toBe(0);
   });
+
+  it('official shape: reduced counts by design — only the six count ⚠ lines, every A2 structure check passes', () => {
+    expect(renderOfficialShape(a2Mock()).split('\n')).toEqual([
+      'Official shape — a2-mock-fx: 6 deviations',
+      '  ⚠ official-shape: lexgram "lexgram" has items 10 — official 100',
+      '  ⚠ official-shape: lexgram "lexgram" maxPoints 10 — official 100',
+      '  ⚠ official-shape: reading "reading" has items 5 — official 30',
+      '  ⚠ official-shape: reading "reading" maxPoints 30 — official 180',
+      '  ⚠ official-shape: listening "listening" has items 3 — official 25',
+      '  ⚠ official-shape: listening "listening" maxPoints 18 — official 150',
+    ]);
+  });
 });
 
 describe('exam reports', () => {

@@ -104,7 +104,7 @@ exam:
         - id: p4
           instructions: { ru: 'Задания 1–3. Прослушайте диалог Маши и Саши. Выберите один вариант ответа.', en: 'Items 1–3. Listen to Masha and Sasha. Choose one answer.' }
           items:
-            - { id: ls01, kind: choice, topic: listen-goal, audio: { storyId: ls-01 }, stem: 'Маша предлагает Саше …', options: ['пойти в кино', 'пойти в театр', 'пойти в парк'], answer: 0 }
+            - { id: ls01, kind: choice, topic: listen-goal, audio: { storyId: ls-01 }, stem: 'Друзья договариваются …', options: ['пойти в кино', 'пойти в театр', 'пойти в парк'], answer: 0 }
             - { id: ls02, kind: choice, topic: listen-detail, stem: 'Встреча будет в … часов.', options: ['пять', 'шесть', 'семь'], answer: 1 }
             - { id: ls03, kind: choice, topic: listen-detail, stem: 'Друзья встретятся в …', options: ['субботу', 'пятницу', 'воскресенье'], answer: 0 }
     - id: speaking
