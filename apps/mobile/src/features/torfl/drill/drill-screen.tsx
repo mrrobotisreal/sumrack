@@ -7,12 +7,13 @@ import { Text } from '@/components/ui/text';
 import { SessionShell } from '@/features/review/session-shell';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { LIGHTNING_PACE_SEC } from '../pace';
+import { lightningPaceSec } from '../pace';
 import { DrillItem } from './drill-item';
 import { DrillSummary } from './drill-summary';
 import { PaceBar } from './pace-bar';
 import { useDrillSession, type DrillParams } from './use-drill-session';
 import type { DrillSource } from './drill-model';
+import { levelFromParam } from '../level-profile';
 
 const SOURCES: readonly DrillSource[] = ['set', 'deck', 'lightning'];
 
@@ -30,6 +31,7 @@ export function DrillScreen() {
     examId?: string;
     topic?: string;
     source?: string;
+    level?: string;
   }>();
   const params = React.useMemo<DrillParams>(
     () => ({
@@ -37,8 +39,9 @@ export function DrillScreen() {
       packId: q.packId,
       examId: q.examId,
       topic: q.topic || undefined,
+      level: levelFromParam(q.level),
     }),
-    [q.packId, q.examId, q.topic, q.source],
+    [q.packId, q.examId, q.topic, q.source, q.level],
   );
   const session = useDrillSession(params);
 
@@ -97,7 +100,13 @@ export function DrillScreen() {
       onQuit={session.quit}
       ambientTheme="education"
     >
-      {lightning && <PaceBar paceSec={LIGHTNING_PACE_SEC} resetKey={entry.itemKey} running />}
+      {lightning && (
+        <PaceBar
+          paceSec={lightningPaceSec(params.level ?? 'A1')}
+          resetKey={entry.itemKey}
+          running
+        />
+      )}
       <DrillItem
         key={entry.itemKey}
         entry={entry}

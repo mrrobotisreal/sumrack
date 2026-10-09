@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   WEAK_TOPIC_WEIGHT,
   drillEntriesFromExam,
+  drillHref,
   drillIdentity,
   entryForDeckCard,
   pickLightning,
@@ -13,6 +14,7 @@ import {
   type DrillEntry,
   type DrillResult,
 } from '../drill/drill-model';
+import { ticketHref } from '../speaking/tickets-model';
 
 const PACK = examPackJson as unknown as { id: string; exams: unknown[] };
 const EXAMS: Exam[] = PACK.exams.map((e) => ExamSchema.parse(e));
@@ -190,5 +192,23 @@ describe('drillIdentity (analytics slugs only)', () => {
       topic: 'all',
       source: 'deck',
     });
+  });
+});
+
+describe('level route params (T75)', () => {
+  it('drillHref carries the level for the deck / lightning sources', () => {
+    expect(drillHref({ source: 'lightning', level: 'A2' }).params).toEqual({
+      source: 'lightning',
+      level: 'A2',
+    });
+  });
+
+  it('drillHref without a level has no level param (A1 back-compat)', () => {
+    expect(drillHref({ source: 'deck' }).params).not.toHaveProperty('level');
+  });
+
+  it('ticketHref carries the level for A2 only', () => {
+    expect(ticketHref('A2')).toEqual({ pathname: '/torfl/tickets', params: { level: 'A2' } });
+    expect(ticketHref()).toEqual({ pathname: '/torfl/tickets' });
   });
 });

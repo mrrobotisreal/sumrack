@@ -13,6 +13,7 @@ import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ruPlural } from '../hub-model';
+import type { TorflLevel } from '../level-profile';
 import {
   rehearsalText,
   rehearseHref,
@@ -33,12 +34,12 @@ const SENTENCES = ['предложение', 'предложения', 'пред
  * has «Отрепетировать вслух» → the rehearsal screen. No prompts installed
  * → an empty state naming the pack that brings them.
  */
-export function AnswersScreen() {
+export function AnswersScreen({ level = 'A1' }: { level?: TorflLevel }) {
   const { tokens } = useAppTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
-  const answers = useAnswers();
+  const answers = useAnswers(level);
   const refresh = useRefreshAnswersOnFocus();
   useFocusEffect(refresh);
 
@@ -54,8 +55,11 @@ export function AnswersScreen() {
     [router],
   );
   const rehearse = React.useCallback(
-    (entry: AnswerEntry, topic: string) => router.push(rehearseHref(entry.id, topic)),
-    [router],
+    (entry: AnswerEntry, topic: string) => {
+      const href = rehearseHref(entry.id, topic);
+      router.push({ ...href, params: { ...href.params, level } });
+    },
+    [router, level],
   );
 
   if (answers.isPending) {

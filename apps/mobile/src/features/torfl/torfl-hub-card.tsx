@@ -27,8 +27,8 @@ export function TorflHubCard({
 }) {
   const router = useRouter();
   const { tokens } = useAppTheme();
-  const { date, today } = useExamDate();
-  const today_ = useTorflToday();
+  const { date, today } = useExamDate(level);
+  const today_ = useTorflToday(level);
   const rows = readiness ?? (today_.isPending ? placeholderReadiness() : today_.readiness);
   return (
     <Pressable

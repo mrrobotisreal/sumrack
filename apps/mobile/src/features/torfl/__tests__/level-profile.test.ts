@@ -151,6 +151,7 @@ describe('level resolution', () => {
     expect(levelFromParam(' A2 ')).toBe('A2');
     expect(levelFromParam('А2')).toBe('A2');
     expect(levelFromParam(['A2', 'A1'])).toBe('A2');
+    expect(levelFromParam(['A2'])).toBe('A2');
     expect(levelFromParam([])).toBe('A1');
     expect(levelFromParam('B1')).toBe('A1');
     expect(levelFromParam('')).toBe('A1');
