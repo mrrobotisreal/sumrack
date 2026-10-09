@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   groupAnswers,
   isTorflPrompt,
+  promptLevel,
+  promptsForLevel,
   promptTopic,
   rehearsalText,
   rehearseHref,
@@ -180,5 +182,37 @@ describe('rehearseHref', () => {
       pathname: '/torfl/rehearse',
       params: { entryId: 'abc', topic: 'write-letter' },
     });
+  });
+});
+
+describe('the level rule for prompts (T75)', () => {
+  it('a prompt belongs to its pack level; bundled / legacy / unknown = A1', () => {
+    expect(promptLevel({ packLevel: 'A2' })).toBe('A2');
+    expect(promptLevel({ packLevel: 'A1' })).toBe('A1');
+    expect(promptLevel({ packLevel: undefined })).toBe('A1');
+    expect(promptLevel({ packLevel: null })).toBe('A1');
+    expect(promptLevel({ packLevel: 'B1' })).toBe('A1');
+  });
+
+  it('promptsForLevel keeps only torfl-tagged prompts of that level', () => {
+    const prompts = [
+      { ...prompt('a1-t', ['torfl']), packLevel: 'A1' },
+      { ...prompt('a2-t', ['torfl']), packLevel: 'A2' },
+      { ...prompt('a1-plain', ['journal']), packLevel: 'A1' },
+      { ...prompt('a2-plain', null), packLevel: 'A2' },
+      { ...prompt('legacy-t', ['torfl', 'torfl:write-letter']), packLevel: undefined },
+    ];
+    expect(promptsForLevel(prompts, 'A1').map((p) => p.id)).toEqual(['a1-t', 'legacy-t']);
+    expect(promptsForLevel(prompts, 'A2').map((p) => p.id)).toEqual(['a2-t']);
+  });
+
+  it('A1 and A2 are isolated in both directions', () => {
+    const a1 = { ...prompt('a1', ['torfl']), packLevel: 'A1' };
+    const a2 = { ...prompt('a2', ['torfl']), packLevel: 'A2' };
+    const all = [a1, a2];
+    expect(promptsForLevel(all, 'A1')).toEqual([a1]);
+    expect(promptsForLevel(all, 'A2')).toEqual([a2]);
+    expect(promptsForLevel([a2], 'A1')).toEqual([]);
+    expect(promptsForLevel([a1], 'A2')).toEqual([]);
   });
 });

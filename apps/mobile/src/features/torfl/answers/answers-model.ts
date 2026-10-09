@@ -1,6 +1,7 @@
 import { parseStoredFeedback } from '@/features/ai/schemas';
 import { splitSentences } from '@/features/import/import-core';
 
+import { torflLevelOf, type TorflLevel } from '../level-profile';
 import { compareTopics, topicLabel } from '../topics';
 
 /**
@@ -20,6 +21,8 @@ export interface AnswerPrompt {
   promptRu: string;
   promptEn: string;
   tags: string[] | null;
+  /** The PACK's level (`packs.level`), when known; absent/null = A1 (T75). */
+  packLevel?: string | null;
 }
 
 export interface AnswerEntry {
@@ -62,6 +65,22 @@ export function promptTopic(tags: readonly string[] | null | undefined): string 
 
 export function isTorflPrompt(p: Pick<AnswerPrompt, 'tags'>): boolean {
   return (p.tags ?? []).includes(TORFL_PROMPT_TAG);
+}
+
+/**
+ * THE LEVEL RULE for prompts (T75): a prompt's level is its pack's level.
+ * Bundled / legacy / no level = A1 (anything that is not A2 is A1).
+ */
+export function promptLevel(p: Pick<AnswerPrompt, 'packLevel'>): TorflLevel {
+  return torflLevelOf(p.packLevel);
+}
+
+/** The TORFL prompts (tagged `torfl`) of one level — the «Мои ответы» level filter (T75). */
+export function promptsForLevel<T extends Pick<AnswerPrompt, 'tags' | 'packLevel'>>(
+  prompts: readonly T[],
+  level: TorflLevel,
+): T[] {
+  return prompts.filter((p) => isTorflPrompt(p) && promptLevel(p) === level);
 }
 
 function topicLabels(topic: string): { ru: string; en: string } {

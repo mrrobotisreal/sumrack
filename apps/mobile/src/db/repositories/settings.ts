@@ -205,6 +205,8 @@ export const SETTING_KEYS = {
   torflPrefs: 'torfl.prefs',
   /** The real exam date (M18 §4.4): ISO 'YYYY-MM-DD' or null — the hub countdown. Invalid → null. */
   torflExamDate: 'torfl.examDate',
+  /** The A2 (ТБУ) exam date (M19, T75; TORFL_A2 A2-5): ISO 'YYYY-MM-DD' or null — healed like torfl.examDate. `torfl.examDate` stays A1's. */
+  torflExamDateA2: 'torfl.examDateA2',
   /**
    * «Exam grading» run profile (M18 §4.4, ADR-0020 decision 10): { v: 1,
    * provider, quality, effort } — the M16 run-profile triple only; default

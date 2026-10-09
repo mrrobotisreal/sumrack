@@ -27,6 +27,7 @@ import {
   type DrillSummary,
 } from './drill-model';
 import { createDrillRecorder, type DrillRecorder } from './drill-recorder';
+import type { TorflLevel } from '../level-profile';
 import { LIGHTNING_PACE_SEC, averageSeconds } from '../pace';
 
 export type DrillPhase = 'loading' | 'empty' | 'playing' | 'summary' | 'error';
@@ -36,6 +37,8 @@ export interface DrillParams {
   packId?: string;
   examId?: string;
   topic?: string;
+  /** THE LEVEL RULE (T75): the deck / «Молния» level; absent = A1 (back-compat). */
+  level?: TorflLevel;
 }
 
 export interface DrillOutcome {
@@ -101,7 +104,10 @@ export function useDrillSession(params: DrillParams) {
         if (cancelled) return;
         gameSessionRef.current = row.id;
         startedAtRef.current = Date.now();
-        dueAtStartRef.current = source === 'deck' ? (await repos.exams.deckCounts()).due : 0;
+        dueAtStartRef.current =
+          source === 'deck'
+            ? (await repos.exams.deckCounts(Date.now(), { level: params.level ?? 'A1' })).due
+            : 0;
         setEntries(queue.entries);
         setIndex(0);
         setPhase('playing');
@@ -264,7 +270,10 @@ async function buildQueue(
     return { entries: q.entries, skipped: q.skipped };
   }
   if (source === 'deck') {
-    const cards = await repos.exams.dueItems({ limit: DECK_SESSION_MAX * 2 });
+    const cards = await repos.exams.dueItems({
+      limit: DECK_SESSION_MAX * 2,
+      level: params.level ?? 'A1',
+    });
     const exams = new Map<string, Awaited<ReturnType<typeof repos.exams.getExam>>>();
     const out: DrillEntry[] = [];
     for (const card of cards) {
@@ -277,13 +286,14 @@ async function buildQueue(
     return { entries: out, skipped: none };
   }
   // lightning: every lexgram item of every installed drill exam, weighted draw
-  const drills = await repos.exams.listExams({ mode: 'drill' });
+  const level = params.level ?? 'A1';
+  const drills = await repos.exams.listExams({ mode: 'drill', level });
   const candidates: DrillEntry[] = [];
   for (const s of drills) {
     if (!s.exam) continue;
     candidates.push(...drillEntriesFromExam(s.exam, s.packId).entries);
   }
-  const stats = await repos.exams.topicStats({ subtestKind: 'lexgram' });
+  const stats = await repos.exams.topicStats({ subtestKind: 'lexgram', level });
   return { entries: pickLightning(candidates, stats), skipped: none };
 }
 
