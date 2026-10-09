@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import {
   fsrs,
   generatorParameters,
@@ -7,6 +7,8 @@ import {
   type Card as FsrsCard,
   type Grade,
 } from 'ts-fsrs';
+
+import { startOfNextLocalDay } from '@/lib/dates';
 
 import { newId } from '../ids';
 import { bankItems, cards, reviewLog, type CardDirection, type ReviewSource } from '../schema';
@@ -44,13 +46,66 @@ export const MIXED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru'];
 export const UNIFIED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'listening'];
 
 /**
- * One shared scheduler, default FSRS-5 parameters (no fuzz — single user,
- * no need to de-synchronize siblings). If parameters ever become tunable
- * (settings), this is the only construction site. Exported (T68) so the
- * exam deck (`exams` repo, ADR-0020 decision 5) schedules with the SAME
- * parameters while keeping its own tables.
+ * T39: the scheduler's tunable inputs. `desiredRetention` is the target
+ * recall probability (the 0.8–0.95 band lives in features/review/fsrs-settings);
+ * `w` is an FSRS-5 parameter vector (21 numbers) or null for ts-fsrs defaults.
  */
-export const reviewScheduler = fsrs(generatorParameters());
+export interface SchedulerConfig {
+  desiredRetention: number;
+  w: number[] | null;
+}
+
+export const DEFAULT_SCHEDULER_CONFIG: SchedulerConfig = { desiredRetention: 0.9, w: null };
+
+/**
+ * Build an FSRS scheduler for `config`. Fuzz stays off (ts-fsrs default) —
+ * single user, no need to de-synchronize siblings.
+ */
+export function buildScheduler(config: SchedulerConfig) {
+  return fsrs(
+    generatorParameters({
+      request_retention: config.desiredRetention,
+      ...(config.w ? { w: config.w } : {}),
+    }),
+  );
+}
+
+/**
+ * T39: the one live scheduler. Replaced by `configureReviewScheduler` when the
+ * user changes desired retention or imports optimizer parameters. Still the
+ * ONLY construction site (see `buildScheduler`). Read it through
+ * `getReviewScheduler()` — `exams` (ADR-0020 decision 5) schedules with the
+ * same instance so the exam deck and the review queue stay in step.
+ */
+let currentScheduler = buildScheduler(DEFAULT_SCHEDULER_CONFIG);
+
+export function configureReviewScheduler(config: SchedulerConfig): void {
+  currentScheduler = buildScheduler(config);
+}
+
+export function getReviewScheduler() {
+  return currentScheduler;
+}
+
+/**
+ * T39: a card a queue may serve at `now` — not suspended, not buried past now.
+ * The ONE exclusion predicate; every card-sourcing query uses it (directly or
+ * through `servableSql`). `getCard`/`listCardsForItem` stay unfiltered.
+ */
+export function servableAt(now: number) {
+  return and(isNull(cards.suspendedAt), or(isNull(cards.buriedUntil), lte(cards.buriedUntil, now)));
+}
+
+/**
+ * T39: raw-SQL twin of `servableAt` for `sql\`\`` queries (dashboard, path).
+ * `alias` is the cards table alias in the query (e.g. `c`) — restricted to
+ * plain identifiers, so it is never user input.
+ */
+export function servableSql(alias: string, now: number): SQL {
+  if (!/^[a-z_][a-z0-9_]*$/i.test(alias)) throw new Error(`servableSql: bad alias ${alias}`);
+  const a = sql.raw(alias);
+  return sql`${a}.suspended_at IS NULL AND (${a}.buried_until IS NULL OR ${a}.buried_until <= ${now})`;
+}
 
 export { Rating, State };
 export type { Grade };
@@ -171,6 +226,27 @@ export function createReviewsRepo(db: SumrakDB) {
       return rows[0] ?? null;
     },
 
+    /**
+     * T39: the card a game may GRADE, or null when it is suspended. Buried
+     * cards are still gradable — bury is only a queue filter (a buried card
+     * answered elsewhere still learns). Use this at every grading call site
+     * that resolves a card from a bank item, so a suspended item is never rated.
+     */
+    async getGradableCard(bankItemId: string, direction: CardDirection): Promise<CardRow | null> {
+      const rows = await db
+        .select()
+        .from(cards)
+        .where(
+          and(
+            eq(cards.bankItemId, bankItemId),
+            eq(cards.direction, direction),
+            isNull(cards.suspendedAt),
+          ),
+        )
+        .limit(1);
+      return rows[0] ?? null;
+    },
+
     async getCardById(cardId: string): Promise<CardRow | null> {
       const rows = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
       return rows[0] ?? null;
@@ -186,7 +262,7 @@ export function createReviewsRepo(db: SumrakDB) {
       return db
         .select()
         .from(cards)
-        .where(and(lte(cards.dueAt, now), inArray(cards.direction, directions)))
+        .where(and(lte(cards.dueAt, now), inArray(cards.direction, directions), servableAt(now)))
         .orderBy(asc(cards.dueAt))
         .limit(limit);
     },
@@ -202,7 +278,7 @@ export function createReviewsRepo(db: SumrakDB) {
       return db
         .select()
         .from(cards)
-        .where(and(gt(cards.dueAt, now), inArray(cards.direction, directions)))
+        .where(and(gt(cards.dueAt, now), inArray(cards.direction, directions), servableAt(now)))
         .orderBy(asc(cards.stability), asc(cards.dueAt))
         .limit(limit);
     },
@@ -222,7 +298,13 @@ export function createReviewsRepo(db: SumrakDB) {
       return db
         .select()
         .from(cards)
-        .where(and(inArray(cards.bankItemId, bankItemIds), inArray(cards.direction, directions)))
+        .where(
+          and(
+            inArray(cards.bankItemId, bankItemIds),
+            inArray(cards.direction, directions),
+            servableAt(now),
+          ),
+        )
         .orderBy(
           sql`CASE WHEN ${cards.dueAt} <= ${now} THEN 0 ELSE 1 END`,
           asc(cards.stability),
@@ -236,6 +318,11 @@ export function createReviewsRepo(db: SumrakDB) {
      * item's *reviewed* core-direction cards (ru-en/en-ru — the directions
      * that vouch for knowing a word, T18 decision) ≥ `minStabilityDays`.
      * Feeds the mastered-100 achievement (T19).
+     */
+    /**
+     * T39 decision: suspension is a scheduling state, not knowledge, so this
+     * count (and the bank/path/coverage stat counts) deliberately IGNORES
+     * suspended and buried cards.
      */
     async countMasteredLemmas(minStabilityDays = 30): Promise<number> {
       const rows = await db.select({ n: sql<number>`COUNT(*)` }).from(
@@ -262,7 +349,7 @@ export function createReviewsRepo(db: SumrakDB) {
       const rows = await db
         .select({ n: sql<number>`COUNT(*)` })
         .from(cards)
-        .where(and(lte(cards.dueAt, now), inArray(cards.direction, directions)));
+        .where(and(lte(cards.dueAt, now), inArray(cards.direction, directions), servableAt(now)));
       return rows[0]?.n ?? 0;
     },
 
@@ -283,7 +370,11 @@ export function createReviewsRepo(db: SumrakDB) {
       if (!row) throw new Error(`gradeCard: card ${cardId} not found`);
       const now = opts.now ?? Date.now();
 
-      const { card: next, log } = reviewScheduler.next(cardRowToFsrs(row), new Date(now), rating);
+      const { card: next, log } = getReviewScheduler().next(
+        cardRowToFsrs(row),
+        new Date(now),
+        rating,
+      );
 
       const updated: CardRow = {
         ...row,
@@ -320,6 +411,90 @@ export function createReviewsRepo(db: SumrakDB) {
       await db.insert(reviewLog).values(logRow);
 
       return { card: updated, log: logRow };
+    },
+
+    /**
+     * T39 card management. Suspend = never served, never graded (see
+     * `getGradableCard`); unsuspend restores it. Scheduling state only — the
+     * review log and mastery counts are untouched.
+     */
+    async suspendCard(cardId: string, now: number = Date.now()): Promise<void> {
+      await db.update(cards).set({ suspendedAt: now }).where(eq(cards.id, cardId));
+    },
+
+    async unsuspendCard(cardId: string): Promise<void> {
+      await db.update(cards).set({ suspendedAt: null }).where(eq(cards.id, cardId));
+    },
+
+    /** T39: hide the card from queues until the start of the next local day. */
+    async buryUntilTomorrow(cardId: string, now: number = Date.now()): Promise<void> {
+      await db
+        .update(cards)
+        .set({ buriedUntil: startOfNextLocalDay(now) })
+        .where(eq(cards.id, cardId));
+    },
+
+    async unburyCard(cardId: string): Promise<void> {
+      await db.update(cards).set({ buriedUntil: null }).where(eq(cards.id, cardId));
+    },
+
+    /**
+     * T39: reset the card's FSRS state to New, due now. `suspendedAt` is kept
+     * (a suspended card stays suspended), buriedUntil is cleared, and the
+     * `review_log` is UNTOUCHED — history is preserved and still feeds
+     * leeches, familiarity and the optimizer export. Returns the updated row.
+     */
+    async resetCard(cardId: string, now: number = Date.now()): Promise<CardRow> {
+      await db
+        .update(cards)
+        .set({
+          state: 0,
+          dueAt: now,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          learningSteps: 0,
+          reps: 0,
+          lapses: 0,
+          lastReviewAt: null,
+          buriedUntil: null,
+        })
+        .where(eq(cards.id, cardId));
+      const rows = await db.select().from(cards).where(eq(cards.id, cardId)).limit(1);
+      const row = rows[0];
+      if (!row) throw new Error(`resetCard: card ${cardId} not found`);
+      return row;
+    },
+
+    /**
+     * Every review_log row with its card's direction and bank item, ordered by
+     * card then time — the optimizer export's input (T39).
+     */
+    async listAllReviewLog(): Promise<
+      {
+        cardId: string;
+        bankItemId: string;
+        direction: CardDirection;
+        rating: number;
+        state: number;
+        reviewedAt: number;
+        durationMs: number | null;
+      }[]
+    > {
+      return db
+        .select({
+          cardId: reviewLog.cardId,
+          bankItemId: cards.bankItemId,
+          direction: cards.direction,
+          rating: reviewLog.rating,
+          state: reviewLog.state,
+          reviewedAt: reviewLog.reviewedAt,
+          durationMs: reviewLog.durationMs,
+        })
+        .from(reviewLog)
+        .innerJoin(cards, eq(cards.id, reviewLog.cardId))
+        .orderBy(asc(reviewLog.cardId), asc(reviewLog.reviewedAt));
     },
 
     /** Persist post-review FSRS state directly (tests/tooling; games use gradeCard). */

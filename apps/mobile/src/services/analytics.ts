@@ -502,7 +502,19 @@ export type AnalyticsEvent =
   | 'torfl_rehearsal_finished'
   | 'torfl_ticket_drawn'
   | 'exam_attempt_pinned'
-  | 'exam_debrief_download_failed';
+  | 'exam_debrief_download_failed'
+  // T39 FSRS control (card management, retention, optimizer import). Props are
+  // numbers / enum kinds only — never lemma text. fsrs_retention_changed
+  // {value, previous}; fsrs_params_applied {reviewCount, cardCount, logLoss?};
+  // fsrs_params_rejected {reason}; fsrs_params_reverted {};
+  // card_action {kind: suspend|unsuspend|bury|unbury|reset, direction,
+  // from: item-detail|leech-inbox}; review_log_exported {rows}.
+  | 'fsrs_retention_changed'
+  | 'fsrs_params_applied'
+  | 'fsrs_params_rejected'
+  | 'fsrs_params_reverted'
+  | 'card_action'
+  | 'review_log_exported';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

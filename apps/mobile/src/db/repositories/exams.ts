@@ -28,7 +28,7 @@ import { track } from '@/services/analytics';
 import { newId } from '../ids';
 import { examAttempts, examItemCards, examResponses, exams } from '../schema';
 import type { SumrakDB } from '../types';
-import { reviewScheduler } from './reviews';
+import { getReviewScheduler } from './reviews';
 
 /**
  * Exams repository (T68, TORFL_EXAM_PREP §4.3) — `repos.exams`: the read side
@@ -978,7 +978,7 @@ export function createExamsRepo(db: SumrakDB) {
       if (!row) throw new Error(`gradeCard: exam card "${itemKey}" not found`);
       const current = toCard(row).fsrs;
       const base = current ? fromFsrsJson(current) : createEmptyCard(new Date(now));
-      const { card: next } = reviewScheduler.next(base, new Date(now), rating);
+      const { card: next } = getReviewScheduler().next(base, new Date(now), rating);
       const fsrsJson = toFsrsJson(next);
       const patch = {
         fsrsJson: JSON.stringify(fsrsJson),
