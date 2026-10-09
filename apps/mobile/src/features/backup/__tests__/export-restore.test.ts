@@ -18,6 +18,7 @@ import {
   examAttempts,
   examItemCards,
   leechDismissals,
+  dailyQuests,
   examResponses,
   frozenDays,
   gameSessions,
@@ -144,6 +145,16 @@ async function seedSource(db: SumrakDB) {
   ]);
   // T38: one acknowledged leech.
   await db.insert(leechDismissals).values({ cardId: 'card-1', dismissedAt: NOW - 1000 });
+  await db.insert(dailyQuests).values({
+    date: '2026-10-09',
+    kind: 'clear-leeches',
+    target: 1,
+    progress: 1,
+    snapshot: ['card-1'],
+    assignedAt: NOW - 900,
+    completedAt: NOW - 800,
+    xp: 15,
+  });
   await db.insert(reviewLog).values({
     id: 'rl-1',
     cardId: 'card-1',
@@ -613,6 +624,7 @@ async function selectAllUserTables(db: SumrakDB) {
     examResponses: await db.select().from(examResponses),
     examItemCards: await db.select().from(examItemCards),
     leechDismissals: await db.select().from(leechDismissals),
+    dailyQuests: await db.select().from(dailyQuests),
     settings: await db.select().from(settings),
     syncState: await db.select().from(syncState),
     analyticsEvents: await db.select().from(analyticsEvents),

@@ -26,6 +26,7 @@ import {
 import { earnsFreeze, parseFreezeState, type FreezeState } from './freeze';
 import { goalIsMet } from './goal-prefs';
 import { replanReminders } from './notifications';
+import { refreshQuest } from './quest-runtime';
 import { requestWidgetRefresh } from './widget-bus';
 import { useAchievementToasts } from './toast-store';
 import { levelForXp, XP_TABLE, xpForRating, xpForReading, xpForScenarioRun } from './xp';
@@ -114,6 +115,9 @@ export async function evaluateMotivation(now: Date = new Date()): Promise<void> 
   if (stateChanged) void replanReminders();
   // T40: the widget snapshot follows every activity change (write-path trigger).
   requestWidgetRefresh();
+  // T34: the daily quest follows every activity change too (coalesced, never throws).
+  // Independent of the goal above: it reads counters, never goal_met_at.
+  void refreshQuest();
 }
 
 /** The three scenario unlocks (T62 §9.4) from `getScenarioStats` — sweep + finish share it. */
@@ -206,6 +210,8 @@ export async function recordJournalEntryCreated(): Promise<void> {
   await repos.stats.bumpDailyActivity({ xp: XP_TABLE.journalEntry });
   await unlock('first-journal');
   invalidate(['motivation'], ['daily-activity']);
+  // T34: journal-1 quest (journal creation doesn't run evaluateMotivation).
+  void refreshQuest();
 }
 
 export async function recordNoteCreated(): Promise<void> {

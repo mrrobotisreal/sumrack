@@ -15,6 +15,8 @@ export interface AchievementDef {
   title: string;
   description: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
+  /** Toast header line; default «Achievement unlocked» (T34's quest toast passes «Quest complete»). */
+  kicker?: string;
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [

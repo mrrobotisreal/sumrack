@@ -171,6 +171,17 @@ const leechDismissalRow = z.strictObject({
   dismissedAt: int,
 });
 
+const dailyQuestRow = z.strictObject({
+  date: z.string(),
+  kind: z.string(),
+  target: int,
+  progress: int,
+  snapshot: z.array(z.string()).nullable(),
+  assignedAt: int,
+  completedAt: int.nullable(),
+  xp: int,
+});
+
 const achievementRow = z.strictObject({
   id: z.string(),
   unlockedAt: int,
@@ -421,6 +432,8 @@ export const BackupPayloadSchema = z.strictObject({
     examItemCards: z.array(examItemCardRow).default([]),
     // T38: additive-with-default — pre-T38 snapshots restore under version 1.
     leechDismissals: z.array(leechDismissalRow).default([]),
+    // T34: older backups have no quests — default to none.
+    dailyQuests: z.array(dailyQuestRow).default([]),
     settings: z.array(settingRow),
     syncState: z.array(syncStateRow),
     analyticsEvents: z.array(analyticsEventRow),
@@ -460,6 +473,7 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   examResponses: 'exam_responses',
   examItemCards: 'exam_item_cards',
   leechDismissals: 'leech_dismissals',
+  dailyQuests: 'daily_quests',
   settings: 'settings',
   syncState: 'sync_state',
   analyticsEvents: 'analytics_events',

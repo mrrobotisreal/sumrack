@@ -18,6 +18,7 @@ import {
 import { classificationEventProps } from '@/features/library/categories';
 import { GoalRingCard } from '@/features/motivation/goal-ring-card';
 import { NotificationPromptCard } from '@/features/motivation/notification-prompt-card';
+import { QuestCard } from '@/features/motivation/quest-card';
 import type { PathNode } from '@/features/path/path-model';
 import { isUnit, nextStepInfo, usePathState } from '@/features/path/use-path';
 import { isResumable, pickTodayScenario } from '@/features/scenario/hub-selection';
@@ -61,6 +62,8 @@ export function TodayScreen() {
       void queryClient.invalidateQueries({ queryKey: ['dialogues'] });
       void queryClient.invalidateQueries({ queryKey: ['scenarios'] });
       void queryClient.invalidateQueries({ queryKey: ['exams'] });
+      // T34: re-evaluate the quest on return (a new local day, a dismissed leech).
+      void queryClient.invalidateQueries({ queryKey: ['quest'] });
     }, [queryClient]),
   );
 
@@ -123,6 +126,9 @@ export function TodayScreen() {
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-4 px-4 pb-16 pt-4">
       {/* the real goal ring + streak flame + freezes + XP (T19) */}
       <GoalRingCard />
+
+      {/* the day's rotating quest — the ring's third segment (T34) */}
+      <QuestCard />
 
       {/* one-time reminders opt-in, once there's a streak to protect (T19) */}
       <NotificationPromptCard />

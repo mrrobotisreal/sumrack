@@ -200,7 +200,24 @@ describe('migrations from empty DB', () => {
     for (const name of ['suspended_at', 'buried_until']) {
       expect(rows.find((r) => r.name === name)?.notnull).toBe(0);
     }
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 17, tag: '0017_card-management' });
+    expect(journal.entries.find((e) => e.tag === '0017_card-management')).toMatchObject({
+      idx: 17,
+    });
+  });
+
+  it('0018_daily-quests: fresh DB has daily_quests (user, one row per local day)', async () => {
+    const db = createTestDb();
+    expect(await columnNames(db, 'daily_quests')).toEqual([
+      'date',
+      'kind',
+      'target',
+      'progress',
+      'snapshot',
+      'assigned_at',
+      'completed_at',
+      'xp',
+    ]);
+    expect(journal.entries.at(-1)).toMatchObject({ idx: 18, tag: '0018_daily-quests' });
   });
 });
 

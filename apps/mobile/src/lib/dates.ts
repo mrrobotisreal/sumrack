@@ -47,3 +47,16 @@ export function startOfNextLocalDay(now: number): number {
   const d = new Date(now);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0).getTime();
 }
+
+/**
+ * T34: the epoch-ms window [start, end) of a LOCAL day key in the device's
+ * current timezone — the same convention as `localDateKey`. Counters that
+ * ask "what happened today" (quests) filter on it.
+ */
+export function localDayWindow(key: string): { start: number; end: number } {
+  const [y, m, d] = key.split('-').map(Number);
+  return {
+    start: new Date(y!, m! - 1, d!, 0, 0, 0, 0).getTime(),
+    end: new Date(y!, m! - 1, d! + 1, 0, 0, 0, 0).getTime(),
+  };
+}

@@ -9,6 +9,7 @@ import { useGoalPrefs } from '@/store/goal-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { MAX_FREEZES } from './freeze';
+import { useDailyQuest } from './use-daily-quest';
 import { useMotivation } from './use-motivation';
 
 /**
@@ -17,9 +18,19 @@ import { useMotivation } from './use-motivation';
  * streak flame, with freeze wallet and XP level alongside. All data live
  * from daily_activity + the motivation snapshot; the ring updates as the
  * day's activity accrues because every record* path invalidates both.
+ *
+ * T34: on a day with a quest, a THIRD ring (quest progress) is added inside
+ * the reading ring on T19's exact pitch — same 9 px stroke, same 14 px step
+ * (radii 61 / 47 / 33), same track, round caps — in the `gold` token (the
+ * reward colour; both themes). The flame column shrinks to fit the smaller
+ * hole (flame 18, number text-lg, the «days» caption moves to the a11y
+ * label). Quest-less days render the two-ring card byte-for-byte as before.
  */
 
 const RING_SIZE = 132;
+const RING_STROKE = 9;
+/** Radial step between rings (T19: 66−5 → 66−19). */
+const RING_STEP = 14;
 
 function ProgressRing({
   radius,
@@ -63,6 +74,7 @@ export function GoalRingCard() {
   const { goal } = useGoalPrefs();
   const activity = useDailyActivity();
   const motivation = useMotivation();
+  const quest = useDailyQuest().data?.state ?? null;
 
   const reviewsDone = activity.data?.reviewsDone ?? 0;
   const readingMs = activity.data?.readingMs ?? 0;
@@ -108,16 +120,40 @@ export function GoalRingCard() {
               color={tokens.textMuted}
               trackColor={tokens.surface2}
             />
+            {quest && (
+              <ProgressRing
+                radius={RING_SIZE / 2 - 19 - RING_STEP}
+                strokeWidth={RING_STROKE}
+                fraction={quest.target > 0 ? quest.progress / quest.target : 0}
+                color={tokens.gold}
+                trackColor={tokens.surface2}
+              />
+            )}
           </Svg>
-          <View className="absolute inset-0 items-center justify-center">
-            <Ionicons
-              name={flameLit ? 'flame' : 'flame-outline'}
-              size={26}
-              color={flameLit ? tokens.accent : tokens.textMuted}
-            />
-            <RNText className="font-ui-bold text-2xl text-text">{streak?.current ?? 0}</RNText>
-            <Text variant="caption">{(streak?.current ?? 0) === 1 ? 'day' : 'days'}</Text>
-          </View>
+          {quest ? (
+            <View
+              className="absolute inset-0 items-center justify-center"
+              accessible
+              accessibilityLabel={`Streak ${streak?.current ?? 0} ${(streak?.current ?? 0) === 1 ? 'day' : 'days'}`}
+            >
+              <Ionicons
+                name={flameLit ? 'flame' : 'flame-outline'}
+                size={18}
+                color={flameLit ? tokens.accent : tokens.textMuted}
+              />
+              <RNText className="font-ui-bold text-lg text-text">{streak?.current ?? 0}</RNText>
+            </View>
+          ) : (
+            <View className="absolute inset-0 items-center justify-center">
+              <Ionicons
+                name={flameLit ? 'flame' : 'flame-outline'}
+                size={26}
+                color={flameLit ? tokens.accent : tokens.textMuted}
+              />
+              <RNText className="font-ui-bold text-2xl text-text">{streak?.current ?? 0}</RNText>
+              <Text variant="caption">{(streak?.current ?? 0) === 1 ? 'day' : 'days'}</Text>
+            </View>
+          )}
         </View>
 
         {/* numbers */}
@@ -136,6 +172,15 @@ export function GoalRingCard() {
             value={`${readingMin} / ${goal.readingMin} min`}
             done={goal.readingMin > 0 ? readingMin >= goal.readingMin : true}
           />
+          {quest && (
+            <GoalLine
+              icon="ribbon-outline"
+              iconColor={tokens.gold}
+              label="Quest"
+              value={`${quest.progress} / ${quest.target}`}
+              done={quest.complete}
+            />
+          )}
           <View className="flex-row items-center gap-1.5">
             {Array.from({ length: MAX_FREEZES }, (_, i) => (
               <Ionicons

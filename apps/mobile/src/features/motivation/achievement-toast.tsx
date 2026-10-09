@@ -73,7 +73,7 @@ export function AchievementToastHost() {
         </View>
         <View className="flex-1 gap-0.5">
           <Text variant="caption" className="uppercase tracking-wider text-accent">
-            Achievement unlocked
+            {current.kicker ?? 'Achievement unlocked'}
           </Text>
           <Text className="font-ui-medium">{current.title}</Text>
           <Text variant="caption">{current.description}</Text>

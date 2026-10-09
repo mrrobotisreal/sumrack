@@ -696,6 +696,26 @@ export const leechDismissals = sqliteTable('leech_dismissals', {
   dismissedAt: integer('dismissed_at').notNull(),
 });
 
+/**
+ * The day's rotating quest (T34, V2 §7.10) — one row per local day key,
+ * written when the day's quest is first assigned (deterministic pick, see
+ * features/motivation/quests.ts) and never re-picked. `progress` is the last
+ * persisted count toward `target`; `snapshot` is kind-owned state frozen at
+ * assignment (clear-leeches: the card ids flagged that morning). Completing
+ * a quest awards `xp` once and is independent of the daily goal: it never
+ * touches daily_activity.goal_met_at or the streak.
+ */
+export const dailyQuests = sqliteTable('daily_quests', {
+  date: text('date').primaryKey(),
+  kind: text('kind').notNull(),
+  target: integer('target').notNull(),
+  progress: integer('progress').notNull().default(0),
+  snapshot: text('snapshot', { mode: 'json' }).$type<string[]>(),
+  assignedAt: integer('assigned_at').notNull(),
+  completedAt: integer('completed_at'),
+  xp: integer('xp').notNull().default(0),
+});
+
 /** Key-value settings (JSON-encoded values), incl. theme mode and path position. */
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
