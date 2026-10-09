@@ -343,6 +343,17 @@ export function createContentRepo(db: SumrakDB) {
       return level ? base.where(eq(journalPrompts.level, level)) : base;
     },
 
+    /**
+     * Journal prompts with their PACK's level (T75 «Мои ответы» level rule:
+     * a TORFL prompt belongs to the level of its pack — `packs.level`).
+     */
+    async listJournalPromptsWithPackLevel() {
+      return db
+        .select({ prompt: journalPrompts, packLevel: packs.level })
+        .from(journalPrompts)
+        .innerJoin(packs, eq(packs.id, journalPrompts.packId));
+    },
+
     async listExerciseSpecs(packId: string) {
       return db
         .select()

@@ -1,4 +1,17 @@
-import { and, asc, desc, eq, gte, inArray, like, lte, ne, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  like,
+  lte,
+  ne,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm';
 import { ExamSchema, type Exam, type ExamSubtestKind } from '@sumrak/schema';
 import { createEmptyCard, Rating, type Card as FsrsCard, type Grade } from 'ts-fsrs';
 import type { z } from 'zod';
@@ -23,6 +36,7 @@ import {
   type ExamScope,
   type ExamVerdict,
 } from '@/features/torfl/model';
+import type { TorflLevel } from '@/features/torfl/level-profile';
 import { track } from '@/services/analytics';
 
 import { newId } from '../ids';
@@ -228,6 +242,19 @@ function fromFsrsJson(card: ExamFsrsCard): FsrsCard {
   };
 }
 
+/**
+ * THE LEVEL RULE (T75, ADR-0021): a user row's TORFL level = the
+ * `exams.level` of its `(pack_id, exam_id)`, read through a LEFT JOIN on the
+ * `exams` PK. A row whose exam is gone (its pack was removed) falls back to
+ * the pack-id convention — `a2-*` → A2, anything else → A1 — so an orphan
+ * never changes level (A1 history and deck numbers stay exactly as before).
+ * Use only in a query that left-joins `exams` on both key columns; `packId`
+ * is the joined row's own `pack_id` column.
+ */
+export function levelIs(level: TorflLevel, packId: AnyColumn): SQL {
+  return sql`COALESCE(${exams.level}, CASE WHEN ${packId} LIKE 'a2-%' THEN 'A2' ELSE 'A1' END) = ${level}`;
+}
+
 export function createExamsRepo(db: SumrakDB) {
   const parseWarned = new Set<string>();
   /** Parsed-exam memo keyed by `packId/examId`, invalidated when the stored JSON changes (pack update). */
@@ -379,12 +406,19 @@ export function createExamsRepo(db: SumrakDB) {
    * mistaken for a mock's resumable attempt — see `startAttempt` /
    * `abandonActiveDrills`.
    */
-  async function activeRows(): Promise<ExamAttemptRow[]> {
-    return db
-      .select()
+  async function activeRows(level?: TorflLevel): Promise<ExamAttemptRow[]> {
+    const where: SQL[] = [eq(examAttempts.status, 'active'), ne(examAttempts.scope, 'drill')];
+    if (level) where.push(levelIs(level, examAttempts.packId));
+    const rows = await db
+      .select({ attempt: examAttempts })
       .from(examAttempts)
-      .where(and(eq(examAttempts.status, 'active'), ne(examAttempts.scope, 'drill')))
+      .leftJoin(
+        exams,
+        and(eq(exams.packId, examAttempts.packId), eq(exams.examId, examAttempts.examId)),
+      )
+      .where(and(...where))
       .orderBy(desc(examAttempts.startedAt));
+    return rows.map((r) => r.attempt);
   }
 
   async function getExam(packId: string, examId: string): Promise<Exam | null> {
@@ -414,13 +448,15 @@ export function createExamsRepo(db: SumrakDB) {
   async function objectiveRows(opts: {
     sinceMs?: number;
     mode?: ExamMode;
+    level?: TorflLevel;
   }): Promise<
     { topic: string; kind: string; points: number; maxPoints: number; createdAt: number }[]
   > {
     const where: SQL[] = [sql`${examResponses.points} IS NOT NULL`];
     if (opts.sinceMs !== undefined) where.push(gte(examResponses.createdAt, opts.sinceMs));
     if (opts.mode) where.push(eq(examAttempts.mode, opts.mode));
-    const rows = await db
+    if (opts.level) where.push(levelIs(opts.level, examAttempts.packId));
+    const base = db
       .select({
         packId: examAttempts.packId,
         examId: examAttempts.examId,
@@ -431,8 +467,16 @@ export function createExamsRepo(db: SumrakDB) {
         createdAt: examResponses.createdAt,
       })
       .from(examResponses)
-      .innerJoin(examAttempts, eq(examAttempts.id, examResponses.attemptId))
-      .where(and(...where));
+      .innerJoin(examAttempts, eq(examAttempts.id, examResponses.attemptId));
+    // THE LEVEL RULE (T75): the level join only when a level is asked for.
+    const rows = await (
+      opts.level
+        ? base.leftJoin(
+            exams,
+            and(eq(exams.packId, examAttempts.packId), eq(exams.examId, examAttempts.examId)),
+          )
+        : base
+    ).where(and(...where));
     if (rows.length === 0) return [];
 
     const examsByKey = new Map<string, Exam | null>();
@@ -486,11 +530,17 @@ export function createExamsRepo(db: SumrakDB) {
   return {
     // --- content reads --------------------------------------------------
 
-    /** Installed exams, pack then authoring order; optional pack / mode filter. */
-    async listExams(filter: { packId?: string; mode?: ExamMode } = {}): Promise<ExamSummary[]> {
+    /**
+     * Installed exams, pack then authoring order; optional pack / mode filter.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     */
+    async listExams(
+      filter: { packId?: string; mode?: ExamMode; level?: TorflLevel } = {},
+    ): Promise<ExamSummary[]> {
       const where: SQL[] = [];
       if (filter.packId) where.push(eq(exams.packId, filter.packId));
       if (filter.mode) where.push(eq(exams.mode, filter.mode));
+      if (filter.level) where.push(eq(exams.level, filter.level));
       const rows = await db
         .select()
         .from(exams)
@@ -665,13 +715,21 @@ export function createExamsRepo(db: SumrakDB) {
         .where(eq(examAttempts.id, attemptId));
     },
 
-    /** The one active attempt (resume), or null. */
-    async getActiveAttempt(): Promise<ExamAttempt | null> {
-      const rows = await activeRows();
+    /**
+     * The one active attempt (resume), or null. `level` = THE LEVEL
+     * RULE (T75, {@link levelIs}); absent = every level. The single-active rule
+     * of `startAttempt` stays global (one active mock across levels).
+     */
+    async getActiveAttempt(opts: { level?: TorflLevel } = {}): Promise<ExamAttempt | null> {
+      const rows = await activeRows(opts.level);
       return rows[0] ? toAttempt(rows[0]) : null;
     },
 
-    /** Attempts newest first; optional scope / status / exam filter. */
+    /**
+     * Attempts newest first; optional scope / status / exam / level filter.
+     * `level` (T75, THE LEVEL RULE — {@link levelIs}) joins `exams` on its
+     * PK `(pack_id, exam_id)`. Absent = every level.
+     */
     async listAttempts(
       opts: {
         scope?: ExamScope;
@@ -679,6 +737,7 @@ export function createExamsRepo(db: SumrakDB) {
         packId?: string;
         examId?: string;
         limit?: number;
+        level?: TorflLevel;
       } = {},
     ): Promise<ExamAttempt[]> {
       const where: SQL[] = [];
@@ -686,13 +745,18 @@ export function createExamsRepo(db: SumrakDB) {
       if (opts.status) where.push(eq(examAttempts.status, opts.status));
       if (opts.packId) where.push(eq(examAttempts.packId, opts.packId));
       if (opts.examId) where.push(eq(examAttempts.examId, opts.examId));
+      if (opts.level) where.push(levelIs(opts.level, examAttempts.packId));
       const rows = await db
-        .select()
+        .select({ attempt: examAttempts })
         .from(examAttempts)
+        .leftJoin(
+          exams,
+          and(eq(exams.packId, examAttempts.packId), eq(exams.examId, examAttempts.examId)),
+        )
         .where(where.length > 0 ? and(...where) : undefined)
         .orderBy(desc(examAttempts.startedAt))
         .limit(opts.limit ?? 50);
-      return rows.map(toAttempt);
+      return rows.map((r) => toAttempt(r.attempt));
     },
 
     /** One attempt + its responses (subtest, then creation order). */
@@ -733,7 +797,13 @@ export function createExamsRepo(db: SumrakDB) {
      * §6.1); `correct` = full credit (points ≥ maxPoints).
      */
     async topicStats(
-      opts: { sinceMs?: number; subtestKind?: ExamSubtestKind; mode?: ExamMode } = {},
+      opts: {
+        sinceMs?: number;
+        subtestKind?: ExamSubtestKind;
+        mode?: ExamMode;
+        /** THE LEVEL RULE (T75, {@link levelIs}); absent = every level. */
+        level?: TorflLevel;
+      } = {},
     ): Promise<ExamTopicStat[]> {
       const rows = await objectiveRows(opts);
       const stats = new Map<string, ExamTopicStat>();
@@ -761,10 +831,14 @@ export function createExamsRepo(db: SumrakDB) {
      * `correct` (full credit). Same item/kind resolution as `topicStats`.
      */
     async recentAccuracy(
-      opts: { limit?: number } = {},
+      opts: {
+        limit?: number;
+        /** THE LEVEL RULE (T75, {@link levelIs}); absent = every level. */
+        level?: TorflLevel;
+      } = {},
     ): Promise<Partial<Record<ExamSubtestKind, { answered: number; correct: number }>>> {
       const limit = opts.limit ?? 200;
-      const rows = await objectiveRows({});
+      const rows = await objectiveRows({ level: opts.level });
       rows.sort((a, b) => b.createdAt - a.createdAt);
       const out: Partial<Record<ExamSubtestKind, { answered: number; correct: number }>> = {};
       for (const r of rows) {
@@ -990,9 +1064,18 @@ export function createExamsRepo(db: SumrakDB) {
       return toCard({ ...row, ...patch });
     },
 
-    /** Due, non-suspended cards (most overdue first); optional subtest kind / topic filter. */
+    /**
+     * Due, non-suspended cards (most overdue first); optional subtest kind / topic filter.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     */
     async dueItems(
-      opts: { limit?: number; now?: number; subtestKind?: string; topic?: string } = {},
+      opts: {
+        limit?: number;
+        now?: number;
+        subtestKind?: string;
+        topic?: string;
+        level?: TorflLevel;
+      } = {},
     ): Promise<ExamItemCard[]> {
       const where: SQL[] = [
         eq(examItemCards.suspended, false),
@@ -1000,26 +1083,59 @@ export function createExamsRepo(db: SumrakDB) {
       ];
       if (opts.subtestKind) where.push(eq(examItemCards.subtestKind, opts.subtestKind));
       if (opts.topic) where.push(eq(examItemCards.topic, opts.topic));
+      const limit = opts.limit ?? 50;
+      // THE LEVEL RULE (T75): the level join only when a level is asked for;
+      // without it the query is the pre-T75 one.
+      if (!opts.level) {
+        const rows = await db
+          .select()
+          .from(examItemCards)
+          .where(and(...where))
+          .orderBy(asc(examItemCards.due))
+          .limit(limit);
+        return rows.map(toCard);
+      }
+      where.push(levelIs(opts.level, examItemCards.packId));
       const rows = await db
-        .select()
+        .select({ card: examItemCards })
         .from(examItemCards)
+        .leftJoin(
+          exams,
+          and(eq(exams.packId, examItemCards.packId), eq(exams.examId, examItemCards.examId)),
+        )
         .where(and(...where))
         .orderBy(asc(examItemCards.due))
-        .limit(opts.limit ?? 50);
-      return rows.map(toCard);
+        .limit(limit);
+      return rows.map((r) => toCard(r.card));
     },
 
-    /** Deck totals: due / total (non-suspended) / suspended, plus per-topic due/total. */
-    async deckCounts(now = Date.now()): Promise<ExamDeckCounts> {
-      const rows = await db
-        .select({
-          topic: examItemCards.topic,
-          suspended: examItemCards.suspended,
-          n: sql<number>`COUNT(*)`,
-          due: sql<number>`SUM(CASE WHEN ${examItemCards.due} <= ${now} THEN 1 ELSE 0 END)`,
-        })
-        .from(examItemCards)
-        .groupBy(examItemCards.topic, examItemCards.suspended);
+    /**
+     * Deck totals: due / total (non-suspended) / suspended, plus per-topic due/total.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     */
+    async deckCounts(now = Date.now(), opts: { level?: TorflLevel } = {}): Promise<ExamDeckCounts> {
+      const counted = {
+        topic: examItemCards.topic,
+        suspended: examItemCards.suspended,
+        n: sql<number>`COUNT(*)`,
+        due: sql<number>`SUM(CASE WHEN ${examItemCards.due} <= ${now} THEN 1 ELSE 0 END)`,
+      };
+      // THE LEVEL RULE (T75): the level join only when a level is asked for;
+      // without it the query is the pre-T75 one.
+      const rows = opts.level
+        ? await db
+            .select(counted)
+            .from(examItemCards)
+            .leftJoin(
+              exams,
+              and(eq(exams.packId, examItemCards.packId), eq(exams.examId, examItemCards.examId)),
+            )
+            .where(levelIs(opts.level, examItemCards.packId))
+            .groupBy(examItemCards.topic, examItemCards.suspended)
+        : await db
+            .select(counted)
+            .from(examItemCards)
+            .groupBy(examItemCards.topic, examItemCards.suspended);
       const out: ExamDeckCounts = { due: 0, total: 0, suspended: 0, byTopic: {} };
       for (const r of rows) {
         if (r.suspended) {
@@ -1038,6 +1154,7 @@ export function createExamsRepo(db: SumrakDB) {
     /**
      * T70 `torfl-deck-100`: non-suspended exam cards in the FSRS Review
      * state (2) — «cleared» items. Suspended cards don't count.
+     * Cross-level by design (TORFL_A2 A2-11): `torfl-deck-100` counts the A1 and A2 decks together, so this stays unscoped — never pass a level here.
      */
     async countCardsInReview(): Promise<number> {
       const rows = await db

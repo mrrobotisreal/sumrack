@@ -1,0 +1,2612 @@
+{
+  "id": "a2-exam-fixture",
+  "version": 1,
+  "type": "exam",
+  "title": {
+    "ru": "ТРКИ-А2: тестовый пакет",
+    "en": "TORFL A2: fixture pack"
+  },
+  "level": "A2",
+  "tags": [
+    "torfl",
+    "torfl-a2",
+    "torfl:fixture"
+  ],
+  "stories": [
+    {
+      "id": "ex-01",
+      "title": {
+        "ru": "Вопросы экзаменатора",
+        "en": "Examiner lines"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "tfa2fx01e01-s01",
+          "ru": "Как вы обычно проводите выходные?",
+          "en": "How do you usually spend your weekends?",
+          "tokens": [
+            {
+              "text": "Как",
+              "lemma": "как",
+              "translation": "how",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "вы",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "обычно",
+              "lemma": "обычно",
+              "translation": "usually",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "проводите",
+              "lemma": "проводить",
+              "translation": "spend (time)",
+              "pos": "verb",
+              "grammar": "2pl. pres.",
+              "level": "A2"
+            },
+            {
+              "text": "выходные",
+              "lemma": "выходной",
+              "translation": "weekend",
+              "pos": "noun",
+              "grammar": "pl. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01e01-s02",
+          "ru": "Какой фильм вы смотрели недавно?",
+          "en": "Which film did you watch recently?",
+          "tokens": [
+            {
+              "text": "Какой",
+              "lemma": "какой",
+              "translation": "which",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "вы",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "смотрели",
+              "lemma": "смотреть",
+              "translation": "watch",
+              "pos": "verb",
+              "grammar": "2pl. past",
+              "level": "A1"
+            },
+            {
+              "text": "недавно",
+              "lemma": "недавно",
+              "translation": "recently",
+              "pos": "adv",
+              "level": "A2"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01e01-s03",
+          "ru": "Ваш друг пригласил вас в кино, но вы заняты. Откажитесь и предложите другой день.",
+          "en": "Your friend invited you to the cinema, but you are busy. Refuse and suggest another day.",
+          "tokens": [
+            {
+              "text": "Ваш",
+              "lemma": "ваш",
+              "translation": "your",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "друг",
+              "lemma": "друг",
+              "translation": "friend",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "пригласил",
+              "lemma": "пригласить",
+              "translation": "invited",
+              "pos": "verb",
+              "grammar": "m.sg. past",
+              "level": "A2"
+            },
+            {
+              "text": "вас",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "acc.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "кино",
+              "lemma": "кино",
+              "translation": "cinema",
+              "pos": "noun",
+              "grammar": "n.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "но",
+              "lemma": "но",
+              "translation": "but",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "вы",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "заняты",
+              "lemma": "занятый",
+              "translation": "busy",
+              "pos": "adj",
+              "grammar": "pl. short pred.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            },
+            {
+              "text": "Откажитесь",
+              "lemma": "отказаться",
+              "translation": "refuse",
+              "pos": "verb",
+              "grammar": "2pl. imp.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "предложите",
+              "lemma": "предложить",
+              "translation": "suggest",
+              "pos": "verb",
+              "grammar": "2pl. imp.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "другой",
+              "lemma": "другой",
+              "translation": "another",
+              "pos": "adj",
+              "grammar": "m.sg. acc.",
+              "level": "A2"
+            },
+            {
+              "text": "день",
+              "lemma": "день",
+              "translation": "day",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01e01-s04",
+          "ru": "Вы хотите купить билеты в театр. Спросите, сколько они стоят.",
+          "en": "You want to buy tickets for the theatre. Ask how much they cost.",
+          "tokens": [
+            {
+              "text": "Вы",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "хотите",
+              "lemma": "хотеть",
+              "translation": "want",
+              "pos": "verb",
+              "grammar": "2pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "купить",
+              "lemma": "купить",
+              "translation": "buy",
+              "pos": "verb",
+              "grammar": "inf.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "билеты",
+              "lemma": "билет",
+              "translation": "ticket",
+              "pos": "noun",
+              "grammar": "m.pl. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "театр",
+              "lemma": "театр",
+              "translation": "theatre",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            },
+            {
+              "text": "Спросите",
+              "lemma": "спросить",
+              "translation": "ask",
+              "pos": "verb",
+              "grammar": "2pl. imp.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "сколько",
+              "lemma": "сколько",
+              "translation": "how much",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "они",
+              "lemma": "они",
+              "translation": "they",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "стоят",
+              "lemma": "стоить",
+              "translation": "cost",
+              "pos": "verb",
+              "grammar": "3pl. pres.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "ls-01",
+      "title": {
+        "ru": "Маша и Саша",
+        "en": "Masha and Sasha"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "tfa2fx01l01-s01",
+          "ru": "Привет, Саша! Ты свободен в субботу?",
+          "en": "Hi, Sasha! Are you free on Saturday?",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Саша",
+              "lemma": "Саша",
+              "translation": "Sasha",
+              "pos": "noun",
+              "grammar": "m.sg. voc. (= nom.)",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Ты",
+              "lemma": "ты",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "свободен",
+              "lemma": "свободный",
+              "translation": "free",
+              "pos": "adj",
+              "grammar": "m.sg. short pred.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "субботу",
+              "lemma": "суббота",
+              "translation": "Saturday",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01l01-s02",
+          "ru": "Привет, Маша! Да, свободен. Давай пойдём в кино.",
+          "en": "Hi, Masha! Yes, I'm free. Let's go to the cinema.",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Маша",
+              "lemma": "Маша",
+              "translation": "Masha",
+              "pos": "noun",
+              "grammar": "f.sg. voc. (= nom.)",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Да",
+              "lemma": "да",
+              "translation": "yes",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "свободен",
+              "lemma": "свободный",
+              "translation": "free",
+              "pos": "adj",
+              "grammar": "m.sg. short pred.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            },
+            {
+              "text": "Давай",
+              "lemma": "давай",
+              "translation": "let's",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "пойдём",
+              "lemma": "пойти",
+              "translation": "let's go",
+              "pos": "verb",
+              "grammar": "1pl. fut.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "кино",
+              "lemma": "кино",
+              "translation": "cinema",
+              "pos": "noun",
+              "grammar": "n.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01l01-s03",
+          "ru": "Хорошо! Во сколько встретимся?",
+          "en": "Good! What time shall we meet?",
+          "tokens": [
+            {
+              "text": "Хорошо",
+              "lemma": "хорошо",
+              "translation": "good, OK",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Во",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1",
+              "note": "во сколько = what time"
+            },
+            {
+              "text": "сколько",
+              "lemma": "сколько",
+              "translation": "what time",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "встретимся",
+              "lemma": "встретиться",
+              "translation": "meet",
+              "pos": "verb",
+              "grammar": "1pl. fut.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01l01-s04",
+          "ru": "В шесть часов. Встретимся у кинотеатра, хорошо?",
+          "en": "At six o'clock. Let's meet by the cinema, OK?",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "шесть",
+              "lemma": "шесть",
+              "translation": "six",
+              "pos": "numeral",
+              "level": "A1"
+            },
+            {
+              "text": "часов",
+              "lemma": "час",
+              "translation": "o'clock",
+              "pos": "noun",
+              "grammar": "m.pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            },
+            {
+              "text": "Встретимся",
+              "lemma": "встретиться",
+              "translation": "meet",
+              "pos": "verb",
+              "grammar": "1pl. fut.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "у",
+              "lemma": "у",
+              "translation": "by, at",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "кинотеатра",
+              "lemma": "кинотеатр",
+              "translation": "cinema",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "хорошо",
+              "lemma": "хорошо",
+              "translation": "OK",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01l01-s05",
+          "ru": "Отлично. До субботы!",
+          "en": "Great. See you on Saturday!",
+          "tokens": [
+            {
+              "text": "Отлично",
+              "lemma": "отлично",
+              "translation": "great",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            },
+            {
+              "text": "До",
+              "lemma": "до",
+              "translation": "until, see you",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "субботы",
+              "lemma": "суббота",
+              "translation": "Saturday",
+              "pos": "noun",
+              "grammar": "f.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01l01-s06",
+          "ru": "Пока! Не опоздай.",
+          "en": "Bye! Don't be late.",
+          "tokens": [
+            {
+              "text": "Пока",
+              "lemma": "пока",
+              "translation": "bye",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Не",
+              "lemma": "не",
+              "translation": "not",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "опоздай",
+              "lemma": "опоздать",
+              "translation": "be late",
+              "pos": "verb",
+              "grammar": "2sg. imp.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "md-note",
+      "title": {
+        "ru": "Сообщение: давай встретимся",
+        "en": "Message: let's meet"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "tfa2fx01d01-s01",
+          "ru": "Привет, Алина!",
+          "en": "Hi, Alina!",
+          "tokens": [
+            {
+              "text": "Привет",
+              "lemma": "привет",
+              "translation": "hi",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "Алина",
+              "lemma": "Алина",
+              "translation": "Alina",
+              "pos": "noun",
+              "grammar": "f.sg. voc. (= nom.)",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01d01-s02",
+          "ru": "В пятницу я работаю допоздна, поэтому предлагаю субботу.",
+          "en": "On Friday I work late, so I suggest Saturday.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "пятницу",
+              "lemma": "пятница",
+              "translation": "Friday",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "работаю",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "допоздна",
+              "lemma": "допоздна",
+              "translation": "until late",
+              "pos": "adv",
+              "level": "A2",
+              "note": "reason"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "поэтому",
+              "lemma": "поэтому",
+              "translation": "so, that is why",
+              "pos": "conj",
+              "level": "A2"
+            },
+            {
+              "text": "предлагаю",
+              "lemma": "предлагать",
+              "translation": "suggest",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A2"
+            },
+            {
+              "text": "субботу",
+              "lemma": "суббота",
+              "translation": "Saturday",
+              "pos": "noun",
+              "grammar": "f.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01d01-s03",
+          "ru": "Давай встретимся в три часа дня в кафе возле парка в Киеве.",
+          "en": "Let's meet at three in the afternoon at a café near the park in Kyiv.",
+          "tokens": [
+            {
+              "text": "Давай",
+              "lemma": "давай",
+              "translation": "let's",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "встретимся",
+              "lemma": "встретиться",
+              "translation": "meet",
+              "pos": "verb",
+              "grammar": "1pl. fut.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "три",
+              "lemma": "три",
+              "translation": "three",
+              "pos": "numeral",
+              "level": "A1"
+            },
+            {
+              "text": "часа",
+              "lemma": "час",
+              "translation": "hour, o'clock",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "дня",
+              "lemma": "день",
+              "translation": "afternoon",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "кафе",
+              "lemma": "кафе",
+              "translation": "café",
+              "pos": "noun",
+              "grammar": "n.sg. indecl.",
+              "level": "A1"
+            },
+            {
+              "text": "возле",
+              "lemma": "возле",
+              "translation": "near",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A2"
+            },
+            {
+              "text": "парка",
+              "lemma": "парк",
+              "translation": "park",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Киеве",
+              "lemma": "Киев",
+              "translation": "Kyiv",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01d01-s04",
+          "ru": "Если это неудобно, напиши мне.",
+          "en": "If this is inconvenient, write to me.",
+          "tokens": [
+            {
+              "text": "Если",
+              "lemma": "если",
+              "translation": "if",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "это",
+              "lemma": "это",
+              "translation": "this",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "неудобно",
+              "lemma": "неудобно",
+              "translation": "inconvenient",
+              "pos": "pred",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "напиши",
+              "lemma": "написать",
+              "translation": "write",
+              "pos": "verb",
+              "grammar": "2sg. imp.; perfective",
+              "level": "A2"
+            },
+            {
+              "text": "мне",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "dat.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01d01-s05",
+          "ru": "Пока! Целую.",
+          "en": "Bye! Kisses.",
+          "tokens": [
+            {
+              "text": "Пока",
+              "lemma": "пока",
+              "translation": "bye",
+              "pos": "intj",
+              "level": "A1"
+            },
+            {
+              "text": "!",
+              "isPunct": true
+            },
+            {
+              "text": "Целую",
+              "lemma": "целовать",
+              "translation": "kiss (I send you)",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "rd-01",
+      "title": {
+        "ru": "Три фильма",
+        "en": "Three films"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "tfa2fx01r01-s01",
+          "ru": "Фильм «Старый дом».",
+          "en": "The film \"Old House\".",
+          "tokens": [
+            {
+              "text": "Фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "Старый",
+              "spaceBefore": false,
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "дом",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s02",
+          "ru": "Семья переехала в старый дом, и там начались странные звуки.",
+          "en": "A family moved into an old house, and strange sounds started there.",
+          "tokens": [
+            {
+              "text": "Семья",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "переехала",
+              "lemma": "переехать",
+              "translation": "moved (to a new place)",
+              "pos": "verb",
+              "grammar": "3sg. past f.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "into",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "старый",
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "дом",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "там",
+              "lemma": "там",
+              "translation": "there",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "начались",
+              "lemma": "начаться",
+              "translation": "started",
+              "pos": "verb",
+              "grammar": "3pl. past",
+              "level": "A2"
+            },
+            {
+              "text": "странные",
+              "lemma": "странный",
+              "translation": "strange",
+              "pos": "adj",
+              "grammar": "pl. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "звуки",
+              "lemma": "звук",
+              "translation": "sound",
+              "pos": "noun",
+              "grammar": "m.pl. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s03",
+          "ru": "Этот фильм страшнее, чем другие фильмы этого года.",
+          "en": "This film is scarier than other films this year.",
+          "tokens": [
+            {
+              "text": "Этот",
+              "lemma": "этот",
+              "translation": "this",
+              "pos": "det",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "страшнее",
+              "lemma": "страшный",
+              "translation": "scarier",
+              "pos": "adj",
+              "grammar": "comparative",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "чем",
+              "lemma": "чем",
+              "translation": "than",
+              "pos": "conj",
+              "level": "A2",
+              "note": "страшнее … чем = scarier than"
+            },
+            {
+              "text": "другие",
+              "lemma": "другой",
+              "translation": "other",
+              "pos": "adj",
+              "grammar": "pl. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "фильмы",
+              "lemma": "фильм",
+              "translation": "films",
+              "pos": "noun",
+              "grammar": "m.pl. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "этого",
+              "lemma": "этот",
+              "translation": "this",
+              "pos": "det",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "года",
+              "lemma": "год",
+              "translation": "year",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s04",
+          "ru": "Фильм «Зимний вечер».",
+          "en": "The film \"Winter Evening\".",
+          "tokens": [
+            {
+              "text": "Фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "Зимний",
+              "spaceBefore": false,
+              "lemma": "зимний",
+              "translation": "winter",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A2"
+            },
+            {
+              "text": "вечер",
+              "lemma": "вечер",
+              "translation": "evening",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s05",
+          "ru": "Молодая женщина приехала в маленький город и встретила старого друга.",
+          "en": "A young woman came to a small town and met an old friend.",
+          "tokens": [
+            {
+              "text": "Молодая",
+              "lemma": "молодой",
+              "translation": "young",
+              "pos": "adj",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "женщина",
+              "lemma": "женщина",
+              "translation": "woman",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "приехала",
+              "lemma": "приехать",
+              "translation": "came (by transport)",
+              "pos": "verb",
+              "grammar": "3sg. past f.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "to",
+              "pos": "prep",
+              "grammar": "+ acc.",
+              "level": "A1"
+            },
+            {
+              "text": "маленький",
+              "lemma": "маленький",
+              "translation": "small",
+              "pos": "adj",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "город",
+              "lemma": "город",
+              "translation": "town",
+              "pos": "noun",
+              "grammar": "m.sg. acc.",
+              "level": "A1"
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "встретила",
+              "lemma": "встретить",
+              "translation": "met",
+              "pos": "verb",
+              "grammar": "3sg. past f.",
+              "level": "A2"
+            },
+            {
+              "text": "старого",
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "m.sg. gen. (animate acc.)",
+              "level": "A2"
+            },
+            {
+              "text": "друга",
+              "lemma": "друг",
+              "translation": "friend",
+              "pos": "noun",
+              "grammar": "m.sg. gen. (animate acc.)",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s06",
+          "ru": "Это добрый фильм, который можно смотреть вместе с семьёй.",
+          "en": "It is a kind film that you can watch together with the family.",
+          "tokens": [
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "this, it",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "добрый",
+              "lemma": "добрый",
+              "translation": "kind",
+              "pos": "adj",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "который",
+              "lemma": "который",
+              "translation": "which, that",
+              "pos": "pron",
+              "grammar": "m.sg. nom. (relative)",
+              "level": "A2"
+            },
+            {
+              "text": "можно",
+              "lemma": "можно",
+              "translation": "one can",
+              "pos": "pred",
+              "level": "A1"
+            },
+            {
+              "text": "смотреть",
+              "lemma": "смотреть",
+              "translation": "watch",
+              "pos": "verb",
+              "grammar": "inf.",
+              "level": "A1"
+            },
+            {
+              "text": "вместе",
+              "lemma": "вместе",
+              "translation": "together",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "с",
+              "lemma": "с",
+              "translation": "with",
+              "pos": "prep",
+              "grammar": "+ instr.",
+              "level": "A1"
+            },
+            {
+              "text": "семьёй",
+              "lemma": "семья",
+              "translation": "family",
+              "pos": "noun",
+              "grammar": "f.sg. instr.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s07",
+          "ru": "Фильм «Друг из Львова».",
+          "en": "The film \"A Friend from Lviv\".",
+          "tokens": [
+            {
+              "text": "Фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "«",
+              "isPunct": true,
+              "spaceBefore": true
+            },
+            {
+              "text": "Друг",
+              "spaceBefore": false,
+              "lemma": "друг",
+              "translation": "friend",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "из",
+              "lemma": "из",
+              "translation": "from",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "Львова",
+              "lemma": "Львов",
+              "translation": "Lviv",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "»",
+              "isPunct": true
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s08",
+          "ru": "Мальчик из Львова помог новому соседу в трудной ситуации.",
+          "en": "A boy from Lviv helped his new neighbour in a difficult situation.",
+          "tokens": [
+            {
+              "text": "Мальчик",
+              "lemma": "мальчик",
+              "translation": "boy",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "из",
+              "lemma": "из",
+              "translation": "from",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "Львова",
+              "lemma": "Львов",
+              "translation": "Lviv",
+              "pos": "noun",
+              "grammar": "m.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "помог",
+              "lemma": "помочь",
+              "translation": "helped",
+              "pos": "verb",
+              "grammar": "m.sg. past",
+              "level": "A2"
+            },
+            {
+              "text": "новому",
+              "lemma": "новый",
+              "translation": "new",
+              "pos": "adj",
+              "grammar": "m.sg. dat.",
+              "level": "A2"
+            },
+            {
+              "text": "соседу",
+              "lemma": "сосед",
+              "translation": "neighbour",
+              "pos": "noun",
+              "grammar": "m.sg. dat.",
+              "level": "A2"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "трудной",
+              "lemma": "трудный",
+              "translation": "difficult",
+              "pos": "adj",
+              "grammar": "f.sg. prep.",
+              "level": "A2"
+            },
+            {
+              "text": "ситуации",
+              "lemma": "ситуация",
+              "translation": "situation",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A2"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "tfa2fx01r01-s09",
+          "ru": "Фильм был интереснее, чем я думал.",
+          "en": "The film was more interesting than I thought.",
+          "tokens": [
+            {
+              "text": "Фильм",
+              "lemma": "фильм",
+              "translation": "film",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "был",
+              "lemma": "быть",
+              "translation": "was",
+              "pos": "verb",
+              "grammar": "m.sg. past",
+              "level": "A1"
+            },
+            {
+              "text": "интереснее",
+              "lemma": "интересный",
+              "translation": "more interesting",
+              "pos": "adj",
+              "grammar": "comparative",
+              "level": "A2"
+            },
+            {
+              "text": ",",
+              "isPunct": true
+            },
+            {
+              "text": "чем",
+              "lemma": "чем",
+              "translation": "than",
+              "pos": "conj",
+              "level": "A2"
+            },
+            {
+              "text": "я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думал",
+              "lemma": "думать",
+              "translation": "thought",
+              "pos": "verb",
+              "grammar": "m.sg. past",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "exams": [
+    {
+      "id": "a2-drill-fx-time",
+      "format": "torfl",
+      "level": "A2",
+      "mode": "drill",
+      "title": {
+        "ru": "Время и даты",
+        "en": "Time and dates"
+      },
+      "blurb": "Time expressions in the accusative and genitive — six fixture items.",
+      "subtests": [
+        {
+          "id": "lexgram",
+          "kind": "lexgram",
+          "title": {
+            "ru": "Лексика. Грамматика",
+            "en": "Vocabulary. Grammar"
+          },
+          "instructions": {
+            "ru": "Выберите один вариант ответа.",
+            "en": "Choose one answer."
+          },
+          "durationMin": 5,
+          "dictionary": false,
+          "navigation": "free",
+          "pointsPerItem": 1,
+          "maxPoints": 6,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задания 1–6.",
+                "en": "Items 1–6."
+              },
+              "items": [
+                {
+                  "id": "dt01",
+                  "topic": "case-time",
+                  "explain": "в + accusative for clock time: в семь часов.",
+                  "kind": "choice",
+                  "stem": "Концерт начинается в … часов вечера.",
+                  "stemEn": "The concert starts at seven in the evening.",
+                  "options": [
+                    "семь",
+                    "семи"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "dt02",
+                  "topic": "case-time",
+                  "explain": "в восемь утра — the number stays in the accusative.",
+                  "kind": "choice",
+                  "stem": "Мы встречаемся в … утра.",
+                  "stemEn": "We meet at eight in the morning.",
+                  "options": [
+                    "восемь",
+                    "восьми",
+                    "восемью"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "dt03",
+                  "topic": "case-time",
+                  "explain": "в два часа — accusative (два), with часа in the genitive singular after two.",
+                  "kind": "choice",
+                  "stem": "Урок заканчивается в … часа.",
+                  "stemEn": "The lesson ends at two o'clock.",
+                  "options": [
+                    "два",
+                    "двух",
+                    "двум"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "dt04",
+                  "topic": "case-time",
+                  "explain": "в пятницу — days of the week take в + accusative.",
+                  "kind": "choice",
+                  "stem": "Мы поедем в … .",
+                  "stemEn": "We will go on Friday.",
+                  "options": [
+                    "пятница",
+                    "пятницу",
+                    "пятницы"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "dt05",
+                  "topic": "case-time",
+                  "explain": "в десять вечера — the accusative of the hour, not the genitive.",
+                  "kind": "choice",
+                  "stem": "Мы будем дома в … вечера.",
+                  "stemEn": "We will be home at ten in the evening.",
+                  "options": [
+                    "десять",
+                    "десяти"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "dt06",
+                  "topic": "case-time",
+                  "explain": "в субботу — the day of the week in the accusative (в + -у). The bare nominative or a wrong case earns half credit.",
+                  "kind": "typed",
+                  "prompt": "Встреча будет в (суббота). Напишите правильную форму.",
+                  "accept": [
+                    "субботу"
+                  ],
+                  "half": [
+                    "суббота",
+                    "субботе"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a2-drill-fx-info",
+      "format": "torfl",
+      "level": "A2",
+      "mode": "drill",
+      "title": {
+        "ru": "Запишите информацию",
+        "en": "Info capture"
+      },
+      "blurb": "Listen to the dialogue and capture the details — two fixture items.",
+      "subtests": [
+        {
+          "id": "listening",
+          "kind": "listening",
+          "title": {
+            "ru": "Аудирование",
+            "en": "Listening"
+          },
+          "instructions": {
+            "ru": "Прослушайте диалог и ответьте на вопросы.",
+            "en": "Listen to the dialogue and answer."
+          },
+          "durationMin": 5,
+          "dictionary": false,
+          "navigation": "linear",
+          "pointsPerItem": 6,
+          "maxPoints": 12,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задания 1–2. Прослушайте диалог.",
+                "en": "Items 1–2. Listen to the dialogue."
+              },
+              "items": [
+                {
+                  "id": "di01",
+                  "topic": "listen-detail",
+                  "explain": "Ты свободен в субботу? — the meeting is on Saturday (в субботу).",
+                  "kind": "choice",
+                  "stem": "Встреча будет в …",
+                  "options": [
+                    "субботу",
+                    "пятницу",
+                    "воскресенье"
+                  ],
+                  "answer": 0,
+                  "audio": {
+                    "storyId": "ls-01"
+                  }
+                },
+                {
+                  "id": "di02",
+                  "topic": "listen-info",
+                  "explain": "Встретимся у кинотеатра — «у» + genitive for the meeting place. The bare or wrong-case form earns half credit.",
+                  "kind": "typed",
+                  "prompt": "Друзья встретятся (где?)",
+                  "accept": [
+                    "у кинотеатра",
+                    "около кинотеатра"
+                  ],
+                  "half": [
+                    "у кинотеатр",
+                    "кинотеатр"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a2-mock-fx",
+      "format": "torfl",
+      "level": "A2",
+      "mode": "mock",
+      "title": {
+        "ru": "Вариант ФХ (А2)",
+        "en": "Fixture mock (A2)"
+      },
+      "subtests": [
+        {
+          "id": "writing",
+          "kind": "writing",
+          "title": {
+            "ru": "Письмо",
+            "en": "Writing"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 50 минут. Можно пользоваться словарём.",
+            "en": "50 minutes · dictionary allowed."
+          },
+          "durationMin": 50,
+          "dictionary": true,
+          "navigation": "free",
+          "maxPoints": 100,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задание 1. Напишите письмо другу.",
+                "en": "Task 1. Write a letter to a friend."
+              },
+              "items": [
+                {
+                  "id": "wr01",
+                  "topic": "write-letter",
+                  "kind": "writing",
+                  "task": {
+                    "ru": "Вы закончили курс русского языка. Напишите письмо другу и расскажите об этом.",
+                    "en": "You finished a Russian language course. Write a letter to a friend and tell them about it."
+                  },
+                  "bullets": [
+                    {
+                      "id": "b1",
+                      "text": {
+                        "ru": "где и когда был курс",
+                        "en": "where and when the course was"
+                      },
+                      "cues": [
+                        "курс"
+                      ]
+                    },
+                    {
+                      "id": "b2",
+                      "text": {
+                        "ru": "сколько времени вы учили русский",
+                        "en": "how long you studied Russian"
+                      },
+                      "cues": [
+                        "месяц*",
+                        "год*",
+                        "недел*"
+                      ]
+                    },
+                    {
+                      "id": "b3",
+                      "text": {
+                        "ru": "кто был преподавателем",
+                        "en": "who the teacher was"
+                      },
+                      "cues": [
+                        "преподават*",
+                        "учител*"
+                      ]
+                    },
+                    {
+                      "id": "b4",
+                      "text": {
+                        "ru": "что было самым трудным",
+                        "en": "what was the hardest part"
+                      },
+                      "cues": [
+                        "трудн*"
+                      ]
+                    },
+                    {
+                      "id": "b5",
+                      "text": {
+                        "ru": "что вам понравилось",
+                        "en": "what you liked"
+                      },
+                      "cues": [
+                        "понрав*"
+                      ]
+                    },
+                    {
+                      "id": "b6",
+                      "text": {
+                        "ru": "спросите друга, хочет ли он тоже учиться",
+                        "en": "ask your friend whether they want to study too"
+                      },
+                      "cues": [
+                        "хочешь",
+                        "хочет"
+                      ]
+                    }
+                  ],
+                  "minSentences": 10,
+                  "minQuestions": 3,
+                  "maxQuestions": 5
+                }
+              ]
+            },
+            {
+              "id": "p2",
+              "instructions": {
+                "ru": "Задание 2. Напишите сообщение.",
+                "en": "Task 2. Write a message."
+              },
+              "items": [
+                {
+                  "id": "wr02",
+                  "topic": "write-note",
+                  "kind": "writing",
+                  "task": {
+                    "ru": "Напишите другу сообщение и предложите встретиться. Укажите причину, день, время и место.",
+                    "en": "Write a message to a friend and propose meeting. Give a reason, the day, the time and the place."
+                  },
+                  "bullets": [
+                    {
+                      "id": "b1",
+                      "text": {
+                        "ru": "причина: почему вы не можете в другой день",
+                        "en": "reason: why you cannot make another day"
+                      },
+                      "cues": [
+                        "работ*",
+                        "занят*"
+                      ]
+                    },
+                    {
+                      "id": "b2",
+                      "text": {
+                        "ru": "какой день",
+                        "en": "which day"
+                      },
+                      "cues": [
+                        "суббот*",
+                        "пятниц*",
+                        "воскресен*"
+                      ]
+                    },
+                    {
+                      "id": "b3",
+                      "text": {
+                        "ru": "во сколько",
+                        "en": "what time"
+                      },
+                      "cues": [
+                        "час*",
+                        "утр*",
+                        "вечер*"
+                      ]
+                    },
+                    {
+                      "id": "b4",
+                      "text": {
+                        "ru": "где",
+                        "en": "where"
+                      },
+                      "cues": [
+                        "кафе",
+                        "парк*",
+                        "кинотеатр*"
+                      ]
+                    }
+                  ],
+                  "minSentences": 5,
+                  "minQuestions": 0,
+                  "model": {
+                    "storyId": "md-note"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lexgram",
+          "kind": "lexgram",
+          "title": {
+            "ru": "Лексика. Грамматика",
+            "en": "Vocabulary. Grammar"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 50 минут. Пользоваться словарём нельзя.",
+            "en": "50 minutes · no dictionary."
+          },
+          "durationMin": 50,
+          "dictionary": false,
+          "navigation": "free",
+          "pointsPerItem": 1,
+          "maxPoints": 10,
+          "parts": [
+            {
+              "id": "p1",
+              "instructions": {
+                "ru": "Задания 1–5. Выберите один вариант ответа.",
+                "en": "Items 1–5. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "lg01",
+                  "topic": "lex-phrases",
+                  "explain": "мне жаль — «I am sorry» (apology/regret); «нравится» is «likes», «нужно» is «need».",
+                  "kind": "choice",
+                  "stem": "Мне очень … , что я опоздал.",
+                  "options": [
+                    "жаль",
+                    "нравится",
+                    "нужно"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg02",
+                  "topic": "case-plural",
+                  "explain": "есть + plural noun in the accusative (= nominative for inanimate): новые книги.",
+                  "kind": "choice",
+                  "stem": "В этом магазине есть новые …",
+                  "options": [
+                    "книги",
+                    "книг",
+                    "книгам"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg03",
+                  "topic": "numerals",
+                  "explain": "numbers 5–20 take the genitive plural: двенадцать студентов.",
+                  "kind": "choice",
+                  "stem": "В классе двенадцать …",
+                  "options": [
+                    "студентов",
+                    "студенты",
+                    "студента"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg04",
+                  "topic": "case-time",
+                  "explain": "в + accusative for the clock time: в семь часов.",
+                  "kind": "choice",
+                  "stem": "Концерт начинается в … часов вечера.",
+                  "options": [
+                    "семь",
+                    "семи"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg05",
+                  "topic": "comparative",
+                  "explain": "comparative with чем: интереснее, чем тот.",
+                  "kind": "choice",
+                  "stem": "Этот фильм … , чем тот.",
+                  "options": [
+                    "интереснее",
+                    "интересен",
+                    "интересный"
+                  ],
+                  "answer": 0
+                }
+              ]
+            },
+            {
+              "id": "p2",
+              "instructions": {
+                "ru": "Задания 6–10. Выберите один вариант ответа.",
+                "en": "Items 6–10. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "lg06",
+                  "topic": "verb-motion-prefix",
+                  "explain": "one-way trip to a place: пойду в магазин (приду = come to where the speaker is).",
+                  "kind": "choice",
+                  "stem": "Я … в магазин за хлебом.",
+                  "options": [
+                    "пойду",
+                    "приду",
+                    "уйду"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg07",
+                  "topic": "verb-aspect",
+                  "explain": "a habitual action is imperfective: каждый день я пишу.",
+                  "kind": "choice",
+                  "stem": "Каждый день я … письма.",
+                  "options": [
+                    "пишу",
+                    "напишу"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg08",
+                  "topic": "clauses",
+                  "explain": "потому что introduces the reason clause; поэтому gives the result.",
+                  "kind": "choice",
+                  "stem": "Я не пошёл на работу, … был болен.",
+                  "options": [
+                    "потому что",
+                    "поэтому"
+                  ],
+                  "answer": 0
+                },
+                {
+                  "id": "lg09",
+                  "topic": "case-prep",
+                  "explain": "на почте — «на» with post office, as with работа, радио.",
+                  "kind": "choice",
+                  "stem": "Мой брат работает … почте.",
+                  "options": [
+                    "в",
+                    "на"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "lg10",
+                  "topic": "case-prep",
+                  "explain": "в Киеве — «в» with a city.",
+                  "kind": "choice",
+                  "stem": "Мы живём … Киеве.",
+                  "options": [
+                    "в",
+                    "на"
+                  ],
+                  "answer": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "reading",
+          "kind": "reading",
+          "title": {
+            "ru": "Чтение",
+            "en": "Reading"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 50 минут. Можно пользоваться словарём.",
+            "en": "50 minutes · dictionary allowed."
+          },
+          "durationMin": 50,
+          "dictionary": true,
+          "navigation": "free",
+          "pointsPerItem": 6,
+          "maxPoints": 30,
+          "parts": [
+            {
+              "id": "p3",
+              "instructions": {
+                "ru": "Задания 1–5. Прочитайте тексты. Выберите один вариант ответа.",
+                "en": "Items 1–5. Read the texts. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "rd01",
+                  "topic": "read-match",
+                  "kind": "choice",
+                  "stem": "Семья переехала в старый дом, и там начались странные звуки. Это фильм …",
+                  "options": [
+                    "«Старый дом»",
+                    "«Зимний вечер»",
+                    "«Друг из Львова»"
+                  ],
+                  "answer": 0,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                },
+                {
+                  "id": "rd02",
+                  "topic": "read-match",
+                  "kind": "choice",
+                  "stem": "Молодая женщина приехала в маленький город. Это фильм …",
+                  "options": [
+                    "«Старый дом»",
+                    "«Зимний вечер»",
+                    "«Друг из Львова»"
+                  ],
+                  "answer": 1,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                },
+                {
+                  "id": "rd03",
+                  "topic": "read-match",
+                  "kind": "choice",
+                  "stem": "Мальчик из Львова помог новому соседу. Это фильм …",
+                  "options": [
+                    "«Старый дом»",
+                    "«Зимний вечер»",
+                    "«Друг из Львова»"
+                  ],
+                  "answer": 2,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                },
+                {
+                  "id": "rd04",
+                  "topic": "read-match",
+                  "kind": "choice",
+                  "stem": "Этот фильм страшнее других фильмов этого года. Это фильм …",
+                  "options": [
+                    "«Старый дом»",
+                    "«Зимний вечер»",
+                    "«Друг из Львова»"
+                  ],
+                  "answer": 0,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                },
+                {
+                  "id": "rd05",
+                  "topic": "read-match",
+                  "kind": "choice",
+                  "stem": "Это добрый фильм, который можно смотреть вместе с семьёй. Это фильм …",
+                  "options": [
+                    "«Старый дом»",
+                    "«Зимний вечер»",
+                    "«Друг из Львова»"
+                  ],
+                  "answer": 1,
+                  "passage": {
+                    "storyId": "rd-01"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "listening",
+          "kind": "listening",
+          "title": {
+            "ru": "Аудирование",
+            "en": "Listening"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 30 минут. Каждый текст звучит два раза.",
+            "en": "30 minutes · every text plays twice."
+          },
+          "durationMin": 30,
+          "dictionary": false,
+          "navigation": "linear",
+          "pointsPerItem": 6,
+          "maxPoints": 18,
+          "audioPlays": 2,
+          "parts": [
+            {
+              "id": "p4",
+              "instructions": {
+                "ru": "Задания 1–3. Прослушайте диалог Маши и Саши. Выберите один вариант ответа.",
+                "en": "Items 1–3. Listen to Masha and Sasha. Choose one answer."
+              },
+              "items": [
+                {
+                  "id": "ls01",
+                  "topic": "listen-goal",
+                  "kind": "choice",
+                  "stem": "Друзья договариваются …",
+                  "options": [
+                    "пойти в кино",
+                    "пойти в театр",
+                    "пойти в парк"
+                  ],
+                  "answer": 0,
+                  "audio": {
+                    "storyId": "ls-01"
+                  }
+                },
+                {
+                  "id": "ls02",
+                  "topic": "listen-detail",
+                  "kind": "choice",
+                  "stem": "Встреча будет в … часов.",
+                  "options": [
+                    "пять",
+                    "шесть",
+                    "семь"
+                  ],
+                  "answer": 1
+                },
+                {
+                  "id": "ls03",
+                  "topic": "listen-detail",
+                  "kind": "choice",
+                  "stem": "Друзья встретятся в …",
+                  "options": [
+                    "субботу",
+                    "пятницу",
+                    "воскресенье"
+                  ],
+                  "answer": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "speaking",
+          "kind": "speaking",
+          "title": {
+            "ru": "Говорение",
+            "en": "Speaking"
+          },
+          "instructions": {
+            "ru": "Время выполнения — 25 минут.",
+            "en": "25 minutes."
+          },
+          "durationMin": 25,
+          "dictionary": false,
+          "navigation": "linear",
+          "maxPoints": 100,
+          "parts": [
+            {
+              "id": "t1",
+              "instructions": {
+                "ru": "Задание 1. Ответьте на вопросы.",
+                "en": "Task 1. Answer the questions."
+              },
+              "items": [
+                {
+                  "id": "sp01",
+                  "topic": "speak-reply",
+                  "kind": "speaking-reply",
+                  "prompt": {
+                    "storyId": "ex-01",
+                    "sentenceIds": [
+                      "tfa2fx01e01-s01"
+                    ]
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "free",
+                        "id": "weekend",
+                        "required": true,
+                        "minTokens": 3,
+                        "cues": [
+                          "обычно",
+                          "выходн*"
+                        ]
+                      }
+                    ],
+                    "accept": [
+                      "Обычно я гуляю с друзьями."
+                    ]
+                  },
+                  "minTokens": 4
+                },
+                {
+                  "id": "sp02",
+                  "topic": "speak-reply",
+                  "kind": "speaking-reply",
+                  "prompt": {
+                    "storyId": "ex-01",
+                    "sentenceIds": [
+                      "tfa2fx01e01-s02"
+                    ]
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "free",
+                        "id": "film",
+                        "required": true,
+                        "minTokens": 3,
+                        "cues": [
+                          "фильм*"
+                        ]
+                      }
+                    ],
+                    "accept": [
+                      "Недавно я смотрел фильм «Старый дом»."
+                    ]
+                  },
+                  "minTokens": 4
+                }
+              ],
+              "timeSec": 300
+            },
+            {
+              "id": "t2",
+              "instructions": {
+                "ru": "Задание 2. Прочитайте ситуацию и начните диалог.",
+                "en": "Task 2. Read the situation and start the dialogue."
+              },
+              "items": [
+                {
+                  "id": "sp03",
+                  "topic": "speak-situation",
+                  "kind": "speaking-situation",
+                  "prompt": {
+                    "storyId": "ex-01",
+                    "sentenceIds": [
+                      "tfa2fx01e01-s03"
+                    ]
+                  },
+                  "situation": {
+                    "ru": "Ваш друг пригласил вас в кино, но вы заняты. Откажитесь и предложите другой день.",
+                    "en": "Your friend invited you to the cinema, but you are busy. Refuse and suggest another day."
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "free",
+                        "id": "refuse",
+                        "required": true,
+                        "minTokens": 4,
+                        "cues": [
+                          "извин*",
+                          "занят*",
+                          "не могу"
+                        ]
+                      }
+                    ],
+                    "accept": [
+                      "Извини, я занят. Давай в среду?"
+                    ]
+                  },
+                  "minTokens": 4
+                },
+                {
+                  "id": "sp04",
+                  "topic": "speak-situation",
+                  "kind": "speaking-situation",
+                  "prompt": {
+                    "storyId": "ex-01",
+                    "sentenceIds": [
+                      "tfa2fx01e01-s04"
+                    ]
+                  },
+                  "situation": {
+                    "ru": "Вы хотите купить билеты в театр. Спросите, сколько они стоят.",
+                    "en": "You want to buy theatre tickets. Ask how much they cost."
+                  },
+                  "expect": {
+                    "slots": [
+                      {
+                        "kind": "free",
+                        "id": "price",
+                        "required": true,
+                        "minTokens": 3,
+                        "cues": [
+                          "сколько"
+                        ]
+                      }
+                    ],
+                    "accept": [
+                      "Сколько стоят билеты?"
+                    ]
+                  },
+                  "minTokens": 4
+                }
+              ],
+              "timeSec": 300
+            },
+            {
+              "id": "t3",
+              "instructions": {
+                "ru": "Задание 3. Расскажите о празднике.",
+                "en": "Task 3. Talk about a holiday."
+              },
+              "items": [
+                {
+                  "id": "sp05",
+                  "topic": "speak-monologue",
+                  "kind": "speaking-monologue",
+                  "topicTitle": {
+                    "ru": "Мой любимый праздник",
+                    "en": "My favourite holiday"
+                  },
+                  "questions": [
+                    {
+                      "ru": "Какой ваш любимый праздник?",
+                      "cues": [
+                        "праздник*"
+                      ]
+                    },
+                    {
+                      "ru": "Когда он бывает?",
+                      "cues": [
+                        "декабр*",
+                        "январ*"
+                      ]
+                    },
+                    {
+                      "ru": "Как вы его празднуете?",
+                      "cues": [
+                        "празднуем",
+                        "праздную"
+                      ]
+                    },
+                    {
+                      "ru": "Кто бывает с вами?",
+                      "cues": [
+                        "друз*",
+                        "семь*",
+                        "родител*"
+                      ]
+                    },
+                    {
+                      "ru": "Что вы едите и пьёте?",
+                      "cues": [
+                        "ем",
+                        "едим"
+                      ]
+                    },
+                    {
+                      "ru": "Что вам нравится больше всего?",
+                      "cues": [
+                        "нравится",
+                        "нравит*"
+                      ]
+                    }
+                  ],
+                  "minSentences": 12,
+                  "maxSentences": 15,
+                  "prepSec": 600,
+                  "answerSec": 300
+                }
+              ],
+              "timeSec": 900
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "category": "torfl-a2"
+}

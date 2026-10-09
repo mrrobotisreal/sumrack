@@ -11,6 +11,8 @@ describe('resolveAmbientTheme', () => {
     ['education', 'action', 'education'],
     ['torfl', null, 'education'],
     ['torfl', 'horror', 'education'],
+    ['torfl-a2', null, 'education'],
+    ['torfl-a2', 'horror', 'education'],
     ['stories', 'comedy', 'comedy'],
     ['stories', 'action', 'action'],
     ['stories', 'horror', 'horror'],

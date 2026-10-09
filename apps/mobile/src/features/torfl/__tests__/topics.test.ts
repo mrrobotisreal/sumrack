@@ -12,17 +12,38 @@ import {
 } from '../topics';
 
 describe('topics (TORFL §3.4)', () => {
-  it('covers the 27 §3.4 slugs with their subtest kind', () => {
-    expect(TOPIC_ORDER).toHaveLength(27);
-    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'lexgram')).toHaveLength(14);
-    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'reading')).toHaveLength(4);
-    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'listening')).toHaveLength(5);
+  it('covers the 27 §3.4 slugs + the 11 A2 additions with their subtest kind', () => {
+    expect(TOPIC_ORDER).toHaveLength(38);
+    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'lexgram')).toHaveLength(21);
+    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'reading')).toHaveLength(5);
+    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'listening')).toHaveLength(7);
+    expect(TOPIC_ORDER.filter((t) => TOPICS[t].subtestKind === 'writing')).toHaveLength(2);
     expect(topicLabel('case-prep')).toEqual({
       ru: 'Предложный',
       en: 'Prepositional case',
       subtestKind: 'lexgram',
     });
     expect(topicLabel('speak-monologue').ru).toBe('Монолог');
+  });
+
+  it('the 11 A2 slugs carry their T75 RU labels and sort after their A1 neighbours', () => {
+    expect(topicLabel('lex-phrases')).toEqual({
+      ru: 'Речевой этикет',
+      en: 'Speech etiquette',
+      subtestKind: 'lexgram',
+    });
+    expect(topicLabel('case-plural').ru).toBe('Падежи во мн. числе');
+    expect(topicLabel('case-time').ru).toBe('Время и даты');
+    expect(topicLabel('numerals').ru).toBe('Числительные');
+    expect(topicLabel('comparative').ru).toBe('Сравнение');
+    expect(topicLabel('verb-motion-prefix').ru).toBe('Приставочные глаголы движения');
+    expect(topicLabel('clauses').ru).toBe('Сложное предложение');
+    expect(topicLabel('read-match').ru).toBe('Какой фильм?');
+    expect(topicLabel('listen-goal').ru).toBe('Цель диалога');
+    expect(topicLabel('listen-monologue').ru).toBe('Монолог');
+    expect(topicLabel('write-note').ru).toBe('Записка / сообщение');
+    expect(compareTopics('conj', 'lex-phrases')).toBeLessThan(0);
+    expect(compareTopics('write-letter', 'write-note')).toBeLessThan(0);
   });
 
   it('an unknown slug renders raw (never dropped)', () => {

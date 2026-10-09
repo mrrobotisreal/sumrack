@@ -77,6 +77,26 @@ describe('sample pack fixtures', () => {
     ).toHaveLength(3);
   });
 
+  it('T75 A2 exam fixture validates (category torfl-a2, level A2)', () => {
+    const exam = loadPack('a2-exam-fixture');
+    expect(exam.type).toBe('exam');
+    expect(exam.category).toBe('torfl-a2');
+    expect(exam.level).toBe('A2');
+    expect(exam.exams!.every((e) => e.level === 'A2')).toBe(true);
+  });
+
+  it('T75 A2 prompts fixture validates (2 prompts, all tagged torfl, level A2, category torfl-a2)', () => {
+    const prompts = loadPack('a2-torfl-prompts-fixture');
+    expect(prompts.type).toBe('prompts');
+    expect(prompts.category).toBe('torfl-a2');
+    expect(prompts.level).toBe('A2');
+    expect(prompts.prompts).toHaveLength(2);
+    for (const p of prompts.prompts ?? []) {
+      expect(p.level).toBe('A2');
+      expect(p.tags).toContain('torfl');
+    }
+  });
+
   it('M14 fixtures validate, carrying category/genre/subtitle/source exactly as authored', () => {
     const news = loadPack('a2-news-090');
     expect(news.category).toBe('news');

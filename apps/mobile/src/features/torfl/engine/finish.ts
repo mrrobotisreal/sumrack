@@ -5,6 +5,7 @@ import { gradeWritingOffline } from '../grading/writing';
 import { isAnswered, type ExamAnswer, type ExamResults, type SpeakingAnswer } from '../model';
 import { roundPct, scoreItem, subtestPercent, type ItemOutcome } from '../scoring';
 import { verdict as computeVerdict, type FullVerdict } from '../verdict';
+import { torflLevelOf } from '../level-profile';
 import { isPlaceholderKind, type ExamRunState } from './exam-machine';
 
 /**
@@ -182,7 +183,8 @@ export function computeFinish(
     results,
     pcts,
     // T73: the first five-subtest verdict is PROVISIONAL while writing / speaking are offline-graded.
-    verdict: scope === 'full' ? computeVerdict(pcts, provisionalKinds) : null,
+    verdict:
+      scope === 'full' ? computeVerdict(pcts, provisionalKinds, torflLevelOf(exam.level)) : null,
     missed,
     scoredSubtests,
   };

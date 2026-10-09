@@ -8,6 +8,7 @@ import {
 
 import { diffDayKeys, isDayKey } from '@/lib/dates';
 
+import { ruleLine, torflLevelOf, type TorflLevel } from './level-profile';
 import type { ExamMode, ExamResults, ExamVerdict } from './model';
 import type { ReadinessBand } from './readiness';
 import { compareTopics, SUBTEST_ORDER } from './topics';
@@ -59,7 +60,7 @@ export function daysOutProp(examDate: string | null, todayKey: string): number {
 }
 
 /** The SPbU rule in one line (§6.3, the hub header). */
-export const SPBU_RULE_LINE = 'Сдал: ≥ 66 % в каждом субтесте; один субтест — ≥ 60 %';
+export const SPBU_RULE_LINE = ruleLine('A1');
 
 // --- readiness (placeholder shape; T70 fills it) -------------------------------
 
@@ -293,6 +294,8 @@ export interface TextEntry {
   hasAudio: boolean;
   /** Every ref field that points at this story (passage / audio / prompt / model). */
   roles: ExamRefField[];
+  /** T75 (THE LEVEL RULE): the level of the exam that references this story's pack. */
+  level: TorflLevel;
 }
 
 export interface TextGroup {
@@ -316,10 +319,12 @@ export function groupTexts(
   const kindOf = new Map<string, ExamSubtestKind>();
   const rolesOf = new Map<string, Set<ExamRefField>>();
   const fallbackKindOfPack = new Map<string, ExamSubtestKind>();
+  const levelOfPack = new Map<string, TorflLevel>();
   const examPackIds = new Set<string>();
   for (const s of exams) {
     if (!s.exam) continue;
     examPackIds.add(s.packId);
+    if (!levelOfPack.has(s.packId)) levelOfPack.set(s.packId, torflLevelOf(s.exam.level));
     const first = s.exam.subtests[0];
     if (first && !fallbackKindOfPack.has(s.packId)) fallbackKindOfPack.set(s.packId, first.kind);
     const kindBySubtest = new Map(s.exam.subtests.map((st) => [st.id, st.kind]));
@@ -351,6 +356,7 @@ export function groupTexts(
       sentenceCount: st.sentenceCount,
       hasAudio: audioStoryKeys.has(key),
       roles: [...(rolesOf.get(key) ?? [])],
+      level: levelOfPack.get(st.packId) ?? 'A1',
     });
     groups.set(kind, entries);
   }

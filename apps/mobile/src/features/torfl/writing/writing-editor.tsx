@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { formatClock, timerTone } from '../engine/rules';
+import type { TorflLevel } from '../level-profile';
 import { WritingLookupSheet } from './lookup-sheet';
 import { countersLine, wordAtSelection, writingChecklist, writingCounters } from './writing-model';
 
@@ -48,6 +49,7 @@ export function WritingEditor({
   remainingMs,
   lookup,
   subtestKind = 'writing',
+  level,
   onDraft,
   onSubmit,
   onQuit,
@@ -60,6 +62,8 @@ export function WritingEditor({
   remainingMs?: number;
   lookup: boolean;
   subtestKind?: string;
+  /** T75 (THE LEVEL RULE): the exam's level for the dictionary's analytics. */
+  level?: TorflLevel;
   onDraft: (text: string) => void;
   onSubmit: (text: string) => void;
   onQuit: () => void;
@@ -273,6 +277,7 @@ export function WritingEditor({
         open={lookupOpen}
         initialQuery={lookupQuery}
         subtestKind={subtestKind}
+        level={level}
         onClose={() => setLookupOpen(false)}
       />
     </KeyboardAvoidingView>

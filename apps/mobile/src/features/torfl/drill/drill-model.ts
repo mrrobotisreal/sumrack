@@ -1,5 +1,6 @@
 import type { Exam, ExamItem, ExamPart, ExamSubtest, ExamSubtestKind } from '@sumrak/schema';
 
+import { torflLevelOf, type TorflLevel } from '../level-profile';
 import { examItemKey, findExamItem } from '../model';
 import { LIGHTNING_ITEMS } from '../pace';
 import { topicLabel } from '../topics';
@@ -23,6 +24,8 @@ export interface DrillEntry {
   itemIdx: number;
   item: Extract<ExamItem, { kind: 'choice' | 'typed' }>;
   itemKey: string;
+  /** T75: the exam's TORFL level (THE LEVEL RULE) — pace + analytics read it. */
+  level: TorflLevel;
 }
 
 export const isObjective = (item: ExamItem): item is DrillEntry['item'] =>
@@ -47,6 +50,7 @@ function entryOf(
     itemIdx,
     item,
     itemKey: examItemKey(packId, exam.id, item.id),
+    level: torflLevelOf(exam.level),
   };
 }
 
@@ -243,10 +247,13 @@ export function drillHref(opts: {
   packId?: string;
   examId?: string;
   topic?: string;
+  /** T75: the deck / «Молния» sources are level-scoped; absent = A1 (back-compat). */
+  level?: TorflLevel;
 }): { pathname: '/torfl/drill'; params: Record<string, string> } {
   const params: Record<string, string> = { source: opts.source };
   if (opts.packId) params.packId = opts.packId;
   if (opts.examId) params.examId = opts.examId;
   if (opts.topic) params.topic = opts.topic;
+  if (opts.level) params.level = opts.level;
   return { pathname: '/torfl/drill', params };
 }

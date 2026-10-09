@@ -9,8 +9,10 @@ import {
   parseTorflPrefs,
   sanitizeExamGradingPreset,
 } from '../settings-core';
+import { TORFL_PROFILES } from '../level-profile';
 import {
   getExamDate,
+  getExamDates,
   getExamGradingPreset,
   getTorflPrefs,
   setExamDate,
@@ -124,6 +126,42 @@ describe('torfl.examDate healing', () => {
     expect(await getExamDate()).toBeNull();
     await setExamDate(null);
     expect(settingsStore.has('torfl.examDate')).toBe(false);
+  });
+});
+
+describe('torfl.examDateA2 (T75, TORFL_A2 A2-5)', () => {
+  it('declares the A2 key; A1 keeps torfl.examDate', () => {
+    expect(SETTING_KEYS.torflExamDateA2).toBe('torfl.examDateA2');
+    expect(TORFL_PROFILES.A2.examDateKey).toBe(SETTING_KEYS.torflExamDateA2);
+    expect(TORFL_PROFILES.A1.examDateKey).toBe(SETTING_KEYS.torflExamDate);
+  });
+
+  it('A2 date persists and heals independently of A1', async () => {
+    await setExamDate('2026-12-05', 'A2');
+    expect(await getExamDate('A2')).toBe('2026-12-05');
+    expect(await getExamDate('A1')).toBeNull();
+
+    await setExamDate('2027-01-10', 'A1');
+    expect(await getExamDate('A2')).toBe('2026-12-05');
+    expect(await getExamDate('A1')).toBe('2027-01-10');
+
+    await expect(setExamDate('2026-13-01', 'A2')).rejects.toThrow();
+    settingsStore.set('torfl.examDateA2', 'garbage');
+    expect(await getExamDate('A2')).toBeNull();
+    expect(await getExamDate('A1')).toBe('2027-01-10');
+  });
+
+  it('clearing A2 removes only that key', async () => {
+    await setExamDate('2026-12-05', 'A1');
+    await setExamDate('2026-12-06', 'A2');
+    await setExamDate(null, 'A2');
+    expect(settingsStore.has('torfl.examDateA2')).toBe(false);
+    expect(settingsStore.get('torfl.examDate')).toBe('2026-12-05');
+  });
+
+  it('an old backup without the A2 key restores with A2 = null', async () => {
+    settingsStore.set('torfl.examDate', '2026-12-05');
+    expect(await getExamDates()).toEqual({ A1: '2026-12-05', A2: null });
   });
 });
 

@@ -8,8 +8,10 @@ import { repos } from '@/db';
 import { recordExamDeckSession } from '@/features/motivation/service';
 import { DrillItem } from '@/features/torfl/drill/drill-item';
 import { createDrillRecorder, type DrillRecorder } from '@/features/torfl/drill/drill-recorder';
-import { getExamDate } from '@/features/torfl/settings';
-import { track } from '@/services/analytics';
+import type { TorflLevel } from '@/features/torfl/level-profile';
+import { levelOrder } from '@/features/torfl/levels-today';
+import { getExamDates } from '@/features/torfl/settings';
+import { track, trackTorfl } from '@/services/analytics';
 import { useDailyPrefs } from '@/store/daily-prefs';
 import { useGamePrefs } from '@/store/game-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -66,16 +68,24 @@ export function DailySessionScreen() {
     });
     // M18 (T70): the optional TORFL block — default on iff an exam date is set; never in a focused session.
     if (focusItemIds) return cards;
-    const examDate = await getExamDate();
-    if (!torflSegmentEnabled(prefs, examDate)) return cards;
-    const segment = await buildTorflSegment(repos);
-    if (segment.length > 0) track('daily_torfl_segment', { items: segment.length });
+    const dates = await getExamDates();
+    if (!torflSegmentEnabled(prefs, dates)) return cards;
+    const segment = await buildTorflSegment(repos, { levels: levelOrder(dates) });
+    if (segment.length > 0) {
+      track('daily_torfl_segment', {
+        items: segment.length,
+        a1Items: segment.filter((s) => s.entry.level === 'A1').length,
+        a2Items: segment.filter((s) => s.entry.level === 'A2').length,
+      });
+    }
     return [...cards, ...segment];
   });
 
   // --- the TORFL block's own recorder (deck cards, not `cards`) ---------------
   const recorderRef = React.useRef<DrillRecorder | null>(null);
   const torflAnsweredRef = React.useRef(0);
+  /** T75: answered deck items per level — `exam_deck_reviewed` reports the level with most of them. */
+  const torflAnsweredByLevelRef = React.useRef<Record<TorflLevel, number>>({ A1: 0, A2: 0 });
   const torflClosedRef = React.useRef(false);
   const getRecorder = () => (recorderRef.current ??= createDrillRecorder(repos.exams));
 
@@ -94,9 +104,15 @@ export function DailySessionScreen() {
       try {
         await getRecorder().finish();
         await recordExamDeckSession();
-        track('exam_deck_reviewed', {
+        const byLevel = torflAnsweredByLevelRef.current;
+        // The level with most answers (ties → A1, the fixed order).
+        const level: TorflLevel = byLevel.A2 > byLevel.A1 ? 'A2' : 'A1';
+        trackTorfl('exam_deck_reviewed', {
           due: torflAnsweredRef.current,
           reviewed: torflAnsweredRef.current,
+          level,
+          a1Reviewed: byLevel.A1,
+          a2Reviewed: byLevel.A2,
         });
       } catch (err) {
         console.warn('[daily] torfl wrap-up failed', err);
@@ -177,11 +193,13 @@ export function DailySessionScreen() {
           last={session.index === session.items.length - 1}
           onAnswered={(args) => {
             torflAnsweredRef.current += 1;
-            track('exam_drill_item_answered', {
+            torflAnsweredByLevelRef.current[item.entry.level] += 1;
+            trackTorfl('exam_drill_item_answered', {
               subtestKind: item.entry.subtest.kind,
               topic: item.entry.item.topic,
               correct: args.score.outcome === 'full',
               ms: Math.round(args.ms),
+              level: item.entry.level,
             });
             void getRecorder()
               .answer(item.entry, args.answer, args.score, args.ms)

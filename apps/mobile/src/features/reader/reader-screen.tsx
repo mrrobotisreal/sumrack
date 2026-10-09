@@ -9,7 +9,7 @@ import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { useBookmarksForStory, useStoryDetail, useStoryProgress } from '@/db/hooks';
 import type { SentenceWithTokens, TokenRow } from '@/db/repositories/content';
-import { track } from '@/services/analytics';
+import { track, trackTorfl } from '@/services/analytics';
 import { useReaderPrefs } from '@/store/reader-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -23,6 +23,7 @@ import {
 } from '@/features/library/categories';
 import { recordReading, recordStoryFinished } from '@/features/motivation/service';
 import { bankTopicToast, canBankTopic, topicSlugOfStory } from '@/features/torfl/bank-topic';
+import { torflLevelOf } from '@/features/torfl/level-profile';
 
 import { AudioBar } from './audio-bar';
 import { PhraseCardSheet, type PhraseCardTarget } from './phrase-card-sheet';
@@ -448,10 +449,11 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
     void repos.bank
       .bankLemmasFromStory(packId, storyId)
       .then(({ words, added }) => {
-        track('torfl_topic_banked', {
+        trackTorfl('torfl_topic_banked', {
           topic: topicSlugOfStory(storyId),
           words,
           newWords: added,
+          level: torflLevelOf(detail.data?.pack.level),
         });
         setBankToast(bankTopicToast(added));
         for (const key of [
@@ -468,7 +470,7 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
       .finally(() => {
         bankBusyRef.current = false;
       });
-  }, [packId, storyId, queryClient]);
+  }, [packId, storyId, queryClient, detail.data?.pack.level]);
 
   // ---- bookmarks (T24) ---------------------------------------------------
   const storyBookmarked = React.useMemo(

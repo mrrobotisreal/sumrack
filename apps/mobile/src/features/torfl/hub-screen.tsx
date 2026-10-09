@@ -11,16 +11,22 @@ import { useActiveExamAttempt, useExamAttempts, useExams } from '@/db/hooks';
 import type { ExamAttempt } from '@/db/repositories/exams';
 import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { useAnswers } from './answers/use-answers';
 import { ExamDateSheet } from './exam-date-sheet';
+import {
+  hubSubtitle,
+  lightningCaption,
+  profileFor,
+  ruleLine,
+  type TorflLevel,
+} from './level-profile';
 import { ExamRow } from './exam-row';
 import { useExamDate, useExamListItems, useExamTexts, useTorflToday } from './hooks';
 import {
   MODE_LABELS,
-  SPBU_RULE_LINE,
   countdownLabel,
   overallPct,
   placeholderReadiness,
@@ -39,6 +45,7 @@ import {
   ticketHref,
 } from './speaking/tickets-model';
 import { writingPracticeEntries, writingPracticeHref } from './writing/writing-practice-model';
+import { minutesRu } from './minutes-ru';
 
 export type HubOpenedFrom = 'library' | 'today' | 'deeplink';
 
@@ -59,23 +66,26 @@ const TEXTS_PREVIEW = 5;
 export function TorflHubScreen({
   from,
   readiness,
+  level = 'A1',
 }: {
   from: HubOpenedFrom;
   readiness?: readonly ReadinessView[];
+  level?: TorflLevel;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
+  const profile = profileFor(level);
 
-  const exams = useExams();
-  const mocks = useExamListItems('mock');
-  const texts = useExamTexts();
-  const attempts = useExamAttempts({ limit: 20 });
-  const activeAttempt = useActiveExamAttempt();
-  const answers = useAnswers();
-  const { date, today, setDate } = useExamDate();
+  const exams = useExams({ level });
+  const mocks = useExamListItems('mock', level);
+  const texts = useExamTexts(level);
+  const attempts = useExamAttempts({ limit: 20, level });
+  const activeAttempt = useActiveExamAttempt(level);
+  const answers = useAnswers(level);
+  const { date, today, setDate } = useExamDate(level);
   const [dateOpen, setDateOpen] = React.useState(false);
   const [tab, setTab] = React.useState<ExamSubtestKind>('lexgram');
 
@@ -89,10 +99,10 @@ export function TorflHubScreen({
   React.useEffect(() => {
     if (openedRef.current) return;
     openedRef.current = true;
-    track('torfl_hub_opened', { from });
-  }, [from]);
+    trackTorfl('torfl_hub_opened', { from, level });
+  }, [from, level]);
 
-  const torfl = useTorflToday();
+  const torfl = useTorflToday(level);
   const tiles = torfl.tiles;
   const titleOf = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -136,8 +146,8 @@ export function TorflHubScreen({
             <Ionicons name="ribbon-outline" size={22} color={tokens.accent} />
           </View>
           <View className="flex-1">
-            <Text className="font-ui-bold text-lg">ТРКИ-А1</Text>
-            <Text variant="caption">Элементарный уровень · онлайн-экзамен СПбГУ</Text>
+            <Text className="font-ui-bold text-lg">{profile.chipLabel}</Text>
+            <Text variant="caption">{hubSubtitle(level)}</Text>
           </View>
         </View>
         <Pressable
@@ -156,15 +166,14 @@ export function TorflHubScreen({
             {countdownLabel(date, today)}
           </Text>
         </Pressable>
-        <Text variant="caption">{SPBU_RULE_LINE}</Text>
+        <Text variant="caption">{ruleLine(level)}</Text>
       </View>
 
       {nothingInstalled && (
         <View className="flex-row items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3">
           <Ionicons name="cloud-download-outline" size={18} color={tokens.textMuted} />
           <Text variant="muted" className="flex-1">
-            Материалы ТРКИ появятся после синхронизации: пробные экзамены, тренировки по темам и
-            тексты для чтения и аудирования.
+            {`Материалы ${level === 'A1' ? 'ТРКИ' : profile.chipLabel} появятся после синхронизации: пробные экзамены, тренировки по темам и тексты для чтения и аудирования.`}
           </Text>
         </View>
       )}
@@ -198,12 +207,13 @@ export function TorflHubScreen({
               if (action?.kind === 'drill') {
                 router.push(
                   action.source === 'deck'
-                    ? drillHref({ source: 'deck' })
+                    ? drillHref({ source: 'deck', level })
                     : drillHref({
                         source: 'set',
                         packId: action.packId,
                         examId: action.examId,
                         topic: action.topic,
+                        level,
                       }),
                 );
               }
@@ -275,7 +285,7 @@ export function TorflHubScreen({
       <Section title="Тренировки">
         <View className="mb-3 gap-2">
           <Pressable
-            onPress={() => router.push(drillHref({ source: 'deck' }))}
+            onPress={() => router.push(drillHref({ source: 'deck', level }))}
             accessibilityRole="button"
             accessibilityState={{ disabled: torfl.deckDue === 0 }}
             testID="torfl-deck-row"
@@ -296,7 +306,7 @@ export function TorflHubScreen({
           </Pressable>
           {torfl.hasLightning && (
             <Pressable
-              onPress={() => router.push(drillHref({ source: 'lightning' }))}
+              onPress={() => router.push(drillHref({ source: 'lightning', level }))}
               accessibilityRole="button"
               testID="torfl-lightning-row"
               className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
@@ -304,14 +314,14 @@ export function TorflHubScreen({
               <Ionicons name="flash-outline" size={20} color={tokens.accent} />
               <View className="flex-1 gap-0.5">
                 <Text className="font-ui-medium">Молния</Text>
-                <Text variant="caption">20 заданий в темпе экзамена — 34 секунды на задание</Text>
+                <Text variant="caption">{lightningCaption(level)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
             </Pressable>
           )}
           {ticketCount > 0 && (
             <Pressable
-              onPress={() => router.push(ticketHref())}
+              onPress={() => router.push(ticketHref(level))}
               accessibilityRole="button"
               testID="torfl-tickets-row"
               className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
@@ -320,7 +330,7 @@ export function TorflHubScreen({
               <View className="flex-1 gap-0.5">
                 <Text className="font-ui-medium">Билеты · {ticketCount}</Text>
                 <Text variant="caption">
-                  Тянешь тему монолога — 8 минут подготовки, 2 минуты ответа, запись
+                  {`Тянешь тему монолога — ${minutesRu(profile.monologueDefaults.prepSec)} подготовки, ${minutesRu(profile.monologueDefaults.answerSec)} ответа, запись`}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
@@ -446,6 +456,7 @@ export function TorflHubScreen({
                       packId: tile.packId,
                       examId: tile.examId,
                       topic: tile.topic,
+                      level,
                     }),
                   )
                 }
@@ -481,10 +492,13 @@ export function TorflHubScreen({
       {/* ---- my answers (T74) ---- */}
       <Section
         title="Мои ответы"
-        action={{ label: 'Все', onPress: () => router.push('/torfl/answers') }}
+        action={{
+          label: 'Все',
+          onPress: () => router.push({ pathname: '/torfl/answers', params: { level } }),
+        }}
       >
         <Pressable
-          onPress={() => router.push('/torfl/answers')}
+          onPress={() => router.push({ pathname: '/torfl/answers', params: { level } })}
           accessibilityRole="button"
           testID="torfl-answers-row"
           className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
@@ -511,7 +525,10 @@ export function TorflHubScreen({
         title="Тексты"
         action={
           texts.total > 0
-            ? { label: `Все · ${texts.total}`, onPress: () => router.push('/torfl/texts') }
+            ? {
+                label: `Все · ${texts.total}`,
+                onPress: () => router.push({ pathname: '/torfl/texts', params: { level } }),
+              }
             : undefined
         }
       >

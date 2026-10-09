@@ -23,8 +23,10 @@ import type { PathNode } from '@/features/path/path-model';
 import { isUnit, nextStepInfo, usePathState } from '@/features/path/use-path';
 import { isResumable, pickTodayScenario } from '@/features/scenario/hub-selection';
 import { drillHref } from '@/features/torfl/drill/drill-model';
-import { useExamDate, useTorflToday } from '@/features/torfl/hooks';
+import { useExamDates, useTorflLevelsToday } from '@/features/torfl/hooks';
 import { countdownLabel } from '@/features/torfl/hub-model';
+import { profileFor } from '@/features/torfl/level-profile';
+import { isLevelActive, levelOrder, type ExamDates } from '@/features/torfl/levels-today';
 import { describeStep } from '@/features/torfl/today';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -47,8 +49,13 @@ export function TodayScreen() {
   const path = usePathState();
   const dialogues = useDialogues();
   const scenarios = useScenarios();
-  const torfl = useTorflToday();
-  const examDate = useExamDate();
+  const torflLevels = useTorflLevelsToday();
+  const examDates = useExamDates();
+  const dates: ExamDates = { A1: examDates.A1.date, A2: examDates.A2.date };
+  // T75: one row per ACTIVE level, nearest exam date first (no date → A1 then A2).
+  const activeLevels = levelOrder(dates).filter((l) =>
+    isLevelActive(dates[l], torflLevels[l].deckDue),
+  );
 
   // Counts change while this tab is unfocused (sessions, reading) — refresh on return.
   useFocusEffect(
@@ -256,76 +263,87 @@ export function TodayScreen() {
         </Pressable>
       )}
 
-      {/* M18 (T70, TORFL §7.2): «ТРКИ» — shown with an exam date set OR deck items due; the hub itself fires torfl_hub_opened {from:'today'} */}
-      {(examDate.date !== null || torfl.deckDue > 0) && (
+      {/* M18/M19 (T70/T75, TORFL_A2 §3): one row per ACTIVE level (exam date set or deck items due), nearest exam date first, no date → A1 then A2; each → its hub */}
+      {activeLevels.length > 0 && (
         <View
           className="gap-3 rounded-xl border border-border bg-surface p-4"
           testID="today-torfl-card"
         >
-          <Pressable
-            onPress={() => {
-              router.push({ pathname: '/torfl', params: { from: 'today' } });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Открыть подготовку к ТРКИ"
-            className="flex-row items-center justify-between gap-3 active:opacity-70"
-          >
-            <View className="flex-1 gap-0.5">
-              <Text variant="caption" className="uppercase tracking-wider">
-                ТРКИ-А1
-              </Text>
-              <Text className="font-ui-medium" testID="today-torfl-countdown">
-                {countdownLabel(examDate.date, examDate.today)}
-              </Text>
-            </View>
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
-              <Ionicons name="ribbon-outline" size={18} color={tokens.accent} />
-            </View>
-          </Pressable>
-          {torfl.deckDue > 0 && (
-            <Pressable
-              onPress={() => router.push(drillHref({ source: 'deck' }))}
-              accessibilityRole="button"
-              testID="today-torfl-deck"
-              className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-3 py-3 active:opacity-70"
-            >
-              <Ionicons name="albums-outline" size={18} color={tokens.accent} />
-              <Text className="flex-1 font-ui-medium">Работа над ошибками · {torfl.deckDue}</Text>
-              <Ionicons name="play" size={14} color={tokens.accent} />
-            </Pressable>
-          )}
-          {torfl.step && torfl.step.kind !== 'deck' && (
-            <Pressable
-              onPress={() => {
-                const action = torfl.action;
-                if (action?.kind === 'drill' && action.source === 'set') {
-                  router.push(
-                    drillHref({
-                      source: 'set',
-                      packId: action.packId,
-                      examId: action.examId,
-                      topic: action.topic,
-                    }),
-                  );
-                } else {
-                  router.push({ pathname: '/torfl', params: { from: 'today' } });
-                }
-              }}
-              accessibilityRole="button"
-              testID="today-torfl-step"
-              className="flex-row items-center gap-3 rounded-lg border border-accent/40 px-3 py-3 active:opacity-70"
-            >
-              <Ionicons name="compass-outline" size={18} color={tokens.accent} />
-              <View className="flex-1 gap-0.5">
-                <Text variant="caption" className="uppercase tracking-wider">
-                  Тренировка дня
-                </Text>
-                <Text className="font-ui-medium" numberOfLines={2}>
-                  {describeStep(torfl.step).title}
-                </Text>
-              </View>
-            </Pressable>
-          )}
+          {activeLevels.map((level, idx) => {
+            const t = torflLevels[level];
+            const sfx = level === 'A2' ? '-a2' : '';
+            const chip = profileFor(level).chipLabel;
+            return (
+              <React.Fragment key={level}>
+                {idx > 0 && <View className="h-px bg-border" />}
+                <Pressable
+                  onPress={() => {
+                    router.push({ pathname: '/torfl', params: { from: 'today', level } });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Открыть подготовку к ${chip}`}
+                  className="flex-row items-center justify-between gap-3 active:opacity-70"
+                >
+                  <View className="flex-1 gap-0.5">
+                    <Text variant="caption" className="uppercase tracking-wider">
+                      {chip}
+                    </Text>
+                    <Text className="font-ui-medium" testID={`today-torfl-countdown${sfx}`}>
+                      {countdownLabel(dates[level], examDates[level].today)}
+                    </Text>
+                  </View>
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-2">
+                    <Ionicons name="ribbon-outline" size={18} color={tokens.accent} />
+                  </View>
+                </Pressable>
+                {t.deckDue > 0 && (
+                  <Pressable
+                    onPress={() => router.push(drillHref({ source: 'deck', level }))}
+                    accessibilityRole="button"
+                    testID={`today-torfl-deck${sfx}`}
+                    className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-3 py-3 active:opacity-70"
+                  >
+                    <Ionicons name="albums-outline" size={18} color={tokens.accent} />
+                    <Text className="flex-1 font-ui-medium">Работа над ошибками · {t.deckDue}</Text>
+                    <Ionicons name="play" size={14} color={tokens.accent} />
+                  </Pressable>
+                )}
+                {t.step && t.step.kind !== 'deck' && (
+                  <Pressable
+                    onPress={() => {
+                      const action = t.action;
+                      if (action?.kind === 'drill' && action.source === 'set') {
+                        router.push(
+                          drillHref({
+                            source: 'set',
+                            packId: action.packId,
+                            examId: action.examId,
+                            topic: action.topic,
+                            level,
+                          }),
+                        );
+                      } else {
+                        router.push({ pathname: '/torfl', params: { from: 'today', level } });
+                      }
+                    }}
+                    accessibilityRole="button"
+                    testID={`today-torfl-step${sfx}`}
+                    className="flex-row items-center gap-3 rounded-lg border border-accent/40 px-3 py-3 active:opacity-70"
+                  >
+                    <Ionicons name="compass-outline" size={18} color={tokens.accent} />
+                    <View className="flex-1 gap-0.5">
+                      <Text variant="caption" className="uppercase tracking-wider">
+                        Тренировка дня
+                      </Text>
+                      <Text className="font-ui-medium" numberOfLines={2}>
+                        {describeStep(t.step).title}
+                      </Text>
+                    </View>
+                  </Pressable>
+                )}
+              </React.Fragment>
+            );
+          })}
         </View>
       )}
 

@@ -22,11 +22,12 @@ import { hasApiKey } from '@/features/ai/config';
 import { FeedbackView } from '@/features/ai/feedback-view';
 import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { recordExamDrillFinished } from '@/features/motivation/service';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { applySelfCheck } from '../grading/self-check';
+import { torflLevelOf, type TorflLevel } from '../level-profile';
 import { pumpGradingQueue, requestGrading, storyText, useGradingQueue } from '../grading/queue';
 import {
   criterionLabel,
@@ -38,6 +39,7 @@ import { findExamItem, initialAttemptState, type ExamGrading } from '../model';
 import { SelfCheckSheet } from './self-check-sheet';
 import { WritingEditor } from './writing-editor';
 import { mergedCriteria } from './review-model';
+import { writingTaskOf } from './writing-model';
 
 type Phase =
   | { kind: 'editing' }
@@ -129,12 +131,14 @@ export function WritingPracticeScreen() {
           null,
           0,
         );
-        track('exam_writing_scored', {
+        trackTorfl('exam_writing_scored', {
           source: 'offline',
           pct: grade.pct,
           sentences: grade.details.sentences,
           questions: grade.details.questions,
           pointsCovered: grade.details.pointsCovered,
+          ...writingTaskOf(exam.data, subtest.id, item.id),
+          level: torflLevelOf(exam.data.level),
         });
         const xp = await recordExamDrillFinished().catch(() => 0);
         void xp;
@@ -191,6 +195,12 @@ export function WritingPracticeScreen() {
       response={response.data ?? null}
       modelLetter={model.data ?? null}
       packId={packId}
+      level={torflLevelOf(exam.data?.level)}
+      meta={
+        exam.data && response.data
+          ? writingTaskOf(exam.data, response.data.subtestId, response.data.itemId)
+          : { task: 0, topic: 'none' }
+      }
       top={insets.top}
       bottom={insets.bottom}
       onAgain={() => {
@@ -209,6 +219,8 @@ function PracticeResult({
   response,
   modelLetter,
   packId,
+  level,
+  meta,
   top,
   bottom,
   onAgain,
@@ -220,6 +232,10 @@ function PracticeResult({
   response: ExamResponse | null;
   modelLetter: string | null;
   packId: string;
+  /** T75 (THE LEVEL RULE): the exam's level for this result's analytics. */
+  level: TorflLevel;
+  /** T75: the writing item's task + topic for `exam_writing_scored` (self-check). */
+  meta: { task: number; topic: string };
   top: number;
   bottom: number;
   onAgain: () => void;
@@ -367,7 +383,12 @@ function PracticeResult({
         {item.model && (
           <Pressable
             onPress={() => {
-              track('torfl_text_opened', { packId, storyId: item.model!.storyId, from: 'review' });
+              trackTorfl('torfl_text_opened', {
+                packId,
+                storyId: item.model!.storyId,
+                from: 'review',
+                level,
+              });
               router.push({
                 pathname: '/reader/[packId]/[storyId]',
                 params: { packId, storyId: item.model!.storyId, from: 'torfl' },
@@ -416,7 +437,7 @@ function PracticeResult({
           onClose={() => setSelfOpen(false)}
           onSubmit={(answers) => {
             setSelfOpen(false);
-            void applySelfCheck(response, answers).then(onRefetch);
+            void applySelfCheck(response, answers, level, meta).then(onRefetch);
           }}
         />
       )}

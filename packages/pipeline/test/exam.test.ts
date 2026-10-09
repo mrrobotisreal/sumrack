@@ -240,6 +240,104 @@ describe('a1-exam-fixture round-trip', () => {
   });
 });
 
+describe('a2-exam-fixture round-trip (T75)', () => {
+  const a2Dir = fixture('a2-exam-fixture');
+  const a2PackPath = join(
+    pkgDir,
+    '..',
+    'schema',
+    'fixtures',
+    'packs',
+    'a2-exam-fixture',
+    'pack.json',
+  );
+  const a2Files = () =>
+    readdirSync(a2Dir)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((f) => read(join(a2Dir, f)));
+  const a2Pack = () => parsePack(JSON.parse(readFileSync(a2PackPath, 'utf8')));
+  const a2Mock = () => a2Pack().exams!.find((e) => e.id === 'a2-mock-fx')!;
+
+  it('annotate on a2-exam-fixture/*.md deep-equals the schema fixture pack', () => {
+    const pack = annotateDrafts(a2Files());
+    const sample = JSON.parse(readFileSync(a2PackPath, 'utf8'));
+    expect(pack).toEqual(sample);
+  });
+
+  it('is a torfl-a2 exam pack at level A2 with four stories, three exams — and stays out of the app manifest', () => {
+    const pack = a2Pack();
+    expect(pack).toMatchObject({
+      id: 'a2-exam-fixture',
+      type: 'exam',
+      category: 'torfl-a2',
+      level: 'A2',
+    });
+    expect(pack.exams!.map((e) => e.id)).toEqual([
+      'a2-drill-fx-time',
+      'a2-drill-fx-info',
+      'a2-mock-fx',
+    ]);
+    for (const exam of pack.exams!) expect(exam.level).toBe('A2');
+    expect(pack.stories.map((s) => s.id).sort()).toEqual(['ex-01', 'ls-01', 'md-note', 'rd-01']);
+    const manifest = JSON.parse(
+      readFileSync(join(pkgDir, '..', 'schema', 'fixtures', 'manifest.json'), 'utf8'),
+    ) as { packs: { id: string }[] };
+    expect(manifest.packs.map((p) => p.id)).not.toContain('a2-exam-fixture');
+  });
+
+  it('the mock: writing has 2 parts (2nd item write-note); speaking ends in one ungrouped 600/300 monologue; reading points at the 9-sentence rd-01', () => {
+    const mock = a2Mock();
+    const writing = mock.subtests.find((s) => s.kind === 'writing')!;
+    expect(writing.parts).toHaveLength(2);
+    expect(writing.parts[1]!.items[0]).toMatchObject({ kind: 'writing', topic: 'write-note' });
+
+    const speaking = mock.subtests.find((s) => s.kind === 'speaking')!;
+    const last = speaking.parts[speaking.parts.length - 1]!;
+    expect(last.items).toHaveLength(1);
+    expect(last.items[0]).toMatchObject({
+      kind: 'speaking-monologue',
+      prepSec: 600,
+      answerSec: 300,
+    });
+    expect((last.items[0] as { group?: string }).group).toBeUndefined();
+
+    const reading = mock.subtests.find((s) => s.kind === 'reading')!;
+    const readItems = reading.parts.flatMap((p) => p.items);
+    expect(readItems.length).toBeGreaterThanOrEqual(5);
+    for (const item of readItems) {
+      expect((item as { passage?: { storyId: string } }).passage?.storyId).toBe('rd-01');
+    }
+    expect(a2Pack().stories.find((s) => s.id === 'rd-01')!.sentences).toHaveLength(9);
+  });
+
+  it('the info drill: a typed listen-info item with half credit; subtest pointsPerItem 6', () => {
+    const info = a2Pack().exams!.find((e) => e.id === 'a2-drill-fx-info')!;
+    const listening = info.subtests[0]!;
+    expect(listening.pointsPerItem).toBe(6);
+    const typed = listening.parts[0]!.items.find((i) => i.kind === 'typed');
+    expect(typed).toMatchObject({ topic: 'listen-info' });
+    expect((typed as { half?: string[] }).half?.length).toBeGreaterThan(0);
+  });
+
+  it('reports: the matrix map has no ✗ and the ref table has zero broken refs', () => {
+    expect(renderMatrixMap(a2Mock())).not.toContain('✗');
+    expect(renderRefTable(a2Mock(), a2Pack()).broken).toBe(0);
+  });
+
+  it('official shape: reduced counts by design — only the six count ⚠ lines, every A2 structure check passes', () => {
+    expect(renderOfficialShape(a2Mock()).split('\n')).toEqual([
+      'Official shape — a2-mock-fx: 6 deviations',
+      '  ⚠ official-shape: lexgram "lexgram" has items 10 — official 100',
+      '  ⚠ official-shape: lexgram "lexgram" maxPoints 10 — official 100',
+      '  ⚠ official-shape: reading "reading" has items 5 — official 30',
+      '  ⚠ official-shape: reading "reading" maxPoints 30 — official 180',
+      '  ⚠ official-shape: listening "listening" has items 3 — official 25',
+      '  ⚠ official-shape: listening "listening" maxPoints 18 — official 150',
+    ]);
+  });
+});
+
 describe('exam reports', () => {
   const pack = () => parsePack(JSON.parse(readFileSync(fixturePackPath, 'utf8')));
   const mock = () => pack().exams!.find((e) => e.id === 'a1-mock-fx')!;
@@ -266,7 +364,7 @@ describe('exam reports', () => {
     const text = renderTopicCensus(exam);
     expect(text).toMatch(/case-locative\s+1\s+lexgram\s+\?\s+\(not a TORFL §3\.4 slug/);
     expect(text).toContain('(§3.4 lists it under reading)');
-    expect(Object.values(EXAM_TOPICS).flat()).toHaveLength(27);
+    expect(Object.values(EXAM_TOPICS).flat()).toHaveLength(38);
   });
 
   it('official shape: the fixture mock prints its six ⚠ lines; a drill is not checked', () => {
@@ -280,6 +378,23 @@ describe('exam reports', () => {
       '  ⚠ official-shape: listening "listening" maxPoints 15 — official 100',
     ]);
     expect(renderOfficialShape(pack().exams![0]!)).toContain('not checked (drill');
+  });
+
+  it('official shape (T75): an A2 clone of the fixture mock is checked against the A2 numbers', () => {
+    const a2 = structuredClone(mock());
+    a2.level = 'A2';
+    const text = renderOfficialShape(a2);
+    expect(text.split('\n')[0]).toMatch(/^Official shape — a1-mock-fx: \d+ deviations$/);
+    expect(text).toContain('official 100');
+    expect(text).toContain('has parts 1 — official 2');
+  });
+
+  it('official shape (T75): a B1 clone is not checked', () => {
+    const b1 = structuredClone(mock());
+    b1.level = 'B1';
+    expect(renderOfficialShape(b1)).toBe(
+      'Official shape — a1-mock-fx: not checked (mock, torfl B1 — only A1 / A2 TORFL mocks are)',
+    );
   });
 
   it('ref table: every ref ✓, inherited listening audio marked ↑', () => {

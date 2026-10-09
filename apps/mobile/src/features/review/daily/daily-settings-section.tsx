@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/text';
 import { useDailyPrefs } from '@/store/daily-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { useExamDate } from '@/features/torfl/hooks';
+import { useExamDates } from '@/features/torfl/hooks';
 
 import { DAILY_LENGTH_OPTIONS, torflSegmentEnabled, type DailyWeights } from './prefs';
 
@@ -29,8 +29,8 @@ const WEIGHT_MAX = 5;
 export function DailySettingsSection() {
   const { tokens } = useAppTheme();
   const { prefs, setLength, setWeight, setTorfl } = useDailyPrefs();
-  const { date: examDate } = useExamDate();
-  const torflOn = torflSegmentEnabled(prefs, examDate);
+  const dates = useExamDates();
+  const torflOn = torflSegmentEnabled(prefs, { A1: dates.A1.date, A2: dates.A2.date });
 
   return (
     <>
@@ -113,13 +113,15 @@ export function DailySettingsSection() {
           );
         })}
 
-        {/* M18 (T70): the TORFL deck block — auto-on once an exam date is set */}
+        {/* M18 (T70, T75): the TORFL deck block — auto-on once any exam date (A1 or A2) is set */}
         <View className="flex-row items-center justify-between border-t border-border px-4 py-3">
           <View className="flex-1 gap-0.5 pr-3">
             <Text className="font-ui-medium">ТРКИ: Работа над ошибками</Text>
             <Text variant="caption">
-              До 10 карточек экзамена в конце сессии
-              {prefs.torfl === undefined ? ' · включается сама, когда задана дата экзамена' : ''}
+              До 10 карточек экзамена (А1 и А2) в конце сессии
+              {prefs.torfl === undefined
+                ? ' · включается сама, когда задана дата экзамена — или включи вручную без даты'
+                : ''}
             </Text>
           </View>
           <Switch

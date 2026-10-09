@@ -9,7 +9,8 @@ import { invalidateExams } from '@/db/hooks';
 import { cn } from '@/lib/cn';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { LIGHTNING_PACE_SEC } from '../pace';
+import { lightningPaceNote } from '../level-profile';
+import { lightningPaceSec } from '../pace';
 import { SUBTEST_LABELS } from '../topics';
 import type { DrillOutcome } from './use-drill-session';
 
@@ -30,7 +31,7 @@ export function DrillSummary({ outcome, onDone }: { outcome: DrillOutcome; onDon
   const { summary, results, skipped, xp, avgSec, source } = outcome;
   const [suspended, setSuspended] = React.useState<ReadonlySet<string>>(new Set());
   const lightning = source === 'lightning';
-  const onPace = avgSec <= LIGHTNING_PACE_SEC;
+  const onPace = avgSec <= lightningPaceSec(outcome.level);
 
   const suspend = (itemKey: string) => {
     Alert.alert('Убрать из колоды?', 'Карточка перестанет возвращаться (можно вернуть позже).', [
@@ -92,7 +93,7 @@ export function DrillSummary({ outcome, onDone }: { outcome: DrillOutcome; onDon
             Твой темп: {avgSec.toLocaleString('ru-RU')} с на задание
           </Text>
           <Text variant="caption">
-            Темп экзамена — {LIGHTNING_PACE_SEC} с (40 минут на 70 заданий).{' '}
+            {lightningPaceNote(outcome.level)}{' '}
             {onPace ? 'Ты укладываешься!' : 'Нужно быстрее — тренируй «Молнию» чаще.'}
           </Text>
         </View>

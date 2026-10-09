@@ -119,6 +119,8 @@ export const CATEGORY_DEFAULT_REGISTER: Record<string, RegisterSlug> = {
   travel: 'guide',
   /** M18 (T67): the «ТРКИ» shelf — model answers, lexicon examples, examiner lines. */
   torfl: 'lecturer',
+  /** M19 (T75): the «ТРКИ-А2» shelf — same register as A1. */
+  'torfl-a2': 'lecturer',
 };
 
 /** A voice direction after register resolution: `voice` and `style` are always present. */

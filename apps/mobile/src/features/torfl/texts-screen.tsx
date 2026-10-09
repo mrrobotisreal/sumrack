@@ -7,6 +7,7 @@ import { useStudyAmbience } from '@/features/ambient-audio/activity';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { useExamTexts } from './hooks';
+import type { TorflLevel } from './level-profile';
 import { TextRow } from './text-row';
 import { SUBTEST_LABELS } from './topics';
 
@@ -16,10 +17,10 @@ import { SUBTEST_LABELS } from './topics';
  * (the subtest of the first item that references the story). Each row
  * opens the ordinary reader — lookup, karaoke and bank work as anywhere.
  */
-export function TorflTextsScreen() {
+export function TorflTextsScreen({ level = 'A1' }: { level?: TorflLevel }) {
   const { tokens } = useAppTheme();
   useStudyAmbience(true, 'education');
-  const { groups, isPending } = useExamTexts();
+  const { groups, isPending } = useExamTexts(level);
 
   if (isPending) {
     return (

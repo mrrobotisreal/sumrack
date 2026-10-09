@@ -23,7 +23,10 @@ import { formatRuDate } from '@/lib/ru-date';
  * without a DB; the chip row itself is verified on-device (node env).
  */
 
-export type FilterablePack = Pick<PackRow, 'id' | 'type' | 'category' | 'genre' | 'origin'>;
+export type FilterablePack = Pick<PackRow, 'id' | 'type' | 'category' | 'genre' | 'origin'> & {
+  /** T75: an exam pack's level picks its «ТРКИ-А1» / «ТРКИ-А2» shelf (`classifyPack`). */
+  level?: string | null;
+};
 
 export interface LibraryFilter {
   category: string;
@@ -95,10 +98,10 @@ export function categoryCounts(packs: readonly FilterablePack[]): Record<string,
 }
 
 /**
- * Category chip items: always all seven known shelves in CATEGORY_ORDER with
+ * Category chip items: always all eight known shelves in CATEGORY_ORDER with
  * their counts (0 when empty). Recorded T45 decision for an UNKNOWN installed
  * category (a pack authored with a slug the app doesn't know yet, e.g.
- * `recipes`): append a chip with the raw slug + generic icon after the seven,
+ * `recipes`): append a chip with the raw slug + generic icon after the eight,
  * per §1.2 ("unknown values render with their raw slug and a generic icon").
  * The persisted selection is included the same way even at count 0 so the
  * selected chip is never invisible.

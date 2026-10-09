@@ -825,7 +825,7 @@ pnpm pipeline validate packs/a1-torfl-mock-001/pack.json     # the four exam rep
 pnpm pipeline audio  packs/a1-torfl-mock-001/pack.json stories/*.draft.md …   # renders the STORIES, exactly as for a story pack
 ```
 
-`pack:` in an exam draft follows the extras precedent: **optional next to story drafts** (it must then match them byte-for-byte), **required when the pack has no story drafts** (a lexgram-only drill bank, CT028) — and such a story-less pack's items may carry **no** story refs. Exams appear in `pack.exams` in the order their drafts are given on the command line. Use `type: exam` and `category: torfl` (the «ТРКИ» shelf; default register `lecturer`).
+`pack:` in an exam draft follows the extras precedent: **optional next to story drafts** (it must then match them byte-for-byte), **required when the pack has no story drafts** (a lexgram-only drill bank, CT028) — and such a story-less pack's items may carry **no** story refs. Exams appear in `pack.exams` in the order their drafts are given on the command line. Use `type: exam` and `category: torfl` for A1 (the «ТРКИ-А1» shelf) or `category: torfl-a2` for A2 (the «ТРКИ-А2» shelf, M19); both default to register `lecturer`.
 
 ### The exam object
 
@@ -984,7 +984,8 @@ Objective subtests (`lexgram`, `reading`, `listening`): each item is worth its `
   - reading — `read-continue` · `read-signs` · `read-topic` · `read-detail`
   - listening — `listen-where` · `listen-who` · `listen-phrase` · `listen-detail` · `listen-info`
   - writing — `write-letter` · speaking — `speak-reply` · `speak-situation` · `speak-monologue`
-- **Official-shape check** — for a `mock` with `format: torfl`, `level: A1` only: `⚠ official-shape:` lines for every deviation from the official A1 numbers (five subtests in the SPbU order; lexgram 70 items / 70 points / 40 min / no dictionary / free; reading 25 / 100 / 40 / dictionary / free; listening 20 / 100 / 30 / no dictionary / linear / `audioPlays: 2`; writing 30 min with dictionary; speaking 20 min, linear, parts 300 / 300 / 600 s), or `✓ official shape (TORFL A1 mock)`. Drills print «not checked». **Warnings never change the exit code** — a short practice mock is legal.
+  - A2 additions (TORFL_A2 §4): lexgram — `lex-phrases` · `case-plural` · `case-time` · `numerals` · `comparative` · `verb-motion-prefix` · `clauses`; reading — `read-match`; listening — `listen-goal` · `listen-monologue`; writing — `write-note`
+- **Official-shape check** — for a `mock` with `format: torfl`, `level: A1` **and A2** (the two levels with a shape, `TORFL_SHAPES`): `⚠ official-shape:` lines for every deviation from the official numbers (five subtests in the SPbU order; dictionary and navigation per subtest). A1: lexgram 70 items / 70 points / 40 min / no dictionary / free; reading 25 / 100 / 40 / dictionary / free; listening 20 / 100 / 30 / no dictionary / linear / `audioPlays: 2`; writing 30 min with dictionary, in 1 part; speaking 20 min, linear, parts 300 / 300 / 600 s. A2: lexgram 100 / 100 / 50 min / no dictionary / free; reading 30 / 180 / 50 / dictionary / free; listening 25 / 150 / 30 / no dictionary / linear / `audioPlays: 2`; writing 50 min with dictionary in **2 parts**, the second item topic `write-note`; speaking 25 min, linear, parts 300 / 300 / 900 s with task 3 = **one** ungrouped monologue, `prepSec: 600`, `answerSec: 300`. Conforming output is `✓ official shape (TORFL A1 mock)` or `(TORFL A2 mock)`. Drills and other levels print «not checked». **Warnings never change the exit code** — a short practice mock is legal.
 - **Ref table** — every ref → story · sentence span · track, `✓` / `✗`; inherited listening audio is marked `audio↑`.
 
 Schema errors (everything in this section that says "must") fail `annotate` with exit 1 and a `file:line:` pointing at the offending YAML node in the exam draft — ref errors included.
@@ -992,6 +993,16 @@ Schema errors (everything in this section that says "must") fail `annotate` with
 ### Ids (the TORFL convention)
 
 Story ids: `rd-<NN>` reading texts · `ls-<NN>` listening scripts · `ex-<NN>` examiner lines · `md-<slug>` model answers · `lx-<topic>` lexicon topics. Sentence ids: `tf<level><pack-code><NN>-sNN`, e.g. `tfa1m01r01-s01` = A1, mock 01 (`m01`; drill and study packs take the code the CT bible assigns — e.g. `lx` for the lexicon, `fx` for the T67 fixture), story kind + number `r01` (`r` reading, `l` listening, `e` examiner, `d` model answer), sentence 01. It is a convention the pipeline does not enforce (sentence ids only have to be unique pack-wide), so follow the bible. Exam ids: `a1-mock-NN`, drill ids per the CT bible. The CT bible `sumrak-content/series/torfl/TORFL.md` is the canonical id table.
+
+### A2 (ТБУ) mocks (M19, T75)
+
+An A2 mock (`level: A2`, `category: torfl-a2`, pack ids `a2-torfl-*`) follows demo v2 (2022) — design `docs/design/TORFL_A2_EXAM_PREP.md` §2.1 at the workspace root:
+
+- **Письмо = two parts**, one `writing` item each: task 1 a letter (`write-letter`, `minSentences: 10`, `minQuestions: 3`, `maxQuestions: 5`), task 2 the messenger message / note (`write-note`, `minSentences: 5`, four bullets — reason · date · time · place). The app splits the subtest's 100 points equally between the two.
+- **Говорение task 3 = one topic, no choice:** a single `speaking-monologue` with **no `group`**, `minSentences: 12`, `maxSentences: 15` and the windows written explicitly — `prepSec: 600`, `answerSec: 300` (the schema defaults 480 / 120 are A1's); part `timeSec: 900`. Tasks 1–2: five items each, `timeSec: 300` + `300`.
+- **Points:** lexgram 100 × 1, reading 30 × 6 = 180, listening 25 × 6 = 150 (a `typed` item's half credit = 3).
+- **Option-count pattern:** copy demo v2's (§2.1 table — 2-option «неполное соответствие» blocks repeat their shared options on every item, in the same order).
+- Drafts under `Stories/education/TORFL/<pack-id>/`; sentence ids `tfa2<code><NN>-sNN`.
 
 ### Exam gotchas
 

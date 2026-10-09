@@ -4,6 +4,8 @@ import {
   countStemGaps,
   examStoryRefs,
   itemPoints,
+  TORFL_A1_SHAPE,
+  TORFL_SHAPES,
   officialShapeIssues,
   resolveItemAudio,
   safeParsePack,
@@ -505,10 +507,10 @@ describe('officialShapeIssues (invariant 10, non-fatal)', () => {
     drill.mode = 'drill';
     drill.subtests = drill.subtests.slice(1, 2);
     expect(officialShapeIssues(drill)).toEqual([]);
-    const a2 = makeOfficialMock();
-    a2.level = 'A2';
-    a2.subtests = [];
-    expect(officialShapeIssues(a2)).toEqual([]);
+    const b1 = makeOfficialMock();
+    b1.level = 'B1'; // T75: A2 has a shape now
+    b1.subtests = [];
+    expect(officialShapeIssues(b1)).toEqual([]);
   });
 
   it('flags the small helper mock (too few items) without throwing', () => {
@@ -518,5 +520,183 @@ describe('officialShapeIssues (invariant 10, non-fatal)', () => {
     const lines = officialShapeIssues(result.data.exams![0]!);
     expect(lines).toContain('⚠ official-shape: lexgram "lexgram" has items 2 — official 70');
     expect(lines).toContain('⚠ official-shape: reading "reading" maxPoints 8 — official 100');
+  });
+});
+
+// --- T75: the A2 (ТБУ) official shape ----------------------------------------
+
+/** A synthetic conforming A2 mock: 100/100/50, 30/180/50, 25/150/30 ×2, writing 50 in 2 parts, speaking 25 (300/300/900, one monologue 600/300). */
+function makeOfficialA2Mock(): Exam {
+  const base = exam(makeValidExamPack() as any);
+  const choice = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    kind: 'choice',
+    topic: 'conj',
+    stem: 'Вопрос …',
+    options: ['а', 'б', 'в'],
+    answer: 0,
+    ...extra,
+  });
+  const range = (n: number, prefix: string) =>
+    Array.from({ length: n }, (_, i) => `${prefix}${String(i + 1).padStart(2, '0')}`);
+  const [writing, lexgram, reading, listening, speaking] = structuredClone(base.subtests) as any[];
+  lexgram.maxPoints = 100;
+  lexgram.durationMin = 50;
+  lexgram.parts = [
+    {
+      id: 'p1',
+      instructions: lexgram.parts[0].instructions,
+      items: range(100, 'lg').map((id) => choice(id)),
+    },
+  ];
+  reading.maxPoints = 180;
+  reading.durationMin = 50;
+  reading.pointsPerItem = 6;
+  reading.parts = [
+    {
+      id: 'p1',
+      instructions: reading.parts[0].instructions,
+      items: range(30, 'rd').map((id) => choice(id)),
+    },
+  ];
+  listening.maxPoints = 150;
+  listening.durationMin = 30;
+  listening.pointsPerItem = 6;
+  listening.parts = [
+    {
+      id: 'p1',
+      instructions: listening.parts[0].instructions,
+      items: range(25, 'ls').map((id, i) =>
+        choice(id, i === 0 ? { audio: { storyId: 'ls-01' } } : {}),
+      ),
+    },
+  ];
+  const wr01 = writing.parts[0].items[0];
+  writing.durationMin = 50;
+  writing.parts = [
+    { id: 'p1', instructions: writing.parts[0].instructions, items: [wr01] },
+    {
+      id: 'p2',
+      instructions: writing.parts[0].instructions,
+      items: [{ ...structuredClone(wr01), id: 'wr02', topic: 'write-note' }],
+    },
+  ];
+  speaking.durationMin = 25;
+  const sp03 = structuredClone(speaking.parts[2].items[0]);
+  delete sp03.group;
+  speaking.parts = [
+    { ...speaking.parts[0], timeSec: 300 },
+    { ...speaking.parts[1], timeSec: 300 },
+    {
+      ...speaking.parts[2],
+      timeSec: 900,
+      items: [{ ...sp03, prepSec: 600, answerSec: 300, minSentences: 12, maxSentences: 15 }],
+    },
+  ];
+  const parsed = ExamSchema.safeParse({
+    ...base,
+    level: 'A2',
+    subtests: [writing, lexgram, reading, listening, speaking],
+  });
+  expect(parsed.success, parsed.success ? '' : JSON.stringify(parsed.error.issues)).toBe(true);
+  return parsed.data!;
+}
+
+describe('officialShapeIssues — A2 (T75)', () => {
+  const withA2 = (edit: (mock: any) => void): Exam => {
+    const mock = makeOfficialA2Mock() as any;
+    edit(mock);
+    return mock as Exam;
+  };
+
+  it('returns [] for a conforming A2 TORFL mock', () => {
+    expect(officialShapeIssues(makeOfficialA2Mock())).toEqual([]);
+  });
+
+  it('A2: an A1-shaped mock is flagged against the A2 numbers', () => {
+    const mock = makeOfficialMock();
+    mock.level = 'A2';
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: writing "writing" durationMin 30 — official 50',
+      '⚠ official-shape: writing "writing" has parts 1 — official 2',
+      '⚠ official-shape: lexgram "lexgram" has items 70 — official 100',
+      '⚠ official-shape: lexgram "lexgram" maxPoints 70 — official 100',
+      '⚠ official-shape: lexgram "lexgram" durationMin 40 — official 50',
+      '⚠ official-shape: reading "reading" has items 25 — official 30',
+      '⚠ official-shape: reading "reading" maxPoints 100 — official 180',
+      '⚠ official-shape: reading "reading" durationMin 40 — official 50',
+      '⚠ official-shape: listening "listening" has items 20 — official 25',
+      '⚠ official-shape: listening "listening" maxPoints 100 — official 150',
+      '⚠ official-shape: speaking "speaking" durationMin 20 — official 25',
+      '⚠ official-shape: speaking "speaking" part times are 300/300/600 s — official 300/300/900 s',
+      '⚠ official-shape: speaking "speaking" task 3 has 2 monologue(s) — official 1',
+      '⚠ official-shape: speaking "speaking" monologue "sp03" is grouped ("g1") — official: one topic, no choice',
+      '⚠ official-shape: speaking "speaking" monologue "sp03" prepSec 480 — official 600',
+      '⚠ official-shape: speaking "speaking" monologue "sp03" answerSec 120 — official 300',
+      '⚠ official-shape: speaking "speaking" monologue "sp04" is grouped ("g1") — official: one topic, no choice',
+      '⚠ official-shape: speaking "speaking" monologue "sp04" prepSec 480 — official 600',
+      '⚠ official-shape: speaking "speaking" monologue "sp04" answerSec 120 — official 300',
+    ]);
+  });
+
+  it('A2 (a): writing part 2 with the wrong topic is flagged', () => {
+    const mock = withA2((m) => {
+      m.subtests[0].parts[1].items[0].topic = 'write-letter';
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: writing "writing" part 2 topic write-letter — official write-note',
+    ]);
+  });
+
+  it('A2 (b): a single writing part is flagged', () => {
+    const mock = withA2((m) => {
+      m.subtests[0].parts = m.subtests[0].parts.slice(0, 1);
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: writing "writing" has parts 1 — official 2',
+    ]);
+  });
+
+  it('A2 (c): a grouped monologue is flagged', () => {
+    const mock = withA2((m) => {
+      m.subtests[4].parts[2].items[0].group = 'g1';
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: speaking "speaking" monologue "sp03" is grouped ("g1") — official: one topic, no choice',
+    ]);
+  });
+
+  it('A2 (d): a wrong prepSec is flagged', () => {
+    const mock = withA2((m) => {
+      m.subtests[4].parts[2].items[0].prepSec = 480;
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: speaking "speaking" monologue "sp03" prepSec 480 — official 600',
+    ]);
+  });
+
+  it('A2 (e): a wrong answerSec is flagged', () => {
+    const mock = withA2((m) => {
+      m.subtests[4].parts[2].items[0].answerSec = 120;
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: speaking "speaking" monologue "sp03" answerSec 120 — official 300',
+    ]);
+  });
+
+  it('A2 (f): a second ungrouped monologue is flagged by the count line only', () => {
+    const mock = withA2((m) => {
+      const extra = structuredClone(m.subtests[4].parts[2].items[0]);
+      extra.id = 'sp04b';
+      m.subtests[4].parts[2].items.push(extra);
+    });
+    expect(officialShapeIssues(mock)).toEqual([
+      '⚠ official-shape: speaking "speaking" task 3 has 2 monologue(s) — official 1',
+    ]);
+  });
+
+  it('TORFL_SHAPES maps A1 and A2 only', () => {
+    expect(Object.keys(TORFL_SHAPES).sort()).toEqual(['A1', 'A2']);
+    expect(TORFL_SHAPES.A1).toBe(TORFL_A1_SHAPE);
   });
 });

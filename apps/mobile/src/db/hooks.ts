@@ -7,6 +7,7 @@ import {
 import * as React from 'react';
 
 import { classifyPack, type Classified } from '@/features/library/categories';
+import type { TorflLevel } from '@/features/torfl/level-profile';
 import type { ExamMode, ExamScope } from '@/features/torfl/model';
 import type { ExamSubtestKind } from '@sumrak/schema';
 import { queryClient } from '@/lib/query-client';
@@ -72,16 +73,16 @@ export const queryKeys = {
   // content AND user rows (attempts/responses/deck) — `invalidateExams()`.
   exams: {
     all: ['exams'] as const,
-    list: (packId?: string, mode?: ExamMode) =>
-      ['exams', 'list', packId ?? 'all', mode ?? 'all'] as const,
+    list: (packId?: string, mode?: ExamMode, level?: TorflLevel) =>
+      ['exams', 'list', packId ?? 'all', mode ?? 'all', level ?? 'all'] as const,
     one: (packId: string, examId: string) => ['exams', 'one', packId, examId] as const,
-    activeAttempt: ['exams', 'attempts', 'active'] as const,
-    attempts: (scope?: ExamScope, limit?: number) =>
-      ['exams', 'attempts', 'list', scope ?? 'all', limit ?? 50] as const,
+    activeAttempt: (level?: TorflLevel) => ['exams', 'attempts', 'active', level ?? 'all'] as const,
+    attempts: (scope?: ExamScope, limit?: number, level?: TorflLevel) =>
+      ['exams', 'attempts', 'list', scope ?? 'all', limit ?? 50, level ?? 'all'] as const,
     attempt: (attemptId: string) => ['exams', 'attempts', 'one', attemptId] as const,
-    topicStats: (sinceMs?: number, subtestKind?: string) =>
-      ['exams', 'topic-stats', sinceMs ?? 0, subtestKind ?? 'all'] as const,
-    deckCounts: ['exams', 'deck-counts'] as const,
+    topicStats: (sinceMs?: number, subtestKind?: string, level?: TorflLevel) =>
+      ['exams', 'topic-stats', sinceMs ?? 0, subtestKind ?? 'all', level ?? 'all'] as const,
+    deckCounts: (level?: TorflLevel) => ['exams', 'deck-counts', level ?? 'all'] as const,
   },
   // M16 word profiles (T53, WORD_FORMS §5.4 key): keyed by the profile key,
   // not the bank item id — profiles outlive items and are shared by lemma.
@@ -491,9 +492,9 @@ export function useScenarioStamps(packId: string | undefined, sentenceId: string
 // --- M18 «ТРКИ» exams (T68) -------------------------------------------------
 
 /** Installed exams (optional pack / mode filter), JSON parsed — the hub's lists (T69). */
-export function useExams(filter: { packId?: string; mode?: ExamMode } = {}) {
+export function useExams(filter: { packId?: string; mode?: ExamMode; level?: TorflLevel } = {}) {
   return useQuery({
-    queryKey: queryKeys.exams.list(filter.packId, filter.mode),
+    queryKey: queryKeys.exams.list(filter.packId, filter.mode, filter.level),
     queryFn: () => repos.exams.listExams(filter),
   });
 }
@@ -508,17 +509,19 @@ export function useExam(packId: string | undefined, examId: string | undefined) 
 }
 
 /** The one active attempt (hub resume banner, T71). */
-export function useActiveExamAttempt() {
+export function useActiveExamAttempt(level?: TorflLevel) {
   return useQuery({
-    queryKey: queryKeys.exams.activeAttempt,
-    queryFn: () => repos.exams.getActiveAttempt(),
+    queryKey: queryKeys.exams.activeAttempt(level),
+    queryFn: () => repos.exams.getActiveAttempt({ level }),
   });
 }
 
 /** Attempt history, newest first. */
-export function useExamAttempts(opts: { scope?: ExamScope; limit?: number } = {}) {
+export function useExamAttempts(
+  opts: { scope?: ExamScope; limit?: number; level?: TorflLevel } = {},
+) {
   return useQuery({
-    queryKey: queryKeys.exams.attempts(opts.scope, opts.limit),
+    queryKey: queryKeys.exams.attempts(opts.scope, opts.limit, opts.level),
     queryFn: () => repos.exams.listAttempts(opts),
   });
 }
@@ -533,18 +536,20 @@ export function useExamAttempt(attemptId: string | undefined) {
 }
 
 /** Per-topic accuracy over objective responses (readiness / hub breakdown). */
-export function useExamTopicStats(opts: { sinceMs?: number; subtestKind?: ExamSubtestKind } = {}) {
+export function useExamTopicStats(
+  opts: { sinceMs?: number; subtestKind?: ExamSubtestKind; level?: TorflLevel } = {},
+) {
   return useQuery({
-    queryKey: queryKeys.exams.topicStats(opts.sinceMs, opts.subtestKind),
+    queryKey: queryKeys.exams.topicStats(opts.sinceMs, opts.subtestKind, opts.level),
     queryFn: () => repos.exams.topicStats(opts),
   });
 }
 
 /** Exam deck totals («Работа над ошибками · N»). */
-export function useExamDeckCounts() {
+export function useExamDeckCounts(level?: TorflLevel) {
   return useQuery({
-    queryKey: queryKeys.exams.deckCounts,
-    queryFn: () => repos.exams.deckCounts(),
+    queryKey: queryKeys.exams.deckCounts(level),
+    queryFn: () => repos.exams.deckCounts(Date.now(), { level }),
   });
 }
 

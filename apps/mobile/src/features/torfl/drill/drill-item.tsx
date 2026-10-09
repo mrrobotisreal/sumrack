@@ -123,6 +123,7 @@ export function DrillItem({
           storyId={assets.passage.storyId}
           sentences={assets.passage.sentences}
           lookup
+          level={entry.level}
         />
       )}
       {needsAudio &&

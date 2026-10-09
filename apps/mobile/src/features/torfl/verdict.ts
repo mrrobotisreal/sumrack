@@ -1,6 +1,7 @@
 import type { ExamSubtestKind } from '@sumrak/schema';
 
 import type { ExamVerdict } from './model';
+import { TORFL_PROFILES, type TorflLevel } from './level-profile';
 import { SUBTEST_ORDER } from './topics';
 
 /**
@@ -16,10 +17,13 @@ import { SUBTEST_ORDER } from './topics';
  * borderline (60 ≤ pct < 66, the best of them) is «spent»: it was the one
  * allowed shortfall, so it is not asked to be retaken when the failure comes
  * from elsewhere. Order = the official subtest order.
+ *
+ * The thresholds come from the level profile (T75): A2 (ТБУ) applies the same
+ * rule with the A2 profile's numbers. A1 is the default everywhere.
  */
 
-export const PASS_PCT = 66;
-export const BORDERLINE_PCT = 60;
+export const PASS_PCT = TORFL_PROFILES.A1.passPct;
+export const BORDERLINE_PCT = TORFL_PROFILES.A1.borderlinePct;
 
 export type VerdictPcts = Partial<Record<ExamSubtestKind, number | null>>;
 
@@ -32,16 +36,17 @@ export interface VerdictOutcome {
  * Pure §6.3 over five pcts; a missing / null pct counts as a fail (the
  * readiness estimate: «unknown» can never predict a pass).
  */
-export function predictVerdict(pcts: VerdictPcts): VerdictOutcome {
+export function predictVerdict(pcts: VerdictPcts, level: TorflLevel = 'A1'): VerdictOutcome {
+  const { passPct, borderlinePct } = TORFL_PROFILES[level];
   const values = SUBTEST_ORDER.map((kind) => ({ kind, pct: pcts[kind] ?? null }));
-  const below66 = values.filter((v) => v.pct === null || v.pct < PASS_PCT);
+  const below66 = values.filter((v) => v.pct === null || v.pct < passPct);
   if (below66.length === 0) return { verdict: 'pass', retake: [] };
   const first = below66[0]!;
-  if (below66.length === 1 && first.pct !== null && first.pct >= BORDERLINE_PCT) {
+  if (below66.length === 1 && first.pct !== null && first.pct >= borderlinePct) {
     return { verdict: 'pass-borderline', retake: [] };
   }
   const borderline = below66
-    .filter((v) => v.pct !== null && v.pct >= BORDERLINE_PCT)
+    .filter((v) => v.pct !== null && v.pct >= borderlinePct)
     .sort((a, b) => b.pct! - a.pct!);
   const spent = borderline[0]?.kind;
   const retake = below66.filter((v) => v.kind !== spent).map((v) => v.kind);
@@ -61,15 +66,17 @@ export interface FullVerdict {
 /**
  * The results card's verdict: `null` when any of the five is missing
  * (skipped placeholders, a single-subtest scope). `provisional` is OR-ed
- * over the subtests flagged in `provisionalKinds`.
+ * over the subtests flagged in `provisionalKinds`. `level` picks the profile's
+ * thresholds (default A1).
  */
 export function verdict(
   pcts: VerdictPcts,
   provisionalKinds: Partial<Record<ExamSubtestKind, boolean>> = {},
+  level: TorflLevel = 'A1',
 ): FullVerdict {
   const missing = SUBTEST_ORDER.filter((k) => pcts[k] === null || pcts[k] === undefined);
   if (missing.length > 0) return { verdict: null, retake: [], provisional: false, missing };
-  const { verdict: v, retake } = predictVerdict(pcts);
+  const { verdict: v, retake } = predictVerdict(pcts, level);
   const provisional = SUBTEST_ORDER.some((k) => provisionalKinds[k] === true);
   return { verdict: v, retake, provisional, missing: [] };
 }

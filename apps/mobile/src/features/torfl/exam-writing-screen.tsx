@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 
 import type { ExamRunState } from './engine/exam-machine';
+import type { TorflLevel } from './level-profile';
 import { dictionaryAllowed } from './engine/rules';
 import type { ExamAnswer } from './model';
 import type { TorflPrefs } from './settings-core';
@@ -20,10 +21,13 @@ export function ExamWritingScreen({
   run,
   remainingMs,
   prefs,
+  level = 'A1',
   onAnswer,
   onSubmit,
   onQuit,
 }: {
+  /** T75 (THE LEVEL RULE): the exam's level for `exam_lookup_used` / `exam_writing_scored`. */
+  level?: TorflLevel;
   subtest: ExamSubtest;
   run: Pick<ExamRunState, 'answers'>;
   remainingMs: number;
@@ -47,6 +51,7 @@ export function ExamWritingScreen({
       remainingMs={remainingMs}
       lookup={lookup}
       subtestKind="writing"
+      level={level}
       onDraft={(text) => onAnswer(item.id, { kind: 'writing', text })}
       onSubmit={(text) => {
         onAnswer(item.id, { kind: 'writing', text });

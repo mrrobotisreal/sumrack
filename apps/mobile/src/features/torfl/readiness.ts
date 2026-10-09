@@ -1,6 +1,7 @@
 import type { ExamSubtestKind } from '@sumrak/schema';
 
 import type { ExamResults, ExamVerdict } from './model';
+import type { TorflLevel } from './level-profile';
 import { BORDERLINE_PCT, PASS_PCT, predictVerdict } from './verdict';
 import { SUBTEST_LABELS, SUBTEST_ORDER } from './topics';
 
@@ -204,10 +205,13 @@ export interface PredictedLine {
 }
 
 /** The hub's one-line predicted verdict (§5.3), from the five readiness rows. */
-export function predictedLine(rows: readonly ReadinessRow[]): PredictedLine {
+export function predictedLine(
+  rows: readonly ReadinessRow[],
+  level: TorflLevel = 'A1',
+): PredictedLine {
   const pcts: Partial<Record<ExamSubtestKind, number | null>> = {};
   for (const r of rows) pcts[r.kind] = r.pct;
-  const { verdict, retake } = predictVerdict(pcts);
+  const { verdict, retake } = predictVerdict(pcts, level);
   if (verdict === 'pass') return { verdict, text: 'Сейчас: сдал бы', retake };
   if (verdict === 'pass-borderline') {
     return { verdict, text: 'Сейчас: почти — один субтест на грани', retake };

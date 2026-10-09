@@ -105,7 +105,7 @@ export function createDrillRecorder(exams: ExamsRepo, now: () => number = Date.n
         topic: entry.item.topic,
         now: at,
       });
-      const rating = ratingForDrillAnswer(score.outcome, ms, entry.subtest.kind);
+      const rating = ratingForDrillAnswer(score.outcome, ms, entry.subtest.kind, entry.level);
       await exams.gradeCard(entry.itemKey, rating, at);
       return { rating, correct: score.outcome === 'full' };
     },

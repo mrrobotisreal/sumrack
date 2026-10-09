@@ -24,6 +24,7 @@ import {
   topicBreakdown,
   type ResultRow,
 } from './results-model';
+import { torflLevelOf } from './level-profile';
 import { PinButton } from './speaking/pin-button';
 import { SUBTEST_LABELS, topicLabel } from './topics';
 import { verdict as computeVerdict, verdictHeadline } from './verdict';
@@ -94,7 +95,7 @@ function ResultsBody({
   const rows = buildResultRows(exam, attempt);
   const pcts = pctsFromRows(rows);
   const full = attempt.scope === 'full';
-  const v = full ? computeVerdict(pcts, provisionalFromRows(rows)) : null;
+  const v = full ? computeVerdict(pcts, provisionalFromRows(rows), torflLevelOf(exam.level)) : null;
   const scoredIds = rows.filter((r) => r.status === 'scored').map((r) => r.subtestId);
   const responses = attempt.responses;
   const answers = React.useMemo(() => {
@@ -146,7 +147,12 @@ function ResultsBody({
           </Text>
         </View>
         {hasRecordings ? (
-          <PinButton attemptId={attemptId} pinned={attempt.pinned} onChanged={onPinChanged} />
+          <PinButton
+            attemptId={attemptId}
+            pinned={attempt.pinned}
+            onChanged={onPinChanged}
+            level={torflLevelOf(exam.level)}
+          />
         ) : null}
       </View>
 

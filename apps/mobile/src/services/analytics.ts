@@ -1,3 +1,5 @@
+import type { TorflLevel } from '@/features/torfl/level-profile';
+
 /**
  * Local analytics (workspace requirement: exceptional tracking even though
  * single-user). track() is safe to call from anywhere at any time: events
@@ -480,6 +482,12 @@ export type AnalyticsEvent =
   // ai_request_* gain feature 'exam-writing' | 'exam-speaking' via the AiFeature union.
   // T74 (§8.5): exam_attempt_pinned {pinned} · exam_debrief_download_failed {code}; the T63
   // recordings_pruned / media_bundle_* events gain `root: 'exam'` for the exam root.
+  // M19 (T75, TORFL_A2 A2-12): EVERY torfl_* / exam_* event above also carries `level` ('A1' |
+  // 'A2', from the exam's / pack's level — THE LEVEL RULE) via `trackTorfl()`;
+  // exam_writing_scored also carries `task` (1 | 2 — the writing item's position; 1 for the
+  // single A1 letter) and `topic` ('write-letter' | 'write-note'). torfl_exam_date_set {daysOut,
+  // level}; daily_torfl_segment gains a1Items / a2Items; exam_deck_reviewed (daily) a1Reviewed /
+  // a2Reviewed.
   | 'torfl_hub_opened'
   | 'torfl_exam_date_set'
   | 'torfl_topic_banked'
@@ -563,6 +571,22 @@ export function track(event: AnalyticsEvent, props?: AnalyticsProps) {
   } else {
     pending.push([event, props]);
   }
+}
+
+/** Every M18/M19 TORFL event (`torfl_*` / `exam_*`). */
+export type TorflAnalyticsEvent = Extract<AnalyticsEvent, `torfl_${string}` | `exam_${string}`>;
+
+/**
+ * THE LEVEL RULE for analytics (T75, TORFL_A2 A2-12): every TORFL event
+ * carries `level` ('A1' | 'A2' — a slug). Call sites use this wrapper, never
+ * a bare `track('torfl_…' | 'exam_…')` — `__tests__/torfl-analytics-level`
+ * scans the source to keep it that way.
+ */
+export function trackTorfl(
+  event: TorflAnalyticsEvent,
+  props: AnalyticsProps & { level: TorflLevel },
+): void {
+  track(event, props);
 }
 
 /** Install the persistence sink (bootstrap) and flush anything queued before it. */

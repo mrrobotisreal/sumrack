@@ -6,7 +6,8 @@ import { isOnline } from '@/features/ai/connectivity';
 import { getModelTable, resolveRun, timeoutFor } from '@/features/ai/run-profile';
 import { runChat } from '@/features/ai/runner';
 import { recordExamVerdictUnlocks } from '@/features/motivation/service';
-import { track } from '@/services/analytics';
+import { torflLevelOf } from '@/features/torfl/level-profile';
+import { track, trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import type { ExamGrading } from '../model';
@@ -106,7 +107,9 @@ export async function recomputeAttemptResults(attemptId: string): Promise<void> 
       const r = results[s.id];
       if (r) pcts[s.kind] = r.pct;
     }
-    await recordExamVerdictUnlocks(pcts, verdict).catch((err) => logError('manual', err));
+    await recordExamVerdictUnlocks(pcts, verdict, torflLevelOf(exam.level)).catch((err) =>
+      logError('manual', err),
+    );
   }
   useGradingQueue.setState((s) => ({ gradedVersion: s.gradedVersion + 1 }));
   void invalidateExams();
@@ -162,7 +165,7 @@ export function pumpGradingQueue(): Promise<number> {
     isOnline,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: () => Date.now(),
-    onScored: (job, write) => {
+    onScored: (job, write, level, meta) => {
       const d = write.grading.offline?.details as
         (Partial<OfflineWritingDetails> & { task?: number }) | undefined;
       if (
@@ -171,24 +174,36 @@ export function pumpGradingQueue(): Promise<number> {
         job.answer.kind !== 'typed' &&
         job.answer.kind !== 'writing'
       ) {
-        track('exam_speaking_scored', { task: d?.task ?? 0, source: 'ai', pct: write.pct });
+        trackTorfl('exam_speaking_scored', {
+          task: d?.task ?? 0,
+          source: 'ai',
+          pct: write.pct,
+          level,
+        });
         return;
       }
-      track('exam_writing_scored', {
+      trackTorfl('exam_writing_scored', {
         source: 'ai',
         pct: write.pct,
         sentences: d?.sentences ?? -1,
         questions: d?.questions ?? -1,
         pointsCovered: d?.pointsCovered ?? -1,
+        task: meta.task,
+        topic: meta.topic,
+        level,
       });
     },
-    onFailed: (job, code) => {
+    onFailed: (job, code, level) => {
       const speaking =
         !!job.answer &&
         job.answer.kind !== 'choice' &&
         job.answer.kind !== 'typed' &&
         job.answer.kind !== 'writing';
-      track('exam_grading_failed', { kind: speaking ? 'speaking' : 'writing', code });
+      trackTorfl('exam_grading_failed', {
+        kind: speaking ? 'speaking' : 'writing',
+        code,
+        level,
+      });
     },
   }).finally(() => {
     pumpInFlight = null;

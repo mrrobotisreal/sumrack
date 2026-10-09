@@ -1,4 +1,5 @@
 import { ruPlural } from './hub-model';
+import { isTorflCategory } from './level-profile';
 
 /**
  * «Добавить все слова в Словарь» (T69, TORFL §5.4) — the pure parts: which
@@ -9,9 +10,12 @@ import { ruPlural } from './hub-model';
 
 export const LEXICON_TAG = 'torfl:lexicon';
 
-/** The reader shows the action only on a `torfl` pack tagged `torfl:lexicon`. */
+/**
+ * The reader shows the action only on a TORFL shelf pack tagged `torfl:lexicon`
+ * (the A1 lexicon is `torfl`; the A2 lexicon (CT037, `torfl-a2`) banks too).
+ */
 export function canBankTopic(pack: { category: string | null; tags: readonly string[] }): boolean {
-  return pack.category === 'torfl' && pack.tags.includes(LEXICON_TAG);
+  return isTorflCategory(pack.category) && pack.tags.includes(LEXICON_TAG);
 }
 
 const WORDS = ['слово', 'слова', 'слов'] as const;
