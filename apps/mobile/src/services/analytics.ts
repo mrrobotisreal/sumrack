@@ -514,7 +514,11 @@ export type AnalyticsEvent =
   | 'fsrs_params_rejected'
   | 'fsrs_params_reverted'
   | 'card_action'
-  | 'review_log_exported';
+  | 'review_log_exported'
+  // T40 typing trainer
+  | 'typing_round_started'
+  | 'typing_round_finished'
+  | 'typing_round_abandoned';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

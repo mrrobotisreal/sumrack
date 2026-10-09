@@ -10,6 +10,17 @@ import type { SumrakDB } from '../types';
 export type BankItemRow = typeof bankItems.$inferSelect;
 export type EncounterRow = typeof encounters.$inferSelect;
 
+/** One typing-trainer candidate (T40) — see `listTypingCandidates`. */
+export interface TypingCandidateRow {
+  id: string;
+  /** Shown text: the lemma (surface fallback). */
+  lemma: string;
+  surface: string;
+  translation: string;
+  /** Weakest-link core stability (days); null = never reviewed. */
+  minCoreStability: number | null;
+}
+
 export interface EncounterSource {
   sentenceId?: string;
   journalEntryId?: string;
@@ -627,6 +638,46 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
         if (r.band in counts) counts[r.band as keyof MasteryCounts] = r.n;
       }
       return counts;
+    },
+
+    /**
+     * Typing-trainer candidates (T40). Exact query — the shown text is
+     * `COALESCE(lemma, surface)`, the minimum is the same weakest-link
+     * fragment as the mastery bands (`MIN_CORE_STABILITY`, reps > 0 on
+     * ru-en / en-ru only):
+     *
+     *   SELECT id, COALESCE(lemma, surface) AS lemma, surface, translation,
+     *          MIN_CORE_STABILITY AS min_core_stability
+     *   FROM bank_items
+     *   WHERE kind = 'word'
+     *     AND instr(COALESCE(lemma, surface), ' ') = 0          -- single words only
+     *     AND COALESCE(lemma, surface) NOT GLOB '*[A-Za-z]*'    -- no Latin letters
+     *
+     * The Latin-letter guard is case-sensitive GLOB on purpose: the pattern
+     * covers both cases explicitly. Band per row: `bandForStability` (lib/mastery).
+     */
+    async listTypingCandidates(): Promise<TypingCandidateRow[]> {
+      const rows = await db.all<{
+        id: string;
+        lemma: string;
+        surface: string;
+        translation: string;
+        min_core_stability: number | null;
+      }>(sql`
+        SELECT id, COALESCE(lemma, surface) AS lemma, surface, translation,
+               ${MIN_CORE_STABILITY} AS min_core_stability
+        FROM bank_items
+        WHERE kind = 'word'
+          AND instr(COALESCE(lemma, surface), ' ') = 0
+          AND COALESCE(lemma, surface) NOT GLOB '*[A-Za-z]*'
+      `);
+      return rows.map((r) => ({
+        id: r.id,
+        lemma: r.lemma,
+        surface: r.surface,
+        translation: r.translation,
+        minCoreStability: r.min_core_stability,
+      }));
     },
 
     /** Distinct filter values actually present, so chips never dead-end. */

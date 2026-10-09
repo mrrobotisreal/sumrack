@@ -71,6 +71,13 @@ export const SETTING_KEYS = {
    */
   dialogueTapMode: 'games.dialogueTapMode',
   /**
+   * Typing trainer stats (T40): { v: 1, bestWpm, bestAccuracy, rounds,
+   * totalWords, totalCorrectChars, lastPlayedAt } — Zod-validated on read
+   * (features/review/games/typing/stats.ts); a corrupt value heals to the
+   * defaults. No table: the per-round rows live in game_sessions.
+   */
+  typingStats: 'games.typingStats',
+  /**
    * boolean (T31, default false): still every ambient animation — room
    * scenes freeze on their poster frame, the threshold transition and the
    * house-map flicker are skipped. OR-combined with the OS reduced-motion
