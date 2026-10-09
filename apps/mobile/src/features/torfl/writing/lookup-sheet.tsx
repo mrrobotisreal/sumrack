@@ -7,8 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { TokenSearchHit } from '@/db/repositories/content';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
+
+import type { TorflLevel } from '../level-profile';
 
 /**
  * The writing screen's dictionary (T72, TORFL decision 8: a bilingual
@@ -22,12 +24,15 @@ export function WritingLookupSheet({
   open,
   initialQuery,
   subtestKind,
+  level = 'A1',
   onClose,
 }: {
   open: boolean;
   initialQuery: string;
-  /** Analytics `exam_lookup_used {subtestKind}` on each query (mocks + practice). */
+  /** Analytics `exam_lookup_used {subtestKind, level}` on each query (mocks + practice). */
   subtestKind: string;
+  /** T75 (THE LEVEL RULE): the exam's level; defaults to A1. */
+  level?: TorflLevel;
   onClose: () => void;
 }) {
   // Remount per open so the query starts from the selected word without a sync effect.
@@ -36,6 +41,7 @@ export function WritingLookupSheet({
       key={initialQuery}
       initialQuery={initialQuery}
       subtestKind={subtestKind}
+      level={level}
       onClose={onClose}
     />
   ) : null;
@@ -44,10 +50,12 @@ export function WritingLookupSheet({
 function LookupBody({
   initialQuery,
   subtestKind,
+  level,
   onClose,
 }: {
   initialQuery: string;
   subtestKind: string;
+  level: TorflLevel;
   onClose: () => void;
 }) {
   const { tokens } = useAppTheme();
@@ -59,7 +67,7 @@ function LookupBody({
     queryKey: ['torfl', 'writing-lookup', q],
     queryFn: async () => {
       const rows = await repos.content.searchTokens(q, 60);
-      track('exam_lookup_used', { subtestKind });
+      trackTorfl('exam_lookup_used', { subtestKind, level });
       return dedupe(rows);
     },
     enabled: q.length >= 2,

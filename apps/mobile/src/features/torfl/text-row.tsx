@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { ruPlural, type TextEntry } from './hub-model';
@@ -27,12 +27,17 @@ export function TextRow({ text, from }: { text: TextEntry; from: 'texts' | 'revi
   const router = useRouter();
   const { tokens } = useAppTheme();
   const open = React.useCallback(() => {
-    track('torfl_text_opened', { packId: text.packId, storyId: text.storyId, from });
+    trackTorfl('torfl_text_opened', {
+      packId: text.packId,
+      storyId: text.storyId,
+      from,
+      level: text.level,
+    });
     router.push({
       pathname: '/reader/[packId]/[storyId]',
       params: { packId: text.packId, storyId: text.storyId, from: 'torfl' },
     });
-  }, [router, text.packId, text.storyId, from]);
+  }, [router, text.packId, text.storyId, text.level, from]);
   return (
     <Pressable
       onPress={open}

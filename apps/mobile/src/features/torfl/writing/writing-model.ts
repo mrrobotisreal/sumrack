@@ -1,4 +1,4 @@
-import type { WritingItem } from '@sumrak/schema';
+import type { Exam, WritingItem } from '@sumrak/schema';
 
 import { bulletCoverage, sentenceSplit } from '../grading/writing';
 
@@ -8,6 +8,30 @@ import { bulletCoverage, sentenceSplit } from '../grading/writing';
  * the exam lets candidates count) and the practice mode (counters + the
  * ticking checklist) read these.
  */
+
+/**
+ * The analytics `task` + `topic` of a writing item (T75, A2-12): `task` is
+ * the 1-based position of the item among its subtest's writing items (parts
+ * in order — A1's single letter → 1, A2's note → 2); `topic` is the item's
+ * topic slug. Unknown item → `{ task: 0, topic: 'none' }`.
+ */
+export function writingTaskOf(
+  exam: Exam,
+  subtestId: string,
+  itemId: string,
+): { task: number; topic: string } {
+  const subtest = exam.subtests.find((s) => s.id === subtestId);
+  if (!subtest) return { task: 0, topic: 'none' };
+  let position = 0;
+  for (const part of subtest.parts) {
+    for (const item of part.items) {
+      if (item.kind !== 'writing') continue;
+      position += 1;
+      if (item.id === itemId) return { task: position, topic: item.topic };
+    }
+  }
+  return { task: 0, topic: 'none' };
+}
 
 export interface WritingCounters {
   sentences: number;

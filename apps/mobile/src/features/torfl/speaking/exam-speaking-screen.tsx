@@ -13,7 +13,7 @@ import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { MicButton, type MicVisualState } from '@/features/scenario/stage/mic-button';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { fileExists } from '../drill/drill-item';
@@ -23,6 +23,7 @@ import { TASK_LABEL, speakingTaskOf } from '../grading/speaking';
 import { loadRefAudio, type ExamAudio } from '../items/exam-audio';
 import { useExamAudio } from '../items/use-exam-audio';
 import type { ExamSpeakingState } from '../model';
+import type { TorflLevel } from '../level-profile';
 import { WritingLookupSheet } from '../writing/lookup-sheet';
 import type { ExamRecorder } from './use-exam-recorder';
 
@@ -56,6 +57,7 @@ const ANSWER_WARN_MS = 10_000;
 export function ExamSpeakingScreen({
   packId,
   attemptId,
+  level = 'A1',
   subtest,
   run,
   remainingMs,
@@ -71,6 +73,8 @@ export function ExamSpeakingScreen({
 }: {
   packId: string;
   attemptId: string;
+  /** T75 (THE LEVEL RULE): the exam's level for `exam_lookup_used`. */
+  level?: TorflLevel;
   subtest: ExamSubtest;
   run: Pick<ExamRunState, 'speaking'>;
   remainingMs: number;
@@ -143,6 +147,7 @@ export function ExamSpeakingScreen({
       {sp.task === 3 ? (
         <MonologueBody
           packId={packId}
+          level={level}
           sp={sp}
           items={items}
           item={item && item.kind === 'speaking-monologue' ? item : null}
@@ -359,6 +364,7 @@ function TurnBody({
 
 function MonologueBody({
   packId,
+  level,
   sp,
   items,
   item,
@@ -372,6 +378,7 @@ function MonologueBody({
   bottom,
 }: {
   packId: string;
+  level: TorflLevel;
   sp: ExamSpeakingState;
   items: readonly ExamItem[];
   item: SpeakingMonologueItem | null;
@@ -518,6 +525,7 @@ function MonologueBody({
           open={lookupOpen}
           initialQuery=""
           subtestKind="speaking"
+          level={level}
           onClose={() => setLookupOpen(false)}
         />
       </>
@@ -622,6 +630,6 @@ export function speakingFacts(subtest: ExamSubtest): string[] {
   return out;
 }
 
-export function logSpeakingLookup(): void {
-  track('exam_lookup_used', { subtestKind: 'speaking' });
+export function logSpeakingLookup(level: TorflLevel = 'A1'): void {
+  trackTorfl('exam_lookup_used', { subtestKind: 'speaking', level });
 }

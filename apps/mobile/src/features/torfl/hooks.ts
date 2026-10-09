@@ -11,7 +11,7 @@ import {
   useStories,
 } from '@/db/hooks';
 import { localDateKey } from '@/db/repositories/stats';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 
 import {
   buildExamListItems,
@@ -85,7 +85,7 @@ export function useExamDate(level: TorflLevel = 'A1') {
     async (date: string | null) => {
       await setExamDate(date, level);
       queryClient.setQueryData(examDateKey(level), date);
-      track('torfl_exam_date_set', { daysOut: daysOutProp(date, localDateKey()), level });
+      trackTorfl('torfl_exam_date_set', { daysOut: daysOutProp(date, localDateKey()), level });
     },
     [queryClient, level],
   );

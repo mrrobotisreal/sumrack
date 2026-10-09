@@ -1,8 +1,9 @@
 import { repos } from '@/db';
 import { invalidateExams } from '@/db/hooks';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 
 import type { ExamResponse } from '@/db/repositories/exams';
+import type { TorflLevel } from '../level-profile';
 
 import type { ExamGrading } from '../model';
 import { recomputeAttemptResults } from './queue';
@@ -18,10 +19,15 @@ import {
  * the response's offline criteria into a full five-criterion set, store it
  * as `grading.self`, mark the row `self-graded` with the new points, then
  * recompute the attempt (gradedBy 'self', final). Returns the pct.
+ *
+ * `level` / `task` / `topic` are the analytics props (T75, THE LEVEL RULE):
+ * the caller passes the exam's level and the item's writing task + topic.
  */
 export async function applySelfCheck(
   response: ExamResponse,
   answers: Record<SelfCheckId, SelfCheckValue>,
+  level: TorflLevel = 'A1',
+  meta: { task: number; topic: string } = { task: 0, topic: 'none' },
 ): Promise<number> {
   const prev: ExamGrading = response.grading ?? { v: 1 };
   const criteria = selfCheckCriteria(prev.offline?.criteria ?? [], answers);
@@ -35,12 +41,15 @@ export async function applySelfCheck(
   });
   const d = prev.offline?.details as
     { sentences?: number; questions?: number; pointsCovered?: number } | undefined;
-  track('exam_writing_scored', {
+  trackTorfl('exam_writing_scored', {
     source: 'self',
     pct,
     sentences: d?.sentences ?? -1,
     questions: d?.questions ?? -1,
     pointsCovered: d?.pointsCovered ?? -1,
+    task: meta.task,
+    topic: meta.topic,
+    level,
   });
   await recomputeAttemptResults(response.attemptId);
   void invalidateExams();

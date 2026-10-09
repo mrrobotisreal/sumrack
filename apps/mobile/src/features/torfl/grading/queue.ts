@@ -7,7 +7,7 @@ import { getModelTable, resolveRun, timeoutFor } from '@/features/ai/run-profile
 import { runChat } from '@/features/ai/runner';
 import { recordExamVerdictUnlocks } from '@/features/motivation/service';
 import { torflLevelOf } from '@/features/torfl/level-profile';
-import { track } from '@/services/analytics';
+import { track, trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import type { ExamGrading } from '../model';
@@ -165,7 +165,7 @@ export function pumpGradingQueue(): Promise<number> {
     isOnline,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: () => Date.now(),
-    onScored: (job, write) => {
+    onScored: (job, write, level, meta) => {
       const d = write.grading.offline?.details as
         (Partial<OfflineWritingDetails> & { task?: number }) | undefined;
       if (
@@ -174,24 +174,36 @@ export function pumpGradingQueue(): Promise<number> {
         job.answer.kind !== 'typed' &&
         job.answer.kind !== 'writing'
       ) {
-        track('exam_speaking_scored', { task: d?.task ?? 0, source: 'ai', pct: write.pct });
+        trackTorfl('exam_speaking_scored', {
+          task: d?.task ?? 0,
+          source: 'ai',
+          pct: write.pct,
+          level,
+        });
         return;
       }
-      track('exam_writing_scored', {
+      trackTorfl('exam_writing_scored', {
         source: 'ai',
         pct: write.pct,
         sentences: d?.sentences ?? -1,
         questions: d?.questions ?? -1,
         pointsCovered: d?.pointsCovered ?? -1,
+        task: meta.task,
+        topic: meta.topic,
+        level,
       });
     },
-    onFailed: (job, code) => {
+    onFailed: (job, code, level) => {
       const speaking =
         !!job.answer &&
         job.answer.kind !== 'choice' &&
         job.answer.kind !== 'typed' &&
         job.answer.kind !== 'writing';
-      track('exam_grading_failed', { kind: speaking ? 'speaking' : 'writing', code });
+      trackTorfl('exam_grading_failed', {
+        kind: speaking ? 'speaking' : 'writing',
+        code,
+        level,
+      });
     },
   }).finally(() => {
     pumpInFlight = null;

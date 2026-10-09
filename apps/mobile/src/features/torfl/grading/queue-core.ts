@@ -6,7 +6,9 @@ import type { RunChatResult } from '@/features/ai/runner';
 import type { ResolvedRun } from '@/features/ai/run-profile';
 import { parseExamGrade, type ExamGrade } from '@/features/ai/schemas';
 
+import { torflLevelOf, type TorflLevel } from '../level-profile';
 import type { ExamAnswer, ExamGrading, ExamResults, ExamVerdict } from '../model';
+import { writingTaskOf } from '../writing/writing-model';
 import { verdict as computeVerdict } from '../verdict';
 
 /**
@@ -108,11 +110,29 @@ export interface GradingQueueDeps {
   isOnline: () => Promise<boolean>;
   sleep: (ms: number) => Promise<void>;
   now: () => number;
-  /** Analytics hooks (props: slugs/numbers only). */
-  onScored?: (job: GradingJobInput, write: GradedWrite) => void;
-  onFailed?: (job: GradingJobInput, code: string) => void;
+  /**
+   * Analytics hooks (props: slugs/numbers only). `level` is the exam's TORFL
+   * level (THE LEVEL RULE); `meta` the writing item's task + topic (T75).
+   */
+  onScored?: (job: GradingJobInput, write: GradedWrite, level: TorflLevel, meta: JobMeta) => void;
+  onFailed?: (job: GradingJobInput, code: string, level: TorflLevel) => void;
   retryDelaysMs?: number[];
   graders: readonly KindGrader[];
+}
+
+/** The analytics meta of one graded job: the writing item's task (1-based) + topic; `0` / `'none'` when unknown. */
+export interface JobMeta {
+  task: number;
+  topic: string;
+}
+
+/**
+ * The level of a job when its exam is gone (the «pack was removed» branch):
+ * the orphan convention of `levelIs` in db/repositories/exams.ts — an `a2-`
+ * pack id is A2, anything else A1.
+ */
+export function orphanLevelOf(packId: string): TorflLevel {
+  return packId.startsWith('a2-') ? 'A2' : 'A1';
 }
 
 export const GRADER_FEATURE: Record<string, 'exam-writing' | 'exam-speaking'> = {
@@ -148,15 +168,16 @@ export async function processGradingQueue(deps: GradingQueueDeps): Promise<numbe
     if (!exam) {
       // The pack was removed underneath the attempt (§12): nothing to grade against.
       await deps.writeFailed(job, { code: 'invalid-response', attempts: 0 });
-      deps.onFailed?.(job, 'invalid-response');
+      deps.onFailed?.(job, 'invalid-response', orphanLevelOf(job.packId));
       continue;
     }
+    const level = torflLevelOf(exam.level);
     const kind = jobKind(exam, job);
     const grader = kind ? deps.graders.find((g) => g.kind === kind) : undefined;
     if (!kind || !grader) {
       if (!kind) {
         await deps.writeFailed(job, { code: 'invalid-response', attempts: 0 });
-        deps.onFailed?.(job, 'invalid-response');
+        deps.onFailed?.(job, 'invalid-response', level);
       }
       // A kind with no grader in this build stays pending (T73 registers speaking).
       continue;
@@ -169,7 +190,7 @@ export async function processGradingQueue(deps: GradingQueueDeps): Promise<numbe
     const request = await grader.buildRequest(ctx);
     if (!request) {
       await deps.writeFailed(job, { code: 'invalid-response', attempts: 0 });
-      deps.onFailed?.(job, 'invalid-response');
+      deps.onFailed?.(job, 'invalid-response', level);
       continue;
     }
     run ??= await deps.resolveRun();
@@ -201,7 +222,7 @@ export async function processGradingQueue(deps: GradingQueueDeps): Promise<numbe
         const write = grader.fold(ctx, grade, receipt);
         await deps.writeGraded(job, write);
         await deps.recomputeAttempt(job.attemptId);
-        deps.onScored?.(job, write);
+        deps.onScored?.(job, write, level, writingTaskOf(exam, job.subtestId, job.itemId));
         done++;
         lastError = null;
         break;
@@ -213,7 +234,7 @@ export async function processGradingQueue(deps: GradingQueueDeps): Promise<numbe
     }
     if (lastError) {
       await deps.writeFailed(job, { code: lastError.code, attempts });
-      deps.onFailed?.(job, lastError.code);
+      deps.onFailed?.(job, lastError.code, level);
       if (lastError.code === 'no-key' || lastError.code === 'http-auth') break;
     }
   }

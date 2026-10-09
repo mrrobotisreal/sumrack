@@ -8,8 +8,9 @@ import { invalidateExams } from '@/db/hooks';
 import { ExamAttemptActiveError } from '@/db/repositories/exams';
 import { drillHref } from '@/features/torfl/drill/drill-model';
 import { startMockAttempt } from '@/features/torfl/engine/start';
+import { torflLevelOf } from '@/features/torfl/level-profile';
 import { ExamIntroScreen, type ExamStartScope } from '@/features/torfl/exam-intro-screen';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 /**
@@ -33,10 +34,11 @@ export default function ExamIntroRoute() {
       try {
         const attempt = await startMockAttempt(repos.exams, exam, pack, scope, { replace });
         void invalidateExams();
-        track('exam_started', {
+        trackTorfl('exam_started', {
           packId: pack,
           examId: exam.id,
           scope: scope.scope,
+          level: torflLevelOf(exam.level),
           ...(scope.scope === 'subtest'
             ? { subtestKind: exam.subtests.find((s) => s.id === scope.subtestId)?.kind ?? 'none' }
             : {}),

@@ -18,10 +18,11 @@ import {
   startAttemptRecording,
   stopAttemptRecording,
 } from '@/features/pronunciation/recorder';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import type { SpeakingTask } from '../grading/speaking';
+import type { TorflLevel } from '../level-profile';
 import type { SpeakingAnswer, SpeakingWordStamp } from '../model';
 
 /**
@@ -49,6 +50,8 @@ export interface RecorderStart {
   fixedWindow: boolean;
   /** Which recordings-root dir the file goes under (the attempt id). */
   attemptId: string;
+  /** T75 (THE LEVEL RULE): the exam's level for `exam_recording_saved`; default A1. */
+  level?: TorflLevel;
 }
 
 export interface ExamRecorder {
@@ -66,7 +69,7 @@ export interface ExamRecorder {
 
 export interface RecorderEvents {
   onDone: (itemId: string, answer: SpeakingAnswer) => void;
-  /** A recording was saved to disk (`exam_recording_saved {task, ms}`). */
+  /** A recording was saved to disk (`exam_recording_saved {task, ms, level}`). */
   onSaved?: (task: SpeakingTask, ms: number) => void;
 }
 
@@ -135,7 +138,11 @@ export function useExamRecorder(events: RecorderEvents): ExamRecorder {
         recordingPath = stashExamWav(cur.attemptId, cur.task, cur.itemId, wavUri);
         if (recordingPath) {
           eventsRef.current.onSaved?.(cur.task, durationMs);
-          track('exam_recording_saved', { task: cur.task, ms: durationMs });
+          trackTorfl('exam_recording_saved', {
+            task: cur.task,
+            ms: durationMs,
+            level: cur.level ?? 'A1',
+          });
         }
       }
       if (serial !== serialRef.current) return; // cancelled meanwhile
