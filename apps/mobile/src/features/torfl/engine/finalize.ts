@@ -6,6 +6,7 @@ import type { Repositories } from '@/db/repositories';
 import type { ExamAnswer, ExamResults, ExamScope, ExamVerdict } from '../model';
 import { computeFinish, type FinishComputation } from './finish';
 import type { ExamRunState } from './exam-machine';
+import { torflLevelOf } from '../level-profile';
 import type { ExamRewardInput } from '../rewards';
 
 /**
@@ -59,6 +60,7 @@ export async function finalizeAttempt(
       scoredSubtests: finish.scoredSubtests,
       pcts: finish.pcts,
       verdict,
+      level: torflLevelOf(args.exam.level),
     },
     { excludeAttemptId: args.attemptId },
   );

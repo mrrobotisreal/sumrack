@@ -6,6 +6,7 @@ import { isOnline } from '@/features/ai/connectivity';
 import { getModelTable, resolveRun, timeoutFor } from '@/features/ai/run-profile';
 import { runChat } from '@/features/ai/runner';
 import { recordExamVerdictUnlocks } from '@/features/motivation/service';
+import { torflLevelOf } from '@/features/torfl/level-profile';
 import { track } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
@@ -106,7 +107,9 @@ export async function recomputeAttemptResults(attemptId: string): Promise<void> 
       const r = results[s.id];
       if (r) pcts[s.kind] = r.pct;
     }
-    await recordExamVerdictUnlocks(pcts, verdict).catch((err) => logError('manual', err));
+    await recordExamVerdictUnlocks(pcts, verdict, torflLevelOf(exam.level)).catch((err) =>
+      logError('manual', err),
+    );
   }
   useGradingQueue.setState((s) => ({ gradedVersion: s.gradedVersion + 1 }));
   void invalidateExams();

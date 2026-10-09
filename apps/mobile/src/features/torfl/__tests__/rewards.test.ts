@@ -56,3 +56,46 @@ describe('examAchievements', () => {
     expect(examAchievements({ ...base, scoredSubtests: 0, pcts: {} })).toEqual([]);
   });
 });
+
+describe('per level (T75, A2-11)', () => {
+  const passFive = {
+    ...base,
+    scope: 'full' as const,
+    scoredSubtests: 5,
+    pcts: five(90),
+    verdict: 'pass' as const,
+  };
+  const fourA1 = ['torfl-first-mock', 'torfl-lexgram-90', 'torfl-would-pass', 'torfl-margin'];
+  const fourA2 = [
+    'torfl-a2-first-mock',
+    'torfl-a2-lexgram-90',
+    'torfl-a2-would-pass',
+    'torfl-a2-margin',
+  ];
+
+  it('A2 five(90)+pass → the four A2 ids, in order', () => {
+    expect(examAchievements({ ...passFive, level: 'A2' })).toEqual(fourA2);
+  });
+
+  it('the same input at A1 → the four A1 ids; level absent → A1 too', () => {
+    expect(examAchievements({ ...passFive, level: 'A1' })).toEqual(fourA1);
+    expect(examAchievements(passFive)).toEqual(fourA1);
+  });
+
+  it('an A2 input never yields an A1 id, and an A1 input never yields an A2 id', () => {
+    const cases: ExamRewardInput[] = [
+      { ...base, scope: 'full', scoredSubtests: 5, pcts: five(40), verdict: 'fail' },
+      { ...base, scope: 'full', scoredSubtests: 5, pcts: five(70), verdict: 'pass' },
+      { ...base, scoredSubtests: 1, pcts: { lexgram: 95 }, verdict: null },
+    ];
+    for (const c of cases) {
+      for (const level of ['A1', 'A2'] as const) {
+        const ids = examAchievements({ ...c, level });
+        for (const id of ids) {
+          if (level === 'A2') expect(id.startsWith('torfl-a2-')).toBe(true);
+          else expect(id.startsWith('torfl-a2-')).toBe(false);
+        }
+      }
+    }
+  });
+});

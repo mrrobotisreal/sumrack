@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TORFL_PROFILES } from '@/features/torfl/level-profile';
+
 import { ACHIEVEMENTS_BY_ID } from '../achievements';
 import { recordExamFinished, recordExamVerdictUnlocks } from '../service';
 import { XP_TABLE } from '../xp';
@@ -137,14 +139,70 @@ describe('recordExamVerdictUnlocks (T72/T73 path)', () => {
     await recordExamVerdictUnlocks(five(40), 'fail');
     expect(unlockedIds()).toEqual([]);
   });
+
+  it("'recordExamVerdictUnlocks A2 → only A2 ids'", async () => {
+    await recordExamVerdictUnlocks(five(90), 'pass', 'A2');
+    expect(unlockedIds().sort()).toEqual(['torfl-a2-margin', 'torfl-a2-would-pass']);
+    expect(unlockedIds().some((id) => !id.startsWith('torfl-a2-'))).toBe(false);
+  });
+
+  it('an A1 call unlocks only A1 ids', async () => {
+    await recordExamVerdictUnlocks(five(90), 'pass', 'A1');
+    expect(unlockedIds().sort()).toEqual(['torfl-margin', 'torfl-would-pass']);
+  });
+});
+
+describe('recordExamFinished per level (T75)', () => {
+  it("'recordExamFinished with level A2 unlocks A2 ids only + first pass per level'", async () => {
+    // The repo filters by level, so the A2 query sees no earlier A2 pass.
+    listAttempts.mockResolvedValue([]);
+    const r = await recordExamFinished(
+      {
+        scope: 'full',
+        scoredSubtests: 5,
+        pcts: five(90),
+        verdict: 'pass',
+        level: 'A2',
+      },
+      { excludeAttemptId: 'me' },
+    );
+    expect(listAttempts).toHaveBeenCalledWith(expect.objectContaining({ level: 'A2' }));
+    expect(r.xp).toBe(5 * 15 + 60 + 100);
+    expect(unlockedIds().sort()).toEqual(
+      [
+        'torfl-a2-first-mock',
+        'torfl-a2-lexgram-90',
+        'torfl-a2-would-pass',
+        'torfl-a2-margin',
+      ].sort(),
+    );
+    expect(unlockedIds().some((id) => !id.startsWith('torfl-a2-'))).toBe(false);
+  });
 });
 
 describe('definitions', () => {
-  it('the four titles', () => {
+  it('the four A1 titles are unchanged', () => {
     const t = (id: string) => ACHIEVEMENTS_BY_ID.get(id)?.title;
     expect(t('torfl-first-mock')).toBe('Первый вариант');
     expect(t('torfl-would-pass')).toBe('Сдал бы!');
     expect(t('torfl-margin')).toBe('С запасом');
     expect(t('torfl-lexgram-90')).toBe('Без словаря');
+  });
+
+  it('the four A2 titles', () => {
+    const t = (id: string) => ACHIEVEMENTS_BY_ID.get(id)?.title;
+    expect(t('torfl-a2-first-mock')).toBe('Первый вариант ТБУ');
+    expect(t('torfl-a2-would-pass')).toBe('Базовый — сдал бы!');
+    expect(t('torfl-a2-margin')).toBe('Базовый с запасом');
+    expect(t('torfl-a2-lexgram-90')).toBe('Без словаря · А2');
+  });
+
+  it('every profile achievement id exists for both levels; torfl-deck-100 stays', () => {
+    for (const level of ['A1', 'A2'] as const) {
+      for (const id of Object.values(TORFL_PROFILES[level].achievements)) {
+        expect(ACHIEVEMENTS_BY_ID.has(id)).toBe(true);
+      }
+    }
+    expect(ACHIEVEMENTS_BY_ID.has('torfl-deck-100')).toBe(true);
   });
 });
