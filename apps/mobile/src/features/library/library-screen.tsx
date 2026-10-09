@@ -55,6 +55,7 @@ import { SyncStatusLine } from '@/features/sync/sync-status-line';
 import { ExamRow } from '@/features/torfl/exam-row';
 import type { ExamListItem } from '@/features/torfl/hub-model';
 import { useExamListItems } from '@/features/torfl/hooks';
+import { isTorflCategory, levelForCategory } from '@/features/torfl/level-profile';
 import { TorflHubCard } from '@/features/torfl/torfl-hub-card';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
@@ -431,11 +432,12 @@ export function LibraryScreen() {
             testID="library-genre-chips"
           />
         )}
-        {/* M18 (T69): the pinned hub card — under «ТРКИ» only, above the
-            sections AND inside the empty state (the hub works before sync). */}
-        {category === 'torfl' && (
+        {/* M18 (T69) / M19 (T75): the pinned hub card — under each «ТРКИ» chip
+            (A1 / A2), parameterised by level, above the sections AND inside
+            the empty state (the hub works before sync). */}
+        {isTorflCategory(category) && (
           <View className="px-4">
-            <TorflHubCard />
+            <TorflHubCard key={category} level={levelForCategory(category) ?? 'A1'} />
           </View>
         )}
         {emptyCategory && <EmptyCategory category={category} />}
@@ -585,7 +587,7 @@ function EmptyCategory({ category }: { category: string }) {
       <Ionicons name={icon} size={40} color={tokens.textMuted} />
       <Text className="font-reading-bold text-xl">Пока пусто</Text>
       <Text variant="muted" className="text-center">
-        {category === 'torfl'
+        {isTorflCategory(category)
           ? 'Материалы ТРКИ появятся после синхронизации — подготовка к экзамену уже открыта выше.'
           : 'Материалы для этой полки появятся после синхронизации.'}
       </Text>

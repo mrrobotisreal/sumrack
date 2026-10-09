@@ -49,6 +49,13 @@ describe('sanitize', () => {
     });
   });
 
+  it("T75: a well-formed 'torfl-a2' category is kept (a known slug)", () => {
+    expect(sanitize({ category: 'torfl-a2', genre: 'all' })).toEqual({
+      category: 'torfl-a2',
+      genre: 'all',
+    });
+  });
+
   it('a well-formed UNKNOWN category/genre slug is kept (forward-compatible reading)', () => {
     expect(sanitize({ category: 'recipes', genre: 'soup' })).toEqual({
       category: 'recipes',
@@ -69,6 +76,8 @@ describe('sanitize', () => {
       category: 'stories',
       genre: 'all',
     });
+    // A pre-T75 Cyrillic label stored in the setting heals to the default.
+    expect(sanitize({ category: 'ТРКИ', genre: 'all' })).toEqual(LIBRARY_PREFS_DEFAULTS);
     expect(sanitize({ category: 'news', genre: 'slice of life' })).toEqual({
       category: 'news',
       genre: 'all',

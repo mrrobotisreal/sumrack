@@ -14,8 +14,8 @@ export function resolveAmbientTheme(c: {
 }): AmbientThemeId {
   if (c.category === 'news') return 'news';
   if (c.category === 'education') return 'education';
-  // M18 (T69, TORFL §5.1): exam prep studies to the education beds.
-  if (c.category === 'torfl') return 'education';
+  // M18/M19 (T69/T75): both TORFL shelves study to the education beds.
+  if (c.category === 'torfl' || c.category === 'torfl-a2') return 'education';
   if (c.category === 'stories' && c.genre === 'comedy') return 'comedy';
   if (c.category === 'stories' && c.genre === 'action') return 'action';
   return 'horror';

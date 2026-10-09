@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { TORFL_PROFILES } from '@/features/torfl/level-profile';
+
 import {
   ALL_GENRES,
   CATEGORIES,
@@ -102,6 +104,33 @@ describe('classifyPack — the §2.4 default table', () => {
     });
   });
 
+  it('T75: none; type exam → the level picks the shelf (A1 / unknown → torfl, A2 → torfl-a2)', () => {
+    expect(classifyPack(pack({ type: 'exam', level: 'A1' }))).toEqual({
+      category: 'torfl',
+      genre: null,
+    });
+    expect(classifyPack(pack({ type: 'exam', level: 'A2' }))).toEqual({
+      category: 'torfl-a2',
+      genre: null,
+    });
+    expect(classifyPack(pack({ type: 'exam' }))).toEqual({ category: 'torfl', genre: null });
+    expect(classifyPack(pack({ type: 'exam', level: 'B1' }))).toEqual({
+      category: 'torfl',
+      genre: null,
+    });
+  });
+
+  it('T75: an authored category wins over the exam level', () => {
+    expect(classifyPack(pack({ type: 'exam', category: 'torfl-a2', level: 'A1' }))).toEqual({
+      category: 'torfl-a2',
+      genre: null,
+    });
+    expect(classifyPack(pack({ type: 'exam', category: 'torfl', level: 'A2' }))).toEqual({
+      category: 'torfl',
+      genre: null,
+    });
+  });
+
   it('a torfl STORY pack (the lexicon) classifies by its authored category', () => {
     expect(classifyPack(pack({ category: 'torfl' }))).toEqual({ category: 'torfl', genre: null });
   });
@@ -181,8 +210,9 @@ describe('labels', () => {
 });
 
 describe('sets & order', () => {
-  it('isKnownCategory matches exactly the seven slugs (six M14 + torfl, T69)', () => {
+  it('isKnownCategory matches exactly the eight slugs (six M14 + torfl + torfl-a2, T69/T75)', () => {
     for (const slug of CATEGORY_ORDER) expect(isKnownCategory(slug)).toBe(true);
+    expect(isKnownCategory('torfl-a2')).toBe(true);
     expect(isKnownCategory('all')).toBe(false);
     expect(isKnownCategory('horror')).toBe(false);
     expect(isKnownCategory('')).toBe(false);
@@ -197,9 +227,30 @@ describe('sets & order', () => {
       'documentary',
       'travel',
       'torfl',
+      'torfl-a2',
     ]);
     expect(new Set(CATEGORY_ORDER)).toEqual(new Set(Object.keys(CATEGORIES)));
-    expect(CATEGORIES.torfl).toEqual({ ru: 'ТРКИ', en: 'TORFL', icon: 'ribbon-outline' });
+    expect(CATEGORIES.torfl).toEqual({ ru: 'ТРКИ-А1', en: 'TORFL A1', icon: 'ribbon-outline' });
+    expect(CATEGORIES['torfl-a2']).toEqual({
+      ru: 'ТРКИ-А2',
+      en: 'TORFL A2',
+      icon: 'ribbon-outline',
+    });
+    expect(CATEGORIES.torfl.ru).toBe(TORFL_PROFILES.A1.chipLabel);
+    expect(CATEGORIES['torfl-a2'].ru).toBe(TORFL_PROFILES.A2.chipLabel);
+  });
+
+  it('labelForCategory resolves both TORFL shelves to their level chip labels', () => {
+    expect(labelForCategory('torfl')).toEqual({
+      ru: 'ТРКИ-А1',
+      en: 'TORFL A1',
+      icon: 'ribbon-outline',
+    });
+    expect(labelForCategory('torfl-a2')).toEqual({
+      ru: 'ТРКИ-А2',
+      en: 'TORFL A2',
+      icon: 'ribbon-outline',
+    });
   });
 
   it('GENRE_ORDER is exactly the table keys, horror first', () => {

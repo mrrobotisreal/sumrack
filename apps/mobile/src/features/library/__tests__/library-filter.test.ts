@@ -42,6 +42,8 @@ const news = section({ id: 'news-090-a2', category: 'news' });
 const podcast = section({ id: 'podcast-090-a2', category: 'podcast' });
 const recipes = section({ id: 'a2-recipes-001', category: 'recipes' }); // unknown category
 const local = section({ id: 'imported-1', origin: 'local' });
+const examA2 = section({ id: 'a2-exam-001', type: 'exam', level: 'A2' });
+const examA1 = section({ id: 'a1-exam-001', type: 'exam', level: 'A1' });
 
 const ids = (sections: Section[]) => sections.map((s) => s.pack.id);
 
@@ -86,6 +88,16 @@ describe('filterSectionsByCategory', () => {
 
   it('an empty category yields an empty list (the «Пока пусто» state)', () => {
     expect(filterSectionsByCategory(all, { category: 'travel', genre: ALL_GENRES })).toEqual([]);
+  });
+
+  it('T75: an A2 exam pack shelves under torfl-a2, not torfl', () => {
+    const all2 = [...all, examA1, examA2];
+    expect(
+      ids(filterSectionsByCategory(all2, { category: 'torfl-a2', genre: ALL_GENRES })),
+    ).toEqual(['a2-exam-001']);
+    expect(ids(filterSectionsByCategory(all2, { category: 'torfl', genre: ALL_GENRES }))).toEqual([
+      'a1-exam-001',
+    ]);
   });
 
   it('unknown installed category is filterable by its raw slug', () => {
@@ -177,10 +189,14 @@ describe('categoryCounts', () => {
   it('empty input → no keys', () => {
     expect(categoryCounts([])).toEqual({});
   });
+
+  it('T75: an A2 exam pack counts under torfl-a2, an A1 exam pack under torfl', () => {
+    expect(categoryCounts([examA2.pack, examA1.pack])).toEqual({ 'torfl-a2': 1, torfl: 1 });
+  });
 });
 
-describe('categoryChipItems — seven known chips always, unknown installed categories appended', () => {
-  it('renders all seven known categories with counts (0 when nothing is installed)', () => {
+describe('categoryChipItems — eight known chips always, unknown installed categories appended', () => {
+  it('renders all eight known categories with counts (0 when nothing is installed)', () => {
     const items = categoryChipItems({ stories: 22, news: 1, podcast: 1 });
     expect(items.map((i) => i.key)).toEqual([
       'stories',
@@ -190,12 +206,13 @@ describe('categoryChipItems — seven known chips always, unknown installed cate
       'documentary',
       'travel',
       'torfl',
+      'torfl-a2',
     ]);
-    expect(items.map((i) => i.count)).toEqual([22, 1, 0, 1, 0, 0, 0]);
+    expect(items.map((i) => i.count)).toEqual([22, 1, 0, 1, 0, 0, 0, 0]);
     expect(items[0]).toEqual({ key: 'stories', label: 'Истории', icon: 'book-outline', count: 22 });
   });
 
-  it('adds an eighth chip for an unknown installed category with its raw slug + generic icon', () => {
+  it('a ninth chip for an unknown installed category with its raw slug + generic icon', () => {
     const items = categoryChipItems({ recipes: 1, stories: 3 });
     expect(items.map((i) => i.key)).toEqual([
       'stories',
@@ -205,13 +222,23 @@ describe('categoryChipItems — seven known chips always, unknown installed cate
       'documentary',
       'travel',
       'torfl',
+      'torfl-a2',
       'recipes',
     ]);
-    expect(items[7]).toEqual({
+    expect(items[8]).toEqual({
       key: 'recipes',
       label: 'recipes',
       icon: 'albums-outline',
       count: 1,
+    });
+  });
+
+  it('T75: a torfl-a2 count shows on the eighth chip with the «ТРКИ-А2» label', () => {
+    expect(categoryChipItems({ 'torfl-a2': 3 })[7]).toEqual({
+      key: 'torfl-a2',
+      label: 'ТРКИ-А2',
+      icon: 'ribbon-outline',
+      count: 3,
     });
   });
 
