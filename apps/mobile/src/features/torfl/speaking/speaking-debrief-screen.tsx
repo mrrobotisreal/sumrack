@@ -18,7 +18,7 @@ import { downloadExamBundle } from '@/features/scenario/recordings/bundle-servic
 import { attemptFile, listRunFiles, runDirBytes } from '@/features/scenario/recordings/paths';
 import { formatBytes } from '@/features/tts/catalog';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { fileExists } from '../drill/drill-item';
@@ -28,6 +28,7 @@ import { loadRefAudio, type ExamAudio } from '../items/exam-audio';
 import { useExamAudio } from '../items/use-exam-audio';
 import { getExamBundle } from '../media-state';
 import type { ExamBundleEntry } from '../media-state-core';
+import { torflLevelOf } from '../level-profile';
 import { PinButton } from './pin-button';
 import {
   examScenarioRung,
@@ -89,8 +90,9 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
       .then(() => attempt.refetch())
       .catch((err) => {
         setDownloadError(friendlyBackupMessage(err));
-        track('exam_debrief_download_failed', {
+        trackTorfl('exam_debrief_download_failed', {
           code: (err as { code?: string })?.code ?? 'unknown',
+          level: torflLevelOf(exam.data?.level),
         });
       })
       .finally(() => {
@@ -170,6 +172,7 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
         <PinButton
           attemptId={a.id}
           pinned={a.pinned}
+          level={torflLevelOf(e?.level)}
           onChanged={() => {
             void attempt.refetch();
             setMediaTick((n) => n + 1);
@@ -260,7 +263,12 @@ export function SpeakingDebriefScreen({ attemptId }: { attemptId: string }) {
               });
             }}
             onModelStory={(storyId) => {
-              track('torfl_text_opened', { packId: a.packId, storyId, from: 'review' });
+              trackTorfl('torfl_text_opened', {
+                packId: a.packId,
+                storyId,
+                from: 'review',
+                level: torflLevelOf(e?.level),
+              });
               router.push({
                 pathname: '/reader/[packId]/[storyId]',
                 params: { packId: a.packId, storyId, from: 'torfl' },

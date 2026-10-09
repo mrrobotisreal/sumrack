@@ -12,15 +12,17 @@ import { useExam, useExamAttempt } from '@/db/hooks';
 import { FeedbackView } from '@/features/ai/feedback-view';
 import { AiError, friendlyAiMessage } from '@/features/ai/errors';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { applySelfCheck } from '../grading/self-check';
 import { requestGrading, storyText, useGradingQueue } from '../grading/queue';
 import { criterionLabel } from '../grading/writing';
+import { torflLevelOf } from '../level-profile';
 import { findExamItem } from '../model';
 import { mergedCriteria } from './review-model';
 import { SelfCheckSheet } from './self-check-sheet';
+import { writingTaskOf } from './writing-model';
 
 const LITERATA = { fontFamily: 'Literata_400Regular', fontSize: 17, lineHeight: 28 } as const;
 
@@ -260,10 +262,11 @@ export function WritingReviewScreen({ attemptId }: { attemptId: string }) {
             <SectionTitle>Образец</SectionTitle>
             <Pressable
               onPress={() => {
-                track('torfl_text_opened', {
+                trackTorfl('torfl_text_opened', {
                   packId: a.packId,
                   storyId: item.model!.storyId,
                   from: 'review',
+                  level: torflLevelOf(e?.level),
                 });
                 router.push({
                   pathname: '/reader/[packId]/[storyId]',
@@ -295,7 +298,12 @@ export function WritingReviewScreen({ attemptId }: { attemptId: string }) {
         onSubmit={(answers) => {
           setSelfOpen(false);
           setBusy('self');
-          void applySelfCheck(response, answers)
+          void applySelfCheck(
+            response,
+            answers,
+            torflLevelOf(e?.level),
+            e ? writingTaskOf(e, response.subtestId, response.itemId) : undefined,
+          )
             .then(() => attempt.refetch())
             .catch((err) => setError(String(err)))
             .finally(() => setBusy(null));

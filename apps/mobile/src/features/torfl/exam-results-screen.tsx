@@ -24,6 +24,7 @@ import {
   topicBreakdown,
   type ResultRow,
 } from './results-model';
+import { torflLevelOf } from './level-profile';
 import { PinButton } from './speaking/pin-button';
 import { SUBTEST_LABELS, topicLabel } from './topics';
 import { verdict as computeVerdict, verdictHeadline } from './verdict';
@@ -146,7 +147,12 @@ function ResultsBody({
           </Text>
         </View>
         {hasRecordings ? (
-          <PinButton attemptId={attemptId} pinned={attempt.pinned} onChanged={onPinChanged} />
+          <PinButton
+            attemptId={attemptId}
+            pinned={attempt.pinned}
+            onChanged={onPinChanged}
+            level={torflLevelOf(exam.level)}
+          />
         ) : null}
       </View>
 

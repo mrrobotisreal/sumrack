@@ -6,7 +6,8 @@ import { Text } from '@/components/ui/text';
 import type { SentenceWithTokens, TokenRow } from '@/db/repositories/content';
 import { TokenText } from '@/features/reader/token-text';
 import { WordPopup, type WordPopupTarget } from '@/features/reader/word-popup';
-import { track } from '@/services/analytics';
+import type { TorflLevel } from '../level-profile';
+import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /** Exam passage reading style (Literata, a touch under the reader's default so a text fits a screen). */
@@ -33,6 +34,7 @@ export function PassagePanel({
   lookup,
   defaultOpen = true,
   subtestKind,
+  level = 'A1',
   onLookup,
 }: {
   packId: string;
@@ -42,6 +44,8 @@ export function PassagePanel({
   defaultOpen?: boolean;
   /** Analytics: the subtest kind for `exam_lookup_used` (mocks, T71). */
   subtestKind?: string;
+  /** T75 (THE LEVEL RULE): the exam's level for `exam_lookup_used`. */
+  level?: TorflLevel;
   onLookup?: () => void;
 }) {
   const { tokens: theme } = useAppTheme();
@@ -53,9 +57,9 @@ export function PassagePanel({
       if (!lookup) return;
       setTarget({ token, sentenceId, storyId });
       onLookup?.();
-      if (subtestKind) track('exam_lookup_used', { subtestKind });
+      if (subtestKind) trackTorfl('exam_lookup_used', { subtestKind, level });
     },
-    [lookup, storyId, subtestKind, onLookup],
+    [lookup, storyId, subtestKind, level, onLookup],
   );
 
   return (

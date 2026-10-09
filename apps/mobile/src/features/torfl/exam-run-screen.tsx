@@ -20,6 +20,7 @@ import { useExamRun } from './engine/use-exam-run';
 import { ExamBreakScreen, ExamPlaceholderScreen } from './exam-break-screen';
 import { ExamInstructionScreen } from './exam-instruction-screen';
 import { ExamObjectiveScreen } from './exam-objective-screen';
+import { torflLevelOf } from './level-profile';
 import { ExamWritingScreen } from './exam-writing-screen';
 import { ExamSpeakingScreen, speakingFacts } from './speaking/exam-speaking-screen';
 import { speakingGateMessage } from './speaking/gates';
@@ -188,6 +189,7 @@ export function ExamRunScreen() {
         key={cur.id}
         packId={run.attempt.packId}
         attemptId={run.attempt.id}
+        level={torflLevelOf(run.exam?.level)}
         subtest={def}
         run={state}
         remainingMs={run.remainingMs}
@@ -208,6 +210,7 @@ export function ExamRunScreen() {
     return (
       <ExamWritingScreen
         key={cur.id}
+        level={torflLevelOf(run.exam?.level)}
         subtest={def}
         run={state}
         remainingMs={run.remainingMs}
@@ -223,6 +226,7 @@ export function ExamRunScreen() {
     <ExamObjectiveScreen
       key={cur.id}
       packId={run.attempt.packId}
+      level={torflLevelOf(run.exam?.level)}
       subtest={def}
       run={state}
       cursor={cur}

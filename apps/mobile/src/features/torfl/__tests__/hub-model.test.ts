@@ -245,6 +245,8 @@ describe('«Тексты» grouping', () => {
     expect(ls.hasAudio).toBe(true);
     // the fixture's speaking prompts reuse the listening dialogue — both roles recorded
     expect(ls.roles).toEqual(['audio', 'prompt']);
+    // T75 (THE LEVEL RULE): the text carries its pack's exam level.
+    expect(ls.level).toBe('A1');
   });
 
   it('stories of packs without exams are never texts', () => {

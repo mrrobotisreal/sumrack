@@ -18,12 +18,13 @@ import { useHubGates } from '@/features/scenario/hub-gates';
 import { MicButton } from '@/features/scenario/stage/mic-button';
 import { recordExamDrillFinished } from '@/features/motivation/service';
 import { scheduleExamBundle } from '@/features/scenario/recordings/bundle-service';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { fileExists } from '../drill/drill-item';
 import { SPEAKING_CAP_MS } from '../engine/exam-machine';
+import { torflLevelOf } from '../level-profile';
 import { formatClock } from '../engine/rules';
 import { pumpGradingQueue, useGradingQueue } from '../grading/queue';
 import {
@@ -157,7 +158,12 @@ export function SpeakingPracticeScreen() {
             null,
             0,
           );
-          track('exam_speaking_scored', { task, source: 'offline', pct: grade.pct });
+          trackTorfl('exam_speaking_scored', {
+            task,
+            source: 'offline',
+            pct: grade.pct,
+            level: torflLevelOf(exam.data?.level),
+          });
           await recordExamDrillFinished().catch(() => 0);
           scheduleExamBundle(attemptId);
           void invalidateExams();
@@ -192,12 +198,13 @@ export function SpeakingPracticeScreen() {
         capMs: SPEAKING_CAP_MS[task],
         fixedWindow: false,
         attemptId: attempt.id,
+        level: torflLevelOf(exam.data?.level),
       });
     } catch (err) {
       logError('manual', err);
       setPhase({ kind: 'ready' });
     }
-  }, [located, item, packId, examId, recorder, task, prompt]);
+  }, [located, item, packId, examId, recorder, task, prompt, exam.data]);
 
   React.useEffect(() => {
     if (recorder.phase === 'processing' && phaseRef.current.kind === 'recording') {

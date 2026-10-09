@@ -11,10 +11,11 @@ import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import { invalidateExams, useExam, useExamAttempt } from '@/db/hooks';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { torflLevelOf, type TorflLevel } from './level-profile';
 import { examItemKey, type ExamAnswer } from './model';
 import { outcomeCounts, reviewEntries, type ReviewEntry } from './results-model';
 import { SUBTEST_LABELS, topicLabel } from './topics';
@@ -37,11 +38,12 @@ export function ExamReviewScreen({ attemptId }: { attemptId: string }) {
 
   const openedRef = React.useRef(false);
   const scope = attempt.data?.scope;
+  const level = torflLevelOf(exam.data?.level);
   React.useEffect(() => {
-    if (openedRef.current || !scope) return;
+    if (openedRef.current || !scope || !exam.data) return;
     openedRef.current = true;
-    track('exam_review_opened', { scope });
-  }, [scope]);
+    trackTorfl('exam_review_opened', { scope, level });
+  }, [scope, exam.data, level]);
 
   const cards = useQuery({
     queryKey: ['exams', 'review-cards', attempt.data?.packId ?? '', attempt.data?.examId ?? ''],
@@ -146,6 +148,7 @@ export function ExamReviewScreen({ attemptId }: { attemptId: string }) {
           packId={a.packId}
           examId={a.examId}
           exam={e}
+          level={level}
           subtest={active}
           answers={answers}
           inDeck={cards.data ?? new Set<string>()}
@@ -166,6 +169,7 @@ function ReviewList({
   packId,
   examId,
   exam,
+  level,
   subtest,
   answers,
   inDeck,
@@ -174,6 +178,7 @@ function ReviewList({
   packId: string;
   examId: string;
   exam: Exam;
+  level: TorflLevel;
   subtest: ExamSubtest;
   answers: Record<string, ExamAnswer>;
   inDeck: ReadonlySet<string>;
@@ -213,6 +218,7 @@ function ReviewList({
           key={entry.item.id}
           entry={entry}
           packId={packId}
+          level={level}
           inDeck={
             inDeck.has(examItemKey(packId, examId, entry.item.id)) || added.has(entry.item.id)
           }
@@ -226,11 +232,13 @@ function ReviewList({
 function ReviewCard({
   entry,
   packId,
+  level,
   inDeck,
   onAdd,
 }: {
   entry: ReviewEntry;
   packId: string;
+  level: TorflLevel;
   inDeck: boolean;
   onAdd: () => void;
 }) {
@@ -238,7 +246,7 @@ function ReviewCard({
   const router = useRouter();
   const ok = entry.outcome === 'full';
   const open = (storyId: string) => {
-    track('torfl_text_opened', { packId, storyId, from: 'review' });
+    trackTorfl('torfl_text_opened', { packId, storyId, from: 'review', level });
     router.push({
       pathname: '/reader/[packId]/[storyId]',
       params: { packId, storyId, from: 'torfl' },

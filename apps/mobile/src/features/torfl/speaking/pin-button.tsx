@@ -3,9 +3,11 @@ import * as React from 'react';
 import { Pressable } from 'react-native';
 
 import { repos } from '@/db';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
+
+import type { TorflLevel } from '../level-profile';
 
 /**
  * Pin / unpin an exam attempt (T74, TORFL §8.5) — the scenario debrief's pin
@@ -17,10 +19,13 @@ export function PinButton({
   attemptId,
   pinned,
   onChanged,
+  level,
 }: {
   attemptId: string;
   pinned: boolean;
   onChanged: () => void;
+  /** T75 (THE LEVEL RULE): the attempt's exam level, for `exam_attempt_pinned`. */
+  level: TorflLevel;
 }) {
   const { tokens } = useAppTheme();
   const [busy, setBusy] = React.useState(false);
@@ -31,12 +36,12 @@ export function PinButton({
     void repos.exams
       .setPinned(attemptId, next)
       .then(() => {
-        track('exam_attempt_pinned', { pinned: next });
+        trackTorfl('exam_attempt_pinned', { pinned: next, level });
         onChanged();
       })
       .catch((err) => logError('manual', err))
       .finally(() => setBusy(false));
-  }, [attemptId, busy, onChanged, pinned]);
+  }, [attemptId, busy, onChanged, pinned, level]);
   return (
     <Pressable
       onPress={toggle}

@@ -482,6 +482,12 @@ export type AnalyticsEvent =
   // ai_request_* gain feature 'exam-writing' | 'exam-speaking' via the AiFeature union.
   // T74 (§8.5): exam_attempt_pinned {pinned} · exam_debrief_download_failed {code}; the T63
   // recordings_pruned / media_bundle_* events gain `root: 'exam'` for the exam root.
+  // M19 (T75, TORFL_A2 A2-12): EVERY torfl_* / exam_* event above also carries `level` ('A1' |
+  // 'A2', from the exam's / pack's level — THE LEVEL RULE) via `trackTorfl()`;
+  // exam_writing_scored also carries `task` (1 | 2 — the writing item's position; 1 for the
+  // single A1 letter) and `topic` ('write-letter' | 'write-note'). torfl_exam_date_set {daysOut,
+  // level}; daily_torfl_segment gains a1Items / a2Items; exam_deck_reviewed (daily) a1Reviewed /
+  // a2Reviewed.
   | 'torfl_hub_opened'
   | 'torfl_exam_date_set'
   | 'torfl_topic_banked'
