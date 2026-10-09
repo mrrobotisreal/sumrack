@@ -680,6 +680,27 @@ export function createBankRepo(db: SumrakDB, hooks: BankRepoHooks = {}) {
       }));
     },
 
+    /**
+     * Match-blitz «Молния» pool (T34): young + mature words — weakest-link
+     * core stability ≥ STABILITY_YOUNG_MIN (7 d), the shared T18/T24 band
+     * rule (lib/mastery), expressed in SQL over the same fragment:
+     *
+     *   SELECT id, COALESCE(lemma, surface) AS ru, translation AS en
+     *   FROM bank_items
+     *   WHERE kind = 'word' AND MIN_CORE_STABILITY >= 7
+     *
+     * Read-only (the blitz is FSRS-free). Suspension is not consulted — like
+     * the T40 typing pool, nothing is scheduled or graded here.
+     */
+    async listBlitzCandidates(): Promise<{ id: string; ru: string; en: string }[]> {
+      return db.all<{ id: string; ru: string; en: string }>(sql`
+        SELECT id, COALESCE(lemma, surface) AS ru, translation AS en
+        FROM bank_items
+        WHERE kind = 'word'
+          AND ${MIN_CORE_STABILITY} >= ${STABILITY_YOUNG_MIN}
+      `);
+    },
+
     /** Distinct filter values actually present, so chips never dead-end. */
     async getFilterOptions(): Promise<BankFilterOptions> {
       const posRows = await db

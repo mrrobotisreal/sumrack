@@ -1,4 +1,4 @@
-import { desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 
 import { newId } from '../ids';
 import {
@@ -179,6 +179,25 @@ export function createStatsRepo(db: SumrakDB) {
       return db.select().from(gameSessions).orderBy(desc(gameSessions.startedAt)).limit(limit);
     },
 
+    /** Finished sessions of one mode, newest first (T34 per-game aggregators). */
+    async listFinishedGameSessions(
+      mode: GameSessionMode | (string & {}),
+      opts: { limit?: number; since?: number } = {},
+    ): Promise<GameSessionRow[]> {
+      return db
+        .select()
+        .from(gameSessions)
+        .where(
+          and(
+            eq(gameSessions.mode, mode),
+            isNotNull(gameSessions.endedAt),
+            opts.since != null ? gte(gameSessions.startedAt, opts.since) : undefined,
+          ),
+        )
+        .orderBy(desc(gameSessions.startedAt))
+        .limit(opts.limit ?? 500);
+    },
+
     async recordCheckpointResult(input: {
       checkpointPackId: string;
       scorePercent: number;
@@ -312,6 +331,10 @@ export type GameSessionMode =
   | 'scenario'
   // T40: the typing trainer (2-minute burst). Stats live in settings; no FSRS writes.
   | 'typing'
+  // T34: the numbers drill (10-item rounds; band tallies in detail) and the
+  // match blitz «Молния» (60 s sprint; score in detail). Both FSRS-free.
+  | 'numbers'
+  | 'match-blitz'
   // M18 (declared in T68): the TORFL drill runner (T70) and «Мои ответы» rehearsal (T74).
   | 'exam-drill'
   | 'torfl-rehearsal';

@@ -520,7 +520,30 @@ export type AnalyticsEvent =
   // T40 typing trainer
   | 'typing_round_started'
   | 'typing_round_finished'
-  | 'typing_round_abandoned';
+  | 'typing_round_abandoned'
+  // T34 numbers drill. numbers_round_started {tier, suggested, mode: manual|suggested|quest};
+  // numbers_item_answered {tier, kind, band, correct, plays, answerMode: choice|typed, ms};
+  // numbers_item_replayed {tier, kind}; numbers_round_finished {tier, correct, total, xp,
+  // replays}; numbers_round_abandoned {tier, answered}.
+  | 'numbers_round_started'
+  | 'numbers_item_answered'
+  | 'numbers_item_replayed'
+  | 'numbers_round_finished'
+  | 'numbers_round_abandoned'
+  // T34 match blitz «Молния». blitz_round_started {poolSize, best}; blitz_match_missed
+  // {elapsedMs}; blitz_round_finished {pairs, misses, penaltyMs, xp, newBest, best};
+  // blitz_round_abandoned {pairs, misses, elapsedMs}.
+  | 'blitz_round_started'
+  | 'blitz_match_missed'
+  | 'blitz_round_finished'
+  | 'blitz_round_abandoned'
+  // T34 daily quest slot. quest_assigned {kind, date, available, target} (once per day);
+  // quest_completed {kind, date, xp, goalMet}; quest_launched {kind, from: today|ring};
+  // quest_progress {kind, done, target} (on each persisted progress change).
+  | 'quest_assigned'
+  | 'quest_completed'
+  | 'quest_launched'
+  | 'quest_progress';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 

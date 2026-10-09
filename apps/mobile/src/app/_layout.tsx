@@ -136,6 +136,14 @@ export default function RootLayout() {
                   name="games/typing"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
                 />
+                <Stack.Screen
+                  name="games/numbers"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="games/blitz"
+                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
                 <Stack.Screen name="dialogues" options={{ title: 'Диалоги' }} />
                 <Stack.Screen name="scenarios/index" options={{ title: 'Сценарии' }} />
                 <Stack.Screen name="scenarios/runs" options={{ title: 'Runs' }} />

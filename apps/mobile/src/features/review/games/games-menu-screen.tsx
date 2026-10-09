@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useDueCardCount, useMixedDueCount, useProductionDueCount } from '@/db/hooks';
 import { repos } from '@/db';
+import { loadBlitzStats } from '@/features/review/games/blitz/service';
 import { loadTypingStats } from '@/features/review/games/typing/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -28,6 +29,10 @@ export function GamesMenuScreen() {
     queryKey: ['typing-stats'],
     queryFn: () => loadTypingStats(repos),
   });
+  const blitzStats = useQuery({
+    queryKey: ['blitz-stats'],
+    queryFn: () => loadBlitzStats(repos),
+  });
   const queryClient = useQueryClient();
 
   useFocusEffect(
@@ -35,6 +40,7 @@ export function GamesMenuScreen() {
       track('games_menu_opened');
       // A typing round finished elsewhere updates the best shown on this row.
       void queryClient.invalidateQueries({ queryKey: ['typing-stats'] });
+      void queryClient.invalidateQueries({ queryKey: ['blitz-stats'] });
     }, [queryClient]),
   );
 
@@ -89,6 +95,22 @@ export function GamesMenuScreen() {
             : '2-minute Cyrillic burst'
         }
         route="/games/typing"
+      />
+      <GameRow
+        icon="calculator-outline"
+        title="Числа"
+        subtitle="Numbers, prices, times, dates, ages — hear it, type it"
+        route="/games/numbers"
+      />
+      <GameRow
+        icon="flash-outline"
+        title="Молния"
+        subtitle={
+          blitzStats.data && blitzStats.data.best > 0
+            ? `60-second match sprint · best ${blitzStats.data.best} pairs`
+            : '60-second match sprint — words you already know'
+        }
+        route="/games/blitz"
       />
       <GameRow
         icon="chatbubbles-outline"

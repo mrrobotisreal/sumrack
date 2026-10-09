@@ -78,6 +78,12 @@ export const SETTING_KEYS = {
    */
   typingStats: 'games.typingStats',
   /**
+   * Match-blitz «Молния» stats (T34): { v: 1, best, rounds, totalPairs,
+   * lastPlayedAt } — Zod-validated on read (features/review/games/blitz/
+   * stats.ts), heals to defaults. Per-sprint rows live in game_sessions.
+   */
+  blitzStats: 'games.blitzStats',
+  /**
    * boolean (T31, default false): still every ambient animation — room
    * scenes freeze on their poster frame, the threshold transition and the
    * house-map flicker are skipped. OR-combined with the OS reduced-motion
