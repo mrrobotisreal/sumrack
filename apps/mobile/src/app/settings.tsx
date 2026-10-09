@@ -18,6 +18,7 @@ import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-
 import { RecordingsSettingsSection } from '@/features/scenario/recordings/recordings-settings-section';
 import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
+import { SchedulingSettingsSection } from '@/features/review/scheduling-settings-section';
 import { ScenarioSettingsSection } from '@/features/scenario/scenario-settings-section';
 import { SyncSettingsSection } from '@/features/sync/sync-settings-section';
 import { VoicesSettingsSection } from '@/features/tts/voices-settings-section';
@@ -175,6 +176,8 @@ export default function SettingsScreen() {
       <NotificationsSettingsSection />
 
       <DailySettingsSection />
+
+      <SchedulingSettingsSection />
 
       <PathSettingsSection />
 
