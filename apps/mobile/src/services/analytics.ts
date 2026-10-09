@@ -1,3 +1,5 @@
+import type { TorflLevel } from '@/features/torfl/level-profile';
+
 /**
  * Local analytics (workspace requirement: exceptional tracking even though
  * single-user). track() is safe to call from anywhere at any time: events
@@ -563,6 +565,22 @@ export function track(event: AnalyticsEvent, props?: AnalyticsProps) {
   } else {
     pending.push([event, props]);
   }
+}
+
+/** Every M18/M19 TORFL event (`torfl_*` / `exam_*`). */
+export type TorflAnalyticsEvent = Extract<AnalyticsEvent, `torfl_${string}` | `exam_${string}`>;
+
+/**
+ * THE LEVEL RULE for analytics (T75, TORFL_A2 A2-12): every TORFL event
+ * carries `level` ('A1' | 'A2' — a slug). Call sites use this wrapper, never
+ * a bare `track('torfl_…' | 'exam_…')` — `__tests__/torfl-analytics-level`
+ * scans the source to keep it that way.
+ */
+export function trackTorfl(
+  event: TorflAnalyticsEvent,
+  props: AnalyticsProps & { level: TorflLevel },
+): void {
+  track(event, props);
 }
 
 /** Install the persistence sink (bootstrap) and flush anything queued before it. */
