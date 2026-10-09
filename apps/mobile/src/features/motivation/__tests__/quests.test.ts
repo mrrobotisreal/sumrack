@@ -13,7 +13,7 @@ import type { SumrakDB } from '@/db/types';
 import { seedStory } from '@/features/review/games/__tests__/seed';
 import { addDaysToKey, localDayWindow } from '@/lib/dates';
 
-import { evaluateQuest, type QuestEnv } from '../quest-service';
+import { evaluateQuest, previewQuestRotation, type QuestEnv } from '../quest-service';
 import {
   availableKinds,
   hashDayKey,
@@ -342,5 +342,21 @@ describe('evaluateQuest (DB, injected day keys)', () => {
     const res = await evaluateQuest(makeEnv(repos), '2026-10-09');
     expect(res.state).toBeNull();
     expect(await db.select().from(storyProgress)).toHaveLength(0);
+  });
+});
+
+describe('previewQuestRotation (dev-db, read-only)', () => {
+  it('chains the rule over injected days and writes no quest rows', async () => {
+    const db = createTestDb();
+    const repos = createRepositories(db);
+    const env = makeEnv(repos, { blitzPoolSize: async () => 10 });
+    const res = await previewQuestRotation(env, '2026-10-09', 7);
+    expect(res.available).toEqual(['journal-1', 'match-blitz', 'numbers-round']);
+    expect(res.days).toHaveLength(7);
+    for (let i = 1; i < 7; i++) expect(res.days[i]!.kind).not.toBe(res.days[i - 1]!.kind);
+    // Day 1 of the preview = what evaluateQuest assigns for that day.
+    expect(await db.select().from(dailyQuests)).toHaveLength(0);
+    const real = await evaluateQuest(env, '2026-10-09');
+    expect(real.state!.kind.id).toBe(res.days[0]!.kind);
   });
 });

@@ -216,3 +216,29 @@ export async function evaluateQuest(env: QuestEnv, todayKey: string): Promise<Qu
 function doneState(date: string, kind: QuestKind, row: DailyQuestRow): QuestState {
   return { date, kind, row, progress: row.target, target: row.target, complete: true };
 }
+
+/**
+ * READ-ONLY rotation preview (T34 device verification, dev-db): today's real
+ * availability facts, then the rotation chained over `days` injected day
+ * keys starting at `fromKey` — no `daily_quests` row is written, so a device
+ * proof never moves the user's data. Availability is held at today's facts
+ * (a preview can't know tomorrow's bank).
+ */
+export async function previewQuestRotation(
+  env: QuestEnv,
+  fromKey: string,
+  days: number,
+): Promise<{ available: string[]; days: { date: string; kind: string | null }[] }> {
+  const ctx = await gatherQuestContext(env, fromKey);
+  const avail = availableKinds(ctx);
+  const yesterday = await env.repos.quests.get(addDaysToKey(fromKey, -1));
+  let prev: string | null = yesterday?.kind ?? null;
+  const out: { date: string; kind: string | null }[] = [];
+  for (let i = 0; i < days; i++) {
+    const date = addDaysToKey(fromKey, i);
+    const kind = pickQuestKind(date, avail, prev);
+    out.push({ date, kind });
+    prev = kind;
+  }
+  return { available: avail, days: out };
+}

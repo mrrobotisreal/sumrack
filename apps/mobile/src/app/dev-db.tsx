@@ -36,6 +36,7 @@ import { track } from '@/services/analytics';
 import { requireOptionalNativeModule } from 'expo';
 import { buildWidgetSnapshot } from '@/features/motivation/widget-snapshot';
 import { refreshWidgetSnapshot } from '@/features/motivation/widget-sync';
+import { previewRotation } from '@/features/motivation/quest-runtime';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /**
@@ -477,6 +478,19 @@ export default function DevDbScreen() {
   }, [forceUnsupported]);
   // --- T58 backup self-check (dev only): export → restore the same payload.
   const [backupLog, setBackupLog] = React.useState<string | null>(null);
+  // T34 quest: read-only rotation preview over injected day keys (writes nothing).
+  const [questLog, setQuestLog] = React.useState<string | null>(null);
+  const runQuestPreview = React.useCallback(async () => {
+    try {
+      const res = await previewRotation(7);
+      setQuestLog(
+        `available: ${res.available.join(', ') || '(none)'}\n` +
+          res.days.map((d) => `${d.date} → ${d.kind ?? '(no quest)'}`).join('\n'),
+      );
+    } catch (err) {
+      setQuestLog(`failed — ${String(err)}`);
+    }
+  }, []);
   // T40 widget: write the home-screen snapshot directly (demo every state on the device).
   const [widgetLog, setWidgetLog] = React.useState<string | null>(null);
   const writeWidget = React.useCallback((label: string, json: string | null) => {
@@ -776,6 +790,21 @@ export default function DevDbScreen() {
             <Text variant="caption" selectable>
               {plantLog ??
                 'Ten finished runs aged 31–40 days, one 20 KB fake .ogg each, #1 pinned.'}
+            </Text>
+          </Pressable>
+        )}
+        {__DEV__ && <Text className="mt-4 font-ui-medium">Daily quest (T34)</Text>}
+        {__DEV__ && (
+          <Pressable
+            onPress={() => void runQuestPreview()}
+            accessibilityRole="button"
+            accessibilityLabel="Quest rotation preview"
+            className="mt-2 rounded-xl border border-border bg-surface p-3 active:opacity-80"
+          >
+            <Text className="font-ui-medium">Quest rotation preview (7 days)</Text>
+            <Text variant="caption" selectable>
+              {questLog ??
+                "Today's real availability → the next 7 day keys' picks. Read-only: writes no quest rows."}
             </Text>
           </Pressable>
         )}

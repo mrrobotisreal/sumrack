@@ -6,7 +6,12 @@ import { loadBlitzPool } from '@/features/review/games/blitz/service';
 import { queryClient } from '@/lib/query-client';
 import { track } from '@/services/analytics';
 
-import { evaluateQuest, type QuestEnv, type QuestEvaluation } from './quest-service';
+import {
+  evaluateQuest,
+  previewQuestRotation,
+  type QuestEnv,
+  type QuestEvaluation,
+} from './quest-service';
 import { useAchievementToasts } from './toast-store';
 import { XP_TABLE } from './xp';
 
@@ -113,4 +118,9 @@ export function refreshQuest(): Promise<QuestEvaluation | null> {
     inFlight = null;
   });
   return inFlight;
+}
+
+/** dev-db: the read-only rotation preview over the production env (no writes). */
+export function previewRotation(days: number) {
+  return previewQuestRotation(ENV, localDateKey(), days);
 }
