@@ -50,6 +50,7 @@ describe('REGISTERS table', () => {
       documentary: 'voiceover',
       travel: 'guide',
       torfl: 'lecturer',
+      'torfl-a2': 'lecturer',
     });
     expect(DEFAULT_VOICE).toBe('elevenlabs:Mr. Wintrow');
   });
@@ -130,6 +131,8 @@ describe('applyRegister', () => {
 
   it('the «ТРКИ» category (M18, T67) defaults to the lecturer register', () => {
     expect(CATEGORY_DEFAULT_REGISTER.torfl).toBe('lecturer');
+    expect(CATEGORY_DEFAULT_REGISTER['torfl-a2']).toBe('lecturer');
+    expect(resolveRegisterSlug({}, 'torfl-a2')).toBe('lecturer');
     const r = applyRegister({ id: 'lx-01', voice: DEFAULT_VOICE } as VoiceDirection, 'torfl');
     expect(r.voice).toBe(DEFAULT_VOICE);
     expect(r.style).toBe('lecturer');

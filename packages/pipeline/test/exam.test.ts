@@ -266,7 +266,7 @@ describe('exam reports', () => {
     const text = renderTopicCensus(exam);
     expect(text).toMatch(/case-locative\s+1\s+lexgram\s+\?\s+\(not a TORFL §3\.4 slug/);
     expect(text).toContain('(§3.4 lists it under reading)');
-    expect(Object.values(EXAM_TOPICS).flat()).toHaveLength(27);
+    expect(Object.values(EXAM_TOPICS).flat()).toHaveLength(38);
   });
 
   it('official shape: the fixture mock prints its six ⚠ lines; a drill is not checked', () => {
@@ -280,6 +280,23 @@ describe('exam reports', () => {
       '  ⚠ official-shape: listening "listening" maxPoints 15 — official 100',
     ]);
     expect(renderOfficialShape(pack().exams![0]!)).toContain('not checked (drill');
+  });
+
+  it('official shape (T75): an A2 clone of the fixture mock is checked against the A2 numbers', () => {
+    const a2 = structuredClone(mock());
+    a2.level = 'A2';
+    const text = renderOfficialShape(a2);
+    expect(text.split('\n')[0]).toMatch(/^Official shape — a1-mock-fx: \d+ deviations$/);
+    expect(text).toContain('official 100');
+    expect(text).toContain('has parts 1 — official 2');
+  });
+
+  it('official shape (T75): a B1 clone is not checked', () => {
+    const b1 = structuredClone(mock());
+    b1.level = 'B1';
+    expect(renderOfficialShape(b1)).toBe(
+      'Official shape — a1-mock-fx: not checked (mock, torfl B1 — only A1 / A2 TORFL mocks are)',
+    );
   });
 
   it('ref table: every ref ✓, inherited listening audio marked ↑', () => {

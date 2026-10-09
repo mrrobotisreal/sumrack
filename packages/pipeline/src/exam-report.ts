@@ -3,6 +3,7 @@ import {
   OBJECTIVE_SUBTEST_KINDS,
   officialShapeIssues,
   resolveItemAudio,
+  TORFL_SHAPES,
   type Exam,
   type Pack,
   type StoryRef,
@@ -100,12 +101,12 @@ export function renderTopicCensus(exam: Exam): string {
 
 /** Official-shape check: the non-fatal invariant-10 lines, or the ✓ line. */
 export function renderOfficialShape(exam: Exam): string {
-  if (exam.mode !== 'mock' || exam.format !== 'torfl' || exam.level !== 'A1') {
-    return `Official shape — ${exam.id}: not checked (${exam.mode}, ${exam.format} ${exam.level} — only A1 TORFL mocks are)`;
+  if (exam.mode !== 'mock' || exam.format !== 'torfl' || !TORFL_SHAPES[exam.level]) {
+    return `Official shape — ${exam.id}: not checked (${exam.mode}, ${exam.format} ${exam.level} — only A1 / A2 TORFL mocks are)`;
   }
   const lines = officialShapeIssues(exam);
   return lines.length === 0
-    ? `Official shape — ${exam.id}: ✓ official shape (TORFL A1 mock)`
+    ? `Official shape — ${exam.id}: ✓ official shape (TORFL ${exam.level} mock)`
     : [
         `Official shape — ${exam.id}: ${lines.length} deviation${lines.length === 1 ? '' : 's'}`,
         ...lines.map((l) => `  ${l}`),
