@@ -148,3 +148,43 @@ export function levelForCategory(category: string | null | undefined): TorflLeve
 export function isTorflCategory(category: string | null | undefined): boolean {
   return levelForCategory(category) !== null;
 }
+
+// --- copy (one place builds every level-specific line) ------------------------------
+
+function ruForm(n: number, forms: readonly [string, string, string]): string {
+  const mod10 = Math.abs(n) % 10;
+  const mod100 = Math.abs(n) % 100;
+  if (mod10 === 1 && mod100 !== 11) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1];
+  return forms[2];
+}
+
+/** The SPbU rule line (hub header): «Сдал: ≥ 66 % в каждом субтесте; один субтест — ≥ 60 %». */
+export function ruleLine(level: TorflLevel): string {
+  const p = TORFL_PROFILES[level];
+  return `Сдал: ≥ ${p.passPct} % в каждом субтесте; один субтест — ≥ ${p.borderlinePct} %`;
+}
+
+/** Hub header subtitle: «Элементарный уровень · онлайн-экзамен СПбГУ». */
+export function hubSubtitle(level: TorflLevel): string {
+  return `${TORFL_PROFILES[level].nameRu} · онлайн-экзамен СПбГУ`;
+}
+
+/** Library hub-card title: «ТРКИ-А1 · Элементарный уровень». */
+export function hubCardTitle(level: TorflLevel): string {
+  const p = TORFL_PROFILES[level];
+  return `${p.chipLabel} · ${p.nameRu}`;
+}
+
+/** The hub's «Молния» row caption: «20 заданий в темпе экзамена — 34 секунды на задание». */
+export function lightningCaption(level: TorflLevel, items = 20): string {
+  const s = TORFL_PROFILES[level].pace.lexgram;
+  return `${items} заданий в темпе экзамена — ${s} ${ruForm(s, ['секунда', 'секунды', 'секунд'])} на задание`;
+}
+
+/** The «Молния» end-screen pace note: «Темп экзамена — 34 с (40 минут на 70 заданий).». */
+export function lightningPaceNote(level: TorflLevel): string {
+  const p = TORFL_PROFILES[level];
+  const { minutes, items } = p.lexgramExam;
+  return `Темп экзамена — ${p.pace.lexgram} с (${minutes} ${ruForm(minutes, ['минута', 'минуты', 'минут'])} на ${items} ${ruForm(items, ['задание', 'задания', 'заданий'])}).`;
+}
