@@ -2,6 +2,7 @@ import type { Ionicons } from '@expo/vector-icons';
 import type * as React from 'react';
 
 import type { PackRow } from '@/db/repositories/content';
+import { profileFor, TORFL_PROFILES } from '@/features/torfl/level-profile';
 
 /**
  * Library categories, fiction genres and narration registers (M14, T44 —
@@ -23,9 +24,9 @@ export interface SlugLabel {
 }
 
 export type CategorySlug =
-  'stories' | 'news' | 'education' | 'podcast' | 'documentary' | 'travel' | 'torfl';
+  'stories' | 'news' | 'education' | 'podcast' | 'documentary' | 'travel' | 'torfl' | 'torfl-a2';
 
-/** Chip order — always all seven visible (§3; «ТРКИ» appended last by M18/T69). */
+/** Chip order — always all eight visible (§3; «ТРКИ-А1» appended by M18/T69, «ТРКИ-А2» by M19/T75). */
 export const CATEGORY_ORDER: readonly CategorySlug[] = [
   'stories',
   'news',
@@ -34,6 +35,7 @@ export const CATEGORY_ORDER: readonly CategorySlug[] = [
   'documentary',
   'travel',
   'torfl',
+  'torfl-a2',
 ];
 
 export const CATEGORIES: Record<CategorySlug, SlugLabel> = {
@@ -43,7 +45,8 @@ export const CATEGORIES: Record<CategorySlug, SlugLabel> = {
   podcast: { ru: 'Подкасты', en: 'Podcasts', icon: 'mic-outline' },
   documentary: { ru: 'Документалки', en: 'Documentaries', icon: 'film-outline' },
   travel: { ru: 'Путешествия', en: 'Travel', icon: 'airplane-outline' },
-  torfl: { ru: 'ТРКИ', en: 'TORFL', icon: 'ribbon-outline' },
+  torfl: { ru: TORFL_PROFILES.A1.chipLabel, en: 'TORFL A1', icon: 'ribbon-outline' },
+  'torfl-a2': { ru: TORFL_PROFILES.A2.chipLabel, en: 'TORFL A2', icon: 'ribbon-outline' },
 };
 
 /** Genre chip order inside «Истории» (only installed genres are shown, §3). */
@@ -110,7 +113,7 @@ export interface Classified {
  * | explicit `category` / `genre`          | as authored | as authored (or null) |
  * | none; type `stories` or `course-unit`  | `stories`   | `horror`              |
  * | none; type `dialogue`                  | `stories`   | none                  |
- * | none; type `exam` (M18, T69)           | `torfl`     | none                  |
+ * | none; type `exam` (M18 T69, M19 T75)   | `torfl` (A1 / unknown level) · `torfl-a2` (A2) | none |
  *
  * `origin: 'local'` packs never go through the chip filter (always the
  * «Импортировано» shelf) — they still classify as `stories/null` so badges
@@ -118,7 +121,7 @@ export interface Classified {
  * for that reason even though the table itself keys off it only via type.
  */
 export function classifyPack(
-  p: Pick<PackRow, 'type' | 'category' | 'genre' | 'origin'>,
+  p: Pick<PackRow, 'type' | 'category' | 'genre' | 'origin'> & { level?: string | null },
 ): Classified {
   // '' can't come from a validated pack (StableId min 1) — only from a
   // hand-staged row; treat it like NULL so both fields agree on "absent".
@@ -126,8 +129,8 @@ export function classifyPack(
   if (p.category) return { category: p.category, genre };
   if (p.origin === 'local') return { category: 'stories', genre };
   if (p.type === 'dialogue') return { category: 'stories', genre }; // genre-less unless authored
-  // M18 (T69): an exam pack only ever shelves under «ТРКИ», authored category or not.
-  if (p.type === 'exam') return { category: 'torfl', genre };
+  // M18 (T69): an exam pack only ever shelves under its level's «ТРКИ-А1» / «ТРКИ-А2» shelf.
+  if (p.type === 'exam') return { category: profileFor(p.level).category, genre };
   return { category: 'stories', genre: genre ?? 'horror' }; // stories, course-unit (and anything else)
 }
 
