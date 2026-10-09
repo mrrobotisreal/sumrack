@@ -407,7 +407,7 @@ export function TypingScreen() {
           autoComplete="off"
           importantForAutofill="no"
           keyboardType="default"
-          blurOnSubmit={false}
+          submitBehavior="submit"
           returnKeyType="next"
           placeholder="Печатай…"
           placeholderTextColor={tokens.textMuted}
