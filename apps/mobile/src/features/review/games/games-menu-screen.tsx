@@ -4,7 +4,11 @@ import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { useDueCardCount, useMixedDueCount, useProductionDueCount } from '@/db/hooks';
+import { repos } from '@/db';
+import { loadTypingStats } from '@/features/review/games/typing/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -20,11 +24,18 @@ export function GamesMenuScreen() {
   const due = useDueCardCount();
   const mixedDue = useMixedDueCount();
   const productionDue = useProductionDueCount();
+  const typingStats = useQuery({
+    queryKey: ['typing-stats'],
+    queryFn: () => loadTypingStats(repos),
+  });
+  const queryClient = useQueryClient();
 
   useFocusEffect(
     React.useCallback(() => {
       track('games_menu_opened');
-    }, []),
+      // A typing round finished elsewhere updates the best shown on this row.
+      void queryClient.invalidateQueries({ queryKey: ['typing-stats'] });
+    }, [queryClient]),
   );
 
   const dueCount = due.data ?? 0;
@@ -68,6 +79,16 @@ export function GamesMenuScreen() {
         title="Listening quiz"
         subtitle="Pick or type what you hear — narration or Piper"
         route="/review/listening"
+      />
+      <GameRow
+        icon="keypad-outline"
+        title="Typing trainer"
+        subtitle={
+          typingStats.data && typingStats.data.bestWpm > 0
+            ? `2-minute Cyrillic burst · best ${typingStats.data.bestWpm.toFixed(1)} WPM`
+            : '2-minute Cyrillic burst'
+        }
+        route="/games/typing"
       />
       <GameRow
         icon="chatbubbles-outline"

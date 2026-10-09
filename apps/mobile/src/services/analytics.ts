@@ -502,7 +502,11 @@ export type AnalyticsEvent =
   | 'torfl_rehearsal_finished'
   | 'torfl_ticket_drawn'
   | 'exam_attempt_pinned'
-  | 'exam_debrief_download_failed';
+  | 'exam_debrief_download_failed'
+  // T40 typing trainer
+  | 'typing_round_started'
+  | 'typing_round_finished'
+  | 'typing_round_abandoned';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
