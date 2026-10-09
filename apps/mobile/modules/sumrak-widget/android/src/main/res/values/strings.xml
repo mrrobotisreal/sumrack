@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sumrak_widget_label">Сумрак</string>
+    <string name="sumrak_widget_description">Streak, due reviews and today\'s goal</string>
+</resources>
