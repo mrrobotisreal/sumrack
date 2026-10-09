@@ -295,7 +295,11 @@ export function NumbersScreen() {
         result={result}
         lifetime={lifetime}
         onAgain={() => void start(tier)}
-        onPickTier={() => setPhase('pick')}
+        onPickTier={() => {
+          // The link reads «Suggested next: tier N» — land on the picker with N selected.
+          if (lifetime) setTier(lifetime.suggested);
+          setPhase('pick');
+        }}
         onDone={() => router.back()}
       />
     );
