@@ -532,7 +532,7 @@ export function createExamsRepo(db: SumrakDB) {
 
     /**
      * Installed exams, pack then authoring order; optional pack / mode filter.
-     * `level` (T75): THE LEVEL RULE — `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
      */
     async listExams(
       filter: { packId?: string; mode?: ExamMode; level?: TorflLevel } = {},
@@ -716,8 +716,9 @@ export function createExamsRepo(db: SumrakDB) {
     },
 
     /**
-     * The one active attempt (resume), or null. `level` (T75): THE LEVEL RULE
-     * — `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     * The one active attempt (resume), or null. `level` = THE LEVEL
+     * RULE (T75, {@link levelIs}); absent = every level. The single-active rule
+     * of `startAttempt` stays global (one active mock across levels).
      */
     async getActiveAttempt(opts: { level?: TorflLevel } = {}): Promise<ExamAttempt | null> {
       const rows = await activeRows(opts.level);
@@ -1065,7 +1066,7 @@ export function createExamsRepo(db: SumrakDB) {
 
     /**
      * Due, non-suspended cards (most overdue first); optional subtest kind / topic filter.
-     * `level` (T75): THE LEVEL RULE — `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
      */
     async dueItems(
       opts: {
@@ -1110,7 +1111,7 @@ export function createExamsRepo(db: SumrakDB) {
 
     /**
      * Deck totals: due / total (non-suspended) / suspended, plus per-topic due/total.
-     * `level` (T75): THE LEVEL RULE — `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
+     * `level` = THE LEVEL RULE (T75, {@link levelIs}); absent = every level.
      */
     async deckCounts(now = Date.now(), opts: { level?: TorflLevel } = {}): Promise<ExamDeckCounts> {
       const counted = {
