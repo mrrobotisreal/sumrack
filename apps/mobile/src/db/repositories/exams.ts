@@ -23,6 +23,7 @@ import {
   type ExamScope,
   type ExamVerdict,
 } from '@/features/torfl/model';
+import type { TorflLevel } from '@/features/torfl/level-profile';
 import { track } from '@/services/analytics';
 
 import { newId } from '../ids';
@@ -226,6 +227,17 @@ function fromFsrsJson(card: ExamFsrsCard): FsrsCard {
     state: card.state,
     last_review: card.last_review !== null ? new Date(card.last_review) : undefined,
   };
+}
+
+/**
+ * THE LEVEL RULE (T75, ADR-0021): a row's TORFL level = the `exams.level` of
+ * its `(pack_id, exam_id)`, read through a LEFT JOIN on the `exams` PK. A row
+ * whose exam is gone (pack removed) has no level and counts as A1 — the
+ * legacy behaviour, so A1 numbers never move. Use only in a query that
+ * left-joins `exams` on both key columns.
+ */
+function levelIs(level: TorflLevel): SQL {
+  return level === 'A1' ? sql`COALESCE(${exams.level}, 'A1') = 'A1'` : eq(exams.level, level);
 }
 
 export function createExamsRepo(db: SumrakDB) {
@@ -671,7 +683,12 @@ export function createExamsRepo(db: SumrakDB) {
       return rows[0] ? toAttempt(rows[0]) : null;
     },
 
-    /** Attempts newest first; optional scope / status / exam filter. */
+    /**
+     * Attempts newest first; optional scope / status / exam / level filter.
+     * `level` (T75, THE LEVEL RULE) joins `exams` on its PK `(pack_id,
+     * exam_id)`; an attempt whose exam row is gone counts as A1 (legacy —
+     * keeps A1 history exactly as before). Absent = every level.
+     */
     async listAttempts(
       opts: {
         scope?: ExamScope;
@@ -679,6 +696,7 @@ export function createExamsRepo(db: SumrakDB) {
         packId?: string;
         examId?: string;
         limit?: number;
+        level?: TorflLevel;
       } = {},
     ): Promise<ExamAttempt[]> {
       const where: SQL[] = [];
@@ -686,13 +704,18 @@ export function createExamsRepo(db: SumrakDB) {
       if (opts.status) where.push(eq(examAttempts.status, opts.status));
       if (opts.packId) where.push(eq(examAttempts.packId, opts.packId));
       if (opts.examId) where.push(eq(examAttempts.examId, opts.examId));
+      if (opts.level) where.push(levelIs(opts.level));
       const rows = await db
-        .select()
+        .select({ attempt: examAttempts })
         .from(examAttempts)
+        .leftJoin(
+          exams,
+          and(eq(exams.packId, examAttempts.packId), eq(exams.examId, examAttempts.examId)),
+        )
         .where(where.length > 0 ? and(...where) : undefined)
         .orderBy(desc(examAttempts.startedAt))
         .limit(opts.limit ?? 50);
-      return rows.map(toAttempt);
+      return rows.map((r) => toAttempt(r.attempt));
     },
 
     /** One attempt + its responses (subtest, then creation order). */
