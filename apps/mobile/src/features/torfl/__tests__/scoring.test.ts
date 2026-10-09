@@ -7,6 +7,8 @@ import {
   LIGHTNING_ITEMS,
   PACE_SEC,
   averageSeconds,
+  lightningPaceSec,
+  paceFor,
   paceFraction,
   paceSecFor,
   ratingForDrillAnswer,
@@ -257,5 +259,16 @@ describe('pace constants + the drill grading rule', () => {
     expect(paceFraction(100, 0)).toBe(0);
     expect(averageSeconds(680_000, 20)).toBe(34);
     expect(averageSeconds(0, 0)).toBe(0);
+  });
+  it('T75: the A2 pace row, the A2 drill rule, and the A1 default unchanged', () => {
+    expect(paceFor('A2')).toEqual({ lexgram: 30, reading: 100, listening: 72 });
+    expect(paceSecFor('lexgram', 'A2')).toBe(30);
+    expect(paceSecFor('writing', 'A2')).toBeNull();
+    expect(lightningPaceSec('A2')).toBe(30);
+    expect(lightningPaceSec()).toBe(34);
+    expect(ratingForDrillAnswer('full', 60_000, 'lexgram', 'A2')).toBe(Rating.Good);
+    expect(ratingForDrillAnswer('full', 60_001, 'lexgram', 'A2')).toBe(Rating.Hard);
+    expect(ratingForDrillAnswer('full', 68_000, 'lexgram')).toBe(Rating.Good);
+    expect(ratingForDrillAnswer('full', 68_001, 'lexgram')).toBe(Rating.Hard);
   });
 });

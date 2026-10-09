@@ -215,6 +215,10 @@ describe('predictedLine', () => {
     expect(line.verdict).toBe('fail');
     expect(line.text.split(',').length).toBeLessThanOrEqual(3);
   });
+  it('T75: the A2 level gives the same line as the A1 default (shared 66/60)', () => {
+    const rows = rowsOf({ writing: 70, lexgram: 70, reading: 70, listening: 62, speaking: 70 });
+    expect(predictedLine(rows, 'A2')).toEqual(predictedLine(rows));
+  });
 });
 
 describe('weakestTopic + recommendToday', () => {
