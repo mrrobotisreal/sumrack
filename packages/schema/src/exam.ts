@@ -544,6 +544,41 @@ export const ExamSchema = ExamShape.superRefine((exam, ctx) => {
 });
 export type Exam = z.infer<typeof ExamSchema>;
 
+/** The shape one TORFL level is checked against (T75). Writing `parts` = writing parts, each one writing item. */
+export interface TorflOfficialShape {
+  lexgram: {
+    items: number;
+    maxPoints: number;
+    durationMin: number;
+    dictionary: boolean;
+    navigation: 'free' | 'linear';
+  };
+  reading: {
+    items: number;
+    maxPoints: number;
+    durationMin: number;
+    dictionary: boolean;
+    navigation: 'free' | 'linear';
+  };
+  listening: {
+    items: number;
+    maxPoints: number;
+    durationMin: number;
+    dictionary: boolean;
+    navigation: 'free' | 'linear';
+    audioPlays: number;
+  };
+  /** `parts` = writing parts; `secondTopic` = the topic the 2nd writing item must carry (A2 note task). */
+  writing: { durationMin: number; dictionary: boolean; parts: number; secondTopic?: string };
+  /** `monologue` (A2): the LAST speaking part holds exactly `count` monologue(s), ungrouped, with these explicit windows. */
+  speaking: {
+    durationMin: number;
+    navigation: 'free' | 'linear';
+    partTimes: readonly number[];
+    monologue?: { count: number; prepSec: number; answerSec: number };
+  };
+}
+
 /** The official A1 numbers (TORFL §2, demo v2) — the one place they live. */
 export const TORFL_A1_SHAPE = {
   lexgram: { items: 70, maxPoints: 70, durationMin: 40, dictionary: false, navigation: 'free' },
@@ -556,22 +591,58 @@ export const TORFL_A1_SHAPE = {
     navigation: 'linear',
     audioPlays: 2,
   },
-  writing: { durationMin: 30, dictionary: true },
+  writing: { durationMin: 30, dictionary: true, parts: 1 },
   speaking: { durationMin: 20, navigation: 'linear', partTimes: [300, 300, 600] },
-} as const;
+} as const satisfies TorflOfficialShape;
+
+/** The official A2 (ТБУ) numbers — demo v2 (2022), TORFL_A2_EXAM_PREP §2.1. */
+export const TORFL_A2_SHAPE = {
+  lexgram: { items: 100, maxPoints: 100, durationMin: 50, dictionary: false, navigation: 'free' },
+  reading: { items: 30, maxPoints: 180, durationMin: 50, dictionary: true, navigation: 'free' },
+  listening: {
+    items: 25,
+    maxPoints: 150,
+    durationMin: 30,
+    dictionary: false,
+    navigation: 'linear',
+    audioPlays: 2,
+  },
+  writing: { durationMin: 50, dictionary: true, parts: 2, secondTopic: 'write-note' },
+  speaking: {
+    durationMin: 25,
+    navigation: 'linear',
+    partTimes: [300, 300, 900],
+    monologue: { count: 1, prepSec: 600, answerSec: 300 },
+  },
+} as const satisfies TorflOfficialShape;
+
+/** Level → official shape; a level without an entry is never shape-checked. */
+export const TORFL_SHAPES: Readonly<Partial<Record<Exam['level'], TorflOfficialShape>>> = {
+  A1: TORFL_A1_SHAPE,
+  A2: TORFL_A2_SHAPE,
+};
 
 /**
  * Invariant 10 — the official-shape check (non-fatal; `validate` prints it).
- * For a `mock` with `format: 'torfl'`, `level: 'A1'`: the five subtests in
- * {@link TORFL_SUBTEST_ORDER}; lexgram 70 items / 70 points / 40 min, reading
- * 25 / 100 / 40, listening 20 / 100 / 30 with `audioPlays: 2`, writing 30 min,
- * speaking 20 min with parts 300 / 300 / 600 s; plus the dictionary rule
- * (decision 8) and navigation (free for paper subtests, linear for listening
- * and speaking). Returns `⚠ official-shape: …` lines, `[]` when conforming or
- * when the exam is not an A1 TORFL mock. Pure; never throws.
+ * For a `mock` with `format: 'torfl'` at a level with a {@link TORFL_SHAPES}
+ * entry (A1, A2):
+ * - the five subtests in {@link TORFL_SUBTEST_ORDER};
+ * - A1: lexgram 70 items / 70 points / 40 min, reading 25 / 100 / 40, listening
+ *   20 / 100 / 30 with `audioPlays: 2`, writing 30 min, speaking 20 min with
+ *   parts 300 / 300 / 600 s;
+ * - A2: lexgram 100 / 100 / 50 min, reading 30 / 180 / 50, listening 25 / 150 /
+ *   30 with `audioPlays: 2`, writing 50 min in 2 parts (the 2nd topic
+ *   `write-note`), speaking 25 min with parts 300 / 300 / 900 s and task 3 = one
+ *   ungrouped monologue with `prepSec: 600`, `answerSec: 300`;
+ * - the dictionary rule (decision 8) and navigation (free for paper subtests,
+ *   linear for listening and speaking).
+ * Returns `⚠ official-shape: …` lines, `[]` when conforming, when the exam is
+ * a drill, another format, or a level without a shape. Pure; never throws.
  */
 export function officialShapeIssues(exam: Exam): string[] {
-  if (exam.mode !== 'mock' || exam.format !== 'torfl' || exam.level !== 'A1') return [];
+  if (exam.mode !== 'mock' || exam.format !== 'torfl') return [];
+  const shape = TORFL_SHAPES[exam.level];
+  if (!shape) return [];
   const out: string[] = [];
   const warn = (msg: string) => out.push(`⚠ official-shape: ${msg}`);
 
@@ -592,28 +663,63 @@ export function officialShapeIssues(exam: Exam): string[] {
       case 'lexgram':
       case 'reading':
       case 'listening': {
-        const shape = TORFL_A1_SHAPE[subtest.kind];
-        check('has items', items, shape.items);
-        check('maxPoints', subtest.maxPoints, shape.maxPoints);
-        check('durationMin', subtest.durationMin, shape.durationMin);
-        check('dictionary', subtest.dictionary, shape.dictionary);
-        check('navigation', subtest.navigation, shape.navigation);
+        const want = shape[subtest.kind];
+        check('has items', items, want.items);
+        check('maxPoints', subtest.maxPoints, want.maxPoints);
+        check('durationMin', subtest.durationMin, want.durationMin);
+        check('dictionary', subtest.dictionary, want.dictionary);
+        check('navigation', subtest.navigation, want.navigation);
         if (subtest.kind === 'listening') {
-          check('audioPlays', subtest.audioPlays, TORFL_A1_SHAPE.listening.audioPlays);
+          check('audioPlays', subtest.audioPlays, shape.listening.audioPlays);
         }
         break;
       }
-      case 'writing':
-        check('durationMin', subtest.durationMin, TORFL_A1_SHAPE.writing.durationMin);
-        check('dictionary', subtest.dictionary, TORFL_A1_SHAPE.writing.dictionary);
+      case 'writing': {
+        check('durationMin', subtest.durationMin, shape.writing.durationMin);
+        check('dictionary', subtest.dictionary, shape.writing.dictionary);
+        check('has parts', subtest.parts.length, shape.writing.parts);
+        const second = shape.writing.secondTopic;
+        if (second !== undefined && subtest.parts.length >= 2) {
+          const first = subtest.parts[1]!.items[0];
+          if (first?.kind !== 'writing' || first.topic !== second) {
+            const topic = first && 'topic' in first ? first.topic : undefined;
+            warn(`${label} part 2 topic ${topic ?? '—'} — official ${second}`);
+          }
+        }
         break;
+      }
       case 'speaking': {
-        check('durationMin', subtest.durationMin, TORFL_A1_SHAPE.speaking.durationMin);
-        check('navigation', subtest.navigation, TORFL_A1_SHAPE.speaking.navigation);
+        check('durationMin', subtest.durationMin, shape.speaking.durationMin);
+        check('navigation', subtest.navigation, shape.speaking.navigation);
         const times = subtest.parts.map((p) => p.timeSec ?? '—');
-        const want = TORFL_A1_SHAPE.speaking.partTimes;
+        const want = shape.speaking.partTimes;
         if (times.join('/') !== want.join('/')) {
           warn(`${label} part times are ${times.join('/')} s — official ${want.join('/')} s`);
+        }
+        const mono = shape.speaking.monologue;
+        const last = subtest.parts[subtest.parts.length - 1];
+        if (mono && last) {
+          const monos = last.items.filter(
+            (i): i is SpeakingMonologueItem => i.kind === 'speaking-monologue',
+          );
+          if (monos.length !== mono.count) {
+            warn(`${label} task 3 has ${monos.length} monologue(s) — official ${mono.count}`);
+          }
+          for (const m of monos) {
+            if (m.group !== undefined) {
+              warn(
+                `${label} monologue "${m.id}" is grouped ("${m.group}") — official: one topic, no choice`,
+              );
+            }
+            if (m.prepSec !== mono.prepSec) {
+              warn(`${label} monologue "${m.id}" prepSec ${m.prepSec} — official ${mono.prepSec}`);
+            }
+            if (m.answerSec !== mono.answerSec) {
+              warn(
+                `${label} monologue "${m.id}" answerSec ${m.answerSec} — official ${mono.answerSec}`,
+              );
+            }
+          }
         }
         break;
       }
