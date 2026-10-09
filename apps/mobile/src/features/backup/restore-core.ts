@@ -136,6 +136,20 @@ export async function restoreUserData(db: SumrakDB, raw: unknown): Promise<Resto
         );
         continue;
       }
+      if (key === 'cards') {
+        // T39: pre-T39 snapshots lack suspendedAt/buriedUntil — normalise to
+        // null so every row has the same column set (insertAll keys off row 0).
+        await insertAll(
+          db,
+          table,
+          tables.cards.map((r) => ({
+            ...r,
+            suspendedAt: r.suspendedAt ?? null,
+            buriedUntil: r.buriedUntil ?? null,
+          })),
+        );
+        continue;
+      }
       await insertAll(db, table, tables[key]);
     }
 

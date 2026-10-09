@@ -62,6 +62,9 @@ const cardRow = z.strictObject({
   lapses: int,
   state: int,
   lastReviewAt: int.nullable(),
+  // T39: optional so pre-T39 backups restore (absent → null on restore).
+  suspendedAt: int.nullable().optional(),
+  buriedUntil: int.nullable().optional(),
   createdAt: int,
 });
 

@@ -189,7 +189,18 @@ describe('migrations from empty DB', () => {
       expect.arrayContaining(['core_lemmas_norm_idx', 'core_lemmas_level_idx']),
     );
     expect(await columnNames(db, 'leech_dismissals')).toEqual(['card_id', 'dismissed_at']);
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 16, tag: '0016_core-lemmas' });
+    expect(journal.entries.find((e) => e.tag === '0016_core-lemmas')).toMatchObject({ idx: 16 });
+  });
+
+  it('0017_card-management: fresh DB cards has suspended_at + buried_until (nullable, additive)', async () => {
+    const db = createTestDb();
+    const cols = await columnNames(db, 'cards');
+    expect(cols).toEqual(expect.arrayContaining(['suspended_at', 'buried_until']));
+    const rows = await db.all<{ name: string; notnull: number }>(sql`PRAGMA table_info(cards)`);
+    for (const name of ['suspended_at', 'buried_until']) {
+      expect(rows.find((r) => r.name === name)?.notnull).toBe(0);
+    }
+    expect(journal.entries.at(-1)).toMatchObject({ idx: 17, tag: '0017_card-management' });
   });
 });
 

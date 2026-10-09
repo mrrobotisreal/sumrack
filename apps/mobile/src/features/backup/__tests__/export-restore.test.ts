@@ -770,6 +770,41 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
     expect(rows[0]).toMatchObject({ id: 'rl-1', source: null });
   });
 
+  it('a pre-T39 payload (cards without suspendedAt/buriedUntil) restores both as null', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as {
+      tables: { cards: Record<string, unknown>[] };
+    };
+    for (const row of legacy.tables.cards) {
+      delete row.suspendedAt;
+      delete row.buriedUntil;
+    }
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.cards).toBeGreaterThan(0);
+    const rows = await target.select().from(cards);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.suspendedAt).toBeNull();
+      expect(row.buriedUntil).toBeNull();
+    }
+  });
+
+  it('cards.suspendedAt + buriedUntil round-trip through export → restore (T39)', async () => {
+    const source = createTestDb();
+    await seedSource(source);
+    await source.update(cards).set({ suspendedAt: NOW - 5, buriedUntil: NOW + 99 });
+    const { payload } = await exportUserData(source);
+
+    const target = createTestDb();
+    await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    const rows = await target.select().from(cards);
+    expect(rows.every((r) => r.suspendedAt === NOW - 5 && r.buriedUntil === NOW + 99)).toBe(true);
+  });
+
   it('review_log.source round-trips through export → restore (T50)', async () => {
     const source = createTestDb();
     await seedSource(source);
