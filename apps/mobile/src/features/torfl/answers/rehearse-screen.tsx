@@ -32,12 +32,13 @@ import {
   type PronunciationScore,
 } from '@/features/pronunciation/scoring';
 import { cn } from '@/lib/cn';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { speak } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import SherpaSpeech from '../../../../modules/sherpa-speech';
+import { levelFromParam } from '../level-profile';
 import {
   rehearsalText,
   summarizeRehearsal,
@@ -84,7 +85,16 @@ export function RehearseScreen() {
   const insets = useSafeAreaInsets();
   useStudyAmbience(true, 'education');
   useQuietStudy();
-  const { entryId, topic } = useLocalSearchParams<{ entryId: string; topic?: string }>();
+  const {
+    entryId,
+    topic,
+    level: levelParam,
+  } = useLocalSearchParams<{
+    entryId: string;
+    topic?: string;
+    level?: string;
+  }>();
+  const level = levelFromParam(levelParam);
   const entry = useJournalEntry(entryId);
 
   const [screen, setScreen] = React.useState<Screen>({ kind: 'loading' });
@@ -159,16 +169,17 @@ export function RehearseScreen() {
         });
       }
       if (all.length > 0) {
-        track('torfl_rehearsal_finished', {
+        trackTorfl('torfl_rehearsal_finished', {
           topic: topicSlug,
           score: summary.score,
           sentences: sentences.length,
           withText: summary.withText ?? -1,
           withoutText: summary.withoutText ?? -1,
+          level,
         });
       }
     },
-    [entryId, sentences.length, topicSlug],
+    [entryId, sentences.length, topicSlug, level],
   );
 
   // Quitting mid-way still closes the row with what was recorded.

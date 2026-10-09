@@ -22,10 +22,12 @@ import { MicButton } from '@/features/scenario/stage/mic-button';
 import { recordExamDrillFinished } from '@/features/motivation/service';
 import { scheduleExamBundle } from '@/features/scenario/recordings/bundle-service';
 import { useReduceMotion } from '@/store/motion-prefs';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { minutesRu } from '../minutes-ru';
+import type { TorflLevel } from '../level-profile';
 import { formatClock, timerTone } from '../engine/rules';
 import { pumpGradingQueue, useGradingQueue } from '../grading/queue';
 import {
@@ -71,12 +73,12 @@ type Phase =
  * answer → offline score + the AI queue → the debrief card with the model
  * monologue. A `drill`-scope attempt per ticket (10 XP). `torfl_ticket_drawn`.
  */
-export function TicketsScreen() {
+export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
   const { tokens } = useAppTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
-  const exams = useExams();
+  const exams = useExams({ level });
   const gates = useHubGates();
   const [phase, setPhase] = React.useState<Phase>({ kind: 'deck' });
   const phaseRef = React.useRef(phase);
@@ -93,9 +95,9 @@ export function TicketsScreen() {
 
   // How often each ticket was answered (any scope) → the draw weights.
   const counts = useQuery({
-    queryKey: ['torfl', 'ticket-counts', gradedVersion],
+    queryKey: ['torfl', 'ticket-counts', level, gradedVersion],
     queryFn: async () => {
-      const attempts = await repos.exams.listAttempts({ status: 'finished', limit: 500 });
+      const attempts = await repos.exams.listAttempts({ status: 'finished', limit: 500, level });
       const map = new Map<string, number>();
       for (const a of attempts) {
         const d = await repos.exams.getAttempt(a.id);
@@ -147,9 +149,9 @@ export function TicketsScreen() {
   const draw = React.useCallback(() => {
     const t = drawTicket(tickets);
     if (!t) return;
-    track('torfl_ticket_drawn', { topic: t.item.topic });
+    trackTorfl('torfl_ticket_drawn', { topic: t.item.topic, level });
     setPhase({ kind: 'revealed', ticket: t });
-  }, [tickets]);
+  }, [tickets, level]);
 
   const recorder = useExamRecorder({
     onDone: (itemId, answer) => {
@@ -201,7 +203,7 @@ export function TicketsScreen() {
             null,
             0,
           );
-          track('exam_speaking_scored', { task: 3, source: 'offline', pct: grade.pct });
+          trackTorfl('exam_speaking_scored', { task: 3, source: 'offline', pct: grade.pct, level });
           await recordExamDrillFinished().catch(() => 0);
           scheduleExamBundle(p.attemptId);
           void invalidateExams();
@@ -438,10 +440,14 @@ export function TicketsScreen() {
             />
             <Pressable
               onPress={() =>
-                Alert.alert('Начать ответ?', 'Запись пойдёт сразу: 2 минуты.', [
-                  { text: 'Ещё подготовлюсь', style: 'cancel' },
-                  { text: 'Готов', onPress: () => void startAnswer() },
-                ])
+                Alert.alert(
+                  'Начать ответ?',
+                  `Запись пойдёт сразу: ${minutesRu(phase.ticket.item.answerSec)}.`,
+                  [
+                    { text: 'Ещё подготовлюсь', style: 'cancel' },
+                    { text: 'Готов', onPress: () => void startAnswer() },
+                  ],
+                )
               }
               accessibilityRole="button"
               testID="ticket-prep-done"
@@ -485,7 +491,9 @@ export function TicketsScreen() {
                 onHoldEnd={() => undefined}
               />
               <Text variant="caption">
-                {phase.kind === 'answer' ? 'Идёт запись — 2 минуты' : 'Распознаю…'}
+                {phase.kind === 'answer'
+                  ? `Идёт запись — ${minutesRu(phase.ticket.item.answerSec)}`
+                  : 'Распознаю…'}
               </Text>
               {phase.kind === 'answer' ? (
                 <Pressable
@@ -529,10 +537,11 @@ export function TicketsScreen() {
                     onRetry={undefined}
                     onPractice={() => setPhase({ kind: 'deck' })}
                     onModelStory={(storyId) => {
-                      track('torfl_text_opened', {
+                      trackTorfl('torfl_text_opened', {
                         packId: phase.ticket.packId,
                         storyId,
                         from: 'review',
+                        level,
                       });
                       router.push({
                         pathname: '/reader/[packId]/[storyId]',

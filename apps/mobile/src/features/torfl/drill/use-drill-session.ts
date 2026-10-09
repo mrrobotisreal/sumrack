@@ -10,7 +10,7 @@ import {
   recordExamDeckSession,
   recordExamDrillFinished,
 } from '@/features/motivation/service';
-import { track } from '@/services/analytics';
+import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
 import type { ExamScoreArgs } from './types';
@@ -49,6 +49,8 @@ export interface DrillOutcome {
   /** Lightning: average seconds per item vs the exam pace. */
   avgSec: number;
   source: DrillSource;
+  /** THE LEVEL RULE (T75): the session's level — picks the «Молния» pace and the copy. */
+  level: TorflLevel;
 }
 
 /**
@@ -77,6 +79,8 @@ export function useDrillSession(params: DrillParams) {
   const finishedRef = React.useRef(false);
   const pendingRef = React.useRef<Promise<unknown>[]>([]);
   const skippedRef = React.useRef({ writing: 0, speaking: 0 });
+  // THE LEVEL RULE (T75): the session's level — a 'set' drill takes its first entry's exam level.
+  const sessionLevelRef = React.useRef<TorflLevel>(params.level ?? 'A1');
 
   React.useEffect(() => {
     let cancelled = false;
@@ -88,6 +92,7 @@ export function useDrillSession(params: DrillParams) {
         const queue = await buildQueue(params);
         if (cancelled) return;
         skippedRef.current = queue.skipped;
+        sessionLevelRef.current = queue.entries[0]?.level ?? params.level ?? 'A1';
         setSkipped(queue.skipped);
         if (queue.entries.length === 0) {
           setPhase('empty');
@@ -106,12 +111,16 @@ export function useDrillSession(params: DrillParams) {
         startedAtRef.current = Date.now();
         dueAtStartRef.current =
           source === 'deck'
-            ? (await repos.exams.deckCounts(Date.now(), { level: params.level ?? 'A1' })).due
+            ? (await repos.exams.deckCounts(Date.now(), { level: sessionLevelRef.current })).due
             : 0;
         setEntries(queue.entries);
         setIndex(0);
         setPhase('playing');
-        track('exam_drill_started', { ...identity, items: queue.entries.length });
+        trackTorfl('exam_drill_started', {
+          ...identity,
+          items: queue.entries.length,
+          level: sessionLevelRef.current,
+        });
       } catch (err) {
         if (cancelled) return;
         logError('manual', err);
@@ -162,11 +171,12 @@ export function useDrillSession(params: DrillParams) {
       ms: args.ms,
       label: entry.item.kind === 'choice' ? entry.item.stem : entry.item.prompt,
     });
-    track('exam_drill_item_answered', {
+    trackTorfl('exam_drill_item_answered', {
       subtestKind: entry.subtest.kind,
       topic: entry.item.topic,
       correct: args.score.outcome === 'full',
       ms: Math.round(args.ms),
+      level: entry.level,
     });
     pendingRef.current.push(
       recorder.answer(entry, args.answer, args.score, args.ms).catch((err) => {
@@ -194,14 +204,19 @@ export function useDrillSession(params: DrillParams) {
       console.warn('[drill] xp failed', err);
     }
     const identity = drillIdentity(source, entries, { packId, examId, topic });
-    track('exam_drill_finished', {
+    trackTorfl('exam_drill_finished', {
       ...identity,
       answered: summary.answered,
       correct: summary.correct,
       ms,
+      level: sessionLevelRef.current,
     });
     if (source === 'deck') {
-      track('exam_deck_reviewed', { due: dueAtStartRef.current, reviewed: summary.answered });
+      trackTorfl('exam_deck_reviewed', {
+        due: dueAtStartRef.current,
+        reviewed: summary.answered,
+        level: sessionLevelRef.current,
+      });
     }
     setOutcome({
       summary,
@@ -210,6 +225,7 @@ export function useDrillSession(params: DrillParams) {
       xp,
       avgSec: averageSeconds(summary.totalMs, summary.answered),
       source,
+      level: sessionLevelRef.current,
     });
     setPhase('summary');
   }, [index, entries, source, packId, examId, topic, wrapUp]);
