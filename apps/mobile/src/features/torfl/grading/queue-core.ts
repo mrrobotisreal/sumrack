@@ -310,6 +310,6 @@ export function recomputeResults(
     if (r.provisional) provisionalKinds[subtest.kind] = true;
   }
   if (scope !== 'full') return { results, verdict: null, provisional: false };
-  const v = computeVerdict(pcts, provisionalKinds);
+  const v = computeVerdict(pcts, provisionalKinds, torflLevelOf(exam.level));
   return { results, verdict: v.verdict, provisional: v.provisional };
 }

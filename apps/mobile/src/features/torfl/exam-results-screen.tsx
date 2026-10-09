@@ -95,7 +95,7 @@ function ResultsBody({
   const rows = buildResultRows(exam, attempt);
   const pcts = pctsFromRows(rows);
   const full = attempt.scope === 'full';
-  const v = full ? computeVerdict(pcts, provisionalFromRows(rows)) : null;
+  const v = full ? computeVerdict(pcts, provisionalFromRows(rows), torflLevelOf(exam.level)) : null;
   const scoredIds = rows.filter((r) => r.status === 'scored').map((r) => r.subtestId);
   const responses = attempt.responses;
   const answers = React.useMemo(() => {
