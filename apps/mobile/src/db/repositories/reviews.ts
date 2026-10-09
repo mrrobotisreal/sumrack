@@ -48,7 +48,7 @@ export const UNIFIED_SESSION_DIRECTIONS: CardDirection[] = ['ru-en', 'en-ru', 'l
 /**
  * T39: the scheduler's tunable inputs. `desiredRetention` is the target
  * recall probability (the 0.8–0.95 band lives in features/review/fsrs-settings);
- * `w` is an FSRS-5 parameter vector (21 numbers) or null for ts-fsrs defaults.
+ * `w` is an FSRS-6 parameter vector (21 numbers, ts-fsrs 5.x) or null for ts-fsrs defaults.
  */
 export interface SchedulerConfig {
   desiredRetention: number;
@@ -318,8 +318,7 @@ export function createReviewsRepo(db: SumrakDB) {
      * item's *reviewed* core-direction cards (ru-en/en-ru — the directions
      * that vouch for knowing a word, T18 decision) ≥ `minStabilityDays`.
      * Feeds the mastered-100 achievement (T19).
-     */
-    /**
+     *
      * T39 decision: suspension is a scheduling state, not knowledge, so this
      * count (and the bank/path/coverage stat counts) deliberately IGNORES
      * suspended and buried cards.
