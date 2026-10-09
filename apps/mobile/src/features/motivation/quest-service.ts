@@ -28,7 +28,7 @@ import { XP_TABLE } from './xp';
  */
 
 export interface QuestEnv {
-  repos: Pick<Repositories, 'quests' | 'stats' | 'dashboard' | 'bank'>;
+  repos: Pick<Repositories, 'quests' | 'stats'>;
   asrInstalled: () => boolean;
   /** T33 dictation shipped — false until it does. */
   dictationAvailable: () => boolean;
@@ -61,9 +61,21 @@ export interface QuestEvaluation {
   available: number;
 }
 
-export async function gatherQuestContext(env: QuestEnv, todayKey: string): Promise<QuestContext> {
+/**
+ * Gather the facts. `scope` keeps the per-review cost small (recorded):
+ * 'assign' reads every availability input (only when today has no row yet);
+ * 'progress' skips them (zeros) and reads the leech inbox only for the
+ * clear-leeches kind — once a quest is assigned, availability is moot.
+ */
+export async function gatherQuestContext(
+  env: QuestEnv,
+  todayKey: string,
+  scope: { kind: 'assign' } | { kind: 'progress'; questKind: string } = { kind: 'assign' },
+): Promise<QuestContext> {
   const w = localDayWindow(todayKey);
   const q = env.repos.quests;
+  const assign = scope.kind === 'assign';
+  const leeches = assign || scope.questKind === 'clear-leeches';
   const [
     unfinishedStories,
     productionCards,
@@ -76,10 +88,10 @@ export async function gatherQuestContext(env: QuestEnv, todayKey: string): Promi
     blitzSprints,
     numbersRounds,
   ] = await Promise.all([
-    q.countUnfinishedStories(),
-    q.countProductionCards(),
-    env.visibleLeechIds(),
-    env.blitzPoolSize(),
+    assign ? q.countUnfinishedStories() : 0,
+    assign ? q.countProductionCards() : 0,
+    leeches ? env.visibleLeechIds() : [],
+    assign ? env.blitzPoolSize() : 0,
     q.countStoriesFinished(w),
     q.countPronunciationGrades(w),
     q.countJournalEntries(w),
@@ -89,9 +101,9 @@ export async function gatherQuestContext(env: QuestEnv, todayKey: string): Promi
   ]);
   return {
     unfinishedStories,
-    asrInstalled: env.asrInstalled(),
+    asrInstalled: assign && env.asrInstalled(),
     productionCards,
-    dictationAvailable: env.dictationAvailable(),
+    dictationAvailable: assign && env.dictationAvailable(),
     blitzPoolSize,
     visibleLeechIds,
     today: {
@@ -113,15 +125,31 @@ export async function gatherQuestContext(env: QuestEnv, todayKey: string): Promi
 export async function evaluateQuest(env: QuestEnv, todayKey: string): Promise<QuestEvaluation> {
   const { quests, stats } = env.repos;
   const now = env.now?.() ?? Date.now();
-  const ctx = await gatherQuestContext(env, todayKey);
-  const avail = availableKinds(ctx);
 
   let row = await quests.get(todayKey);
   let assigned = false;
-  if (!row) {
+  let ctx: QuestContext;
+  let availableCount = 0;
+  if (row) {
+    const known = QUEST_KINDS_BY_ID.get(row.kind);
+    // A completed (or unknown-kind) day needs no counters at all.
+    if (row.completedAt != null || !known) {
+      return {
+        state: known ? doneState(todayKey, known, row) : null,
+        assigned: false,
+        justCompleted: false,
+        progressed: false,
+        available: 0,
+      };
+    }
+    ctx = await gatherQuestContext(env, todayKey, { kind: 'progress', questKind: row.kind });
+  } else {
+    ctx = await gatherQuestContext(env, todayKey);
+    const avail = availableKinds(ctx);
+    availableCount = avail.length;
     const yesterday = await quests.get(addDaysToKey(todayKey, -1));
     const kindId = pickQuestKind(todayKey, avail, yesterday?.kind ?? null);
-    if (!kindId)
+    if (!kindId) {
       return {
         state: null,
         assigned: false,
@@ -129,6 +157,7 @@ export async function evaluateQuest(env: QuestEnv, todayKey: string): Promise<Qu
         progressed: false,
         available: 0,
       };
+    }
     const kind = QUEST_KINDS_BY_ID.get(kindId)!;
     const res = await quests.assign({
       date: todayKey,
@@ -149,7 +178,7 @@ export async function evaluateQuest(env: QuestEnv, todayKey: string): Promise<Qu
       assigned,
       justCompleted: false,
       progressed: false,
-      available: avail.length,
+      available: availableCount,
     };
 
   const view = { target: row.target, snapshot: row.snapshot ?? null };
@@ -180,6 +209,10 @@ export async function evaluateQuest(env: QuestEnv, todayKey: string): Promise<Qu
     assigned,
     justCompleted,
     progressed: progressed || justCompleted,
-    available: avail.length,
+    available: availableCount,
   };
+}
+
+function doneState(date: string, kind: QuestKind, row: DailyQuestRow): QuestState {
+  return { date, kind, row, progress: row.target, target: row.target, complete: true };
 }
