@@ -6,6 +6,9 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.glance.currentState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.Image
@@ -83,21 +86,40 @@ internal fun appUri(path: String, from: String? = "widget"): Uri {
   return Uri.parse("sumrak://$path$query")
 }
 
+/**
+ * A VIEW intent pinned to this app (never a chooser) — MainActivity owns the
+ * `sumrak` scheme; NEW_TASK + CLEAR_TOP reuse a running task or start cold.
+ */
+internal fun viewIntent(context: Context, uri: Uri): Intent =
+  Intent(Intent.ACTION_VIEW, uri)
+    .setPackage(context.packageName)
+    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+/** Glance-state key the app bumps on every snapshot write, forcing a re-read. */
+internal val SNAPSHOT_REV = longPreferencesKey("sumrak_snapshot_rev")
+
 class SumrakWidget : GlanceAppWidget() {
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
-    // Read the snapshot here, not in Compose, so every failure is caught before composition.
-    val result = try {
+    val palette = paletteFor(context)
+    provideContent {
+      // Read the snapshot INSIDE composition, keyed on the Glance-state revision
+      // the app bumps on every write (SumrakWidgetModule.refreshAll). Reading it
+      // once before provideContent froze the first value for the whole Glance
+      // session — update() recomposed with the stale capture (S25 finding).
+      val rev = currentState(SNAPSHOT_REV) ?: 0L
+      val result = remember(rev) { readSafely(context) }
+      WidgetBody(context, palette, result)
+    }
+  }
+
+  private fun readSafely(context: Context): SnapshotResult =
+    try {
       SnapshotStore.read(context)
     } catch (e: Exception) {
       Log.w(TAG, "snapshot read failed", e)
       SnapshotResult.Corrupt
     }
-    val palette = paletteFor(context)
-    provideContent {
-      WidgetBody(context, palette, result)
-    }
-  }
 
   companion object {
     private const val TAG = "SumrakWidget"
@@ -113,18 +135,18 @@ private fun WidgetBody(context: Context, palette: WidgetPalette, result: Snapsho
       val stale = snap.isStale(now)
       Normal(context, palette, snap, stale)
     }
-    else -> Placeholder(palette, appUri(""))
+    else -> Placeholder(context, palette, appUri(""))
   }
 }
 
 @Composable
-private fun Placeholder(palette: WidgetPalette, uri: Uri) {
+private fun Placeholder(context: Context, palette: WidgetPalette, uri: Uri) {
   Box(
     modifier = GlanceModifier
       .fillMaxSize()
       .background(ColorProvider(Color(palette.bg)))
       .cornerRadius(20.dp)
-      .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, uri)))
+      .clickable(actionStartActivity(viewIntent(context, uri)))
       .padding(12.dp),
     contentAlignment = Alignment.Center,
   ) {
@@ -159,7 +181,7 @@ private fun Normal(
       .background(ColorProvider(Color(palette.surface)))
       .cornerRadius(20.dp)
       .padding(12.dp)
-      .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, cardUri))),
+      .clickable(actionStartActivity(viewIntent(context, cardUri))),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -185,7 +207,7 @@ private fun Normal(
     Spacer(GlanceModifier.height(6.dp))
     Text(
       text = "${snap.dueCount} к повторению",
-      modifier = GlanceModifier.clickable(actionStartActivity(Intent(Intent.ACTION_VIEW, dailyUri))),
+      modifier = GlanceModifier.clickable(actionStartActivity(viewIntent(context, dailyUri))),
       style = TextStyle(
         color = ColorProvider(Color(numberColor)),
         fontSize = 13.sp,

@@ -3,6 +3,7 @@ package expo.modules.sumrakwidget
 import android.content.Context
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +55,8 @@ class SumrakWidgetModule : Module() {
       val widget = SumrakWidget()
       val manager = GlanceAppWidgetManager(context)
       for (id in manager.getGlanceIds(SumrakWidget::class.java)) {
+        // Bump the revision so a live Glance session re-reads the snapshot.
+        updateAppWidgetState(context, id) { prefs -> prefs[SNAPSHOT_REV] = System.currentTimeMillis() }
         widget.update(context, id)
       }
     }

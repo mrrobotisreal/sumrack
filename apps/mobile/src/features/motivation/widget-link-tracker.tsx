@@ -12,16 +12,21 @@ import { track } from '@/services/analytics';
 
 type WidgetScreen = 'daily' | 'reader' | 'app';
 
-/** Pure: the analytics screen for a sumrak:// URL, or null when it isn't a widget tap. */
+/**
+ * Pure: the analytics screen for a sumrak:// URL, or null when it isn't a
+ * widget tap. WHATWG URL parsing of a custom scheme puts the first segment in
+ * the host (`sumrak://review/daily` → host `review`, path `/daily`), so the
+ * route is host + path — reading the path alone never matched (S25 finding).
+ */
 export function widgetScreenFromUrl(url: string): WidgetScreen | null {
-  let parsed: ReturnType<typeof Linking.parse>;
+  let parsed: URL;
   try {
-    parsed = Linking.parse(url);
+    parsed = new URL(url);
   } catch {
     return null;
   }
-  if (parsed.queryParams?.from !== 'widget') return null;
-  const path = (parsed.path ?? '').replace(/^\/+/, '');
+  if (parsed.searchParams.get('from') !== 'widget') return null;
+  const path = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+|\/+$/g, '');
   if (path === 'review/daily') return 'daily';
   if (path.startsWith('reader/')) return 'reader';
   if (path === '' || path === '(tabs)') return 'app';
