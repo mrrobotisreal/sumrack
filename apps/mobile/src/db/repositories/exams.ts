@@ -1,4 +1,17 @@
-import { and, asc, desc, eq, gte, inArray, like, lte, ne, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  like,
+  lte,
+  ne,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm';
 import { ExamSchema, type Exam, type ExamSubtestKind } from '@sumrak/schema';
 import { createEmptyCard, Rating, type Card as FsrsCard, type Grade } from 'ts-fsrs';
 import type { z } from 'zod';
@@ -230,14 +243,16 @@ function fromFsrsJson(card: ExamFsrsCard): FsrsCard {
 }
 
 /**
- * THE LEVEL RULE (T75, ADR-0021): a row's TORFL level = the `exams.level` of
- * its `(pack_id, exam_id)`, read through a LEFT JOIN on the `exams` PK. A row
- * whose exam is gone (pack removed) has no level and counts as A1 — the
- * legacy behaviour, so A1 numbers never move. Use only in a query that
- * left-joins `exams` on both key columns.
+ * THE LEVEL RULE (T75, ADR-0021): a user row's TORFL level = the
+ * `exams.level` of its `(pack_id, exam_id)`, read through a LEFT JOIN on the
+ * `exams` PK. A row whose exam is gone (its pack was removed) falls back to
+ * the pack-id convention — `a2-*` → A2, anything else → A1 — so an orphan
+ * never changes level (A1 history and deck numbers stay exactly as before).
+ * Use only in a query that left-joins `exams` on both key columns; `packId`
+ * is the joined row's own `pack_id` column.
  */
-function levelIs(level: TorflLevel): SQL {
-  return level === 'A1' ? sql`COALESCE(${exams.level}, 'A1') = 'A1'` : eq(exams.level, level);
+export function levelIs(level: TorflLevel, packId: AnyColumn): SQL {
+  return sql`COALESCE(${exams.level}, CASE WHEN ${packId} LIKE 'a2-%' THEN 'A2' ELSE 'A1' END) = ${level}`;
 }
 
 export function createExamsRepo(db: SumrakDB) {
@@ -685,9 +700,8 @@ export function createExamsRepo(db: SumrakDB) {
 
     /**
      * Attempts newest first; optional scope / status / exam / level filter.
-     * `level` (T75, THE LEVEL RULE) joins `exams` on its PK `(pack_id,
-     * exam_id)`; an attempt whose exam row is gone counts as A1 (legacy —
-     * keeps A1 history exactly as before). Absent = every level.
+     * `level` (T75, THE LEVEL RULE — {@link levelIs}) joins `exams` on its
+     * PK `(pack_id, exam_id)`. Absent = every level.
      */
     async listAttempts(
       opts: {
@@ -704,7 +718,7 @@ export function createExamsRepo(db: SumrakDB) {
       if (opts.status) where.push(eq(examAttempts.status, opts.status));
       if (opts.packId) where.push(eq(examAttempts.packId, opts.packId));
       if (opts.examId) where.push(eq(examAttempts.examId, opts.examId));
-      if (opts.level) where.push(levelIs(opts.level));
+      if (opts.level) where.push(levelIs(opts.level, examAttempts.packId));
       const rows = await db
         .select({ attempt: examAttempts })
         .from(examAttempts)
