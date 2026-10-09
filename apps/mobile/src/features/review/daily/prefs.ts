@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { anyExamDate, type ExamDates } from '@/features/torfl/levels-today';
+
 /**
  * Daily-session composition preferences (T14): how long a session is and
  * the relative frequency of each game mode. Stored as one settings row
@@ -27,7 +29,8 @@ export const DailyPrefsSchema = z.strictObject({
   weights: DailyWeightsSchema,
   /**
    * M18 (T70): the TORFL «Работа над ошибками» segment. Absent = «auto» — on
-   * iff `torfl.examDate` is set; an explicit boolean overrides (TORFL §7.2).
+   * iff ANY TORFL exam date (A1 `torfl.examDate` or A2 `torfl.examDateA2`) is
+   * set; an explicit boolean overrides — switch it on by hand without a date.
    */
   torfl: z.boolean().optional(),
 });
@@ -52,7 +55,16 @@ export function weightForMode(weights: DailyWeights, mode: DailyMode): number {
   return mode === 'sentence-builder' ? weights.sentenceBuilder : weights[mode];
 }
 
-/** Is the TORFL daily segment on? An explicit preference wins; otherwise on iff an exam date is set. */
-export function torflSegmentEnabled(prefs: DailyPrefs, examDate: string | null): boolean {
-  return prefs.torfl ?? examDate !== null;
+/**
+ * Is the TORFL daily segment on? An explicit preference wins; otherwise on iff
+ * an exam date is set. Takes one level's date (the pre-T75 call) or every
+ * level's dates (T75 — on iff ANY is set).
+ */
+export function torflSegmentEnabled(
+  prefs: DailyPrefs,
+  examDates: string | null | ExamDates,
+): boolean {
+  if (prefs.torfl !== undefined) return prefs.torfl;
+  if (typeof examDates === 'object' && examDates !== null) return anyExamDate(examDates);
+  return examDates !== null;
 }

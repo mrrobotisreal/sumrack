@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { BankItemRow } from '@/db/repositories/bank';
 import { UNIFIED_SESSION_DIRECTIONS, type CardRow } from '@/db/repositories/reviews';
 import type { Repositories } from '@/db/repositories';
+import { TORFL_LEVELS, type TorflLevel } from '@/features/torfl/level-profile';
 import { track } from '@/services/analytics';
 
 import {
@@ -130,24 +131,33 @@ export interface DailySessionOpts {
 }
 
 /**
- * The TORFL segment (T70): up to `DAILY_DECK_MAX` due, non-suspended deck
- * items, most overdue first, resolved against the CURRENT exams (an item a
- * pack update removed is skipped — §12). Never touches `cards`.
+ * The TORFL segment (T70, T75): up to `DAILY_DECK_MAX` due, non-suspended
+ * deck items, resolved against the CURRENT exams (an item a pack update
+ * removed is skipped — §12). Never touches `cards`.
+ *
+ * THE LEVEL RULE (T75): the cap spans levels. `levels` is the priority order
+ * (the screen passes `levelOrder(dates)`); each level is drained most-overdue
+ * first, and the next level fills whatever the first left over. Absent =
+ * every level in fixed order (A1 → A2).
  */
 export async function buildTorflSegment(
   repos: Repositories,
-  opts: { now?: number; max?: number } = {},
+  opts: { now?: number; max?: number; levels?: readonly TorflLevel[] } = {},
 ): Promise<DailyTorflItem[]> {
   const max = opts.max ?? DAILY_DECK_MAX;
-  const due = await repos.exams.dueItems({ limit: max * 3, now: opts.now });
+  const levels = opts.levels ?? TORFL_LEVELS;
   const exams = new Map<string, Awaited<ReturnType<Repositories['exams']['getExam']>>>();
   const out: DailyTorflItem[] = [];
-  for (const card of due) {
-    const key = `${card.packId}/${card.examId}`;
-    if (!exams.has(key)) exams.set(key, await repos.exams.getExam(card.packId, card.examId));
-    const entry = entryForDeckCard(card, exams.get(key) ?? null);
-    if (entry) out.push({ mode: 'torfl', entry });
+  for (const level of levels) {
     if (out.length >= max) break;
+    const due = await repos.exams.dueItems({ limit: max * 3, now: opts.now, level });
+    for (const card of due) {
+      const key = `${card.packId}/${card.examId}`;
+      if (!exams.has(key)) exams.set(key, await repos.exams.getExam(card.packId, card.examId));
+      const entry = entryForDeckCard(card, exams.get(key) ?? null);
+      if (entry) out.push({ mode: 'torfl', entry });
+      if (out.length >= max) break;
+    }
   }
   return out;
 }
