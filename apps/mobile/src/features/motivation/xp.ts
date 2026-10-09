@@ -47,6 +47,18 @@ export const XP_TABLE = {
   examFullFinished: 60,
   /** The first pass / pass-borderline verdict ever (T71). */
   examFirstPass: 100,
+  /**
+   * T40 typing trainer: XP for a finished 2-minute round, by WPM bracket —
+   * the highest bracket whose minWpm ≤ the round's WPM wins. Sorted ascending
+   * (engine.ts relies on it). Accuracy below 0.7 caps the round at the first
+   * bracket. Typing is FSRS-free, so this is the only reward it pays out.
+   */
+  typingRound: [
+    { minWpm: 0, xp: 5 },
+    { minWpm: 10, xp: 10 },
+    { minWpm: 20, xp: 15 },
+    { minWpm: 30, xp: 20 },
+  ],
   /** Bonus for unlocking any achievement. */
   achievementUnlocked: 20,
 } as const;

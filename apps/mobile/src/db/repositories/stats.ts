@@ -310,6 +310,8 @@ export type GameSessionMode =
   | 'unit-quiz'
   | 'dialogue'
   | 'scenario'
+  // T40: the typing trainer (2-minute burst). Stats live in settings; no FSRS writes.
+  | 'typing'
   // M18 (declared in T68): the TORFL drill runner (T70) and «Мои ответы» rehearsal (T74).
   | 'exam-drill'
   | 'torfl-rehearsal';
