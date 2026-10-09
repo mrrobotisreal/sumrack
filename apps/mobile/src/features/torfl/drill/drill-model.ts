@@ -1,6 +1,6 @@
 import type { Exam, ExamItem, ExamPart, ExamSubtest, ExamSubtestKind } from '@sumrak/schema';
 
-import type { TorflLevel } from '../level-profile';
+import { torflLevelOf, type TorflLevel } from '../level-profile';
 import { examItemKey, findExamItem } from '../model';
 import { LIGHTNING_ITEMS } from '../pace';
 import { topicLabel } from '../topics';
@@ -24,6 +24,8 @@ export interface DrillEntry {
   itemIdx: number;
   item: Extract<ExamItem, { kind: 'choice' | 'typed' }>;
   itemKey: string;
+  /** T75: the exam's TORFL level (THE LEVEL RULE) — pace + analytics read it. */
+  level: TorflLevel;
 }
 
 export const isObjective = (item: ExamItem): item is DrillEntry['item'] =>
@@ -48,6 +50,7 @@ function entryOf(
     itemIdx,
     item,
     itemKey: examItemKey(packId, exam.id, item.id),
+    level: torflLevelOf(exam.level),
   };
 }
 
