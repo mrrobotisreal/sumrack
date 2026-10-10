@@ -2,6 +2,7 @@ import type { WritingItem } from '@sumrak/schema';
 
 import { buildExamWritingMessages } from '@/features/ai/prompts/exam-writing';
 
+import { torflLevelOf } from '../level-profile';
 import { findExamItem, type ExamGrading } from '../model';
 import type { GradedWrite, GraderContext, KindGrader } from './queue-core';
 import { criteriaPercent } from './writing';
@@ -39,6 +40,8 @@ export const writingGrader: KindGrader = {
         maxQuestions: item.maxQuestions ?? null,
         letter: job.answer.text,
         modelLetter,
+        level: torflLevelOf(exam.level),
+        taskTopic: item.topic,
       }),
       maxTokens: EXAM_WRITING_MAX_TOKENS,
     };

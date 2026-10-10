@@ -13,39 +13,23 @@
           {
             "key": "usa",
             "lemma": "Америка",
-            "forms": [
-              "америк*",
-              "сша",
-              "штат*"
-            ]
+            "forms": ["америк*", "сша", "штат*"]
           },
           {
             "key": "colorado",
             "lemma": "Колорадо",
-            "forms": [
-              "колорадо"
-            ]
+            "forms": ["колорадо"]
           },
           {
             "key": "elsewhere",
             "lemma": "из",
-            "forms": [
-              "из"
-            ]
+            "forms": ["из"]
           }
         ]
       }
     ],
-    "accept": [
-      "Я из Америки.",
-      "Из Колорадо.",
-      "Я из США."
-    ],
-    "allowedKeys": [
-      "usa",
-      "colorado",
-      "elsewhere"
-    ],
+    "accept": ["Я из Америки.", "Из Колорадо.", "Я из США."],
+    "allowedKeys": ["usa", "colorado", "elsewhere"],
     "transcript": "я родился в денвере и живу там всю жизнь"
   },
   "model": "anthropic/claude-haiku-4.5",

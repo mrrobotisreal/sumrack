@@ -1,5 +1,7 @@
 import type { ChatMessage } from '../client';
 
+import type { TorflLevel } from '@/features/torfl/level-profile';
+
 /**
  * TORFL A1 speaking rubric prompt (T73, TORFL_EXAM_PREP §6.2). The
  * examiner grades ONE recorded answer from its ASR transcript(s) — a reply
@@ -35,6 +37,8 @@ export interface ExamSpeakingInput {
   assistTranscript?: string | null;
   /** The model answer (tasks 1–2: `accept[0]`; task 3: the model monologue's text) — calibration only. */
   modelAnswer?: string | null;
+  /** T76: the exam's TORFL level; absent = A1 (the prompt is then byte-identical to T73's). */
+  level?: TorflLevel;
 }
 
 export const EXAM_SPEAKING_TURN_CRITERIA_TEXT = `Criteria (max points):
@@ -48,15 +52,35 @@ export const EXAM_SPEAKING_MONOLOGUE_CRITERIA_TEXT = `Criteria (max points):
 - "fluency" (10): does it read like continuous speech on the topic — connected sentences, not a word list; repeats and restarts cost a little.
 - "lexis-grammar" (30): vocabulary range and correctness FOR A1 and grammar — agreement, cases, verb forms, word order. Deduct proportionally to how many errors there are and how badly they obscure meaning, never per slip mechanically.`;
 
-function system(task: ExamSpeakingTask): string {
+/**
+ * The A2 (ТБУ) standards (T76, TORFL_A2_EXAM_PREP §6.2): the 2010 sample's speaking control-sheet
+ * criteria mapped onto the unchanged criterion ids. Tasks 1-2 and task 3 differ.
+ */
+export const EXAM_SPEAKING_A2_TURN_STANDARD = `Grade honestly at the A2 standard (ТБУ, базовый уровень): in tasks 1–2 the candidate must give a FULL spoken answer (a sentence with the asked-for information; «да» / «нет» alone is not full) or START a dialogue on their own initiative, with the expected etiquette (greeting, «пожалуйста», «извините», «спасибо» where the situation calls for them).
+Map the examiners' control sheet onto the criteria: adequacy of the reply or of the initiative ("task-response"); a missing etiquette formula about −0.5, a significant language error about −1, an insignificant one about −0.5 ("grammar"), a gross phonetic problem (visible in the transcript as a garbled word) about −2 per task; a bonus of about +1 each for apt etiquette, clear phonetics and a fuller-than-required answer.`;
+
+export const EXAM_SPEAKING_A2_MONOLOGUE_STANDARD = `Grade honestly at the A2 standard (ТБУ, базовый уровень): task 3 is ONE monologue on the printed topic with six guiding questions; the candidate prepared for 10 minutes and spoke for up to 5. The required volume is 12–15 phrases.
+Map the examiners' control sheet onto the criteria: the talk must fit the topic (drifting off it costs 10–30 of 100, shown under "coverage"); VOLUME — fewer than 12 phrases costs about 10 of 100 (shown under "length", proportionally); a logic break about −1 each; a significant language error −2, an insignificant one −0.5 (under "lexis-grammar"); a gross phonetic problem about −2; a bonus of about +5 for fullness, +5 for independent, confident use of the language, +1 for clear phonetics — within the criteria's maxima, never above them.`;
+
+/** The system prompt for a level (T76). A1 (the default) is the T73 text, byte for byte. */
+function system(task: ExamSpeakingTask, level?: TorflLevel): string {
+  const a2 = level === 'A2';
   const what =
     task === 'monologue'
-      ? 'the task-3 MONOLOGUE: the candidate chose one of two topics, prepared for 8 minutes with its guiding questions, and spoke for up to 2 minutes'
+      ? a2
+        ? 'the task-3 MONOLOGUE: the candidate prepared for 10 minutes with the single printed topic and its guiding questions, and spoke for up to 5 minutes'
+        : 'the task-3 MONOLOGUE: the candidate chose one of two topics, prepared for 8 minutes with its guiding questions, and spoke for up to 2 minutes'
       : task === 'situation'
         ? 'a task-2 SITUATION: the candidate reads a situation and must START the dialogue (ask, request, greet, invite — whatever the situation calls for)'
         : 'a task-1 REPLY: the examiner asks a question once and the candidate answers; «да», «нет», «не знаю» alone is not a full answer';
-  const criteria =
+  const base =
     task === 'monologue' ? EXAM_SPEAKING_MONOLOGUE_CRITERIA_TEXT : EXAM_SPEAKING_TURN_CRITERIA_TEXT;
+  const criteria = a2 ? base.replaceAll('FOR A1', 'FOR A2') : base;
+  const standard = a2
+    ? task === 'monologue'
+      ? EXAM_SPEAKING_A2_MONOLOGUE_STANDARD
+      : EXAM_SPEAKING_A2_TURN_STANDARD
+    : 'Grade honestly at the A1 standard: the exam asks for simple, correct, on-task spoken communication — not literary Russian.';
   const ids =
     task === 'monologue'
       ? `    { "id": "coverage", "score": <0-40>, "max": 40, "comment": "<…>" },
@@ -66,11 +90,11 @@ function system(task: ExamSpeakingTask): string {
       : `    { "id": "task-response", "score": <0-60>, "max": 60, "comment": "<…>" },
     { "id": "completeness", "score": <0-20>, "max": 20, "comment": "<…>" },
     { "id": "grammar", "score": <0-20>, "max": 20, "comment": "<…>" }`;
-  return `You are a TORFL (ТРКИ) examiner grading the Говорение (speaking) subtest of the A1 / Elementary level (ТЭУ) exam of St Petersburg State University, for one adult English-speaking candidate. You are grading ${what}.
+  return `You are a TORFL (ТРКИ) examiner grading the Говорение (speaking) subtest of the ${a2 ? 'A2 / Basic level (ТБУ)' : 'A1 / Elementary level (ТЭУ)'} exam of St Petersburg State University, for one adult English-speaking candidate. You are grading ${what}.
 
 You do NOT hear the audio. You receive the candidate's answer as an AUTOMATIC SPEECH RECOGNITION transcript (sometimes two: an on-device Russian recognizer and a Whisper re-decode). ASR has no punctuation and may mis-hear a word (a case ending, a name, a city). Judge the MEANING the candidate most plausibly produced; never penalize what is clearly a transcription artefact, and never reward a word the candidate plausibly did not say. When two transcripts disagree, take the reading more consistent with the task.
 
-Grade honestly at the A1 standard: the exam asks for simple, correct, on-task spoken communication — not literary Russian.
+${standard}
 
 ${criteria}
 
@@ -105,8 +129,8 @@ export function buildExamSpeakingMessages(input: ExamSpeakingInput): ChatMessage
       lines.push('', 'Guiding questions:');
       input.questionsRu.forEach((q, i) => lines.push(`  ${i + 1}. ${q}`));
     }
-    const min = input.minSentences ?? 10;
-    const max = input.maxSentences ?? 12;
+    const min = input.minSentences ?? (input.level === 'A2' ? 12 : 10);
+    const max = input.maxSentences ?? (input.level === 'A2' ? 15 : 12);
     lines.push('', `Required: ${min}–${max} sentences.`);
   }
   if (input.modelAnswer) {
@@ -128,7 +152,7 @@ export function buildExamSpeakingMessages(input: ExamSpeakingInput): ChatMessage
     );
   }
   return [
-    { role: 'system', content: system(input.task) },
+    { role: 'system', content: system(input.task, input.level) },
     { role: 'user', content: lines.join('\n') },
   ];
 }

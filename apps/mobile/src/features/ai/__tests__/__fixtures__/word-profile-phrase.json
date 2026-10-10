@@ -5,9 +5,7 @@
     "headword": "волосы встали дыбом",
     "translation": "one's hair stood on end",
     "level": "B1",
-    "contexts": [
-      "Когда я услышал шаги наверху, у меня волосы встали дыбом."
-    ]
+    "contexts": ["Когда я услышал шаги наверху, у меня волосы встали дыбом."]
   },
   "model": "anthropic/claude-sonnet-5",
   "choices": [

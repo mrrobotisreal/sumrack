@@ -7,6 +7,7 @@ import {
 
 import { findExamItem, type ExamGrading } from '../model';
 import type { GradedWrite, GraderContext, KindGrader } from './queue-core';
+import { torflLevelOf } from '../level-profile';
 import { speakingCriteriaPercent } from './speaking';
 
 /** Reasoning + the JSON answer share this budget (a monologue grade is ~1–3k completion tokens). */
@@ -32,6 +33,7 @@ export const speakingGrader: KindGrader = {
     if (!a || a.kind === 'choice' || a.kind === 'typed' || a.kind === 'writing') return null;
     const hasText = a.transcript.trim().length > 0 || (a.assistTranscript ?? '').trim().length > 0;
     if (!hasText) return null;
+    const level = torflLevelOf(exam.level);
     let input: ExamSpeakingInput;
     if (hit.item.kind === 'speaking-reply' || hit.item.kind === 'speaking-situation') {
       const item: SpeakingTurnItem = hit.item;
@@ -46,6 +48,7 @@ export const speakingGrader: KindGrader = {
         transcript: a.transcript,
         assistTranscript: a.assistTranscript ?? null,
         modelAnswer: item.expect.accept[0] ?? null,
+        level,
       };
     } else if (hit.item.kind === 'speaking-monologue') {
       const item: SpeakingMonologueItem = hit.item;
@@ -61,6 +64,7 @@ export const speakingGrader: KindGrader = {
         transcript: a.transcript,
         assistTranscript: a.assistTranscript ?? null,
         modelAnswer: model,
+        level,
       };
     } else return null;
     return { messages: buildExamSpeakingMessages(input), maxTokens: EXAM_SPEAKING_MAX_TOKENS };

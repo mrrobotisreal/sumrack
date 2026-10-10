@@ -8,9 +8,7 @@
     "grammar": "short form / adverb",
     "pos": "adj",
     "level": "A2",
-    "contexts": [
-      "Мне было страшно идти по тёмному коридору."
-    ]
+    "contexts": ["Мне было страшно идти по тёмному коридору."]
   },
   "model": "anthropic/claude-sonnet-5",
   "choices": [

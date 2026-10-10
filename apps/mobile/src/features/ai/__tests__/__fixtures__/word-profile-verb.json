@@ -8,10 +8,7 @@
     "grammar": "past, masc.",
     "pos": "verb",
     "level": "A1",
-    "contexts": [
-      "Он говорил тихо, но я всё слышал.",
-      "Не говори никому."
-    ]
+    "contexts": ["Он говорил тихо, но я всё слышал.", "Не говори никому."]
   },
   "model": "anthropic/claude-sonnet-5",
   "choices": [
