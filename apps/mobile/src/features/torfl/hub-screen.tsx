@@ -44,7 +44,11 @@ import {
   speakingPracticeHref,
   ticketHref,
 } from './speaking/tickets-model';
-import { writingPracticeEntries, writingPracticeHref } from './writing/writing-practice-model';
+import {
+  writingPracticeEntries,
+  writingPracticeGroups,
+  writingPracticeHref,
+} from './writing/writing-practice-model';
 import { minutesRu } from './minutes-ru';
 
 export type HubOpenedFrom = 'library' | 'today' | 'deeplink';
@@ -387,25 +391,37 @@ export function TorflHubScreen({
             <EmptyLine text="Задания на письмо появятся вместе с экзаменами." />
           ) : (
             <View className="gap-2">
-              {writingEntries.map((e) => (
-                <Pressable
-                  key={`${e.packId}/${e.examId}/${e.item.id}`}
-                  onPress={() => router.push(writingPracticeHref(e))}
-                  accessibilityRole="button"
-                  testID={`torfl-writing-${e.item.id}`}
-                  className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
-                >
-                  <Ionicons name="create-outline" size={20} color={tokens.accent} />
-                  <View className="flex-1 gap-0.5">
-                    <Text className="font-ui-medium" numberOfLines={2}>
-                      {e.item.task.ru}
+              {writingPracticeGroups(writingEntries).map((group) => (
+                <View key={group.key} className="gap-2" testID={`torfl-writing-group-${group.key}`}>
+                  {group.titleRu && (
+                    <Text
+                      variant="caption"
+                      className="px-1 pt-1 font-ui-medium uppercase tracking-wider"
+                    >
+                      {group.titleRu}
                     </Text>
-                    <Text variant="caption" numberOfLines={1}>
-                      {e.examTitleRu} · {e.item.bullets.length} пункт(ов) · без таймера
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
-                </Pressable>
+                  )}
+                  {group.entries.map((e) => (
+                    <Pressable
+                      key={`${e.packId}/${e.examId}/${e.item.id}`}
+                      onPress={() => router.push(writingPracticeHref(e))}
+                      accessibilityRole="button"
+                      testID={`torfl-writing-${e.item.id}`}
+                      className="flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+                    >
+                      <Ionicons name="create-outline" size={20} color={tokens.accent} />
+                      <View className="flex-1 gap-0.5">
+                        <Text className="font-ui-medium" numberOfLines={2}>
+                          {e.item.task.ru}
+                        </Text>
+                        <Text variant="caption" numberOfLines={1}>
+                          {e.examTitleRu} · {e.item.bullets.length} пункт(ов) · без таймера
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+                    </Pressable>
+                  ))}
+                </View>
               ))}
             </View>
           )

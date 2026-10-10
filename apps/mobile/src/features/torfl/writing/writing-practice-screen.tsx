@@ -342,7 +342,9 @@ function PracticeResult({
                 className={`gap-0.5 px-4 py-2.5 ${i > 0 ? 'border-t border-border' : ''}`}
               >
                 <View className="flex-row items-center gap-2">
-                  <Text className="flex-1 font-ui-medium text-sm">{criterionLabel(c.id).ru}</Text>
+                  <Text className="flex-1 font-ui-medium text-sm">
+                    {criterionLabel(c.id, item.topic).ru}
+                  </Text>
                   <Text className={`font-ui-bold text-sm ${c.pending ? 'text-text-muted' : ''}`}>
                     {c.pending ? '—' : c.score.toLocaleString('ru-RU')} / {c.max}
                   </Text>

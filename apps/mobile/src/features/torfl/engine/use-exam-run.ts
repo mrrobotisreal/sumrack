@@ -48,7 +48,7 @@ import {
 import { preflightListening, type ListeningPreflight } from './assets';
 import { scoreItem } from '../scoring';
 import { torflLevelOf } from '../level-profile';
-import { writingTaskOf } from '../writing/writing-model';
+import { writingShare, writingTaskOf } from '../writing/writing-model';
 import { finalizeAttempt } from './finalize';
 import { devDurationOverrideSec } from './rules';
 
@@ -193,7 +193,7 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                 points: null,
                 maxPoints:
                   item.kind === 'writing'
-                    ? subtest.maxPoints
+                    ? writingShare(subtest)
                     : speakingKind
                       ? responseShare(subtest, item)
                       : (subtest.pointsPerItem ?? item.points ?? 1),
@@ -315,7 +315,8 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                     const given = answers[item.id];
                     const text = given?.kind === 'writing' ? given.text : '';
                     const grade = gradeWritingOffline(item, text);
-                    const score = offlineItemScore(grade, subtest.maxPoints);
+                    const share = writingShare(subtest);
+                    const score = offlineItemScore(grade, share);
                     const grading: ExamGrading = {
                       v: 1,
                       offline: { criteria: grade.criteria, details: { ...grade.details } },
@@ -326,7 +327,7 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                       itemId: item.id,
                       answer: { kind: 'writing', text },
                       points: score.points,
-                      maxPoints: subtest.maxPoints,
+                      maxPoints: share,
                       gradingStatus:
                         online && text.trim().length > 0 ? 'pending-ai' : 'provisional',
                       grading,

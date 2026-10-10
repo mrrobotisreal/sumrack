@@ -53,3 +53,29 @@ export function writingPracticeHref(e: Pick<WritingPracticeEntry, 'packId' | 'ex
     params: { packId: e.packId, examId: e.examId, itemId: e.item.id },
   };
 }
+
+/**
+ * The Письмо practice list grouped by text type (T76): «Письмо» (letters) then
+ * «Записка» (`write-note` messenger tasks). The hub is already level-scoped
+ * (its exams come from `useExams({level})`, THE LEVEL RULE), so a group only
+ * ever holds one level's items. A header is shown for the note group always
+ * and for the letter group only when notes exist (A1 stays a flat list).
+ */
+export interface WritingPracticeGroup {
+  key: 'letter' | 'note';
+  titleRu: string | null;
+  entries: WritingPracticeEntry[];
+}
+
+export function writingPracticeGroups(
+  entries: readonly WritingPracticeEntry[],
+): WritingPracticeGroup[] {
+  const notes = entries.filter((e) => e.item.topic === 'write-note');
+  const letters = entries.filter((e) => e.item.topic !== 'write-note');
+  const out: WritingPracticeGroup[] = [];
+  if (letters.length > 0) {
+    out.push({ key: 'letter', titleRu: notes.length > 0 ? 'Письмо' : null, entries: letters });
+  }
+  if (notes.length > 0) out.push({ key: 'note', titleRu: 'Записка', entries: notes });
+  return out;
+}

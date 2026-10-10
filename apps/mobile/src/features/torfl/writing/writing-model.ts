@@ -1,4 +1,4 @@
-import type { Exam, WritingItem } from '@sumrak/schema';
+import type { Exam, ExamSubtest, WritingItem } from '@sumrak/schema';
 
 import { bulletCoverage, sentenceSplit } from '../grading/writing';
 
@@ -31,6 +31,32 @@ export function writingTaskOf(
     }
   }
   return { task: 0, topic: 'none' };
+}
+
+/** The writing items of a subtest, in order across its parts (A1: one letter; A2: letter + note). */
+export function writingItemsOf(subtest: ExamSubtest): WritingItem[] {
+  const out: WritingItem[] = [];
+  for (const part of subtest.parts) {
+    for (const item of part.items) if (item.kind === 'writing') out.push(item);
+  }
+  return out;
+}
+
+/**
+ * The points one writing response is worth: the subtest's `maxPoints` split
+ * equally over its writing items (T76, A2-8) — A1's single letter keeps the
+ * whole subtest, A2's letter + note 50 each. The ONE rule behind both
+ * `use-exam-run` writes, `fold` (via the row's `maxPoints`) and
+ * `scoreWritingSubtest`.
+ */
+export function writingShare(subtest: Pick<ExamSubtest, 'maxPoints' | 'parts'>): number {
+  const n = writingItemsOf(subtest as ExamSubtest).length;
+  return n > 0 ? subtest.maxPoints / n : subtest.maxPoints;
+}
+
+/** True for the messenger-note task (A2 task 2): `write-note`. */
+export function isNoteTopic(topic: string | undefined): boolean {
+  return topic === 'write-note';
 }
 
 export interface WritingCounters {
@@ -80,8 +106,14 @@ export function writingChecklist(item: Pick<WritingItem, 'bullets'>, text: strin
   }));
 }
 
-/** «Предложений: 7 / ≥ 10 · Вопросов: 1 / 2–5» */
-export function countersLine(c: WritingCounters): string {
+/**
+ * «Предложений: 7 / ≥ 10 · Вопросов: 1 / 2–5». A note (`write-note`, T76)
+ * has no question quota: «Предложений: 3 / ≥ 5».
+ */
+export function countersLine(c: WritingCounters, topic?: string): string {
+  if (isNoteTopic(topic) && c.minQuestions === 0 && c.maxQuestions === null) {
+    return `Предложений: ${c.sentences} / ≥ ${c.minSentences}`;
+  }
   const q =
     c.maxQuestions !== null
       ? `${c.questions} / ${c.minQuestions}–${c.maxQuestions}`

@@ -2,7 +2,12 @@ import { ExamSchema, type Exam, type Pack } from '@sumrak/schema';
 import examPackJson from '@sumrak/schema/fixtures/packs/a1-exam-fixture/pack.json';
 import { describe, expect, it } from 'vitest';
 
-import { writingPracticeEntries, writingPracticeHref } from '../writing/writing-practice-model';
+import a2Pack from '@sumrak/schema/fixtures/packs/a2-exam-fixture/pack.json';
+import {
+  writingPracticeEntries,
+  writingPracticeGroups,
+  writingPracticeHref,
+} from '../writing/writing-practice-model';
 import { mergedCriteria } from '../writing/review-model';
 
 const PACK = examPackJson as unknown as Pack;
@@ -69,5 +74,28 @@ describe('mergedCriteria', () => {
       grading: { v: 1, offline: { criteria: offline }, self: { criteria: ai } },
     });
     expect(self.every((r) => r.source === 'self')).toBe(true);
+  });
+});
+
+describe('writingPracticeGroups (T76)', () => {
+  it('A1: one flat letter group with no header', () => {
+    const groups = writingPracticeGroups(writingPracticeEntries(summaries));
+    expect(groups.map((g) => [g.key, g.titleRu, g.entries.length])).toEqual([['letter', null, 1]]);
+  });
+  it('A2: Письмо then Записка', () => {
+    const a2 = (a2Pack as unknown as Pack).exams!.map((e) => ({
+      packId: 'a2-exam-fixture',
+      examId: e.id,
+      mode: e.mode,
+      titleRu: e.title.ru,
+      titleEn: e.title.en,
+      exam: ExamSchema.parse(e) as Exam,
+    }));
+    const groups = writingPracticeGroups(writingPracticeEntries(a2));
+    expect(groups.map((g) => [g.key, g.titleRu])).toEqual([
+      ['letter', 'Письмо'],
+      ['note', 'Записка'],
+    ]);
+    expect(groups[1]!.entries[0]!.item.id).toBe('wr02');
   });
 });

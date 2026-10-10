@@ -43,7 +43,11 @@ export function criterionMax(id: WritingCriterionId): number {
   return WRITING_CRITERIA.find((c) => c.id === id)!.max;
 }
 
-export function criterionLabel(id: string): { ru: string; en: string } {
+export function criterionLabel(id: string, topic?: string): { ru: string; en: string } {
+  // T76: the messenger note's form row reads «Форма записки» (letters keep «Форма письма»).
+  if (id === 'letter-form' && topic === 'write-note') {
+    return { ru: 'Форма записки', en: 'Note form' };
+  }
   const hit = WRITING_CRITERIA.find((c) => c.id === id);
   return hit ? { ru: hit.ru, en: hit.en } : { ru: id, en: id };
 }
@@ -212,7 +216,9 @@ function half(n: number): number {
  * greeting 5 + sign-off 5. An empty letter scores 0 everywhere.
  */
 export function gradeWritingOffline(
-  item: Pick<WritingItem, 'bullets' | 'minSentences' | 'minQuestions' | 'maxQuestions'>,
+  item: Pick<WritingItem, 'bullets' | 'minSentences' | 'minQuestions' | 'maxQuestions'> & {
+    topic?: string;
+  },
   text: string,
 ): OfflineWritingGrade {
   const split = sentenceSplit(text);
@@ -238,7 +244,15 @@ export function gradeWritingOffline(
   } else if (maxQ !== null && split.questions > maxQ) questionShare = QUESTIONS_POINTS / 2;
   else questionShare = QUESTIONS_POINTS;
 
-  const formPoints = empty ? 0 : (form.greeting ? 5 : 0) + (form.signOff ? 5 : 0);
+  // T76 (A2-8): a note (`write-note`) needs a greeting OR a sign-off — either earns the whole
+  // form row; a letter still earns 5 + 5 separately. Its content rides the four bullets.
+  const formPoints = empty
+    ? 0
+    : item.topic === 'write-note'
+      ? form.greeting || form.signOff
+        ? 10
+        : 0
+      : (form.greeting ? 5 : 0) + (form.signOff ? 5 : 0);
 
   const criteria: ExamCriterion[] = [
     { id: 'task-points', score: taskPoints, max: criterionMax('task-points') },

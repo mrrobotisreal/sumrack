@@ -4,6 +4,7 @@ import { scoreSpeakingSubtest } from '../grading/speaking';
 import { gradeWritingOffline } from '../grading/writing';
 import { isAnswered, type ExamAnswer, type ExamResults, type SpeakingAnswer } from '../model';
 import { roundPct, scoreItem, subtestPercent, type ItemOutcome } from '../scoring';
+import { writingShare } from '../writing/writing-model';
 import { verdict as computeVerdict, type FullVerdict } from '../verdict';
 import { torflLevelOf } from '../level-profile';
 import { isPlaceholderKind, type ExamRunState } from './exam-machine';
@@ -65,7 +66,7 @@ export function scoreWritingSubtest(
   answers: Record<string, ExamAnswer>,
 ): ExamResults[string] {
   const items = subtest.parts.flatMap((p) => p.items).filter((i) => i.kind === 'writing');
-  const share = items.length > 0 ? subtest.maxPoints / items.length : 0;
+  const share = items.length > 0 ? writingShare(subtest) : 0;
   let points = 0;
   for (const item of items) {
     if (item.kind !== 'writing') continue;

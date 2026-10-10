@@ -19,7 +19,13 @@ import { useAppTheme } from '@/theme/use-app-theme';
 import { formatClock, timerTone } from '../engine/rules';
 import type { TorflLevel } from '../level-profile';
 import { WritingLookupSheet } from './lookup-sheet';
-import { countersLine, wordAtSelection, writingChecklist, writingCounters } from './writing-model';
+import {
+  countersLine,
+  isNoteTopic,
+  wordAtSelection,
+  writingChecklist,
+  writingCounters,
+} from './writing-model';
 
 const TIMER_TONE_CLASS = {
   normal: 'text-text',
@@ -54,6 +60,8 @@ export function WritingEditor({
   onSubmit,
   onQuit,
   footer,
+  header,
+  heading,
 }: {
   item: WritingItem;
   initialText: string;
@@ -69,6 +77,10 @@ export function WritingEditor({
   onQuit: () => void;
   /** Practice: rendered under the editor (model letter / feedback). */
   footer?: React.ReactNode;
+  /** T76: rendered between the top bar and the task — the mock's «Задание 1 · Задание 2» stepper. */
+  header?: React.ReactNode;
+  /** T76: overrides the top-bar title (default «Письмо»). */
+  heading?: string;
 }) {
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -140,10 +152,11 @@ export function WritingEditor({
         </Pressable>
         <View className="flex-1">
           <Text className="font-ui-medium" numberOfLines={1}>
-            Письмо{mode === 'practice' ? ' · тренировка' : ''}
+            {heading ?? 'Письмо'}
+            {mode === 'practice' ? ' · тренировка' : ''}
           </Text>
           <Text variant="caption" className="text-xs" testID="writing-counters">
-            {countersLine(counters)}
+            {countersLine(counters, item.topic)}
           </Text>
         </View>
         {remainingMs !== undefined ? (
@@ -169,6 +182,8 @@ export function WritingEditor({
           </Pressable>
         )}
       </View>
+
+      {header}
 
       <ScrollView
         className="flex-1"
@@ -217,7 +232,17 @@ export function WritingEditor({
           </Text>
         </View>
 
-        {/* the editor */}
+        {/* the editor — a note (A2 task 2) sits in a messenger-bubble frame: visual only (T76) */}
+        {isNoteTopic(item.topic) && (
+          <View className="flex-row items-center gap-2 px-1" testID="note-frame-header">
+            <View className="h-7 w-7 items-center justify-center rounded-full bg-accent-soft">
+              <Ionicons name="chatbubble-ellipses-outline" size={14} color={tokens.accent} />
+            </View>
+            <Text variant="caption" className="font-ui-medium">
+              Сообщение другу
+            </Text>
+          </View>
+        )}
         <TextInput
           value={text}
           onChangeText={change}
@@ -233,8 +258,11 @@ export function WritingEditor({
           placeholder="Привет, …"
           placeholderTextColor={tokens.textMuted}
           testID="writing-input"
-          accessibilityLabel="The letter"
-          className="min-h-[260px] rounded-2xl border border-border bg-surface px-4 py-4 text-text"
+          accessibilityLabel={isNoteTopic(item.topic) ? 'The message' : 'The letter'}
+          className={cn(
+            'rounded-2xl border border-border bg-surface px-4 py-4 text-text',
+            isNoteTopic(item.topic) ? 'min-h-[180px] rounded-bl-md border-accent' : 'min-h-[260px]',
+          )}
           style={{ fontFamily: 'Literata_400Regular', fontSize: 18, lineHeight: 29 }}
         />
         <Text variant="caption">
