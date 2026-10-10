@@ -257,6 +257,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-assist" options={{ title: 'Assist bench' }} />
                 <Stack.Screen name="dev-judge" options={{ title: 'Judge lab' }} />
                 <Stack.Screen name="dev-scene" options={{ title: 'Scene gallery' }} />
+                <Stack.Screen name="dev-exam-capture" options={{ title: 'A2 grading capture' }} />
               </Stack>
               <AmbientAudioHost ready={introDone} />
               <AutoSync />

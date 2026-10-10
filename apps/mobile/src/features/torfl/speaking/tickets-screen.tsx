@@ -77,7 +77,10 @@ type Phase =
  */
 export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
   // T76: prep / answer windows = the ticket's own, else the level profile's defaults.
-  const windows = (item: { prepSec?: number; answerSec?: number }) => monologueWindows(level, item);
+  const windows = React.useCallback(
+    (item: { prepSec?: number; answerSec?: number }) => monologueWindows(level, item),
+    [level],
+  );
   const { tokens } = useAppTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -250,7 +253,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
     } catch (err) {
       logError('manual', err);
     }
-  }, [phase]);
+  }, [phase, windows]);
 
   const startAnswer = React.useCallback(async () => {
     const p = phaseRef.current;
@@ -264,7 +267,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
       fixedWindow: true,
       attemptId: p.attemptId,
     });
-  }, [recorder]);
+  }, [recorder, windows]);
 
   // the 1 s clock: prep deadline → answer; answer deadline → stop
   React.useEffect(() => {
