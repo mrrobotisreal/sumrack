@@ -11,6 +11,7 @@ import {
 } from '../model';
 import { buildLayout, flatIndexOf } from './layout';
 import { speakingTaskOf, type SpeakingTask } from '../grading/speaking';
+import { profileFor } from '../level-profile';
 
 /**
  * The mock-exam engine (T71, TORFL_EXAM_PREP §8.1) — a PURE reducer in the
@@ -172,8 +173,26 @@ export function isPlaceholderKind(_kind: ExamSubtestKind): boolean {
   return false;
 }
 
-/** Task 1 / task 2 answer caps (§8.4): 30 s replies, 40 s situations. The endpointer stops earlier on silence. */
+/**
+ * Task 1 / task 2 answer caps (§8.4): 30 s replies, 40 s situations — the A1 values, pinned equal to
+ * the A1 profile by a test. The endpointer stops earlier on silence. Level-aware code asks
+ * `speakingCapMsFor(level, task)` (T76: A2 = 45 s / 60 s).
+ */
 export const SPEAKING_CAP_MS: Record<1 | 2, number> = { 1: 30_000, 2: 40_000 };
+
+/** The answer cap of a task-1 / task-2 item at `level`, from the level profile (T76). */
+export function speakingCapMsFor(level: string | null | undefined, task: 1 | 2): number {
+  return profileFor(level).speakingCapMs[task];
+}
+
+/** The prep / answer window (s) of a monologue: the item's own, else the level profile's default (T76). */
+export function monologueWindows(
+  level: string | null | undefined,
+  item: { prepSec?: number; answerSec?: number },
+): { prepSec: number; answerSec: number } {
+  const d = profileFor(level).monologueDefaults;
+  return { prepSec: item.prepSec ?? d.prepSec, answerSec: item.answerSec ?? d.answerSec };
+}
 
 // --- construction / persistence ------------------------------------------------------
 
@@ -406,6 +425,24 @@ function enterSpeakingPart(
     ? now + windowSec(ctx, part.timeSec, part.timeSec) * 1000
     : undefined;
   if (task === 3) {
+    // T76 (A2-9): a part with exactly ONE monologue has nothing to choose — straight to prep.
+    const monologues = items.filter((i) => i.kind === 'speaking-monologue');
+    if (monologues.length === 1) {
+      const only = monologues[0]!;
+      const win = monologueWindows(
+        ctx.exam.level,
+        only as { prepSec?: number; answerSec?: number },
+      );
+      return {
+        task,
+        phase: 'prep',
+        itemId: only.id,
+        chosenId: only.id,
+        partIdx,
+        partDeadlineAt,
+        phaseDeadlineAt: now + windowSec(ctx, win.prepSec, win.prepSec) * 1000,
+      };
+    }
     return { task, phase: 'choose', itemId: null, partIdx, partDeadlineAt };
   }
   return { task, phase: 'prompt', itemId: first.id, partIdx, partDeadlineAt };
@@ -457,7 +494,7 @@ function speakingStep(
   };
 }
 
-function startRec(sp: ExamSpeakingState): ExamEffect {
+function startRec(ctx: ExamCtx, sp: ExamSpeakingState): ExamEffect {
   if (sp.task === 3) {
     return { type: 'START_REC', itemId: sp.itemId ?? '', task: 3, capMs: 0, fixedWindow: true };
   }
@@ -465,7 +502,7 @@ function startRec(sp: ExamSpeakingState): ExamEffect {
     type: 'START_REC',
     itemId: sp.itemId ?? '',
     task: sp.task as 1 | 2,
-    capMs: SPEAKING_CAP_MS[sp.task as 1 | 2],
+    capMs: speakingCapMsFor(ctx.exam.level, sp.task as 1 | 2),
     fixedWindow: false,
   };
 }
@@ -653,7 +690,8 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
         phase: 'prep',
         itemId: item.id,
         chosenId: item.id,
-        phaseDeadlineAt: event.now + windowSec(ctx, item.prepSec, 480) * 1000,
+        phaseDeadlineAt:
+          event.now + windowSec(ctx, monologueWindows(ctx.exam.level, item).prepSec, 480) * 1000,
       };
       return {
         state: withSpeaking(state, subtest, next),
@@ -669,11 +707,12 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
       const next: ExamSpeakingState = {
         ...sp,
         phase: 'answer',
-        phaseDeadlineAt: event.now + windowSec(ctx, item.answerSec, 120) * 1000,
+        phaseDeadlineAt:
+          event.now + windowSec(ctx, monologueWindows(ctx.exam.level, item).answerSec, 120) * 1000,
       };
       return {
         state: withSpeaking(state, subtest, next),
-        effects: [startRec(next), { type: 'PERSIST_STATE', urgent: true }],
+        effects: [startRec(ctx, next), { type: 'PERSIST_STATE', urgent: true }],
       };
     }
 
@@ -815,7 +854,7 @@ export function reduce(ctx: ExamCtx, state: ExamRunState, event: ExamEvent): Tra
         const next: ExamSpeakingState = { ...sp, phase: 'recording' };
         return {
           state: { ...state, speaking: next },
-          effects: [startRec(next), { type: 'PERSIST_STATE', urgent: false }],
+          effects: [startRec(ctx, next), { type: 'PERSIST_STATE', urgent: false }],
         };
       }
       if (state.audio.phase !== 'playing') return NOOP(state);

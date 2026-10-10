@@ -10,6 +10,7 @@ import { contentTokens } from '@/features/scenario/judge/slots';
 import { scoringTokens } from '@/features/pronunciation/scoring';
 
 import type { ExamCriterion, SpeakingAnswer, SpeakingWordStamp } from '../model';
+import { profileFor } from '../level-profile';
 import { roundPct } from '../scoring';
 import { bulletCoverage } from './writing';
 
@@ -240,6 +241,244 @@ const VERB_STEMS = [
   'вод',
   'лет',
 ];
+/**
+ * A2 additions (T76, TORFL_A2 §5.3): prefixed motion (при-/у-/вы-/по-/до-/за-/пере-/под-/в- + ход/езжа/ед/ид),
+ * carrying (нес/нош/вез/вож), reflexives and the common A2 verbs. A DATA list — `A2_VERB_TEST_CORPUS`
+ * in the tests is its proof set. Stems match as prefixes (≤ 4 extra letters) and a token must still end
+ * like a verb, so nouns stay out (a test asserts a noun corpus is rejected).
+ */
+export const A2_VERB_STEMS: readonly string[] = [
+  // past of prefixed motion / irregulars
+  'приш',
+  'ушл',
+  'уш',
+  'уех',
+  'зашл',
+  'заш',
+  'дошл',
+  'дош',
+  'вышл',
+  'выш',
+  'нашл',
+  'пошл',
+  'перешл',
+  'переех',
+  'приех',
+  'привезл',
+  'вывезл',
+  'встретил',
+  'познакомил',
+  'уста',
+  'дал',
+  'взял',
+  'принесл',
+  // prefixed motion
+  'приход',
+  'прихож',
+  'приед',
+  'приезжа',
+  'прийд',
+  'приду',
+  'уход',
+  'ухож',
+  'уйд',
+  'уйду',
+  'уезжа',
+  'уед',
+  'выход',
+  'выхож',
+  'выйд',
+  'выйду',
+  'выезжа',
+  'выед',
+  'заход',
+  'захож',
+  'зайд',
+  'зайду',
+  'заезжа',
+  'заед',
+  'доход',
+  'дойд',
+  'доезжа',
+  'доед',
+  'переход',
+  'перейд',
+  'переезжа',
+  'переед',
+  'подход',
+  'подойд',
+  'вход',
+  'войд',
+  'пойд',
+  'поед',
+  'поех',
+  // carrying / leading
+  'принес',
+  'принос',
+  'принош',
+  'привез',
+  'привоз',
+  'привож',
+  'унес',
+  'увез',
+  'нес',
+  'нош',
+  'вез',
+  'вож',
+  'веду',
+  'вел',
+  // meeting, inviting, deciding, calling
+  'встреч',
+  'встрет',
+  'пригласи',
+  'приглаша',
+  'предлож',
+  'предлага',
+  'реша',
+  'реши',
+  'решу',
+  'звон',
+  'позвон',
+  'собира',
+  'собер',
+  // everyday A2 verbs
+  'купи',
+  'куплю',
+  'продава',
+  'отдыха',
+  'отдохн',
+  'устава',
+  'болит',
+  'болею',
+  'лечи',
+  'лечу',
+  'выздоравл',
+  'готовит',
+  'приготов',
+  'заказыв',
+  'заказа',
+  'принима',
+  'бра',
+  'бер',
+  'взя',
+  'дава',
+  'даю',
+  'дад',
+  'сказа',
+  'скаж',
+  'объясн',
+  'объясня',
+  'спроси',
+  'спраш',
+  'проси',
+  'прош',
+  'найд',
+  'наход',
+  'нашл',
+  'ищу',
+  'ищет',
+  'поним',
+  'узна',
+  'выуч',
+  'повтор',
+  'пробу',
+  'стара',
+  'мечта',
+  'интересу',
+  'увлека',
+  'улыба',
+  'смея',
+  'плака',
+  'радуе',
+  'радую',
+  'волну',
+  'беспокои',
+  'ссор',
+  'помир',
+  'полюб',
+  'вырос',
+  'расту',
+  'поступ',
+  'окончи',
+  'закончи',
+  'провод',
+  'провел',
+  'провёл',
+  'проведу',
+  'праздну',
+  'поздравл',
+  'подар',
+  'дарю',
+  'отмеча',
+  'ожида',
+  'надею',
+  'верю',
+  'пользу',
+  'использу',
+  'трати',
+  'зараб',
+  'платит',
+  'стоит',
+  'стоят',
+  'требу',
+  'получи',
+  'получа',
+  'послал',
+  'пошл',
+  'посыл',
+  'напиш',
+  'написа',
+  'прочита',
+  'прочт',
+  'просмотр',
+  'посмотр',
+  'услыш',
+  'послуша',
+  'увид',
+  'заметил',
+  'вспомин',
+  'вспомн',
+  'забуд',
+  'запомн',
+  'запомин',
+  'помог',
+  'помога',
+  'меша',
+  'разреш',
+  // reflexive-leaning (the `-ся` ending rule completes them)
+  'встреча',
+  'знакомл',
+  'познаком',
+  'собира',
+  'чувству',
+  'называ',
+  'находи',
+  'оказыва',
+  'каже',
+  'каж',
+  'надо',
+  'занима',
+  'готови',
+  'одева',
+  'умыва',
+  'купа',
+  'моюс',
+  'просыпа',
+  'просып',
+  'засып',
+  'засыпа',
+  'ложи',
+  'ляг',
+  'лёг',
+  'лег',
+  'сяд',
+  'сад',
+  'сид',
+  'встава',
+  'встан',
+  'встаю',
+];
+
 const VERB_FORMS = new Set([
   'был',
   'была',
@@ -330,9 +569,9 @@ const PAST_ENDINGS = ['л', 'ла', 'ло', 'ли', 'лся', 'лась', 'ло�
 export function looksLikeVerb(token: string): boolean {
   const t = token.replace('ё', 'е');
   if (VERB_FORMS.has(t)) return true;
-  const stemHit = VERB_STEMS.some(
-    (s) => t.startsWith(s) && t.length - s.length <= 4 && t.length >= 3,
-  );
+  const stemHit =
+    VERB_STEMS.some((s) => t.startsWith(s) && t.length - s.length <= 4 && t.length >= 3) ||
+    A2_VERB_STEMS.some((s) => t.startsWith(s) && t.length - s.length <= 4 && t.length >= 3);
   if (!stemHit) return false;
   return (
     VERB_ENDINGS.some((e) => t.endsWith(e)) ||
@@ -408,17 +647,13 @@ export const PAUSE_BANDS_MS = { full: 2_000, half: 4_000 } as const;
 /** 0..1 fluency share: 60 % words-per-minute band + 40 % longest-pause band. */
 export function fluencyShare(
   est: Pick<SentenceEstimate, 'wpm' | 'longestPauseMs' | 'words'>,
+  /** T76: the level profile's bands (A1 default = `WPM_BANDS`). */
+  bands: { full: number; good: number; weak: number } = WPM_BANDS,
 ): number {
   if (est.words === 0) return 0;
   if (est.wpm === 0) return 0.5; // no stamps: neutral
   const wpmBand =
-    est.wpm >= WPM_BANDS.full
-      ? 1
-      : est.wpm >= WPM_BANDS.good
-        ? 2 / 3
-        : est.wpm >= WPM_BANDS.weak
-          ? 1 / 3
-          : 0;
+    est.wpm >= bands.full ? 1 : est.wpm >= bands.good ? 2 / 3 : est.wpm >= bands.weak ? 1 / 3 : 0;
   const pauseBand =
     est.longestPauseMs <= PAUSE_BANDS_MS.full
       ? 1
@@ -556,7 +791,7 @@ export function gradeTurnOffline(
 export function gradeMonologueOffline(
   item: Pick<SpeakingMonologueItem, 'questions' | 'minSentences'>,
   answer: Pick<SpeakingAnswer, 'transcript' | 'assistTranscript' | 'words'>,
-  opts: { pauseMs?: number } = {},
+  opts: { pauseMs?: number; level?: string | null } = {},
 ): OfflineSpeakingGrade {
   const bullets = item.questions.map((q, i) => ({ id: `q${i}`, cues: q.cues }));
   const primaryCov = bulletCoverage(answer.transcript, bullets);
@@ -579,7 +814,9 @@ export function gradeMonologueOffline(
   const lengthScore = empty
     ? 0
     : half(Math.min(1, est.sentences / Math.max(1, item.minSentences)) * 20);
-  const fluencyScore = empty ? 0 : half(fluencyShare(est) * 10);
+  const fluencyScore = empty
+    ? 0
+    : half(fluencyShare(est, profileFor(opts.level).fluencyBands) * 10);
   const criteria: ExamCriterion[] = [
     { id: 'coverage', score: coverageScore, max: 40 },
     { id: 'length', score: lengthScore, max: 20 },
@@ -617,7 +854,7 @@ export function gradeMonologueOffline(
 export function gradeSpeakingOffline(
   item: ExamItem,
   answer: SpeakingAnswer | undefined,
-  opts: { pauseMs?: number } = {},
+  opts: { pauseMs?: number; level?: string | null } = {},
 ): OfflineSpeakingGrade | null {
   const blank: SpeakingAnswer = {
     kind:
@@ -651,6 +888,7 @@ export function offlineSpeakingPoints(grade: OfflineSpeakingGrade, share: number
 export function scoreSpeakingSubtest(
   subtest: ExamSubtest,
   answers: Record<string, { kind: string } & Partial<SpeakingAnswer>>,
+  level?: string | null,
 ): { points: number; maxPoints: number; pct: number } {
   let points = 0;
   for (const item of subtest.parts.flatMap((p) => p.items)) {
@@ -658,7 +896,7 @@ export function scoreSpeakingSubtest(
     if (task === null) continue;
     const a = answers[item.id];
     if (!a || typeof a.transcript !== 'string') continue;
-    const grade = gradeSpeakingOffline(item, a as SpeakingAnswer);
+    const grade = gradeSpeakingOffline(item, a as SpeakingAnswer, { level });
     if (!grade) continue;
     points += offlineSpeakingPoints(grade, responseShare(subtest, item));
   }

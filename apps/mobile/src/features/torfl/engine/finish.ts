@@ -91,6 +91,7 @@ export function scoreWritingSubtest(
 export function scoreSpeakingResult(
   subtest: Exam['subtests'][number],
   answers: Record<string, ExamAnswer>,
+  level?: string | null,
 ): ExamResults[string] {
   const speaking: Record<string, SpeakingAnswer> = {};
   for (const [id, a] of Object.entries(answers)) {
@@ -102,7 +103,7 @@ export function scoreSpeakingResult(
       speaking[id] = a;
     }
   }
-  const r = scoreSpeakingSubtest(subtest, speaking);
+  const r = scoreSpeakingSubtest(subtest, speaking, level);
   return {
     points: r.points,
     maxPoints: r.maxPoints,
@@ -116,11 +117,12 @@ export function scoreSpeakingResult(
 export function scoreSubtest(
   subtest: Exam['subtests'][number],
   answers: Record<string, ExamAnswer>,
+  level?: string | null,
 ): SubtestScore {
   if (subtest.kind === 'writing')
     return { result: scoreWritingSubtest(subtest, answers), missed: [] };
   if (subtest.kind === 'speaking')
-    return { result: scoreSpeakingResult(subtest, answers), missed: [] };
+    return { result: scoreSpeakingResult(subtest, answers, level), missed: [] };
   const scored: { points: number }[] = [];
   const missed: MissedItem[] = [];
   let points = 0;
@@ -173,7 +175,7 @@ export function computeFinish(
     if (run.status !== 'submitted' || run.skipped || isPlaceholderKind(run.kind)) continue;
     const subtest = exam.subtests.find((s) => s.id === run.id);
     if (!subtest) continue;
-    const { result, missed: subtestMissed } = scoreSubtest(subtest, answers);
+    const { result, missed: subtestMissed } = scoreSubtest(subtest, answers, exam.level);
     results[subtest.id] = result;
     pcts[subtest.kind] = result.pct;
     if (result.provisional) provisionalKinds[subtest.kind] = true;

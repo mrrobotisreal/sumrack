@@ -163,7 +163,9 @@ export function ExamRunScreen() {
           devDurationSec,
           typeof __DEV__ !== 'undefined' && __DEV__,
         )}
-        extraFacts={def.kind === 'speaking' ? speakingFacts(def) : undefined}
+        extraFacts={
+          def.kind === 'speaking' ? speakingFacts(def, torflLevelOf(run.exam?.level)) : undefined
+        }
         blocked={
           missing
             ? 'Скачай аудио по Wi-Fi: без файла экзамен не звучит. Подключись к Wi-Fi, синхронизируй пакет и вернись.'

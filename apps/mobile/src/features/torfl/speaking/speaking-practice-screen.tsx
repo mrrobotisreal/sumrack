@@ -23,7 +23,7 @@ import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { fileExists } from '../drill/drill-item';
-import { SPEAKING_CAP_MS } from '../engine/exam-machine';
+import { speakingCapMsFor } from '../engine/exam-machine';
 import { torflLevelOf } from '../level-profile';
 import { formatClock } from '../engine/rules';
 import { pumpGradingQueue, useGradingQueue } from '../grading/queue';
@@ -120,7 +120,7 @@ export function SpeakingPracticeScreen() {
           const attemptId = attemptIdRef.current;
           if (!attemptId) return;
           const subtest = located.subtest;
-          const grade = gradeSpeakingOffline(item, answer)!;
+          const grade = gradeSpeakingOffline(item, answer, { level: exam.data?.level })!;
           const share = responseShare(subtest, item);
           const online = await hasApiKey();
           const grading: ExamGrading = {
@@ -195,7 +195,7 @@ export function SpeakingPracticeScreen() {
       await recorder.start({
         itemId: item.id,
         task,
-        capMs: SPEAKING_CAP_MS[task],
+        capMs: speakingCapMsFor(exam.data?.level, task),
         fixedWindow: false,
         attemptId: attempt.id,
         level: torflLevelOf(exam.data?.level),
@@ -341,7 +341,7 @@ export function SpeakingPracticeScreen() {
               />
               <Text variant="caption" testID="practice-mic-hint">
                 {phase.kind === 'recording'
-                  ? `Говори · нажми, чтобы закончить · до ${formatClock(SPEAKING_CAP_MS[task])}`
+                  ? `Говори · нажми, чтобы закончить · до ${formatClock(speakingCapMsFor(exam.data?.level, task))}`
                   : phase.kind === 'processing'
                     ? 'Распознаю…'
                     : 'Нажми и отвечай'}

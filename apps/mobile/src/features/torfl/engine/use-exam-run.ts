@@ -271,7 +271,7 @@ export function useExamRun(attemptId: string, devDurationSecParam?: string): Exa
                         : undefined;
                     // An unanswered item (skipped / the unchosen topic) gets no row: it is 0 of its share.
                     if (!answer) continue;
-                    const grade = gradeSpeakingOffline(item, answer);
+                    const grade = gradeSpeakingOffline(item, answer, { level: ctx.exam.level });
                     if (!grade) continue;
                     const share = responseShare(subtest, item);
                     const grading: ExamGrading = {

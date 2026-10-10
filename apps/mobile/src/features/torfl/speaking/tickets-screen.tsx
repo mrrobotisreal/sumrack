@@ -26,7 +26,9 @@ import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { monologueWindows } from '../engine/exam-machine';
 import { minutesRu } from '../minutes-ru';
+import { recordingLine } from './timing-copy';
 import type { TorflLevel } from '../level-profile';
 import { formatClock, timerTone } from '../engine/rules';
 import { pumpGradingQueue, useGradingQueue } from '../grading/queue';
@@ -74,6 +76,8 @@ type Phase =
  * monologue. A `drill`-scope attempt per ticket (10 XP). `torfl_ticket_drawn`.
  */
 export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
+  // T76: prep / answer windows = the ticket's own, else the level profile's defaults.
+  const windows = (item: { prepSec?: number; answerSec?: number }) => monologueWindows(level, item);
   const { tokens } = useAppTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -165,7 +169,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
           )?.exam;
           const subtest = exam?.subtests.find((s) => s.id === p.ticket.subtestId);
           if (!exam || !subtest) return;
-          const grade = gradeSpeakingOffline(p.ticket.item, answer)!;
+          const grade = gradeSpeakingOffline(p.ticket.item, answer, { level })!;
           const share = responseShare(subtest, p.ticket.item);
           const online = await hasApiKey();
           const grading: ExamGrading = {
@@ -240,7 +244,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
       setPhase({
         kind: 'prep',
         ticket: t,
-        deadlineAt: Date.now() + t.item.prepSec * 1000,
+        deadlineAt: Date.now() + windows(t.item).prepSec * 1000,
         attemptId: attempt.id,
       });
     } catch (err) {
@@ -251,7 +255,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
   const startAnswer = React.useCallback(async () => {
     const p = phaseRef.current;
     if (p.kind !== 'prep') return;
-    const deadlineAt = Date.now() + p.ticket.item.answerSec * 1000;
+    const deadlineAt = Date.now() + windows(p.ticket.item).answerSec * 1000;
     setPhase({ kind: 'answer', ticket: p.ticket, deadlineAt, attemptId: p.attemptId });
     await recorder.start({
       itemId: p.ticket.item.id,
@@ -390,7 +394,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
                   className={`items-center rounded-full px-5 py-3.5 ${gate ? 'bg-surface-2' : 'bg-accent active:opacity-80'}`}
                 >
                   <Text className={`font-ui-bold ${gate ? 'text-text-muted' : 'text-bg'}`}>
-                    Начать подготовку · {Math.round(phase.ticket.item.prepSec / 60)} мин
+                    Начать подготовку · {Math.round(windows(phase.ticket.item).prepSec / 60)} мин
                   </Text>
                 </Pressable>
                 <Pressable
@@ -442,7 +446,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
               onPress={() =>
                 Alert.alert(
                   'Начать ответ?',
-                  `Запись пойдёт сразу: ${minutesRu(phase.ticket.item.answerSec)}.`,
+                  `Запись пойдёт сразу: ${minutesRu(windows(phase.ticket.item).answerSec)}.`,
                   [
                     { text: 'Ещё подготовлюсь', style: 'cancel' },
                     { text: 'Готов', onPress: () => void startAnswer() },
@@ -492,7 +496,7 @@ export function TicketsScreen({ level = 'A1' }: { level?: TorflLevel }) {
               />
               <Text variant="caption">
                 {phase.kind === 'answer'
-                  ? `Идёт запись — ${minutesRu(phase.ticket.item.answerSec)}`
+                  ? recordingLine(windows(phase.ticket.item).answerSec)
                   : 'Распознаю…'}
               </Text>
               {phase.kind === 'answer' ? (

@@ -17,7 +17,7 @@ import { trackTorfl } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { fileExists } from '../drill/drill-item';
-import type { ExamRunState } from '../engine/exam-machine';
+import { monologueWindows, type ExamRunState } from '../engine/exam-machine';
 import { formatClock, timerTone } from '../engine/rules';
 import { TASK_LABEL, speakingTaskOf } from '../grading/speaking';
 import { loadRefAudio, type ExamAudio } from '../items/exam-audio';
@@ -25,6 +25,13 @@ import { useExamAudio } from '../items/use-exam-audio';
 import type { ExamSpeakingState } from '../model';
 import type { TorflLevel } from '../level-profile';
 import { WritingLookupSheet } from '../writing/lookup-sheet';
+import {
+  chooseLine,
+  recordingLine,
+  sentencesLine,
+  startAnswerLine,
+  task3Fact,
+} from './timing-copy';
 import type { ExamRecorder } from './use-exam-recorder';
 
 const TIMER_TONE_CLASS = {
@@ -400,9 +407,12 @@ function MonologueBody({
   if (sp.phase === 'choose') {
     return (
       <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-10 pt-2">
-        <Text variant="caption" className="px-1">
-          Задание 3. Выбери одну из двух тем. После выбора — 8 минут на подготовку, затем 2 минуты
-          на ответ.
+        <Text variant="caption" className="px-1" testID="speaking-choose-line">
+          {chooseLine(
+            topics.length,
+            monologueWindows(level, topics[0] ?? {}).prepSec,
+            monologueWindows(level, topics[0] ?? {}).answerSec,
+          )}
         </Text>
         {topics.map((t) => (
           <Pressable
@@ -467,10 +477,7 @@ function MonologueBody({
                 </Text>
               ))}
             </View>
-            <Text variant="caption">
-              Расскажи {item.minSentences}–{item.maxSentences} предложений. Отвечать нужно без
-              текста — заметки только для подготовки.
-            </Text>
+            <Text variant="caption">{sentencesLine(item.minSentences, item.maxSentences)}</Text>
           </View>
           <View className="gap-2">
             <View className="flex-row items-center justify-between px-1">
@@ -507,7 +514,7 @@ function MonologueBody({
             onPress={() =>
               Alert.alert(
                 'Начать ответ?',
-                'Запись пойдёт сразу: 2 минуты, без остановки таймера.',
+                startAnswerLine(monologueWindows(level, item).answerSec),
                 [
                   { text: 'Ещё подготовлюсь', style: 'cancel' },
                   { text: 'Готов', onPress: onPrepDone },
@@ -585,7 +592,11 @@ function MonologueBody({
           onHoldEnd={() => undefined}
         />
         <Text variant="caption">
-          {recording ? 'Идёт запись — 2 минуты' : processing ? 'Распознаю…' : 'Запись'}
+          {recording
+            ? recordingLine(monologueWindows(level, item ?? {}).answerSec)
+            : processing
+              ? 'Распознаю…'
+              : 'Запись'}
         </Text>
         {recording ? (
           <Pressable
@@ -608,7 +619,7 @@ function MonologueBody({
 }
 
 /** The speaking part instruction + item count for the instruction screen's facts (T73). */
-export function speakingFacts(subtest: ExamSubtest): string[] {
+export function speakingFacts(subtest: ExamSubtest, level: TorflLevel = 'A1'): string[] {
   const out: string[] = [];
   for (const part of subtest.parts) {
     const first = part.items[0];
@@ -619,7 +630,11 @@ export function speakingFacts(subtest: ExamSubtest): string[] {
     if (task === 3) {
       const m = first as SpeakingMonologueItem;
       out.push(
-        `Задание 3: одна тема из двух, подготовка ${Math.round(m.prepSec / 60)} мин, ответ ${Math.round(m.answerSec / 60)} мин.`,
+        task3Fact(
+          part.items.filter((i) => i.kind === 'speaking-monologue').length,
+          monologueWindows(level, m).prepSec,
+          monologueWindows(level, m).answerSec,
+        ),
       );
     } else {
       out.push(
