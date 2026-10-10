@@ -18,6 +18,7 @@ import { ExamMatrixSheet } from './exam-matrix-sheet';
 import { loadItemAssets, type ExamPassage, type ItemAssets } from './items/exam-audio';
 import { ChoiceItemView } from './items/choice-item-view';
 import { ListeningPlayer } from './items/listening-player';
+import { clearPassageOffsets } from './items/passage-scroll';
 import { PassagePanel } from './items/passage-panel';
 import { TypedItemView } from './items/typed-item-view';
 import type { TorflLevel } from './level-profile';
@@ -82,6 +83,8 @@ export function ExamObjectiveScreen({
   const { tokens } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [matrixOpen, setMatrixOpen] = React.useState(false);
+  // T76: a fresh sitting starts every shared passage at the top.
+  React.useEffect(() => clearPassageOffsets, []);
   const layout = React.useMemo(() => buildLayout(subtest), [subtest]);
   const linear = subtest.navigation === 'linear';
   const flat = cursor.flat;

@@ -1,5 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
+
+import { clearPassageOffsets } from '../items/passage-scroll';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { QueryError } from '@/components/query-error';
@@ -25,6 +27,8 @@ const SOURCES: readonly DrillSource[] = ['set', 'deck', 'lightning'];
  * bar in «Молния» (visual only), then the summary.
  */
 export function DrillScreen() {
+  // T76: per-passage scroll memory lives for one drill session.
+  React.useEffect(() => clearPassageOffsets, []);
   const { tokens } = useAppTheme();
   const q = useLocalSearchParams<{
     packId?: string;
