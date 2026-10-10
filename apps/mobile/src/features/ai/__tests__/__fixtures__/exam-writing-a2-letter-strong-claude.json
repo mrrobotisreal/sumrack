@@ -1,0 +1,56 @@
+{
+  "input": {
+    "taskRu": "Вы закончили курс русского языка. Напишите письмо другу и расскажите об этом.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "где и когда был курс"
+      },
+      {
+        "id": "b2",
+        "ru": "сколько времени вы учили русский"
+      },
+      {
+        "id": "b3",
+        "ru": "кто был преподавателем"
+      },
+      {
+        "id": "b4",
+        "ru": "что было самым трудным"
+      },
+      {
+        "id": "b5",
+        "ru": "что вам понравилось"
+      },
+      {
+        "id": "b6",
+        "ru": "спросите друга, хочет ли он тоже учиться"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 3,
+    "maxQuestions": 5,
+    "level": "A2",
+    "taskTopic": "write-letter",
+    "modelLetter": null,
+    "letter": "Привет, Саша!\nКак дела? Я давно тебе не писал, потому что был очень занят.\nНедавно я закончил курс русского языка в Денвере. Курс начался в январе и закончился в июне.\nЯ учил русский язык шесть месяцев, четыре раза в неделю.\nНашим преподавателем была Ирина Петровна. Она очень добрая и терпеливая, и всегда объясняла нам грамматику простыми словами.\nСамым трудным были падежи и глаголы движения. Когда я говорил, я часто путал окончания.\nНо мне очень понравилось, что мы каждый день разговаривали и смотрели русские фильмы.\nТеперь я могу читать простые тексты и говорить с друзьями.\nА ты хочешь тоже учить русский? Может быть, мы можем заниматься вместе? Когда ты будешь свободен?\nПиши мне скорее!\nТвой друг Митч"
+  },
+  "ms": 25011,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-points\", \"score\": 30, \"max\": 30, \"comment\": \"All six points are covered with concrete detail: place and dates (в Денвере, с января по июнь), duration (шесть месяцев, четыре раза в неделю), the teacher (Ирина Петровна), the hardest part (падежи и глаголы движения), what you liked (разговаривали, смотрели русские фильмы), and the question to your friend (А ты хочешь тоже учить русский?).\" },\n    { \"id\": \"task-length\", \"score\": 15, \"max\": 15, \"comment\": \"About 15 real sentences, well over the minimum of 10. There are 4 questions (Как дела?, А ты хочешь…?, Может быть, мы можем…?, Когда ты будешь свободен?), which is inside the required 3–5.\" },\n    { \"id\": \"letter-form\", \"score\": 10, \"max\": 10, \"comment\": \"This is a proper friendly letter: greeting (Привет, Саша!), a natural opening (Как дела? Я давно тебе не писал…), logical paragraphs, a closing request (Пиши мне скорее!) and a signature (Твой друг Митч). Ты is used consistently.\" },\n    { \"id\": \"vocabulary\", \"score\": 20, \"max\": 20, \"comment\": \"The vocabulary is varied and accurate for A2, with some above-level touches: терпеливая, объясняла простыми словами, путал окончания, глаголы движения. There are no English or invented words, which earns a bonus for confident use.\" },\n    { \"id\": \"grammar\", \"score\": 24.5, \"max\": 25, \"comment\": \"Grammar is very accurate. You use past, present and future (будешь свободен), the instrumental (Нашим преподавателем была, Самым трудным были), and the connectors потому что, когда and но. Only small slips remain: an extra comma before a second predicate joined by и, and slightly unnatural placement of тоже.\" }\n  ],\n  \"corrected\": \"Привет, Саша!\\nКак дела? Я давно тебе не писал, потому что был очень занят.\\nНедавно я закончил курс русского языка в Денвере. Курс начался в январе и закончился в июне.\\nЯ учил русский язык шесть месяцев, четыре раза в неделю.\\nНашим преподавателем была Ирина Петровна. Она очень добрая и терпеливая и всегда объясняла нам грамматику простыми словами.\\nСамым трудным были падежи и глаголы движения. Когда я говорил, я часто путал окончания.\\nНо мне очень понравилось, что мы каждый день разговаривали и смотрели русские фильмы.\\nТеперь я могу читать простые тексты и говорить с друзьями.\\nА ты тоже хочешь учить русский? Может быть, мы можем заниматься вместе? Когда ты будешь свободен?\\nПиши мне скорее!\\nТвой друг Митч\",\n  \"changes\": [\n    { \"before\": \"Она очень добрая и терпеливая, и всегда объясняла\", \"after\": \"Она очень добрая и терпеливая и всегда объясняла\", \"explanation\": \"Punctuation: no comma before и when it joins two predicates of the same subject (она … добрая и терпеливая и … объясняла).\" },\n    { \"before\": \"А ты хочешь тоже учить русский?\", \"after\": \"А ты тоже хочешь учить русский?\", \"explanation\": \"Word order: тоже normally comes right after the word it refers to (ты тоже = 'you too'), before the verb.\" }\n  ],\n  \"tips\": [\n    \"Put тоже and также right after the word they refer to: Я тоже хочу…, Ты тоже любишь…\",\n    \"Don't put a comma before и when it links two actions of the same person: Он пришёл и сел. Use a comma only when и joins two full clauses with different subjects.\",\n    \"Your letter is already strong. To vary it further, add a sentence with чтобы or который, e.g. Я учил русский, чтобы говорить с друзьями or Ирина Петровна, которая…\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2064,
+    "completion_tokens": 2527,
+    "cost": 0.058796,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1169
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "input": {
+    "taskRu": "Вы закончили курс русского языка. Напишите письмо другу и расскажите об этом.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "где и когда был курс"
+      },
+      {
+        "id": "b2",
+        "ru": "сколько времени вы учили русский"
+      },
+      {
+        "id": "b3",
+        "ru": "кто был преподавателем"
+      },
+      {
+        "id": "b4",
+        "ru": "что было самым трудным"
+      },
+      {
+        "id": "b5",
+        "ru": "что вам понравилось"
+      },
+      {
+        "id": "b6",
+        "ru": "спросите друга, хочет ли он тоже учиться"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 3,
+    "maxQuestions": 5,
+    "level": "A2",
+    "taskTopic": "write-letter",
+    "modelLetter": null,
+    "letter": "Привет Саша. Я закончил курс русский язык. Курс был в Денвер. Я учить русский три месяц. Мне нравится курс. Ты хотеть учиться?"
+  },
+  "ms": 37990,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-points\",\n      \"score\": 17.5,\n      \"max\": 30,\n      \"comment\": \"The letter says where the course was, how long you studied, that you liked it, and asks whether your friend wants to study. It omits when the course took place, who taught it, and what was most difficult.\"\n    },\n    {\n      \"id\": \"task-length\",\n      \"score\": 7,\n      \"max\": 15,\n      \"comment\": \"There are five sentences excluding the greeting, rather than at least ten. There is one question rather than the required three to five.\"\n    },\n    {\n      \"id\": \"letter-form\",\n      \"score\": 5,\n      \"max\": 10,\n      \"comment\": \"«Привет, Саша» suits a letter to a friend, but there is no sign-off or signature. The short statements have little natural flow between them.\"\n    },\n    {\n      \"id\": \"vocabulary\",\n      \"score\": 13,\n      \"max\": 20,\n      \"comment\": \"The everyday words are appropriate and understandable. The range is very narrow for A2: there is no description of the teacher or difficulty and no connectors such as «потому что» or «когда».\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 16,\n      \"max\": 25,\n      \"comment\": \"«Я закончил» and «Мне нравится» are formed correctly, but «Я учить» and «Ты хотеть» use infinitives instead of conjugated verbs. The letter also has case errors in «курс русский язык», «в Денвер» and «три месяц».\"\n    }\n  ],\n  \"corrected\": \"Привет, Саша. Я закончил курс русского языка. Курс был в Денвере. Я учил русский три месяца. Мне нравится курс. Ты хочешь учиться?\",\n  \"changes\": [\n    {\n      \"before\": \"Привет Саша\",\n      \"after\": \"Привет, Саша\",\n      \"explanation\": \"Punctuation: set off a direct address with a comma.\"\n    },\n    {\n      \"before\": \"курс русский язык\",\n      \"after\": \"курс русского языка\",\n      \"explanation\": \"Case: after «курс», the name of the subject takes the genitive.\"\n    },\n    {\n      \"before\": \"в Денвер\",\n      \"after\": \"в Денвере\",\n      \"explanation\": \"Case: use the prepositional after «в» to say where something was.\"\n    },\n    {\n      \"before\": \"Я учить\",\n      \"after\": \"Я учил\",\n      \"explanation\": \"Verb form: use the masculine past tense for completed study, not the infinitive.\"\n    },\n    {\n      \"before\": \"три месяц\",\n      \"after\": \"три месяца\",\n      \"explanation\": \"Case after a numeral: «три» takes the genitive singular form «месяца».\"\n    },\n    {\n      \"before\": \"Ты хотеть\",\n      \"after\": \"Ты хочешь\",\n      \"explanation\": \"Verb conjugation: with «ты», use the present-tense form «хочешь», not the infinitive.\"\n    }\n  ],\n  \"tips\": [\n    \"Before writing, check every bullet point; include when the course took place, the teacher, and the hardest part.\",\n    \"Count your sentences and questions: this task needs at least ten sentences and three to five questions.\",\n    \"Practise conjugating verbs with «я» and «ты», and add a closing line to your next letter.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 9212,
+    "completion_tokens": 5285,
+    "cost": 0.0671016,
+    "completion_tokens_details": {
+      "reasoning_tokens": 3733
+    }
+  }
+}

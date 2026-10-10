@@ -1,0 +1,56 @@
+{
+  "input": {
+    "taskRu": "Вы закончили курс русского языка. Напишите письмо другу и расскажите об этом.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "где и когда был курс"
+      },
+      {
+        "id": "b2",
+        "ru": "сколько времени вы учили русский"
+      },
+      {
+        "id": "b3",
+        "ru": "кто был преподавателем"
+      },
+      {
+        "id": "b4",
+        "ru": "что было самым трудным"
+      },
+      {
+        "id": "b5",
+        "ru": "что вам понравилось"
+      },
+      {
+        "id": "b6",
+        "ru": "спросите друга, хочет ли он тоже учиться"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 3,
+    "maxQuestions": 5,
+    "level": "A2",
+    "taskTopic": "write-letter",
+    "modelLetter": null,
+    "letter": "Привет, Саша!\nКак дела? Я давно тебе не писал, потому что был очень занят.\nНедавно я закончил курс русского языка в Денвере. Курс начался в январе и закончился в июне.\nЯ учил русский язык шесть месяцев, четыре раза в неделю.\nНашим преподавателем была Ирина Петровна. Она очень добрая и терпеливая, и всегда объясняла нам грамматику простыми словами.\nСамым трудным были падежи и глаголы движения. Когда я говорил, я часто путал окончания.\nНо мне очень понравилось, что мы каждый день разговаривали и смотрели русские фильмы.\nТеперь я могу читать простые тексты и говорить с друзьями.\nА ты хочешь тоже учить русский? Может быть, мы можем заниматься вместе? Когда ты будешь свободен?\nПиши мне скорее!\nТвой друг Митч"
+  },
+  "ms": 19555,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-points\",\n      \"score\": 30,\n      \"max\": 30,\n      \"comment\": \"All six points are covered: the letter gives the course’s place and dates, duration, teacher, difficulties, enjoyable activities, and a question inviting Sasha to study too.\"\n    },\n    {\n      \"id\": \"task-length\",\n      \"score\": 15,\n      \"max\": 15,\n      \"comment\": \"There are 15 sentences and four questions, meeting both requirements.\"\n    },\n    {\n      \"id\": \"letter-form\",\n      \"score\": 10,\n      \"max\": 10,\n      \"comment\": \"The greeting, friendly flow, consistent «ты» forms, and signature make this a natural letter to a friend.\"\n    },\n    {\n      \"id\": \"vocabulary\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"Everyday vocabulary is accurate and varied, including «глаголы движения» and «простыми словами».\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 24,\n      \"max\": 25,\n      \"comment\": \"Past and present forms and connectors are used confidently. The plural subject requires «самыми трудными»; there is also one unnecessary comma before «и».\"\n    }\n  ],\n  \"corrected\": \"Привет, Саша!\\nКак дела? Я давно тебе не писал, потому что был очень занят.\\nНедавно я закончил курс русского языка в Денвере. Курс начался в январе и закончился в июне.\\nЯ учил русский язык шесть месяцев, четыре раза в неделю.\\nНашим преподавателем была Ирина Петровна. Она очень добрая и терпеливая и всегда объясняла нам грамматику простыми словами.\\nСамыми трудными были падежи и глаголы движения. Когда я говорил, я часто путал окончания.\\nНо мне очень понравилось, что мы каждый день разговаривали и смотрели русские фильмы.\\nТеперь я могу читать простые тексты и говорить с друзьями.\\nА ты хочешь тоже учить русский? Может быть, мы можем заниматься вместе? Когда ты будешь свободен?\\nПиши мне скорее!\\nТвой друг Митч\",\n  \"changes\": [\n    {\n      \"before\": \"Самым трудным были\",\n      \"after\": \"Самыми трудными были\",\n      \"explanation\": \"Agreement: the instrumental predicate must be plural to agree with «падежи и глаголы движения».\"\n    },\n    {\n      \"before\": \"терпеливая, и всегда объясняла\",\n      \"after\": \"терпеливая и всегда объясняла\",\n      \"explanation\": \"Punctuation: no comma is needed before the single «и» joining the predicates.\"\n    }\n  ],\n  \"tips\": [\n    \"Check agreement when the subject contains two nouns joined by «и».\",\n    \"Keep using connectors and a mix of past and present forms; they make your letter clear and natural.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 8997,
+    "completion_tokens": 3680,
+    "cost": 0.0522938,
+    "completion_tokens_details": {
+      "reasoning_tokens": 2298
+    }
+  }
+}

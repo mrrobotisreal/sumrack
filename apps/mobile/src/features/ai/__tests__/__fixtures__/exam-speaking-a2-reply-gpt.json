@@ -1,0 +1,28 @@
+{
+  "input": {
+    "task": "reply",
+    "promptRu": "Как вы обычно проводите выходные?",
+    "transcript": "обычно по выходным я гуляю с друзьями в парке а вечером мы идём в кафе или смотрим фильм дома",
+    "assistTranscript": "Обычно по выходным я гуляю с друзьями в парке, а вечером мы идём в кафе или смотрим фильм дома.",
+    "modelAnswer": "Обычно я гуляю с друзьями.",
+    "level": "A2"
+  },
+  "ms": 6376,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-response\",\n      \"score\": 60,\n      \"max\": 60,\n      \"comment\": \"The answer directly describes how the candidate usually spends weekends, with several relevant activities.\"\n    },\n    {\n      \"id\": \"completeness\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"This is a full answer with details about where the candidate goes and what they do in the evening.\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"The verb forms, cases and phrasing are appropriate for A2. No correction is needed.\"\n    }\n  ],\n  \"corrected\": \"Обычно по выходным я гуляю с друзьями в парке, а вечером мы идём в кафе или смотрим фильм дома.\",\n  \"changes\": [],\n  \"tips\": [\n    \"Keep giving a full answer with concrete details.\",\n    \"For variety, you could also mention what you do on Sunday.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5407,
+    "completion_tokens": 794,
+    "cost": 0.0167488,
+    "completion_tokens_details": {
+      "reasoning_tokens": 317
+    }
+  }
+}

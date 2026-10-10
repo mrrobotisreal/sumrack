@@ -1,0 +1,48 @@
+{
+  "input": {
+    "taskRu": "Напишите другу сообщение и предложите встретиться. Укажите причину, день, время и место.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "причина: почему вы не можете в другой день"
+      },
+      {
+        "id": "b2",
+        "ru": "какой день"
+      },
+      {
+        "id": "b3",
+        "ru": "во сколько"
+      },
+      {
+        "id": "b4",
+        "ru": "где"
+      }
+    ],
+    "minSentences": 5,
+    "minQuestions": 0,
+    "maxQuestions": null,
+    "level": "A2",
+    "taskTopic": "write-note",
+    "modelLetter": null,
+    "letter": "Привет, Алина! В пятницу я работаю допоздна, поэтому предлагаю встретиться в субботу. Давай в три часа дня? Напиши, если тебе удобно."
+  },
+  "ms": 11025,
+  "model": "openai/gpt-6-sol-pro",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    {\n      \"id\": \"task-points\",\n      \"score\": 22.5,\n      \"max\": 30,\n      \"comment\": \"The message explains why Friday is impossible and gives Saturday at three o’clock as the proposed day and time. It does not say where to meet.\"\n    },\n    {\n      \"id\": \"task-length\",\n      \"score\": 9,\n      \"max\": 15,\n      \"comment\": \"There are three sentences after the greeting, rather than the required five. No questions are required.\"\n    },\n    {\n      \"id\": \"letter-form\",\n      \"score\": 10,\n      \"max\": 10,\n      \"comment\": \"«Привет, Алина!» and the informal tone fit a message to a friend. A sign-off is not necessary.\"\n    },\n    {\n      \"id\": \"vocabulary\",\n      \"score\": 20,\n      \"max\": 20,\n      \"comment\": \"The everyday vocabulary is appropriate and clear; «допоздна» expresses the reason precisely.\"\n    },\n    {\n      \"id\": \"grammar\",\n      \"score\": 25,\n      \"max\": 25,\n      \"comment\": \"The sentences are correct, and «поэтому» and «если» connect the ideas naturally. «Давай в три часа дня?» is acceptable conversational shorthand in a message.\"\n    }\n  ],\n  \"corrected\": \"Привет, Алина! В пятницу я работаю допоздна, поэтому предлагаю встретиться в субботу. Давай в три часа дня? Напиши, если тебе удобно.\",\n  \"changes\": [],\n  \"tips\": [\n    \"Always include the meeting place as well as the day and time.\",\n    \"Write at least five sentences after the greeting; a greeting alone does not count.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6961,
+    "completion_tokens": 1789,
+    "cost": 0.0294126,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1010
+    }
+  }
+}

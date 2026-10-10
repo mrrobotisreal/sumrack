@@ -1,0 +1,56 @@
+{
+  "input": {
+    "taskRu": "Вы закончили курс русского языка. Напишите письмо другу и расскажите об этом.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "где и когда был курс"
+      },
+      {
+        "id": "b2",
+        "ru": "сколько времени вы учили русский"
+      },
+      {
+        "id": "b3",
+        "ru": "кто был преподавателем"
+      },
+      {
+        "id": "b4",
+        "ru": "что было самым трудным"
+      },
+      {
+        "id": "b5",
+        "ru": "что вам понравилось"
+      },
+      {
+        "id": "b6",
+        "ru": "спросите друга, хочет ли он тоже учиться"
+      }
+    ],
+    "minSentences": 10,
+    "minQuestions": 3,
+    "maxQuestions": 5,
+    "level": "A2",
+    "taskTopic": "write-letter",
+    "modelLetter": null,
+    "letter": "Привет Саша. Я закончил курс русский язык. Курс был в Денвер. Я учить русский три месяц. Мне нравится курс. Ты хотеть учиться?"
+  },
+  "ms": 21995,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-points\", \"score\": 16, \"max\": 30, \"comment\": \"Covered: where the course was (\\\"в Денвер\\\"), how long you studied (\\\"три месяц\\\"), a vague 'I liked it' (\\\"Мне нравится курс\\\") and the question to your friend. Missing: when the course took place, who the teacher was, and what was hardest. Point 5 is only one generic sentence with no detail.\"\n    },\n    { \"id\": \"task-length\", \"score\": 5, \"max\": 15, \"comment\": \"Only 5 real sentences (the greeting doesn't count) against a minimum of 10. Only 1 question against the required 3–5.\"\n    },\n    { \"id\": \"letter-form\", \"score\": 4, \"max\": 10, \"comment\": \"There is a greeting (\\\"Привет Саша\\\", missing a comma). There is no closing phrase or signature. The sentences are a bare list with no natural letter flow.\"\n    },\n    { \"id\": \"vocabulary\", \"score\": 9, \"max\": 20, \"comment\": \"The words used are correct and appropriate, with no English or invented words. The range is minimal, A1-level (курс, учить, нравится, хотеть). There are no connectors, so the vocabulary does not show A2 range.\"\n    },\n    { \"id\": \"grammar\", \"score\": 10, \"max\": 25, \"comment\": \"There are errors in almost every sentence: wrong cases (\\\"курс русский язык\\\", \\\"в Денвер\\\", \\\"три месяц\\\") and unconjugated infinitives (\\\"Я учить\\\", \\\"Ты хотеть\\\"). The present \\\"нравится\\\" should be past, since the course is over. All sentences are simple, with no connectors, so the text stays at A1 rather than A2.\"\n    }\n  ],\n  \"corrected\": \"Привет, Саша! Я закончил курс русского языка. Курс был в Денвере. Я учил русский три месяца. Мне понравился курс. Ты хочешь учиться?\",\n  \"changes\": [\n    { \"before\": \"Привет Саша.\", \"after\": \"Привет, Саша!\", \"explanation\": \"Punctuation: the name of the person addressed is separated by a comma; an exclamation mark is usual after a greeting.\" },\n    { \"before\": \"курс русский язык\", \"after\": \"курс русского языка\", \"explanation\": \"Genitive case: 'course of Russian' — the noun after курс goes into the genitive (русского языка).\" },\n    { \"before\": \"в Денвер\", \"after\": \"в Денвере\", \"explanation\": \"Prepositional case: location 'in Denver' (где?) is в + prepositional, ending -е.\" },\n    { \"before\": \"Я учить\", \"after\": \"Я учил\", \"explanation\": \"Verb form: the infinitive must be conjugated; the past tense masculine is учил.\" },\n    { \"before\": \"три месяц\", \"after\": \"три месяца\", \"explanation\": \"Numerals: after два/три/четыре the noun is genitive singular (месяца).\" },\n    { \"before\": \"Мне нравится курс\", \"after\": \"Мне понравился курс\", \"explanation\": \"Tense/aspect: the course is finished, so use the past perfective понравился, agreeing with masculine курс.\" },\n    { \"before\": \"Ты хотеть\", \"after\": \"Ты хочешь\", \"explanation\": \"Verb conjugation: хотеть is irregular — ты хочешь.\" }\n  ],\n  \"tips\": [\n    \"Cover every bullet point and write at least 10 sentences: add when the course was, who your teacher was (Моим преподавателем был/была…), and what was hardest (Самым трудным была грамматика…).\",\n    \"Always conjugate verbs (я учил, ты хочешь) and check cases after prepositions and numbers: в + prepositional for place (в Денвере), три + genitive singular (три месяца).\",\n    \"Link sentences with потому что, поэтому, когда, and ask 3–5 questions. End with a closing phrase and signature (Пиши! Твой Джон).\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1810,
+    "completion_tokens": 2188,
+    "cost": 0.051,
+    "completion_tokens_details": {
+      "reasoning_tokens": 888
+    }
+  }
+}

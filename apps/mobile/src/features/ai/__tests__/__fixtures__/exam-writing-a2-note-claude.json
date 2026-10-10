@@ -1,0 +1,48 @@
+{
+  "input": {
+    "taskRu": "Напишите другу сообщение и предложите встретиться. Укажите причину, день, время и место.",
+    "bullets": [
+      {
+        "id": "b1",
+        "ru": "причина: почему вы не можете в другой день"
+      },
+      {
+        "id": "b2",
+        "ru": "какой день"
+      },
+      {
+        "id": "b3",
+        "ru": "во сколько"
+      },
+      {
+        "id": "b4",
+        "ru": "где"
+      }
+    ],
+    "minSentences": 5,
+    "minQuestions": 0,
+    "maxQuestions": null,
+    "level": "A2",
+    "taskTopic": "write-note",
+    "modelLetter": null,
+    "letter": "Привет, Алина! В пятницу я работаю допоздна, поэтому предлагаю встретиться в субботу. Давай в три часа дня? Напиши, если тебе удобно."
+  },
+  "ms": 12792,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-points\", \"score\": 22.5, \"max\": 30, \"comment\": \"The reason (\\\"В пятницу я работаю допоздна\\\"), the day (\\\"в субботу\\\") and the time (\\\"в три часа дня\\\") are all clear. The place is missing completely, so one of the four units is lost.\" },\n    { \"id\": \"task-length\", \"score\": 10, \"max\": 15, \"comment\": \"Only 3 real sentences, not counting the greeting, against a minimum of 5. Short is acceptable for a message, but here it was too short to fit the place.\" },\n    { \"id\": \"letter-form\", \"score\": 10, \"max\": 10, \"comment\": \"There is a friendly greeting (\\\"Привет, Алина!\\\") and a natural chat register with consistent ты. It ends with a fitting closing request (\\\"Напиши, если тебе удобно\\\").\" },\n    { \"id\": \"vocabulary\", \"score\": 18, \"max\": 20, \"comment\": \"Everyday vocabulary is used accurately and idiomatically (\\\"допоздна\\\", \\\"предлагаю встретиться\\\", \\\"удобно\\\"). The range is naturally narrow because the text is so short.\" },\n    { \"id\": \"grammar\", \"score\": 23, \"max\": 25, \"comment\": \"There are no errors: time expressions with в + accusative are correct, and the connectors поэтому and если are used well. The variety is limited, with no past or future forms, because the text is brief.\" }\n  ],\n  \"corrected\": \"Привет, Алина! В пятницу я работаю допоздна, поэтому предлагаю встретиться в субботу. Давай в три часа дня? Напиши, если тебе удобно.\",\n  \"changes\": [],\n  \"tips\": [\n    \"Always check that every unit of the task is covered. Here you forgot the place, e.g. \\\"Давай встретимся в кафе около метро\\\".\",\n    \"Reach the required number of sentences (5). Add one or two simple ones, e.g. \\\"Там очень вкусный кофе. Я буду ждать тебя у входа.\\\"\",\n    \"Use a future form to show more range at A2, e.g. \\\"Мы погуляем в парке\\\" or \\\"Я позвоню тебе вечером\\\".\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1924,
+    "completion_tokens": 1194,
+    "cost": 0.031576,
+    "completion_tokens_details": {
+      "reasoning_tokens": 466
+    }
+  }
+}

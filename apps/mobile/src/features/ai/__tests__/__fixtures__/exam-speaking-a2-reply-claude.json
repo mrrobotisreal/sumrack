@@ -1,0 +1,28 @@
+{
+  "input": {
+    "task": "reply",
+    "promptRu": "Как вы обычно проводите выходные?",
+    "transcript": "обычно по выходным я гуляю с друзьями в парке а вечером мы идём в кафе или смотрим фильм дома",
+    "assistTranscript": "Обычно по выходным я гуляю с друзьями в парке, а вечером мы идём в кафе или смотрим фильм дома.",
+    "modelAnswer": "Обычно я гуляю с друзьями.",
+    "level": "A2"
+  },
+  "ms": 12294,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"task-response\", \"score\": 60, \"max\": 60, \"comment\": \"The answer addresses the question directly with concrete weekend activities: «гуляю с друзьями в парке», «идём в кафе или смотрим фильм дома». It is clearly on task.\" },\n    { \"id\": \"completeness\", \"score\": 20, \"max\": 20, \"comment\": \"A full, connected answer that goes beyond the model. It has two clauses joined by «а», a time marker («по выходным», «вечером») and alternatives with «или».\" },\n    { \"id\": \"grammar\", \"score\": 20, \"max\": 20, \"comment\": \"All forms are correct: instrumental «с друзьями», prepositional «в парке», accusative «в кафе», «по выходным» and correct present-tense agreement. In a habitual context «ходим в кафе» would sound slightly more standard, but «идём» is acceptable when narrating a typical sequence of events.\" }\n  ],\n  \"corrected\": \"Обычно по выходным я гуляю с друзьями в парке, а вечером мы идём в кафе или смотрим фильм дома.\",\n  \"changes\": [],\n  \"tips\": [\n    \"For repeated, habitual trips you can use the multidirectional verb: «по выходным мы ходим в кафе». Keep «идём» for describing one typical sequence of events.\",\n    \"To make the answer even richer, add a reason or feeling, e.g. «…потому что это интересно» or «мне это очень нравится».\",\n    \"Keep using connectors like «а», «или» and «потом». They make your answer sound natural and complete.\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1678,
+    "completion_tokens": 785,
+    "cost": 0.022412,
+    "completion_tokens_details": {
+      "reasoning_tokens": 252
+    }
+  }
+}

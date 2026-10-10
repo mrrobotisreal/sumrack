@@ -1,0 +1,38 @@
+{
+  "input": {
+    "task": "monologue",
+    "promptRu": "Мой любимый праздник",
+    "questionsRu": [
+      "Какой ваш любимый праздник?",
+      "Когда он бывает?",
+      "Как вы его празднуете?",
+      "Кто бывает с вами?",
+      "Что вы едите и пьёте?",
+      "Что вам нравится больше всего?"
+    ],
+    "minSentences": 12,
+    "maxSentences": 15,
+    "level": "A2",
+    "transcript": "мой любимый праздник это новый год он бывает в конце декабря и в начале январь у нас в семье мы всегда готовим много еды за несколько дней перед праздником мама делает салат оливье а я помогаю ей на кухне вечером тридцать первого декабря приходят мои родители и мои друзья мы вместе сидим за столом и разговариваем в двенадцать часов мы смотрим по телевизору президент и пьём шампанское потом мы дарим друг другу подарки на новый год я всегда получаю что-нибудь интересное больше всего мне нравится когда вся семья вместе и мы смеёмся и поём песни после праздника я два дня отдыхаю дома",
+    "assistTranscript": "Мой любимый праздник — это Новый год. Он бывает в конце декабря и в начале январь. У нас в семье мы всегда готовим много еды за несколько дней перед праздником. Мама делает салат оливье, а я помогаю ей на кухне. Вечером тридцать первого декабря приходят мои родители и мои друзья. Мы вместе сидим за столом и разговариваем. В двенадцать часов мы смотрим по телевизору президент и пьём шампанское. Потом мы дарим друг другу подарки. На Новый год я всегда получаю что-нибудь интересное. Больше всего мне нравится, когда вся семья вместе, и мы смеёмся и поём песни. После праздника я два дня отдыхаю дома.",
+    "modelAnswer": null
+  },
+  "ms": 21799,
+  "model": "anthropic/claude-opus-5.5",
+  "choices": [
+    {
+      "message": {
+        "content": "{\n  \"criteria\": [\n    { \"id\": \"coverage\", \"score\": 39, \"max\": 40, \"comment\": \"All six guiding questions are answered: the holiday (Новый год), when it is, how it is celebrated, who comes, food and drink (салат оливье, шампанское), and what you like most. One small logic wobble: Mama cooks at home with you, yet later 'приходят мои родители', which reads a little oddly.\" },\n    { \"id\": \"length\", \"score\": 18, \"max\": 20, \"comment\": \"About 11–12 real sentences, just at or slightly under the required 12–15. One or two more sentences, for example about the New Year tree or other dishes, would secure full marks.\" },\n    { \"id\": \"fluency\", \"score\": 10, \"max\": 10, \"comment\": \"Smooth, connected narration with good linking words: 'потом', 'вечером тридцать первого декабря', 'больше всего мне нравится, когда…'. There are no restarts or list-like fragments.\" },\n    { \"id\": \"lexis-grammar\", \"score\": 26, \"max\": 30, \"comment\": \"Vocabulary is rich for A2 and confidently used (дарим друг другу подарки, что-нибудь интересное). Two case errors cost points: 'в начале январь' needs the genitive, and 'смотрим президент' needs the animate accusative. 'За несколько дней перед праздником' should be 'до праздника'.\" }\n  ],\n  \"corrected\": \"Мой любимый праздник — это Новый год. Он бывает в конце декабря и в начале января. У нас в семье мы всегда готовим много еды за несколько дней до праздника. Мама делает салат оливье, а я помогаю ей на кухне. Вечером тридцать первого декабря приходят мои родители и мои друзья. Мы вместе сидим за столом и разговариваем. В двенадцать часов мы смотрим по телевизору президента и пьём шампанское. Потом мы дарим друг другу подарки. На Новый год я всегда получаю что-нибудь интересное. Больше всего мне нравится, когда вся семья вместе и мы смеёмся и поём песни. После праздника я два дня отдыхаю дома.\",\n  \"changes\": [\n    { \"before\": \"в начале январь\", \"after\": \"в начале января\", \"explanation\": \"Genitive case: 'в начале' requires the genitive (января), as in 'в конце декабря'.\" },\n    { \"before\": \"за несколько дней перед праздником\", \"after\": \"за несколько дней до праздника\", \"explanation\": \"Set expression: 'за … дней до + genitive' is the standard way to say 'X days before'.\" },\n    { \"before\": \"смотрим по телевизору президент\", \"after\": \"смотрим по телевизору президента\", \"explanation\": \"Animate accusative: a masculine animate direct object takes the -а ending (президента).\" }\n  ],\n  \"tips\": [\n    \"Watch case endings after prepositions and verbs: 'в начале/в конце' + genitive, and animate masculine objects in the accusative end in -а/-я (вижу президента, брата).\",\n    \"Add one or two more sentences, for example about the ёлка or other dishes you eat, so that you are safely within 12–15 sentences.\",\n    \"Check that the details agree: if Mama cooks with you at home, say who comes as guests (e.g. 'приходят бабушка, дедушка и друзья').\"\n  ]\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2104,
+    "completion_tokens": 1788,
+    "cost": 0.044176,
+    "completion_tokens_details": {
+      "reasoning_tokens": 673
+    }
+  }
+}
