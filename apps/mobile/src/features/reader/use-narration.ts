@@ -7,6 +7,7 @@ import { SETTING_KEYS } from '@/db/repositories/settings';
 import type { AudioTrackRow } from '@/db/repositories/content';
 import type { ClassificationEventProps } from '@/features/library/categories';
 import { track as trackEvent } from '@/services/analytics';
+import { getSpeechService } from '@/services/speech';
 import { runSpan } from '@/features/audio/slice-window';
 import { useSlicePlayer } from '@/features/audio/use-slice-player';
 
@@ -468,6 +469,8 @@ export function useNarration({
     () => ({
       pauseNarration: () => {
         // Mirror of toggle()'s pause half: only pause a playing narration.
+        // A «в предложении» sentence still playing stops too, so the clip never overlaps it.
+        stopSlice();
         const player = playerRef.current;
         if (player?.playing) player.pause();
       },
@@ -480,6 +483,7 @@ export function useNarration({
         const span = runSpan(idx.stamps, (s) => s.sentenceId === sentenceId);
         if (!span) return;
         playerRef.current?.pause();
+        void getSpeechService().stop(); // a Piper word/phrase clip never talks over the sentence
         void playSlice({
           uri,
           startMs: span.startMs,
@@ -490,7 +494,7 @@ export function useNarration({
         trackEvent('word_slice_context_played', { surface: 'popup' });
       },
     }),
-    [currentTrack, playSlice],
+    [currentTrack, playSlice, stopSlice],
   );
 
   // ---- teardown -----------------------------------------------------------
