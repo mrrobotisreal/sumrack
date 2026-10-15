@@ -10,11 +10,12 @@ import { describe, expect, it } from 'vitest';
  */
 const SRC = join(__dirname, '..', '..');
 const SLICE_PLAYERS = [
-  'features/audio/use-slice-player.ts', // T79: listening quiz + reader popup slice through this
+  'features/audio/use-slice-player.ts', // T79/T85: reader «в предложении» + popup sentence slice through this
   'features/torfl/items/use-exam-audio.ts',
 ];
 const SPEAK_SURFACES = [
   'features/reader/word-popup.tsx',
+  'features/reader/phrase-card-sheet.tsx',
   'features/review/games/numbers/numbers-screen.tsx',
   'features/pronunciation/pronunciation-view.tsx',
   'features/path/exercises/spec-pronunciation-view.tsx',

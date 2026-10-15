@@ -66,7 +66,7 @@ export type AnalyticsEvent =
   | 'packs_screen_opened'
   // T10 narration + karaoke. Since M14 (T46) narration_* and
   // karaoke_fallback_sentence_mode carry `category` + `genre` via
-  // useNarration's `eventProps` option (word_segment_played does not).
+  // useNarration's `eventProps` option (popup_word_spoken / phrase_spoken do not).
   | 'narration_track_loaded'
   | 'narration_play'
   | 'narration_pause'
@@ -75,7 +75,11 @@ export type AnalyticsEvent =
   | 'narration_track_switched'
   | 'narration_finished'
   | 'karaoke_fallback_sentence_mode'
-  | 'word_segment_played'
+  // T85 reader speakers (ids and counts only, never text). The word popup and the
+  // phrase sheet speak through Piper; `voiceId` is the picked id or 'system'.
+  | 'popup_word_spoken'
+  | 'phrase_spoken'
+  | 'phrase_context_played'
   // T79 slice player. Props: surface slug + numbers (lead/seek/stop ms, rate).
   | 'word_slice_played'
   | 'word_slice_context_played'
@@ -168,7 +172,6 @@ export type AnalyticsEvent =
   | 'listening_replay'
   | 'listening_audio_resolved'
   | 'listening_answered'
-  | 'listening_audio_flagged'
   | 'daily_session_started'
   | 'daily_session_empty'
   | 'daily_session_composed'

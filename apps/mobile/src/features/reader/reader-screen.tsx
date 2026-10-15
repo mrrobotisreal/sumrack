@@ -776,7 +776,11 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
         onClose={() => setPopupTarget(null)}
         segments={narration.segments}
       />
-      <PhraseCardSheet target={phraseTarget} onClose={() => setPhraseTarget(null)} />
+      <PhraseCardSheet
+        target={phraseTarget}
+        onClose={() => setPhraseTarget(null)}
+        segments={narration.segments}
+      />
       <ExplainSheet target={explainTarget} onClose={() => setExplainTarget(null)} />
     </View>
   );

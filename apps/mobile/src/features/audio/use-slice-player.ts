@@ -7,7 +7,8 @@ import { createSliceFocus } from '@/services/learning-focus';
 import { createSliceController, type SlicePlayerLike } from './slice-controller';
 import { sliceWindow, type SliceStamp, type SliceWindow } from './slice-window';
 
-export type SliceSurface = 'listening' | 'popup' | 'exam';
+/** T85: the listening quiz no longer slices story audio, so it is not a surface here. */
+export type SliceSurface = 'popup' | 'exam';
 
 /** word_slice_played is sampled 1 in N per surface. */
 const ANALYTICS_SAMPLE = 5;

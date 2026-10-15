@@ -16,7 +16,6 @@ import {
   buildKaraokeIndex,
   mapPositionAcrossTracks,
   seekTargetForSentence,
-  tokenKey,
   type ActiveWord,
   type KaraokeIndex,
   type KaraokeSentenceInput,
@@ -60,9 +59,8 @@ function sanitizePrefs(raw: unknown): NarrationPrefs {
 export type SeekMethod = 'scrub' | 'sentence' | 'auto';
 
 export interface WordSegmentPlayer {
-  hasSegment(sentenceId: string, tokenIndex: number): boolean;
-  /** Play just this word's slice of the current track (pauses narration). */
-  playSegment(sentenceId: string, tokenIndex: number): void;
+  /** T85: pause the narration before a Piper word/phrase clip speaks over it. */
+  pauseNarration(): void;
   /** T79: the sentence has stamps on the loaded track («▶ в предложении»). */
   hasContext(sentenceId: string): boolean;
   /** T79: play the whole source sentence (first stamp − lead-in … last + lead-out). */
@@ -458,36 +456,20 @@ export function useNarration({
     [effectiveTrackId],
   );
 
-  // ---- word segments (popup speaker, work item 7) -------------------------
-  // T79: the shared slice player (neighbour-aware window, media-clock stop, T78
-  // focus held for the slice); narration keeps its own player and mode.
+  // ---- word segments (reader speakers) ------------------------------------
+  // T85: word/phrase speakers no longer slice narration; they speak through
+  // Piper and only pause the narration here. «в предложении» still plays the
+  // real sentence via the shared T79 slice player.
   const slice = useSlicePlayer('popup', 'word-popup');
   const { stop: stopSlice, play: playSlice } = slice;
   const stopSegment = stopSlice;
 
   const segments = React.useMemo<WordSegmentPlayer>(
     () => ({
-      hasSegment: (sentenceId, tokenIndex) =>
-        indexRef.current?.stampByToken.has(tokenKey(sentenceId, tokenIndex)) ?? false,
-      playSegment: (sentenceId, tokenIndex) => {
-        const idx = indexRef.current;
-        const uri = currentTrack?.localUri;
-        if (!idx || !uri) return;
-        const stamp = idx.stampByToken.get(tokenKey(sentenceId, tokenIndex));
-        if (!stamp) return;
-        // Never fight the narration for the same word.
-        playerRef.current?.pause();
-        const at = idx.stamps.findIndex(
-          (s) => s.sentenceId === sentenceId && s.tokenIndex === tokenIndex,
-        );
-        void playSlice({
-          uri,
-          startMs: stamp.startMs,
-          endMs: stamp.endMs,
-          prev: idx.stamps[at - 1] ?? null,
-          next: idx.stamps[at + 1] ?? null,
-        });
-        trackEvent('word_segment_played', { sentenceId, tokenIndex });
+      pauseNarration: () => {
+        // Mirror of toggle()'s pause half: only pause a playing narration.
+        const player = playerRef.current;
+        if (player?.playing) player.pause();
       },
       hasContext: (sentenceId) =>
         indexRef.current?.stamps.some((s) => s.sentenceId === sentenceId) ?? false,

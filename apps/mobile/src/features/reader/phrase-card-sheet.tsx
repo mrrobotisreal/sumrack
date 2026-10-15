@@ -6,11 +6,14 @@ import { Modal, Pressable, Text as RNText, TextInput, Vibration, View } from 're
 import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { ClassificationEventProps } from '@/features/library/categories';
+import { clipVoiceId } from '@/features/tts/clip-voice';
 import { track } from '@/services/analytics';
+import { getSpeechService, speak } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { glossTranslation, phraseSurface, wordTokensInRange } from './token-chunks';
 
+import type { WordSegmentPlayer } from './use-narration';
 import type { PhraseSelection } from './token-text';
 
 export interface PhraseCardTarget {
@@ -26,6 +29,12 @@ export interface PhraseCardTarget {
 interface PhraseCardSheetProps {
   target: PhraseCardTarget | null;
   onClose: () => void;
+  /**
+   * T85: the reader's narration handle. Drives the «в предложении» pill (when the
+   * sentence is stamped) and pauses narration before the phrase speaker talks.
+   * Absent on non-reader surfaces.
+   */
+  segments?: WordSegmentPlayer | null;
 }
 
 /**
@@ -34,14 +43,22 @@ interface PhraseCardSheetProps {
  * save, which is what makes naive gloss concatenation acceptable (ticket
  * technical note; don't over-engineer translation quality here).
  */
-export function PhraseCardSheet({ target, onClose }: PhraseCardSheetProps) {
+export function PhraseCardSheet({ target, onClose, segments }: PhraseCardSheetProps) {
   if (!target) return null;
   // Remount per selection so the editable fields start fresh.
   const key = `${target.sentenceId}:${target.selection.range.start}-${target.selection.range.end}`;
-  return <PhraseSheet key={key} target={target} onClose={onClose} />;
+  return <PhraseSheet key={key} target={target} onClose={onClose} segments={segments ?? null} />;
 }
 
-function PhraseSheet({ target, onClose }: { target: PhraseCardTarget; onClose: () => void }) {
+function PhraseSheet({
+  target,
+  onClose,
+  segments,
+}: {
+  target: PhraseCardTarget;
+  onClose: () => void;
+  segments: WordSegmentPlayer | null;
+}) {
   const { tokens: theme } = useAppTheme();
   const queryClient = useQueryClient();
 
@@ -49,6 +66,31 @@ function PhraseSheet({ target, onClose }: { target: PhraseCardTarget; onClose: (
     () => phraseSurface(target.selection.chunks, target.selection.range),
     [target],
   );
+
+  // T85: the phrase speaker. Stop any speech when the sheet closes so a clip
+  // never outlives its card.
+  React.useEffect(() => {
+    return () => {
+      void getSpeechService().stop();
+    };
+  }, []);
+
+  const canSpeak = getSpeechService().available;
+  const handleSpeak = React.useCallback(() => {
+    segments?.pauseNarration();
+    const voiceId = clipVoiceId();
+    void speak(surface, { voiceId });
+    track('phrase_spoken', {
+      words: wordTokensInRange(target.selection.chunks, target.selection.range).length,
+      voiceId: voiceId ?? 'system',
+    });
+  }, [segments, surface, target]);
+
+  const hasContext = segments?.hasContext(target.sentenceId) ?? false;
+  const handleContext = React.useCallback(() => {
+    segments?.playContext(target.sentenceId);
+    track('phrase_context_played', {});
+  }, [segments, target.sentenceId]);
   const defaultTranslation = React.useMemo(
     () => glossTranslation(target.selection.chunks, target.selection.range),
     [target],
@@ -97,8 +139,41 @@ function PhraseSheet({ target, onClose }: { target: PhraseCardTarget; onClose: (
           </Pressable>
         </View>
 
-        {/* the phrase */}
-        <RNText className="font-reading text-xl text-text">{surface}</RNText>
+        {/* the phrase + T85 speaker and «в предложении» (same markup as the word popup) */}
+        <View className="flex-row items-center gap-3">
+          <RNText className="flex-1 font-reading text-xl text-text">{surface}</RNText>
+          {hasContext && (
+            <Pressable
+              onPress={handleContext}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Play in sentence"
+              className="h-11 flex-row items-center gap-1 rounded-full bg-surface-2 px-3 active:bg-border"
+            >
+              <Ionicons name="play" size={16} color={theme.accent} />
+              <RNText className="font-ui-medium text-xs text-text">в предложении</RNText>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={canSpeak ? handleSpeak : undefined}
+            disabled={!canSpeak}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={canSpeak ? 'Pronounce phrase' : 'No audio available for this phrase'}
+            accessibilityState={{ disabled: !canSpeak }}
+            className={
+              canSpeak
+                ? 'h-11 w-11 items-center justify-center rounded-full bg-surface-2 active:bg-border'
+                : 'h-11 w-11 items-center justify-center rounded-full bg-surface-2 opacity-40'
+            }
+          >
+            <Ionicons
+              name={canSpeak ? 'volume-medium' : 'volume-mute-outline'}
+              size={22}
+              color={canSpeak ? theme.accent : theme.textMuted}
+            />
+          </Pressable>
+        </View>
 
         {/* sentence context */}
         <View className="mt-2 border-l-2 border-accent/40 pl-3">
