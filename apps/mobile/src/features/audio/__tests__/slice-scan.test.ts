@@ -8,15 +8,15 @@ const SRC = join(__dirname, '..', '..', '..');
 const read = (f: string) => readFileSync(join(SRC, f), 'utf8');
 
 describe('slice players share playSlice', () => {
-  it('listening + reader popup go through useSlicePlayer', () => {
-    expect(read('features/review/games/listening/use-listening-audio.ts')).toContain(
+  it('T85: the listening quiz no longer slices story audio; the reader still does', () => {
+    // Listening speaks the banked text through Piper (T85) — no story slices at all.
+    expect(read('features/review/games/listening/use-listening-audio.ts')).not.toContain(
       'useSlicePlayer(',
     );
     expect(read('features/reader/use-narration.ts')).toContain('useSlicePlayer(');
   });
 
   it.each([
-    'features/review/games/listening/use-listening-audio.ts',
     'features/reader/use-narration.ts',
     'features/audio/use-slice-player.ts',
     'features/audio/slice-controller.ts',

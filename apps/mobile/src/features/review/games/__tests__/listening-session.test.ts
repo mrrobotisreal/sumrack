@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { createTestDb } from '@/db/__tests__/helpers';
 import { createRepositories, type Repositories } from '@/db/repositories';
-import { audioTracks, wordStamps } from '@/db/schema';
 import type { SumrakDB } from '@/db/types';
 import { foldForAnswer } from '@/lib/text';
 
@@ -14,17 +13,15 @@ import {
 } from '../listening/session';
 import { seedStory } from './seed';
 
-/** T14: listening-quiz audio-source selection + session generation. */
+/** T14 / T85: listening-quiz audio resolution (TTS of the banked surface) + session generation. */
 
 /**
  * One story whose sentence s0 is «Вот словами здесь» with lemma «слово» on
- * token 1 — the banked word points at that sentence, so the segment path
- * can resolve surface «словами» when a downloaded track stamps it.
+ * token 1 — the banked word points at that sentence, so the post-answer
+ * context can highlight surface «словами».
  */
-async function setup(
-  opts: { withTrack?: boolean; withStamp?: boolean; downloaded?: boolean } = {},
-) {
-  const { withTrack = false, withStamp = false, downloaded = true } = opts;
+async function setup(opts: { unread?: boolean } = {}) {
+  const { unread = false } = opts;
   const db = createTestDb();
   const repos = createRepositories(db);
   await seedStory(db, {
@@ -39,30 +36,6 @@ async function setup(
       },
     ],
   });
-  if (withTrack) {
-    await db.insert(audioTracks).values({
-      packId: 'p1',
-      storyId: 'st1',
-      id: 'tr1',
-      voice: 'elevenlabs:Test',
-      style: 'neutral',
-      file: 'audio/st1.opus',
-      localUri: downloaded ? 'file:///packs/p1/audio/st1.opus' : null,
-      durationMs: 5000,
-    });
-    if (withStamp) {
-      await db.insert(wordStamps).values({
-        packId: 'p1',
-        storyId: 'st1',
-        trackId: 'tr1',
-        stampIndex: 0,
-        sentenceId: 's0',
-        tokenIndex: 1,
-        startMs: 700,
-        endMs: 1400,
-      });
-    }
-  }
   const { item } = await repos.bank.addWord({
     lemma: 'слово',
     surface: 'словами',
@@ -72,6 +45,7 @@ async function setup(
     sentenceId: 's0',
     sourceStoryId: 'st1',
   });
+  if (!unread) await repos.reading.markFinished('p1', 'st1');
   return { db, repos, item };
 }
 
@@ -87,59 +61,38 @@ async function addDistractors(repos: Repositories, n: number) {
   }
 }
 
-describe('resolveListeningAudio', () => {
-  it('picks the pack segment when a downloaded track stamps the lemma token in a read story', async () => {
-    const { repos, item } = await setup({ withTrack: true, withStamp: true });
-    await repos.reading.markFinished('p1', 'st1');
+describe('resolveListeningAudio (T85: TTS only)', () => {
+  it('speaks the banked surface and highlights the context token for a read story', async () => {
+    const { repos, item } = await setup();
     const audio = await resolveListeningAudio(repos, item);
-    expect(audio).toMatchObject({
-      kind: 'segment',
-      uri: 'file:///packs/p1/audio/st1.opus',
-      startMs: 700,
-      endMs: 1400,
-      spokenText: 'словами',
-      prev: null,
-      next: null,
-      context: { startMs: 700, endMs: 1400, prev: null, next: null },
-    });
-    expect(
-      audio.kind === 'segment' && audio.context?.tokens.filter((t) => t.isTarget),
-    ).toHaveLength(1);
+    expect(audio).toMatchObject({ kind: 'tts', keySource: 'surface', text: 'словами' });
+    expect(audio.context?.tokens.filter((t) => t.isTarget)).toHaveLength(1);
+    expect(audio.context?.tokens.find((t) => t.isTarget)?.text).toBe('словами');
   });
 
-  it('respects the unseen-stories rule: unread source sentence → TTS unless the toggle allows it', async () => {
-    const { repos, item } = await setup({ withTrack: true, withStamp: true });
+  it('never carries story audio fields', async () => {
+    const { repos, item } = await setup();
+    const audio = await resolveListeningAudio(repos, item);
+    expect(audio).not.toHaveProperty('uri');
+    expect(audio).not.toHaveProperty('startMs');
+    expect(audio).not.toHaveProperty('endMs');
+  });
+
+  it('respects the unseen-stories rule: unread source sentence → no context, unless the toggle allows it', async () => {
+    const { repos, item } = await setup({ unread: true });
     // No progress row: the sentence would spoil an unopened story.
     expect(await resolveListeningAudio(repos, item)).toEqual({
       kind: 'tts',
       keySource: 'tts',
       text: 'словами',
+      context: null,
     });
     const allowed = await resolveListeningAudio(repos, item, { unseenAllowed: true });
-    expect(allowed.kind).toBe('segment');
+    expect(allowed).toMatchObject({ keySource: 'surface', text: 'словами' });
+    expect(allowed.context).not.toBeNull();
   });
 
-  it('falls back to TTS of the banked surface when the track has no stamp for the token', async () => {
-    const { repos, item } = await setup({ withTrack: true, withStamp: false });
-    await repos.reading.markFinished('p1', 'st1');
-    expect(await resolveListeningAudio(repos, item)).toEqual({
-      kind: 'tts',
-      keySource: 'tts',
-      text: 'словами',
-    });
-  });
-
-  it('falls back to TTS when the track audio is not downloaded', async () => {
-    const { repos, item } = await setup({ withTrack: true, withStamp: true, downloaded: false });
-    await repos.reading.markFinished('p1', 'st1');
-    expect(await resolveListeningAudio(repos, item)).toEqual({
-      kind: 'tts',
-      keySource: 'tts',
-      text: 'словами',
-    });
-  });
-
-  it('falls back to TTS when the item has no source sentence', async () => {
+  it('item with no source sentence → no context, spoken text is the surface', async () => {
     const { repos } = await setup();
     const { item } = await repos.bank.addWord({
       lemma: 'дом',
@@ -150,11 +103,12 @@ describe('resolveListeningAudio', () => {
       kind: 'tts',
       keySource: 'tts',
       text: 'дом',
+      context: null,
     });
   });
 
-  it('phrases always go to TTS of the phrase surface', async () => {
-    const { repos } = await setup({ withTrack: true, withStamp: true });
+  it('phrases speak the phrase surface with no context', async () => {
+    const { repos } = await setup();
     const { item } = await repos.bank.addPhrase({
       surface: 'вот словами',
       translation: 'here with words',
@@ -165,14 +119,14 @@ describe('resolveListeningAudio', () => {
       kind: 'tts',
       keySource: 'tts',
       text: 'вот словами',
+      context: null,
     });
   });
 });
 
 describe('buildListeningItemForCard', () => {
-  it('answer key is the spoken text; segment case answers the surface form', async () => {
-    const { repos, item } = await setup({ withTrack: true, withStamp: true });
-    await repos.reading.markFinished('p1', 'st1');
+  it('answer key is the spoken text; the surface form is the answer', async () => {
+    const { repos, item } = await setup();
     await addDistractors(repos, 5);
     const card = (await repos.reviews.getCard(item.id, 'listening'))!;
     const entry = await buildListeningItemForCard(repos, card, item, 'pick4');

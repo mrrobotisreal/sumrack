@@ -1,6 +1,7 @@
 import type { BankItemRow } from '@/db/repositories/bank';
 import { type CardRow } from '@/db/repositories/reviews';
 import type { Repositories } from '@/db/repositories';
+import { clipVoiceId } from '@/features/tts/clip-voice';
 import { track } from '@/services/analytics';
 import { foldForAnswer } from '@/lib/text';
 import { normalizeRu } from '@/db/normalize';
@@ -56,6 +57,7 @@ export async function buildListeningItemForCard(
     source: audio.kind,
     keySource: audio.keySource,
     itemKind: item.kind,
+    voiceId: clipVoiceId() ?? 'system',
   });
   const entry: ListeningItem = {
     card,

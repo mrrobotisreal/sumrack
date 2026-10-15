@@ -6,11 +6,9 @@ import { Pressable, Text as RNText, TextInput, Vibration, View } from 'react-nat
 import { Text } from '@/components/ui/text';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
-import { repos } from '@/db';
 import { answersMatch } from '@/lib/text';
 
 import type { ListeningOutcome } from '../../mapping';
-import { flagListeningAudio } from './audio-flags';
 import { gradeListening, type ListeningMatch } from './grading';
 import type { ListeningItem } from './session';
 import { useListeningAudio } from './use-listening-audio';
@@ -39,7 +37,6 @@ export function ListeningView({ entry, onDone }: ListeningViewProps) {
   const [answered, setAnswered] = React.useState<null | { text: string; match: ListeningMatch }>(
     null,
   );
-  const [flagged, setFlagged] = React.useState(false);
   const [revealed, setRevealed] = React.useState(false);
   const [typed, setTyped] = React.useState('');
   const [selectedChoice, setSelectedChoice] = React.useState<string | null>(null);
@@ -108,15 +105,6 @@ export function ListeningView({ entry, onDone }: ListeningViewProps) {
   const almost = answered?.match === 'form';
   const showContinue = (answered && !exact) || revealed;
 
-  const flagAudio = React.useCallback(() => {
-    if (flagged || entry.audio.kind !== 'segment') return;
-    setFlagged(true);
-    const { ref } = entry.audio;
-    void flagListeningAudio(repos, entry.item.id, ref).catch((err) =>
-      console.error('[listening] flag failed', err),
-    );
-    track('listening_audio_flagged', { ...ref, keySource: entry.audio.keySource });
-  }, [flagged, entry.audio, entry.item.id]);
   const showAnswer = !!answered || revealed;
 
   return (
@@ -161,41 +149,17 @@ export function ListeningView({ entry, onDone }: ListeningViewProps) {
               </Text>
             )}
             {entry.translation && <Text variant="muted">{entry.translation}</Text>}
-            {audio.hasContext && entry.audio.kind === 'segment' && entry.audio.context && (
-              <>
-                <RNText className="mt-2 text-center font-reading text-base text-text-muted">
-                  {entry.audio.context.tokens.map((t, i) => (
-                    <RNText
-                      key={i}
-                      className={t.isTarget ? 'font-reading text-accent' : 'font-reading'}
-                    >
-                      {(t.spaceBefore && i > 0 ? ' ' : '') + t.text}
-                    </RNText>
-                  ))}
-                </RNText>
-                <Pressable
-                  onPress={audio.playContext}
-                  accessibilityRole="button"
-                  accessibilityLabel="Play in sentence"
-                  className="mt-1 flex-row items-center gap-2 rounded-full border border-border bg-surface-2 px-4 py-2 active:bg-border"
-                >
-                  <Ionicons name="play" size={16} color={theme.accent} />
-                  <RNText className="font-ui-medium text-sm text-text">в предложении</RNText>
-                </Pressable>
-              </>
-            )}
-            {entry.audio.kind === 'segment' && (
-              <Pressable
-                onPress={flagAudio}
-                disabled={flagged}
-                accessibilityRole="button"
-                accessibilityLabel="Неверный звук?"
-                className="mt-1 px-3 py-2 active:opacity-70"
-              >
-                <RNText className="font-ui text-sm text-text-muted">
-                  {flagged ? 'Отмечено — дальше голос приложения' : 'Неверный звук?'}
-                </RNText>
-              </Pressable>
+            {entry.audio.context && (
+              <RNText className="mt-2 text-center font-reading text-base text-text-muted">
+                {entry.audio.context.tokens.map((t, i) => (
+                  <RNText
+                    key={i}
+                    className={t.isTarget ? 'font-reading text-accent' : 'font-reading'}
+                  >
+                    {(t.spaceBefore && i > 0 ? ' ' : '') + t.text}
+                  </RNText>
+                ))}
+              </RNText>
             )}
           </View>
         )}

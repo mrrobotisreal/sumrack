@@ -4,82 +4,39 @@ import { foldForAnswer } from '@/lib/text';
 import type { BankItemRow } from '@/db/repositories/bank';
 import type { Repositories } from '@/db/repositories';
 
-import { sliceWindowSpan } from '@/features/audio/slice-span';
-import type { SliceStamp } from '@/features/audio/slice-window';
-
 import { headword } from '../../session';
 import { sentenceEligible } from '../sentence-source';
-import { isFlagActive, readAudioFlags } from './audio-flags';
 
 /**
- * T22: the T02 fixture pack ships a deliberately SILENT narration track
- * («Стук в стене» — fabricated word stamps over silence, built for karaoke
- * plumbing tests before real audio existed). A listening-quiz segment
- * sliced from it plays nothing, which reads as a broken question. Skip it
- * here (TTS fallback takes over); the reader's narration bar still plays
- * it, where the silence is at least attributable.
+ * Listening-quiz audio (T14 → T85). The quiz never plays story audio: T85 retired
+ * the word slices cut from the narration track, because neighbour words bled into
+ * them and stamp errors chopped the target. Every item now speaks its BANKED
+ * surface through the SpeechService (Piper when installed, system voice otherwise).
+ *
+ * The source sentence is still resolved, but only to highlight the target token
+ * in the post-answer context line, so the answer reveal shows where the word came
+ * from. `keySource` records which rule picked that token (kept for analytics).
  */
-const SILENT_FIXTURE_TRACKS = new Set(['a1-creepypasta-001:knock-anton-creepy']);
-
-/**
- * Audio-source selection for the listening quiz (T14 work item 4; the same
- * "pack segment with valid timestamps → use it; else → TTS" rule the reader
- * popup speaker applies via T10's WordSegmentPlayer). This standalone
- * resolver works outside the reader: given only a bank item, it walks
- * source sentence → downloaded audio track → word stamp, and falls back to
- * on-device TTS (Piper via the SpeechService, which itself degrades to the
- * system voice) whenever any link is missing. It never fails — every bank
- * item is speakable.
- */
-export type ListeningAudio =
-  | {
-      kind: 'segment';
-      /** T81: which rule picked the keyed token — the banked occurrence, a surface match, or the first lemma match. */
-      keySource: 'encounter' | 'surface' | 'lemma';
-      /** T81: content ids of the keyed token (flag payload; slugs, never user text). */
-      ref: { packId: string; sentenceId: string; tokenIndex: number; trackId: string };
-      /** Local file uri of the narration track (audio_tracks.localUri). */
-      uri: string;
-      startMs: number;
-      endMs: number;
-      /** The surface form the narrator actually says in this slice. */
-      spokenText: string;
-      /** T79: the stamps either side of the word in the same track (null at a track edge). */
-      prev: SliceStamp | null;
-      next: SliceStamp | null;
-      /** T79: the whole source sentence's span + outside neighbours («▶ в предложении»). */
-      context: {
-        startMs: number;
-        endMs: number;
-        prev: SliceStamp | null;
-        next: SliceStamp | null;
-        /** Sentence tokens for the post-answer highlight. */
-        tokens: { text: string; spaceBefore: boolean; isPunct: boolean; isTarget: boolean }[];
-      } | null;
-    }
-  | {
-      kind: 'tts';
-      keySource: 'tts';
-      /** What the TTS engine should say: the BANKED surface (T81), never the lemma. */
-      text: string;
-      /** T81: true when a «Неверный звук?» flag (still valid for this pack version) forced TTS. */
-      flagged?: boolean;
-    };
+export type ListeningAudio = {
+  kind: 'tts';
+  /** Which rule picked the highlighted token; `'tts'` when there is no sentence context. */
+  keySource: 'encounter' | 'surface' | 'lemma' | 'tts';
+  /** What the TTS engine says and the answer key: the banked surface, never the lemma. */
+  text: string;
+  /** Post-answer sentence highlight; null when the sentence is not eligible or no token resolves. */
+  context: { tokens: { text: string; spaceBefore: boolean; isPunct: boolean; isTarget: boolean }[] } | null;
+};
 
 /** The Russian a listener is expected to hear — the quiz answer key. */
 export function spokenText(audio: ListeningAudio): string {
-  return audio.kind === 'segment' ? audio.spokenText : audio.text;
+  return audio.text;
 }
 
 /**
- * Resolve the best audio source for a bank item. Segment path requires:
- * a word item with a source sentence the T13 sentence-sourcing rules allow
- * (read story / scrolled-past sentence, unless `unseenAllowed`), a
- * downloaded track for that story, and a word stamp covering the lemma's
- * token in that sentence. Phrases go straight to TTS (bank phrases don't
- * record a token span, so a reliable multi-word slice can't be
- * reconstructed — recorded T14 deviation). Ineligible/unstamped sources
- * fall back to TTS — the item always stays playable.
+ * Resolve the audio for a bank item. The spoken text is always
+ * `item.surface.trim() || headword(item)`. Context is resolved only for words:
+ * source sentence → T13 eligibility (unless `unseenAllowed`) → sentence tokens →
+ * `pickTargetToken`. Phrases and items without a sentence get `context: null`.
  */
 export async function resolveListeningAudio(
   repos: Repositories,
@@ -87,26 +44,13 @@ export async function resolveListeningAudio(
   opts: { unseenAllowed?: boolean } = {},
 ): Promise<ListeningAudio> {
   const { unseenAllowed = false } = opts;
-  // T81: TTS speaks what Mitch banked (the surface), so heard = banked. The
-  // lemma is only the last resort when a surface is missing.
-  const fallback: ListeningAudio = {
-    kind: 'tts',
-    keySource: 'tts',
-    text: item.surface.trim() || headword(item),
-  };
-  if (item.kind !== 'word' || !item.lemma || !item.sourceSentenceId) return fallback;
+  const text = item.surface.trim() || headword(item);
+  const none: ListeningAudio = { kind: 'tts', keySource: 'tts', text, context: null };
+  if (item.kind !== 'word' || !item.lemma || !item.sourceSentenceId) return none;
 
   const resolved = await repos.content.resolveSentence(item.sourceSentenceId);
-  if (!resolved) return fallback;
+  if (!resolved) return none;
   const { packId, storyId, id: sentenceId } = resolved.sentence;
-
-  // T81 «Неверный звук?»: a flag holds only while the pack is at the flagged version.
-  const flag = (await readAudioFlags(repos))[item.id];
-  if (flag) {
-    const pack = await repos.content.getPack(packId);
-    if (isFlagActive(flag, pack?.version ?? 0))
-      return { ...fallback, flagged: true } as ListeningAudio;
-  }
 
   // T14 ticket: listening items sourced from stories respect the T13
   // unseen-stories toggle too (a one-entry ReadIndex feeds the shared rule).
@@ -116,61 +60,28 @@ export async function resolveListeningAudio(
       progress: new Map(progress ? [[`${packId}:${storyId}`, progress]] : []),
       storyLevel: new Map(),
     };
-    if (!sentenceEligible(resolved.sentence, index, false)) return fallback;
+    if (!sentenceEligible(resolved.sentence, index, false)) return none;
   }
-
-  const tracks = (await repos.content.listAudioTracksForPack(packId)).filter(
-    (t) =>
-      t.storyId === storyId &&
-      t.localUri != null &&
-      !SILENT_FIXTURE_TRACKS.has(`${packId}:${t.id}`),
-  );
-  if (tracks.length === 0) return fallback;
 
   const tokens = await repos.content.getSentenceTokens(packId, sentenceId);
   const norm = normalizeRu(item.lemma);
   const picked = await pickTargetToken(repos, item, sentenceId, tokens, norm);
-  if (!picked) return fallback;
+  if (!picked) return none;
   const { target, keySource } = picked;
 
-  for (const track of tracks) {
-    const stamps = await repos.content.getWordStamps(packId, storyId, track.id);
-    const sorted = [...stamps].sort((a, b) => a.startMs - b.startMs);
-    const stamp = sorted.find(
-      (s) => s.sentenceId === sentenceId && s.tokenIndex === target.tokenIndex,
-    );
-    if (stamp && stamp.endMs > stamp.startMs) {
-      const at = sorted.indexOf(stamp);
-      const sentenceSpan = sliceWindowSpan(sorted, (s) => s.sentenceId === sentenceId);
-      return {
-        kind: 'segment',
-        keySource,
-        ref: { packId, sentenceId, tokenIndex: target.tokenIndex, trackId: track.id },
-        uri: track.localUri!,
-        startMs: stamp.startMs,
-        endMs: stamp.endMs,
-        spokenText: target.text,
-        prev: sorted[at - 1]
-          ? { startMs: sorted[at - 1]!.startMs, endMs: sorted[at - 1]!.endMs }
-          : null,
-        next: sorted[at + 1]
-          ? { startMs: sorted[at + 1]!.startMs, endMs: sorted[at + 1]!.endMs }
-          : null,
-        context: sentenceSpan
-          ? {
-              ...sentenceSpan,
-              tokens: tokens.map((t) => ({
-                text: t.text,
-                spaceBefore: t.spaceBefore,
-                isPunct: t.isPunct,
-                isTarget: t.tokenIndex === target.tokenIndex,
-              })),
-            }
-          : null,
-      };
-    }
-  }
-  return fallback;
+  return {
+    kind: 'tts',
+    keySource,
+    text,
+    context: {
+      tokens: tokens.map((t) => ({
+        text: t.text,
+        spaceBefore: t.spaceBefore,
+        isPunct: t.isPunct,
+        isTarget: t.tokenIndex === target.tokenIndex,
+      })),
+    },
+  };
 }
 
 type SentenceToken = Awaited<ReturnType<Repositories['content']['getSentenceTokens']>>[number];

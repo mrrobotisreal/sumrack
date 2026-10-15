@@ -1,4 +1,4 @@
-import { getVoice, SYSTEM_VOICE_ID } from './catalog';
+import { getVoice, PIPER_VOICES, SYSTEM_VOICE_ID } from './catalog';
 
 /**
  * Pure engine routing (T11): which TTS actually speaks a request. Kept
@@ -31,6 +31,22 @@ export function pickEngine(
     return { engine: 'piper', voiceId: candidate };
   }
   return { engine: 'system', voiceId: SYSTEM_VOICE_ID };
+}
+
+/**
+ * T85: the voice for short word/phrase clips. Clips always prefer Piper — the
+ * selected voice when it is an installed Piper voice, else the first installed
+ * one in catalog order; undefined = no Piper installed → the caller's normal
+ * routing lands on the system voice.
+ */
+export function pickClipVoiceId(
+  selectedVoiceId: string,
+  installedVoiceIds: readonly string[],
+): string | undefined {
+  const isInstalledPiper = (id: string) =>
+    id !== SYSTEM_VOICE_ID && getVoice(id) !== undefined && installedVoiceIds.includes(id);
+  if (isInstalledPiper(selectedVoiceId)) return selectedVoiceId;
+  return PIPER_VOICES.find((v) => installedVoiceIds.includes(v.id))?.id;
 }
 
 /** Clamp a user/UI rate multiplier to what both engines handle sanely. */

@@ -1,10 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
 import { SYSTEM_VOICE_ID } from '../catalog';
-import { clampRate, pickEngine } from '../engine';
+import { clampRate, pickClipVoiceId, pickEngine } from '../engine';
 
 const RUSLAN = 'piper-ru-ruslan';
 const IRINA = 'piper-ru-irina';
+const DENIS = 'piper-ru-denis';
+
+describe('pickClipVoiceId (T85)', () => {
+  it('returns the selected voice when it is an installed Piper voice', () => {
+    expect(pickClipVoiceId(IRINA, [RUSLAN, IRINA])).toBe(IRINA);
+  });
+
+  it('system selected + Piper installed → first installed in catalog order', () => {
+    // Catalog order is ruslan, irina, denis, dmitri — denis is listed first here
+    // on purpose so the result cannot be the array order.
+    expect(pickClipVoiceId(SYSTEM_VOICE_ID, [DENIS, IRINA])).toBe(IRINA);
+  });
+
+  it('selected Piper not installed + another installed → that other one', () => {
+    expect(pickClipVoiceId('piper-ru-dmitri', [RUSLAN])).toBe(RUSLAN);
+  });
+
+  it('none installed → undefined', () => {
+    expect(pickClipVoiceId(RUSLAN, [])).toBeUndefined();
+    expect(pickClipVoiceId(SYSTEM_VOICE_ID, [])).toBeUndefined();
+  });
+});
 
 describe('pickEngine', () => {
   it('uses the selected piper voice when installed', () => {

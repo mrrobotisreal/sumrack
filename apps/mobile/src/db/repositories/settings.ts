@@ -42,9 +42,8 @@ export const SETTING_KEYS = {
    */
   syncdConfig: 'backup.syncd',
   /**
-   * «Неверный звук?» flags (T81): `{ [bankItemId]: { packId, packVersion, sentenceId,
-   * tokenIndex, trackId, flaggedAt } }` — that card speaks TTS of the banked surface
-   * until the pack version changes. Read by `features/review/games/listening/audio-flags`.
+   * Retired by T85: no longer read (the «Неверный звук?» flag was removed with the
+   * story-slice listening audio). Kept so old rows and backups stay harmless.
    */
   listeningAudioFlags: 'listening.audioFlags',
   /** Content sync source (T07): { owner, repo, branch } — the PAT lives in secure-store, never here. */
