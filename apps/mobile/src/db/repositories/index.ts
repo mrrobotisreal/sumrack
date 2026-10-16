@@ -4,6 +4,7 @@ import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
 import { createBookmarksRepo } from './bookmarks';
 import { createContentRepo } from './content';
+import { createCourseRepo } from './course';
 import { createDashboardRepo } from './dashboard';
 import { createDialoguesRepo } from './dialogues';
 import { createExamsRepo } from './exams';
@@ -33,6 +34,7 @@ export function createRepositories(db: SumrakDB) {
   const reviews = createReviewsRepo(db);
   return {
     content: createContentRepo(db),
+    course: createCourseRepo(db),
     bank: createBankRepo(db, {
       afterAdd: async (item) => {
         await reviews.ensureCards(item.id);
@@ -68,6 +70,7 @@ export type Repositories = ReturnType<typeof createRepositories>;
 export * from './bank';
 export * from './bookmarks';
 export * from './content';
+export * from './course';
 export * from './dashboard';
 export * from './dialogues';
 export * from './exams';
