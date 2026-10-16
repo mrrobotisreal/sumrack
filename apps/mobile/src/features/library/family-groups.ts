@@ -122,17 +122,20 @@ export function nextRungLevel(rungs: readonly RungState[], selected: CefrLevel):
 
 /**
  * Shelf header tag chrome (recorded decision, ticket item 2): the tags every
- * installed rung shares, minus the `family:*` mechanism tag and the per-level
- * `grammar:*` noise — for tall-dog that leaves `creepypasta` + `horror`.
- * Order follows the first (lowest) rung's tag order.
+ * installed rung shares, minus the `family:*` mechanism tag, the per-level
+ * `grammar:*` noise and (T86) the `series:*` / `book:*` / `chapter:*` grouping
+ * keys — those place a chapter in its book and are not reader-facing tags. For
+ * tall-dog that leaves `creepypasta` + `horror`. Order follows the first
+ * (lowest) rung's tag order.
  */
+const HIDDEN_TAG_PREFIXES = ['family:', 'grammar:', 'series:', 'book:', 'chapter:'] as const;
+
 export function sharedShelfTags(tagLists: readonly (readonly string[])[]): string[] {
   const [first, ...rest] = tagLists;
   if (!first) return [];
   return first.filter(
     (tag) =>
-      !tag.startsWith('family:') &&
-      !tag.startsWith('grammar:') &&
+      !HIDDEN_TAG_PREFIXES.some((prefix) => tag.startsWith(prefix)) &&
       rest.every((tags) => tags.includes(tag)),
   );
 }

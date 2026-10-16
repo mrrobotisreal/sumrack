@@ -104,3 +104,52 @@ describe('resolveContinueTarget (T84)', () => {
     expect(resolveContinueTarget([], STORIES)).toBeNull();
   });
 });
+
+describe('resolveContinueTarget series step (T86)', () => {
+  const tb = (packId: string): ContinueStory[] =>
+    [1, 2].map((p) => ({ packId, id: `${packId}-p${p}`, orderIdx: p - 1, titleRu: `${packId} ${p}` }));
+  const placements: Record<string, { series: string; chapter: number; level: string }> = {
+    'a2-three-body-ch04': { series: 'three-body', chapter: 4, level: 'A2' },
+    'a2-three-body-ch05': { series: 'three-body', chapter: 5, level: 'A2' },
+    'a1-three-body-ch05': { series: 'three-body', chapter: 5, level: 'A1' },
+    'a2-three-body-ch06': { series: 'three-body', chapter: 6, level: 'A2' },
+  };
+  const seriesOf = (packId: string) => placements[packId] ?? null;
+  const STORIES_TB: ContinueStory[] = [
+    ...tb('a2-three-body-ch04'),
+    ...tb('a2-three-body-ch05'),
+    ...tb('a1-three-body-ch05'),
+    ...tb('a2-three-body-ch06'),
+  ];
+  // Last part of ch04 (p2) finished; the next chapter's p1 is what matters.
+  const endOfCh4 = row('a2-three-body-ch04', 'a2-three-body-ch04-p2', 100, 100);
+
+  it('chooses chapter + 1, part 1, at the same level', () => {
+    expect(resolveContinueTarget([endOfCh4], STORIES_TB, seriesOf)).toEqual({
+      packId: 'a2-three-body-ch05',
+      storyId: 'a2-three-body-ch05-p1',
+      title: 'a2-three-body-ch05 1',
+      kind: 'next',
+      fromPackId: 'a2-three-body-ch04',
+    });
+  });
+
+  it('does not choose chapter + 1 at a different level', () => {
+    const onlyA1Next = STORIES_TB.filter((s) => s.packId !== 'a2-three-body-ch05');
+    // Only the A1 ch05 is installed as chapter + 1: not the same level, so no series step.
+    expect(resolveContinueTarget([endOfCh4], onlyA1Next, seriesOf)).toBeNull();
+  });
+
+  it('falls back to rule 4 when chapter + 1 is not installed', () => {
+    const noNext = STORIES_TB.filter((s) => s.packId !== 'a2-three-body-ch05');
+    const unfinished = row('a2-peeking-wife-001', 'part-1', 50);
+    const out = resolveContinueTarget([endOfCh4, unfinished], [...noNext, ...STORIES], seriesOf);
+    expect(out).toMatchObject({ kind: 'fallback', storyId: 'part-1' });
+  });
+
+  it('leaves a non-series pack exactly as before', () => {
+    const progress = [row('a2-peeking-wife-001', 'part-5', 1002, 900)];
+    const plain = resolveContinueTarget(progress, STORIES, () => null);
+    expect(plain).toMatchObject({ storyId: 'part-6', kind: 'next' });
+  });
+});

@@ -326,6 +326,15 @@ export type AnalyticsEvent =
   | 'family_rung_switched'
   | 'family_next_rung_shown'
   | 'family_next_rung_tapped'
+  // T86 Library accordion + «Задача трёх тел» series. Props are ids, slugs and counts only.
+  // library_section_toggled {kind: 'pack'|'family'|'book'|'chapter', key, expanded};
+  // library_collapse_all {expanded, sections}; library_series_viewed {series, books, chapters}
+  // (once per visit); reader_next_chapter_opened {series, fromChapter, toChapter, level}
+  // (fired from Today's card, the only emitter — the reader has no next-chapter button).
+  | 'library_section_toggled'
+  | 'library_collapse_all'
+  | 'library_series_viewed'
+  | 'reader_next_chapter_opened'
   // T31 ambient room scenes. Props carry the scene name / a boolean only.
   | 'room_scene_shown'
   | 'reduce_motion_toggled'

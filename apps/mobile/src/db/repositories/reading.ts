@@ -90,7 +90,17 @@ export function createReadingRepo(db: SumrakDB) {
           })
           .from(stories),
       ]);
-      return resolveContinueTarget(progress, storyRows);
+      // T86 series step: the widget shares Today's rule, so it needs the packs'
+      // series placement too (tags + level).
+      const packRows = await db
+        .select({ id: packs.id, tags: packs.tags, level: packs.level })
+        .from(packs);
+      const placements = new Map<string, { series: string; chapter: number; level: string }>();
+      for (const pack of packRows) {
+        const placed = parseSeriesTags(pack.tags);
+        if (placed) placements.set(pack.id, { series: placed.series, chapter: placed.chapter, level: pack.level });
+      }
+      return resolveContinueTarget(progress, storyRows, (packId) => placements.get(packId) ?? null);
     },
 
     /** Idempotent — returns true only on the first finish (for stats/analytics). */

@@ -13,6 +13,7 @@ import {
   useDueBreakdown,
   useScenarios,
   usePackClassification,
+  usePacks,
   useProductionDueCount,
   useStories,
   useStoryProgressList,
@@ -20,6 +21,7 @@ import {
 import { backlogLine, splitLine } from '@/features/review/due-core';
 import { DueBreakdownSheet } from '@/features/review/due-breakdown-sheet';
 import { classificationEventProps } from '@/features/library/categories';
+import { parseSeriesTags } from '@/features/library/series';
 import { GoalRingCard } from '@/features/motivation/goal-ring-card';
 import { NotificationPromptCard } from '@/features/motivation/notification-prompt-card';
 import { QuestCard } from '@/features/motivation/quest-card';
@@ -89,9 +91,19 @@ export function TodayScreen() {
 
   // T84: the same «last read → resume, or the next part once finished» rule
   // the home-screen widget uses (`resolveContinueTarget`).
+  // T86: the series step needs each pack's series placement (tags + level).
+  const packs = usePacks();
+  const seriesOf = React.useMemo(() => {
+    const placements = new Map<string, { series: string; chapter: number; level: string }>();
+    for (const pack of packs.data ?? []) {
+      const placed = parseSeriesTags(pack.tags);
+      if (placed) placements.set(pack.id, { series: placed.series, chapter: placed.chapter, level: pack.level });
+    }
+    return (packId: string) => placements.get(packId) ?? null;
+  }, [packs.data]);
   const continueTarget = React.useMemo(
-    () => resolveContinueTarget(progressList.data ?? [], stories.data ?? []),
-    [progressList.data, stories.data],
+    () => resolveContinueTarget(progressList.data ?? [], stories.data ?? [], seriesOf),
+    [progressList.data, stories.data, seriesOf],
   );
 
   // T27: «Диалог» card — first installed dialogue not yet finished once;
@@ -375,9 +387,20 @@ export function TodayScreen() {
       {/* where I left off */}
       {continueTarget && (
         <Pressable
-          onPress={() =>
-            router.push(`/reader/${continueTarget.packId}/${continueTarget.storyId}?from=today`)
-          }
+          onPress={() => {
+            // T86: a series step into the next chapter, same level.
+            const from = continueTarget.fromPackId ? seriesOf(continueTarget.fromPackId) : null;
+            const to = seriesOf(continueTarget.packId);
+            if (from && to) {
+              track('reader_next_chapter_opened', {
+                series: from.series,
+                fromChapter: from.chapter,
+                toChapter: to.chapter,
+                level: to.level,
+              });
+            }
+            router.push(`/reader/${continueTarget.packId}/${continueTarget.storyId}?from=today`);
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Continue reading ${continueTarget.title}`}
           className="rounded-xl border border-border bg-surface p-4 active:bg-surface-2"

@@ -176,6 +176,15 @@ describe('sharedShelfTags', () => {
     ).toEqual(['creepypasta', 'horror']);
   });
 
+  it('drops the T86 series, book and chapter grouping tags', () => {
+    expect(
+      sharedShelfTags([
+        ['scifi', 'series:three-body', 'book:2', 'chapter:4', 'family:three-body-ch04'],
+        ['scifi', 'series:three-body', 'book:2', 'chapter:4', 'family:three-body-ch04'],
+      ]),
+    ).toEqual(['scifi']);
+  });
+
   it('drops tags not present on every rung', () => {
     expect(sharedShelfTags([['creepypasta', 'bonus'], ['creepypasta']])).toEqual(['creepypasta']);
   });
