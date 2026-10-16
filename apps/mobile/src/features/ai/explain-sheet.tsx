@@ -25,8 +25,15 @@ export function ExplainSheet({
   onClose: () => void;
 }) {
   if (!target) return null;
-  const key = target.kind === 'sentence' ? target.ru : target.headword;
-  return <ExplainSheetInner key={key} target={target} onClose={onClose} />;
+  return <ExplainSheetInner key={headingOf(target)} target={target} onClose={onClose} />;
+}
+
+/** The sheet's title and remount key: the Russian text for every kind that has one. */
+function headingOf(target: ExplainTarget): string {
+  if (target.kind === 'sentence') return target.ru;
+  if (target.kind === 'card') return target.headword;
+  if (target.kind === 'course-card') return target.title;
+  return target.stem;
 }
 
 function ExplainSheetInner({ target, onClose }: { target: ExplainTarget; onClose: () => void }) {
@@ -63,7 +70,7 @@ function ExplainSheetInner({ target, onClose }: { target: ExplainTarget; onClose
     void fetchExplanation();
   }, [fetchExplanation]);
 
-  const heading = target.kind === 'sentence' ? target.ru : target.headword;
+  const heading = headingOf(target);
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
