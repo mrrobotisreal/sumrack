@@ -55,3 +55,38 @@ export function summarizeStories(stories: readonly { finished: boolean }[]): {
   for (const story of stories) if (story.finished) finished += 1;
   return { finished, total: stories.length };
 }
+
+/** The minimal section shape the ancestor lookup needs (LibrarySection satisfies it). */
+export interface AncestorSection {
+  /** Every pack this section can show — a family shelf lists all its rungs. */
+  packIds: readonly string[];
+  family?: { slug: string };
+  book?: { series: string; book: number; chapters: { chapter: number; section: AncestorSection }[] };
+}
+
+/**
+ * Keys of every section that must be open to show `packId`: its series book
+ * and chapter (when it sits in one), then its family or pack key. Empty when
+ * the pack is not on screen.
+ */
+export function ancestorKeysFor(sections: readonly AncestorSection[], packId: string): string[] {
+  for (const section of sections) {
+    if (section.book) {
+      for (const chapter of section.book.chapters) {
+        const inner = ancestorKeysFor([chapter.section], packId);
+        if (inner.length > 0) {
+          return [
+            bookKey(section.book.series, section.book.book),
+            chapterKey(section.book.series, chapter.chapter),
+            ...inner,
+          ];
+        }
+      }
+      continue;
+    }
+    if (section.packIds.includes(packId)) {
+      return [section.family ? familyKey(section.family.slug) : packKey(section.packIds[0]!)];
+    }
+  }
+  return [];
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MAX_EXPANSION_KEYS,
+  ancestorKeysFor,
   bookKey,
   chapterKey,
   familyKey,
@@ -99,5 +100,40 @@ describe('summarizeStories', () => {
 
   it('is zero for no stories', () => {
     expect(summarizeStories([])).toEqual({ finished: 0, total: 0 });
+  });
+});
+
+describe('ancestorKeysFor (continue-target auto-expand)', () => {
+  const plain = { packIds: ['a1-tall-dog'] };
+  const family = { packIds: ['a1-x', 'a2-x'], family: { slug: 'x' } };
+  const chapter4 = { packIds: ['a2-three-body-ch04'], family: { slug: 'three-body-ch04' } };
+  const bookSection = {
+    packIds: ['a2-three-body-ch04'],
+    book: {
+      series: 'three-body',
+      book: 2,
+      chapters: [{ chapter: 4, section: chapter4 }],
+    },
+  };
+
+  it('a plain pack opens only its own key', () => {
+    expect(ancestorKeysFor([plain], 'a1-tall-dog')).toEqual(['pack:a1-tall-dog']);
+  });
+
+  it('a family shelf opens for any of its rungs', () => {
+    expect(ancestorKeysFor([family], 'a1-x')).toEqual(['family:x']);
+    expect(ancestorKeysFor([family], 'a2-x')).toEqual(['family:x']);
+  });
+
+  it('a chapter inside a book opens the book, the chapter, then its family', () => {
+    expect(ancestorKeysFor([bookSection], 'a2-three-body-ch04')).toEqual([
+      'series:three-body:book:2',
+      'series:three-body:chapter:4',
+      'family:three-body-ch04',
+    ]);
+  });
+
+  it('a pack not on screen opens nothing', () => {
+    expect(ancestorKeysFor([plain, family], 'missing')).toEqual([]);
   });
 });

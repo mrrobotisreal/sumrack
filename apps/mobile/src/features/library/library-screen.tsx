@@ -3,10 +3,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as React from 'react';
 import {
   ActivityIndicator,
+  LayoutAnimation,
   Pressable,
   RefreshControl,
   ScrollView,
   SectionList,
+  UIManager,
   View,
 } from 'react-native';
 
@@ -42,6 +44,15 @@ import {
   sharedShelfTags,
   type RungState,
 } from '@/features/library/family-groups';
+import {
+  ancestorKeysFor,
+  bookKey,
+  familyKey,
+  packKey,
+  sectionDataFor,
+  summarizeStories,
+  type AncestorSection,
+} from '@/features/library/expansion';
 import { FamilyShelfHeader } from '@/features/library/family-shelf';
 import {
   categoryChipItems,
@@ -51,6 +62,8 @@ import {
   orderRowsForCategory,
   storyRowCaption,
 } from '@/features/library/library-filter';
+import { chapterLabel, groupBySeries, seriesBookTitle } from '@/features/library/series';
+import { resolveContinueTarget } from '@/features/reader/continue-target';
 import { SyncStatusLine } from '@/features/sync/sync-status-line';
 import { ExamRow } from '@/features/torfl/exam-row';
 import type { ExamListItem } from '@/features/torfl/hub-model';
@@ -59,7 +72,9 @@ import { isTorflCategory, levelForCategory } from '@/features/torfl/level-profil
 import { TorflHubCard } from '@/features/torfl/torfl-hub-card';
 import { runSync } from '@/features/sync/sync-service';
 import { track } from '@/services/analytics';
+import { useLibraryExpansion } from '@/store/library-expansion';
 import { useLibraryPrefs } from '@/store/library-prefs';
+import { useReduceMotion } from '@/store/motion-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /**
@@ -68,10 +83,16 @@ import { useAppTheme } from '@/theme/use-app-theme';
  * stories are never Library rows (decision 3; still searchable).
  */
 type LibraryRow =
-  | { kind: 'story'; story: StoryListItem }
+  | { kind: 'story'; story: StoryListItem; indent?: boolean }
   | { kind: 'dialogue'; dialogue: DialogueListItem }
-  | { kind: 'exam'; exam: ExamListItem };
+  | { kind: 'exam'; exam: ExamListItem }
+  /** T86: a chapter inside a series book (its own family/pack section, collapsed by default). */
+  | { kind: 'chapter'; section: LibrarySection; chapter: number };
 
+/**
+ * T86: one chapter of a series book. Its `section` is a normal section (family
+ * shelf or single pack) — collapsed until tapped, then expands to its parts.
+ */
 interface LibrarySection {
   pack: PackRow;
   data: LibraryRow[];
@@ -90,11 +111,46 @@ interface LibrarySection {
     tags: string[];
     rungs: RungState[];
     selectedLevel: CefrLevel;
+    /** T86: every installed rung's pack id (the shelf expands for any of them). */
+    packIds: string[];
+  };
+  /**
+   * T86: set on a series book section (a `series` + `book` group). `data` holds
+   * its chapter rows (ordered by chapter number), each expanding to its parts.
+   */
+  book?: {
+    series: string;
+    book: number;
+    titleRu: string;
+    subtitle?: string;
+    chapters: { chapter: number; section: LibrarySection }[];
+  };
+}
+
+/** T86: the ancestor-lookup view of a section (its packs and its series chain). */
+function toAncestorSection(section: LibrarySection): AncestorSection {
+  return {
+    packIds: section.family ? section.family.packIds : [section.pack.id],
+    family: section.family ? { slug: section.family.slug } : undefined,
+    book: section.book
+      ? {
+          series: section.book.series,
+          book: section.book.book,
+          chapters: section.book.chapters.map((c) => ({
+            chapter: c.chapter,
+            section: toAncestorSection(c.section),
+          })),
+        }
+      : undefined,
   };
 }
 
 /** A pack the classification map hasn't seen (row just removed) — the dialogue default. */
 const UNKNOWN_PACK: Classified = { category: 'stories', genre: null };
+
+// T86: Android needs this flag before LayoutAnimation does anything (once per
+// process; the module loads once). Guarded so iOS and the new arch are untouched.
+UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
 /**
  * Библиотека (design §7.2 nav / T04): installed packs with their stories —
@@ -176,6 +232,22 @@ export function LibraryScreen() {
   // fresh mount the recorded default-rung rule picks (most-recently-read →
   // lowest unfinished → lowest). Switching writes zero progress.
   const [rungChoice, setRungChoice] = React.useState<Record<string, CefrLevel>>({});
+
+  // T86: accordion expansion. Persisted keys (store) plus a mount-only set of
+  // the continue target's ancestors — never written to the store.
+  const expandedKeys = useLibraryExpansion((s) => s.keys);
+  const toggleExpanded = useLibraryExpansion((s) => s.toggle);
+  const setAllExpanded = useLibraryExpansion((s) => s.setAll);
+  const reduceMotion = useReduceMotion();
+  const persistedSet = React.useMemo(() => new Set(expandedKeys), [expandedKeys]);
+
+  // Mount-only: the continue target's section and its book/chapter ancestors
+  // expand for THIS visit only and are never written to the store (ticket
+  // decision 5). Derived once, the first render where sections exist; the
+  // state is set during render (not in an effect) so it never re-derives.
+  const [continueAncestors, setContinueAncestors] = React.useState<ReadonlySet<string> | null>(
+    null,
+  );
 
   // Every installed pack as a plain section (stories + dialogue rows), in
   // pack-id order, before any category filter or family grouping. Split out
@@ -287,7 +359,7 @@ export function LibraryScreen() {
     // shelf at the lowest installed rung's list position (the CT002b fix —
     // a newly synced higher rung joins the shelf instead of appending at the
     // bottom). Single-member families and untagged packs pass through as-is.
-    return groupByFamily(
+    const families = groupByFamily(
       filterSectionsByCategory(remoteAll, { category, genre: effectiveGenre }).map(orderRows),
       (section) => ({
         packId: section.pack.id,
@@ -312,9 +384,35 @@ export function LibraryScreen() {
           tags: sharedShelfTags(group.members.map((m) => m.pack.tags)),
           rungs,
           selectedLevel,
+          packIds: group.members.map((m) => m.pack.id),
         },
       };
     });
+
+    // T86: series packs (series + book + chapter tags) collapse into one book
+    // per (series, book). Each chapter is a family/single section, its own
+    // collapsed row; the book is positioned at its first member.
+    return groupBySeries(families, (section) => section.pack.tags).map(
+      (group): LibrarySection => {
+        if (group.kind === 'plain') return group.item;
+        const first = group.chapters[0]!.item;
+        const chapters = group.chapters.map(({ chapter, item }) => ({ chapter, section: item }));
+        const bookTitle = seriesBookTitle(group.series, group.book, first.pack.titleRu);
+        return {
+          pack: first.pack,
+          data: chapters.map(
+            (c): LibraryRow => ({ kind: 'chapter', section: c.section, chapter: c.chapter }),
+          ),
+          book: {
+            series: group.series,
+            book: group.book,
+            titleRu: bookTitle.title,
+            subtitle: bookTitle.subtitle,
+            chapters,
+          },
+        };
+      },
+    );
   }, [remoteAll, category, effectiveGenre, progressByStory, rungChoice]);
 
   // The selected category has nothing installed while packs exist → the
@@ -326,6 +424,46 @@ export function LibraryScreen() {
     () => (emptyCategory ? local : [...remote, ...local]),
     [emptyCategory, remote, local],
   );
+
+  // T86 decision 5: once the sections exist, find the section holding the
+  // continue target and expand its ancestors for this visit (not persisted).
+  if (
+    continueAncestors === null &&
+    stories.data &&
+    progressList.data &&
+    (remote.length > 0 || local.length > 0)
+  ) {
+    const target = resolveContinueTarget(progressList.data, stories.data);
+    setContinueAncestors(
+      new Set(target ? ancestorKeysFor(sections.map(toAncestorSection), target.packId) : []),
+    );
+  }
+  // A user toggle always wins over the continue-target ancestors: once a key is
+  // touched (either way) it is removed from the ephemeral set for this visit.
+  const [touchedKeys, setTouchedKeys] = React.useState<ReadonlySet<string>>(() => new Set());
+  const expandedSetForRender = React.useMemo(() => {
+    const ancestors = [...(continueAncestors ?? [])].filter((k) => !touchedKeys.has(k));
+    return new Set([...persistedSet, ...ancestors]);
+  }, [persistedSet, continueAncestors, touchedKeys]);
+
+  // T86 toolbar: «Свернуть всё» when anything is open, else «Развернуть всё».
+  // Expand-all adds only the top-level keys (packs, families, books); chapters
+  // stay collapsed. Collapse-all clears everything (persisted).
+  const topLevelKeys = React.useMemo(() => collectTopLevelKeys(remote), [remote]);
+  const anyExpanded = expandedKeys.length > 0;
+  const onToggleAll = React.useCallback(() => {
+    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Every ephemeral ancestor is now an explicit choice too.
+    setTouchedKeys(new Set([...(continueAncestors ?? [])]));
+    if (anyExpanded) {
+      setAllExpanded([]);
+      track('library_collapse_all', { expanded: false, sections: topLevelKeys.length });
+    } else {
+      setAllExpanded(topLevelKeys);
+      track('library_collapse_all', { expanded: true, sections: topLevelKeys.length });
+    }
+  }, [anyExpanded, continueAncestors, reduceMotion, setAllExpanded, topLevelKeys]);
+
 
   // M14 §4.5: chip presses persist through the store and log only on a real
   // change (a tap on the selected chip is a no-op, no event).
@@ -432,6 +570,21 @@ export function LibraryScreen() {
             testID="library-genre-chips"
           />
         )}
+        {/* T86: expand-all / collapse-all, shown only when ≥2 sections exist. */}
+        {sections.length >= 2 && (
+          <View className="flex-row justify-end px-4">
+            <Pressable
+              onPress={onToggleAll}
+              accessibilityRole="button"
+              accessibilityLabel={anyExpanded ? 'Свернуть всё' : 'Развернуть всё'}
+              className="rounded-lg px-2 py-1 active:bg-surface-2"
+            >
+              <Text variant="caption" className="text-accent">
+                {anyExpanded ? 'Свернуть всё' : 'Развернуть всё'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
         {/* M18 (T69) / M19 (T75): the pinned hub card — under each «ТРКИ» chip
             (A1 / A2), parameterised by level, above the sections AND inside
             the empty state (the hub works before sync). */}
@@ -451,7 +604,48 @@ export function LibraryScreen() {
       effectiveGenre,
       onSelectGenre,
       emptyCategory,
+      sections.length,
+      anyExpanded,
+      onToggleAll,
     ],
+  );
+
+  // T86: every toggle goes through here — persists, logs, and animates (only
+  // with reduce-motion off). `kind` is the section kind for analytics.
+  const onToggle = React.useCallback(
+    (kind: 'pack' | 'family' | 'book' | 'chapter', key: string, expanded: boolean) => {
+      if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setTouchedKeys((prev) => (prev.has(key) ? prev : new Set([...prev, key])));
+      toggleExpanded(key, expanded);
+      track('library_section_toggled', { kind, key, expanded });
+    },
+    [reduceMotion, toggleExpanded],
+  );
+
+  // T86 analytics: once per series per Library visit (focus-effect signature).
+  const seriesSignature = React.useMemo(
+    () =>
+      remote
+        .filter((s) => s.book)
+        .map((s) => `${s.book!.series}:${s.book!.book}:${s.book!.chapters.length}`)
+        .join('|'),
+    [remote],
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!seriesSignature) return;
+      const byseries = new Map<string, { books: number; chapters: number }>();
+      for (const entry of seriesSignature.split('|')) {
+        const [series = '', , chapters = '0'] = entry.split(':');
+        const acc = byseries.get(series) ?? { books: 0, chapters: 0 };
+        acc.books += 1;
+        acc.chapters += Number(chapters);
+        byseries.set(series, acc);
+      }
+      for (const [series, acc] of byseries) {
+        track('library_series_viewed', { series, books: acc.books, chapters: acc.chapters });
+      }
+    }, [seriesSignature]),
   );
 
   if (packs.isPending || stories.isPending) {
@@ -495,82 +689,96 @@ export function LibraryScreen() {
   return (
     <SectionList
       className="flex-1 bg-bg"
-      sections={sections}
+      sections={sections.map((section) => ({
+        ...section,
+        // Collapsed → no rows at all (ticket rule 8); the header still renders.
+        data: sectionDataFor(sectionKeyOf(section), section.data, expandedSetForRender),
+      }))}
       keyExtractor={(item) =>
         item.kind === 'story'
           ? `story/${item.story.packId}/${item.story.id}`
           : item.kind === 'exam'
             ? `exam/${item.exam.packId}/${item.exam.examId}`
-            : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
+            : item.kind === 'chapter'
+              ? `chapter/${item.section.pack.id}/${item.chapter}`
+              : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
       }
       stickySectionHeadersEnabled={false}
       contentContainerClassName="px-4 pb-12 pt-2"
       refreshControl={refreshControl}
       ListHeaderComponent={listHeader}
       renderSectionHeader={({ section }) => (
-        <View>
-          {section.shelfHeader && (
-            <View className="mt-8 flex-row items-center gap-2 border-b border-border pb-2">
-              <Ionicons name="download-outline" size={16} color={tokens.textMuted} />
-              <Text variant="caption" className="uppercase tracking-wider">
-                {section.shelfHeader}
-              </Text>
-            </View>
-          )}
-          {section.family ? (
-            <FamilyShelfHeader
-              slug={section.family.slug}
-              titleRu={section.family.titleRu}
-              tags={section.family.tags}
-              rungs={section.family.rungs}
-              selectedLevel={section.family.selectedLevel}
-              onSelectRung={(to, via) =>
-                onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
-              }
-            />
-          ) : (
-            <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
-          )}
-        </View>
+        <SectionHeader
+          section={section}
+          expanded={expandedSetForRender.has(sectionKeyOf(section))}
+          onToggle={(expanded) =>
+            onToggle(
+              section.book ? 'book' : section.family ? 'family' : 'pack',
+              sectionKeyOf(section),
+              expanded,
+            )
+          }
+          progressByStory={progressByStory}
+          onSelectRung={onSelectRung}
+        />
       )}
-      renderItem={({ item }) =>
-        item.kind === 'exam' ? (
-          <ExamRow
-            item={item.exam}
-            onPress={() =>
-              router.push({
-                pathname: '/exam/[packId]/[examId]',
-                params: { packId: item.exam.packId, examId: item.exam.examId },
-              })
-            }
-          />
-        ) : item.kind === 'story' ? (
-          <StoryRow
-            story={item.story}
-            progress={progressByStory.get(`${item.story.packId}/${item.story.id}`)}
-            bookmarked={bookmarkedKeys.data?.has(`${item.story.packId}/${item.story.id}`) ?? false}
-            onPress={() => router.push(`/reader/${item.story.packId}/${item.story.id}`)}
-            onLongPress={() => toggleBookmark(item.story.packId, item.story.id)}
-          />
-        ) : (
-          <View className="mb-2">
-            <DialogueRow
-              item={item.dialogue}
-              onPress={() => {
-                track('dialogue_opened', {
-                  packId: item.dialogue.packId,
-                  dialogueId: item.dialogue.id,
-                  from: 'library',
-                  ...eventPropsFor(item.dialogue.packId),
-                });
-                router.push(`/dialogue/${item.dialogue.packId}/${item.dialogue.id}`);
-              }}
+      renderItem={({ item }) => {
+        if (item.kind === 'chapter') {
+          return (
+            <ChapterRow
+              section={item.section}
+              chapter={item.chapter}
+              expanded={expandedSetForRender.has(sectionKeyOf(item.section))}
+              onToggle={(expanded) => onToggle('chapter', sectionKeyOf(item.section), expanded)}
+              progressByStory={progressByStory}
+              onSelectRung={onSelectRung}
+              renderPartRow={renderPartRow}
             />
-          </View>
-        )
-      }
+          );
+        }
+        return renderPartRow(item);
+      }}
     />
   );
+
+  /** A story / dialogue / exam row (inside a chapter it is indented). */
+  function renderPartRow(item: LibraryRow) {
+    return item.kind === 'exam' ? (
+      <ExamRow
+        item={item.exam}
+        onPress={() =>
+          router.push({
+            pathname: '/exam/[packId]/[examId]',
+            params: { packId: item.exam.packId, examId: item.exam.examId },
+          })
+        }
+      />
+    ) : item.kind === 'story' ? (
+      <StoryRow
+        story={item.story}
+        progress={progressByStory.get(`${item.story.packId}/${item.story.id}`)}
+        bookmarked={bookmarkedKeys.data?.has(`${item.story.packId}/${item.story.id}`) ?? false}
+        indent={item.indent}
+        onPress={() => router.push(`/reader/${item.story.packId}/${item.story.id}`)}
+        onLongPress={() => toggleBookmark(item.story.packId, item.story.id)}
+      />
+    ) : item.kind === 'dialogue' ? (
+      <View className="mb-2">
+        <DialogueRow
+          item={item.dialogue}
+          onPress={() => {
+            track('dialogue_opened', {
+              packId: item.dialogue.packId,
+              dialogueId: item.dialogue.id,
+              from: 'library',
+              ...eventPropsFor(item.dialogue.packId),
+            });
+            router.push(`/dialogue/${item.dialogue.packId}/${item.dialogue.id}`);
+          }}
+        />
+      </View>
+    ) : null;
+  }
 }
 
 /**
@@ -591,6 +799,231 @@ function EmptyCategory({ category }: { category: string }) {
           ? 'Материалы ТРКИ появятся после синхронизации — подготовка к экзамену уже открыта выше.'
           : 'Материалы для этой полки появятся после синхронизации.'}
       </Text>
+    </View>
+  );
+}
+
+/** T86: the expansion key of a section (family shelf, series book, or pack). */
+function sectionKeyOf(section: LibrarySection): string {
+  if (section.book) return bookKey(section.book.series, section.book.book);
+  if (section.family) return familyKey(section.family.slug);
+  return packKey(section.pack.id);
+}
+
+/** T86 expand-all targets: top-level keys only (packs, families, books) — never chapters. */
+function collectTopLevelKeys(sections: readonly LibrarySection[]): string[] {
+  return sections.map(sectionKeyOf);
+}
+
+/**
+ * T86: a section's header. Collapsed it is one tappable row (title + level or
+ * rung chips + progress + chevron); expanded it is today's header chrome,
+ * unchanged, under a small toggle row. The shelf divider and the toolbar sit
+ * above it.
+ */
+function SectionHeader({
+  section,
+  expanded,
+  onToggle,
+  progressByStory,
+  onSelectRung,
+}: {
+  section: LibrarySection;
+  expanded: boolean;
+  onToggle: (expanded: boolean) => void;
+  progressByStory: Map<string, StoryProgressRow>;
+  onSelectRung: (slug: string, from: CefrLevel, to: CefrLevel, via: 'chip' | 'next-rung') => void;
+}) {
+  const { tokens } = useAppTheme();
+  const summary = summarizeStories(sectionStories(section, progressByStory));
+  const levels = section.family
+    ? section.family.rungs.map((r) => r.level)
+    : [section.pack.level];
+  return (
+    <View>
+      {section.shelfHeader && (
+        <View className="mt-8 flex-row items-center gap-2 border-b border-border pb-2">
+          <Ionicons name="download-outline" size={16} color={tokens.textMuted} />
+          <Text variant="caption" className="uppercase tracking-wider">
+            {section.shelfHeader}
+          </Text>
+        </View>
+      )}
+      {!expanded && (
+        <Pressable
+          onPress={() => onToggle(true)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: false }}
+          accessibilityLabel={`${section.family?.titleRu ?? section.pack.titleRu}. Expand`}
+          className="mb-2 mt-4 flex-row items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 active:bg-surface-2"
+        >
+          <Ionicons name="chevron-forward" size={16} color={tokens.textMuted} />
+          <Text className="flex-1 font-ui-medium text-lg" numberOfLines={1}>
+            {section.book
+              ? section.book.subtitle
+                ? `${section.book.titleRu} · ${section.book.subtitle}`
+                : section.book.titleRu
+              : (section.family?.titleRu ?? section.pack.titleRu)}
+          </Text>
+          <View className="flex-row gap-1">
+            {levels.map((level) => (
+              <LevelChip key={level} level={level} />
+            ))}
+          </View>
+          <Text variant="caption" className="text-xs">
+            {summary.finished === summary.total && summary.total > 0
+              ? '✓'
+              : `${summary.finished}/${summary.total}`}
+          </Text>
+        </Pressable>
+      )}
+      {expanded && (
+        <Pressable
+          onPress={() => onToggle(false)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: true }}
+          accessibilityLabel={`${section.family?.titleRu ?? section.pack.titleRu}. Collapse`}
+          className="mt-4 flex-row items-center gap-2 self-start rounded-lg px-1 py-1 active:bg-surface-2"
+        >
+          <Ionicons name="chevron-down" size={16} color={tokens.textMuted} />
+          <Text variant="caption">Свернуть</Text>
+        </Pressable>
+      )}
+      {expanded && section.book && (
+        <BookHeader book={section.book} progressByStory={progressByStory} />
+      )}
+      {expanded && !section.book && (section.family ? (
+        <FamilyShelfHeader
+          slug={section.family.slug}
+          titleRu={section.family.titleRu}
+          tags={section.family.tags}
+          rungs={section.family.rungs}
+          selectedLevel={section.family.selectedLevel}
+          onSelectRung={(to, via) =>
+            onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
+          }
+        />
+      ) : (
+        <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
+      ))}
+    </View>
+  );
+}
+
+/**
+ * T86: the stories a section counts for progress. A plain pack or family is its
+ * selected rung's stories; a series book is every chapter's selected-rung
+ * stories, so the book row shows the whole book's finished/total.
+ */
+function sectionStories(
+  section: LibrarySection,
+  progressByStory: Map<string, StoryProgressRow>,
+): { finished: boolean }[] {
+  if (section.book) {
+    return section.book.chapters.flatMap((c) => sectionStories(c.section, progressByStory));
+  }
+  return section.data
+    .filter((row): row is Extract<LibraryRow, { kind: 'story' }> => row.kind === 'story')
+    .map((row) => ({
+      finished: progressByStory.get(`${row.story.packId}/${row.story.id}`)?.finishedAt != null,
+    }));
+}
+
+/**
+ * T86 book header (expanded): title, subtitle and the book's count line. The
+ * chapter rows follow in the list.
+ */
+function BookHeader({
+  book,
+  progressByStory,
+}: {
+  book: NonNullable<LibrarySection['book']>;
+  progressByStory: Map<string, StoryProgressRow>;
+}) {
+  const summary = summarizeStories(
+    book.chapters.flatMap((c) => sectionStories(c.section, progressByStory)),
+  );
+  return (
+    <View className="mb-1 mt-2 gap-1">
+      <Text variant="caption">
+        {`${book.chapters.length} глав · ${summary.finished}/${summary.total} частей`}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * T86: a chapter row inside a book — collapsed it is one indented row with the
+ * chapter label and its level chips; expanded it shows the family chrome and
+ * the chapter's part rows (indented).
+ */
+function ChapterRow({
+  section,
+  chapter,
+  expanded,
+  onToggle,
+  progressByStory,
+  onSelectRung,
+  renderPartRow,
+}: {
+  section: LibrarySection;
+  chapter: number;
+  expanded: boolean;
+  onToggle: (expanded: boolean) => void;
+  progressByStory: Map<string, StoryProgressRow>;
+  onSelectRung: (slug: string, from: CefrLevel, to: CefrLevel, via: 'chip' | 'next-rung') => void;
+  renderPartRow: (item: LibraryRow) => React.ReactNode;
+}) {
+  const { tokens } = useAppTheme();
+  const title = chapterLabel(section.family?.titleRu ?? section.pack.titleRu);
+  const levels = section.family ? section.family.rungs.map((r) => r.level) : [section.pack.level];
+  const summary = summarizeStories(sectionStories(section, progressByStory));
+  return (
+    <View className="mb-1 ml-3 border-l border-border pl-3">
+      <Pressable
+        onPress={() => onToggle(!expanded)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${title}. ${expanded ? 'Collapse' : 'Expand'}`}
+        className="flex-row items-center gap-2 py-2 active:bg-surface-2"
+      >
+        <Ionicons
+          name={expanded ? 'chevron-down' : 'chevron-forward'}
+          size={14}
+          color={tokens.textMuted}
+        />
+        <Text className="flex-1 font-reading text-base" numberOfLines={1}>
+          {`Глава ${chapter}. ${title}`}
+        </Text>
+        <View className="flex-row gap-1">
+          {levels.map((level) => (
+            <LevelChip key={level} level={level} />
+          ))}
+        </View>
+        <Text variant="caption" className="text-xs">
+          {summary.finished === summary.total && summary.total > 0
+            ? '✓'
+            : `${summary.finished}/${summary.total}`}
+        </Text>
+      </Pressable>
+      {expanded && section.family && (
+        <FamilyShelfHeader
+          slug={section.family.slug}
+          titleRu={section.family.titleRu}
+          tags={section.family.tags}
+          rungs={section.family.rungs}
+          selectedLevel={section.family.selectedLevel}
+          onSelectRung={(to, via) =>
+            onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
+          }
+        />
+      )}
+      {expanded &&
+        section.data.map((row) => (
+          <React.Fragment key={row.kind === 'story' ? `${row.story.packId}/${row.story.id}` : row.kind}>
+            {renderPartRow(row)}
+          </React.Fragment>
+        ))}
     </View>
   );
 }
@@ -635,12 +1068,15 @@ function StoryRow({
   story,
   progress,
   bookmarked,
+  indent,
   onPress,
   onLongPress,
 }: {
   story: StoryListItem;
   progress: StoryProgressRow | undefined;
   bookmarked: boolean;
+  /** T86: a part inside an expanded chapter sits one step in. */
+  indent?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -652,7 +1088,7 @@ function StoryRow({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={`Read ${story.titleRu}. Long press to ${bookmarked ? 'remove the' : 'add a'} bookmark`}
-      className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 active:bg-surface-2"
+      className={`mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 active:bg-surface-2 ${indent ? 'ml-3' : ''}`}
     >
       <View className="flex-1 gap-0.5">
         <Text

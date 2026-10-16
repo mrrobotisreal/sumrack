@@ -1,8 +1,9 @@
 import { and, eq, sql } from 'drizzle-orm';
 
+import { parseSeriesTags } from '@/features/library/series';
 import { resolveContinueTarget, type ContinueTarget } from '@/features/reader/continue-target';
 
-import { stories, storyProgress } from '../schema';
+import { packs, stories, storyProgress } from '../schema';
 import type { SumrakDB } from '../types';
 
 export type StoryProgressRow = typeof storyProgress.$inferSelect;
