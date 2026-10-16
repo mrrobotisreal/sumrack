@@ -22,6 +22,7 @@
     --text: 26 26 31; /* #1A1A1F */
     --text-muted: 107 104 112; /* #6B6870 */
     --accent: 160 56 40; /* #A03828 */
+    --karaoke: 232 84 52; /* #E85434 Sumrak orange-red — karaoke word wash (used at 42 %) */
     --success: 90 117 72; /* #5A7548 muted moss */
     --danger: 150 50 43; /* #96322B dried blood */
     --border: 226 222 216; /* #E2DED8 */
@@ -49,6 +50,7 @@
     --text: 232 230 227; /* #E8E6E3 */
     --text-muted: 154 151 160; /* #9A97A0 */
     --accent: 179 64 47; /* #B3402F */
+    --karaoke: 232 84 52; /* #E85434 Sumrak orange-red — karaoke word wash (used at 42 %) */
     --success: 112 140 90; /* #708C5A muted moss */
     --danger: 206 106 96; /* #CE6A60 dried blood, lightened for AA text contrast on all dark surfaces (T22 a11y; was #8E3B35 @ 2.65:1) */
     --border: 38 38 46; /* #26262E */

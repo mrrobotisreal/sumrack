@@ -39,7 +39,7 @@ interface TokenTextProps {
   /**
    * Karaoke (T10): tokenIndex of the word to highlight as currently spoken
    * (null/undefined = none). The chunk containing that token gets the
-   * `karaoke` treatment: accent-soft wash, full text color (UI_DESIGN §1).
+   * `karaoke` treatment: a translucent orange-red wash (`bg-karaoke`), full text color.
    */
   karaokeTokenIndex?: number | null;
   /**
@@ -224,7 +224,13 @@ export function TokenText({
             onPress={tappable ? () => onWordPress(chunk.wordToken!) : undefined}
             onLongPress={!selectionEnabled ? onChunkLongPress : undefined}
             suppressHighlighting
-            className={selected || karaoke ? 'rounded-[3px] bg-accent-soft' : undefined}
+            className={
+              karaoke
+                ? 'rounded-[3px] bg-karaoke'
+                : selected
+                  ? 'rounded-[3px] bg-accent-soft'
+                  : undefined
+            }
             style={[readingStyle, { color: theme.text }]}
           >
             {chunk.text}
