@@ -7,6 +7,7 @@ import {
   StableIdSchema,
 } from './common';
 import { DialogueSchema } from './dialogue';
+import { CourseItemSchema, CourseSchema, checkCourseInvariants } from './course';
 import { ExamSchema, examStoryRefs } from './exam';
 import { LemmaListSchema } from './reference';
 import { ScenarioSchema, scenarioLines } from './scenario';
@@ -277,6 +278,14 @@ export const PackSchema = z
     /** Journal prompts (prompts packs, or riding along in course units). */
     prompts: z.array(JournalPromptSchema).optional(),
     /**
+     * The `course` section (T88, M25, design HOTEL_PATH §2): one floor of the
+     * TORFL hotel course. Required for `course` packs, forbidden on every other
+     * type (checked in the superRefine below).
+     */
+    course: CourseSchema.optional(),
+    /** The `course` pack's scored and check items, referenced by id from `course`. */
+    items: z.array(CourseItemSchema).optional(),
+    /**
      * Ambient room theme (T30, V2 §5.2) — read by the app for course-unit
      * packs (house map now, T31 scenes next). Optional and additive on every
      * pack type so future content shapes never need a schema bump.
@@ -361,6 +370,46 @@ export const PackSchema = z
         path: ['exams'],
         message: 'an "exam" pack must contain at least one exam',
       });
+    }
+
+    if (pack.type === 'course') {
+      if (!pack.course) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['course'],
+          message: 'a "course" pack must include its "course" section (one floor)',
+        });
+      }
+      if (!pack.items) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items'],
+          message: 'a "course" pack must include its "items" (the scored and check items)',
+        });
+      }
+      if (pack.stories.length === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['stories'],
+          message:
+            'a "course" pack must reference at least one story (every Russian sentence lives in a story)',
+        });
+      }
+    } else {
+      if (pack.course !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['course'],
+          message: `a "${pack.type}" pack must not carry a "course" section — only type "course" does`,
+        });
+      }
+      if (pack.items !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items'],
+          message: `a "${pack.type}" pack must not carry "items" — only type "course" does`,
+        });
+      }
     }
 
     if (pack.type === 'reference' && (pack.lemmaLists?.length ?? 0) === 0) {
@@ -527,6 +576,15 @@ export const PackSchema = z
         claimSentenceId(ref.line.sentence, ['scenarios', si, ...ref.path, 'sentence', 'id']);
       }
     });
+
+    // course invariants (T88, invariants a–f): run only once the course and
+    // its items are present, so one missing section reports once, not cascading.
+    if (pack.type === 'course' && pack.course && pack.items) {
+      checkCourseInvariants(
+        { course: pack.course, items: pack.items, stories: pack.stories },
+        (path, message) => ctx.addIssue({ code: 'custom', path, message }),
+      );
+    }
 
     // word stamps resolve
     pack.stories.forEach((story, si) => {
