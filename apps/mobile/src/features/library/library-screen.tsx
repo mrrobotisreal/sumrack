@@ -39,6 +39,7 @@ import {
   type Classified,
 } from '@/features/library/categories';
 import {
+  CEFR_ORDER,
   defaultRungLevel,
   groupByFamily,
   sharedShelfTags,
@@ -83,7 +84,7 @@ import { useAppTheme } from '@/theme/use-app-theme';
  * stories are never Library rows (decision 3; still searchable).
  */
 type LibraryRow =
-  | { kind: 'story'; story: StoryListItem; indent?: boolean }
+  | { kind: 'story'; story: StoryListItem }
   | { kind: 'dialogue'; dialogue: DialogueListItem }
   | { kind: 'exam'; exam: ExamListItem }
   /** T86: a chapter inside a series book (its own family/pack section, collapsed by default). */
@@ -727,7 +728,6 @@ export function LibraryScreen() {
           return (
             <ChapterRow
               section={item.section}
-              chapter={item.chapter}
               expanded={expandedSetForRender.has(sectionKeyOf(item.section))}
               onToggle={(expanded) => onToggle('chapter', sectionKeyOf(item.section), expanded)}
               progressByStory={progressByStory}
@@ -758,7 +758,6 @@ export function LibraryScreen() {
         story={item.story}
         progress={progressByStory.get(`${item.story.packId}/${item.story.id}`)}
         bookmarked={bookmarkedKeys.data?.has(`${item.story.packId}/${item.story.id}`) ?? false}
-        indent={item.indent}
         onPress={() => router.push(`/reader/${item.story.packId}/${item.story.id}`)}
         onLongPress={() => toggleBookmark(item.story.packId, item.story.id)}
       />
@@ -836,9 +835,7 @@ function SectionHeader({
 }) {
   const { tokens } = useAppTheme();
   const summary = summarizeStories(sectionStories(section, progressByStory));
-  const levels = section.family
-    ? section.family.rungs.map((r) => r.level)
-    : [section.pack.level];
+  const levels = sectionLevels(section);
   return (
     <View>
       {section.shelfHeader && (
@@ -910,6 +907,15 @@ function SectionHeader({
   );
 }
 
+/** T86: the level chips a section shows (a family's rungs, a book's union of its chapters, or the pack's level). */
+function sectionLevels(section: LibrarySection): CefrLevel[] {
+  if (section.book) {
+    const all = section.book.chapters.flatMap((c) => sectionLevels(c.section));
+    return CEFR_ORDER.filter((level) => all.includes(level));
+  }
+  return section.family ? section.family.rungs.map((r) => r.level) : [section.pack.level];
+}
+
 /**
  * T86: the stories a section counts for progress. A plain pack or family is its
  * selected rung's stories; a series book is every chapter's selected-rung
@@ -959,7 +965,6 @@ function BookHeader({
  */
 function ChapterRow({
   section,
-  chapter,
   expanded,
   onToggle,
   progressByStory,
@@ -967,7 +972,6 @@ function ChapterRow({
   renderPartRow,
 }: {
   section: LibrarySection;
-  chapter: number;
   expanded: boolean;
   onToggle: (expanded: boolean) => void;
   progressByStory: Map<string, StoryProgressRow>;
@@ -976,7 +980,7 @@ function ChapterRow({
 }) {
   const { tokens } = useAppTheme();
   const title = chapterLabel(section.family?.titleRu ?? section.pack.titleRu);
-  const levels = section.family ? section.family.rungs.map((r) => r.level) : [section.pack.level];
+  const levels = sectionLevels(section);
   const summary = summarizeStories(sectionStories(section, progressByStory));
   return (
     <View className="mb-1 ml-3 border-l border-border pl-3">
@@ -993,7 +997,7 @@ function ChapterRow({
           color={tokens.textMuted}
         />
         <Text className="flex-1 font-reading text-base" numberOfLines={1}>
-          {`Глава ${chapter}. ${title}`}
+          {title}
         </Text>
         <View className="flex-row gap-1">
           {levels.map((level) => (
@@ -1068,15 +1072,12 @@ function StoryRow({
   story,
   progress,
   bookmarked,
-  indent,
   onPress,
   onLongPress,
 }: {
   story: StoryListItem;
   progress: StoryProgressRow | undefined;
   bookmarked: boolean;
-  /** T86: a part inside an expanded chapter sits one step in. */
-  indent?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -1088,7 +1089,7 @@ function StoryRow({
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={`Read ${story.titleRu}. Long press to ${bookmarked ? 'remove the' : 'add a'} bookmark`}
-      className={`mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 active:bg-surface-2 ${indent ? 'ml-3' : ''}`}
+      className="mb-2 flex-row items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 active:bg-surface-2"
     >
       <View className="flex-1 gap-0.5">
         <Text
