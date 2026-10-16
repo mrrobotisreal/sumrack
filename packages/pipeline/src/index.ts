@@ -209,6 +209,17 @@ export {
   renderTopicCensus,
 } from './exam-report.ts';
 export { EXAM_TOPICS, EXAM_TOPIC_KIND } from './exam-topics.ts';
+export {
+  CourseFrontmatterSchema,
+  parseCourseDraft,
+  type ParsedCourseDraft,
+} from './course-draft.ts';
+export { renderCourseReport, isBinaryPair, BINARY_OPTION_SETS } from './course-report.ts';
+export {
+  courseManifestIssues,
+  defaultManifestPath,
+  type CourseManifestReport,
+} from './course-manifest.ts';
 export { ExtrasFrontmatterSchema, loadExtras, parseExtras, type PackExtras } from './extras.ts';
 export {
   FrontmatterSchema,

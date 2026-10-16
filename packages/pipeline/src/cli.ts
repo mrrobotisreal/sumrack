@@ -1,10 +1,12 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { formatIssue, DraftError } from './errors.ts';
 import { runAnnotate } from './annotate.ts';
 import { renderBranchMap, renderScenarioBranchMap } from './branch-map.ts';
 import { glossaryCoverage, renderCoverageReport } from './coverage.ts';
 import { renderExamReports } from './exam-report.ts';
+import { renderCourseReport } from './course-report.ts';
+import { courseManifestIssues, defaultManifestPath } from './course-manifest.ts';
 import {
   planAudioRun,
   runAudition,
@@ -52,10 +54,13 @@ Usage:
                             drafts (checkpoint, prompts) passes ONLY --extras
                             (its frontmatter then carries the "pack:" meta)
 
-  pipeline validate <pack.json> [more.json ...]
+  pipeline validate <pack.json> [more.json ...] [--manifest <manifest.json>]
       Validate existing pack.json file(s) against the schema. Reference
       packs (T38) print a census line per lemma list; they are hand-
-      assembled JSON (no annotate) and publish like any pack
+      assembled JSON (no annotate) and publish like any pack. Course packs
+      (T88) print the floor report; their practice and library refs are
+      checked against --manifest (default ../sumrak-content/manifest.json
+      when present, else a warning line)
 
   pipeline audio <draft.md> [more-drafts.md ...] -o <pack-dir> [options]
       Render narration via ElevenLabs (needs ELEVENLABS_API_KEY in the env or
@@ -224,12 +229,38 @@ function printReferenceReports(pack: Pack): void {
   }
 }
 
+/**
+ * T88: a published pack's pack.json, read from the sumrak-content checkout the
+ * manifest sits in (`packs/<id>/pack.json`). Undefined when it is not there.
+ */
+function readPublishedPack(manifestPath: string, id: string): Pack | undefined {
+  const file = join(dirname(manifestPath), 'packs', id, 'pack.json');
+  if (!existsSync(file)) return undefined;
+  return JSON.parse(readFileSync(file, 'utf8')) as Pack;
+}
+
 function validateCommand(args: string[]): void {
-  if (args.length === 0 || args.some((a) => a.startsWith('-'))) {
+  const files: string[] = [];
+  let manifest: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg === '--manifest') {
+      const value = args[++i];
+      if (value === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
+      manifest = value;
+    } else if (arg.startsWith('-')) {
+      fail(`validate needs one or more pack.json paths\n\n${USAGE}`, 2);
+    } else {
+      files.push(arg);
+    }
+  }
+  if (files.length === 0) {
     fail(`validate needs one or more pack.json paths\n\n${USAGE}`, 2);
   }
+  // T88: the live manifest, when one is reachable, for course refs (decision 5).
+  const manifestPath = manifest ?? defaultManifestPath();
   let failed = false;
-  for (const file of args) {
+  for (const file of files) {
     const result = runValidate(file);
     if (result.ok) {
       console.log(`✓ ${file}: valid pack "${result.pack.id}" v${result.pack.version}`);
@@ -239,6 +270,15 @@ function validateCommand(args: string[]): void {
       printScenarioReports(result.pack);
       printExamReports(result.pack);
       printReferenceReports(result.pack);
+      if (result.pack.course) {
+        console.log(`\n${renderCourseReport(result.pack)}`);
+        const live = courseManifestIssues(
+          result.pack,
+          existsSync(manifestPath) ? manifestPath : undefined,
+          (id) => readPublishedPack(manifestPath, id),
+        );
+        console.log(live.lines.join('\n'));
+      }
     } else {
       failed = true;
       console.error(`✗ ${file}: invalid pack`);

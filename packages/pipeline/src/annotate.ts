@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import type { Pack } from '@sumrak/schema';
 import { assemblePack } from './assemble.ts';
 import { parseDialogueDraft, sniffDraftKind, type ParsedDialogueDraft } from './dialogue-draft.ts';
+import { parseCourseDraft, type ParsedCourseDraft } from './course-draft.ts';
 import { parseDraft, type ParsedDraft } from './draft.ts';
 import { parseExamDraft, type ParsedExamDraft } from './exam-draft.ts';
 import { loadExtras, type PackExtras } from './extras.ts';
@@ -30,14 +31,23 @@ export function annotateDrafts(
   const dialogueDrafts: ParsedDialogueDraft[] = [];
   const scenarioDrafts: ParsedScenarioDraft[] = [];
   const examDrafts: ParsedExamDraft[] = [];
+  const courseDrafts: ParsedCourseDraft[] = [];
   for (const f of files) {
     const kind = sniffDraftKind(f.path, f.source);
     if (kind === 'dialogue') dialogueDrafts.push(parseDialogueDraft(f.path, f.source));
     else if (kind === 'scenario') scenarioDrafts.push(parseScenarioDraft(f.path, f.source));
     else if (kind === 'exam') examDrafts.push(parseExamDraft(f.path, f.source));
+    else if (kind === 'course') courseDrafts.push(parseCourseDraft(f.path, f.source));
     else storyDrafts.push(parseDraft(f.path, f.source));
   }
-  return assemblePack(storyDrafts, extras, dialogueDrafts, scenarioDrafts, examDrafts);
+  return assemblePack(
+    storyDrafts,
+    extras,
+    dialogueDrafts,
+    scenarioDrafts,
+    examDrafts,
+    courseDrafts,
+  );
 }
 
 export interface AnnotateSummary {
