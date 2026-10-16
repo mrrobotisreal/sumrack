@@ -20,10 +20,10 @@ export const OPENING_ASPECT = 600 / 1180;
 /** The leaf art is 142 px wide per half at 1x; each leaf slides out by its full width. */
 const LEAF_FRACTION = 0.5;
 
-const CAR = require('../../../../assets/images/hotel/car@2x.webp') as number;
-const LEFT = require('../../../../assets/images/hotel/door-left@2x.webp') as number;
-const RIGHT = require('../../../../assets/images/hotel/door-right@2x.webp') as number;
-const FRAME = require('../../../../assets/images/hotel/frame@2x.webp') as number;
+const CAR = require('../../../../assets/images/hotel/car.webp') as number;
+const LEFT = require('../../../../assets/images/hotel/door-left.webp') as number;
+const RIGHT = require('../../../../assets/images/hotel/door-right.webp') as number;
+const FRAME = require('../../../../assets/images/hotel/frame.webp') as number;
 
 export interface DoorsProps {
   /** 0 = shut, 1 = open. Driven by the Lift on the UI thread. */
