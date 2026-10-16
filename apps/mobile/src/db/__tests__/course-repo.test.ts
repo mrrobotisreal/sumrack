@@ -416,3 +416,30 @@ describe('dev wipe guard', () => {
     }
   });
 });
+
+describe('the deck level rule for course cards (decision 9)', () => {
+  it('a course card with no exams row is counted at A1 by dueItems, never at A2', async () => {
+    const item = itemsById().get('u1-c01')!;
+    const attempt = await repos.course.startAttempt({
+      packId: PACK_ID,
+      unitId: 'u1',
+      kind: 'unit',
+      itemIds: ['u1-c01'],
+      now: T0,
+    });
+    await repos.course.recordAttempt({
+      attemptId: attempt.id,
+      packId: PACK_ID,
+      unitId: 'u1',
+      kind: 'unit',
+      percent: 0,
+      responses: { 'u1-c01': { answer: 3, correct: false } },
+      items: [item],
+      now: T0,
+    });
+    const a1 = await repos.exams.dueItems({ level: 'A1', now: T0 + MIN });
+    const a2 = await repos.exams.dueItems({ level: 'A2', now: T0 + MIN });
+    expect(a1.map((c) => c.itemKey)).toContain(`${PACK_ID}:course:u1-c01`);
+    expect(a2.map((c) => c.itemKey)).not.toContain(`${PACK_ID}:course:u1-c01`);
+  });
+});

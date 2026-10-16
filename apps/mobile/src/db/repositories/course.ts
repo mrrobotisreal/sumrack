@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { cooldownFor, passes, type CourseKind } from '@/features/hotel/hotel-model';
 import { ratingForDrillAnswer } from '@/features/torfl/pace';
 import { track } from '@/services/analytics';
-import { logError } from '@/services/error-log';
 
 import { newId } from '../ids';
 import { examItemKey } from '@/features/torfl/model';
@@ -226,11 +225,12 @@ export function createCourseRepo(db: SumrakDB) {
     }
   }
 
-  function warnOnce(key: string, err: unknown) {
+  function warnOnce(key: string) {
     if (parseWarned.has(key)) return;
     parseWarned.add(key);
+    // Repos report through analytics only: `logError` pulls in expo-file-system
+    // (word-forms.ts), which the repo test harness cannot load.
     track('app_error', { scope: 'course-parse', fatal: false });
-    logError('db', err ?? new Error(`unreadable course row ${key}`));
   }
 
   function toProgress(row: typeof courseProgress.$inferSelect): ProgressRecord {
@@ -252,7 +252,7 @@ export function createCourseRepo(db: SumrakDB) {
     const ids = IdListSchema.safeParse(parseJson(row.itemIds));
     const responses = ResponsesSchema.safeParse(parseJson(row.responsesJson));
     if (!ids.success || !responses.success) {
-      warnOnce(`attempt/${row.id}`, null);
+      warnOnce(`attempt/${row.id}`);
       return null;
     }
     return {
@@ -277,7 +277,7 @@ export function createCourseRepo(db: SumrakDB) {
   function parseCourse(row: typeof courseFloors.$inferSelect): z.infer<typeof CourseSchema> | null {
     const parsed = CourseSchema.safeParse(parseJson(row.json));
     if (!parsed.success) {
-      warnOnce(`floor/${row.packId}`, parsed.error);
+      warnOnce(`floor/${row.packId}`);
       return null;
     }
     return parsed.data;
@@ -334,7 +334,7 @@ export function createCourseRepo(db: SumrakDB) {
       for (const row of rows) {
         const parsed = CourseItemSchema.safeParse(parseJson(row.json));
         if (parsed.success) byId.set(row.itemId, parsed.data);
-        else warnOnce(`item/${row.packId}/${row.itemId}`, parsed.error);
+        else warnOnce(`item/${row.packId}/${row.itemId}`);
       }
       return ids.flatMap((id) => {
         const item = byId.get(id);
@@ -353,7 +353,7 @@ export function createCourseRepo(db: SumrakDB) {
       if (!row) return null;
       const parsed = CourseItemSchema.safeParse(parseJson(row.json));
       if (!parsed.success) {
-        warnOnce(`item/${packId}/${itemId}`, parsed.error);
+        warnOnce(`item/${packId}/${itemId}`);
         return null;
       }
       return parsed.data;

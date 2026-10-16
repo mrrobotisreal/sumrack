@@ -367,6 +367,36 @@ const examItemCardRow = z.strictObject({
   updatedAt: int,
 });
 
+/**
+ * T89 (HOTEL_PATH §3): the two hotel user tables. Attempts carry their drawn
+ * item ids and responses as JSON strings (the course repo Zod-parses on read).
+ */
+const courseProgressRow = z.strictObject({
+  key: z.string(),
+  packId: z.string(),
+  unitId: z.string().nullable(),
+  bestPercent: int,
+  passedAt: int.nullable(),
+  passedVia: z.enum(['course', 'extern']).nullable(),
+  attempts: int,
+  lastAttemptAt: int.nullable(),
+  cooldownUntil: int.nullable(),
+  updatedAt: int,
+});
+
+const courseAttemptRow = z.strictObject({
+  id: z.string(),
+  packId: z.string(),
+  unitId: z.string().nullable(),
+  kind: z.enum(['unit', 'floor', 'extern']),
+  startedAt: int,
+  finishedAt: int.nullable(),
+  percent: int.nullable(),
+  passed: z.boolean().nullable(),
+  itemIds: z.string(),
+  responsesJson: z.string(),
+});
+
 const settingRow = z.strictObject({
   key: z.string(),
   value: z.unknown(),
@@ -431,6 +461,9 @@ export const BackupPayloadSchema = z.strictObject({
     examAttempts: z.array(examAttemptRow).default([]),
     examResponses: z.array(examResponseRow).default([]),
     examItemCards: z.array(examItemCardRow).default([]),
+    // T89 (M25): additive-with-default — pre-T89 snapshots restore under version 1.
+    courseProgress: z.array(courseProgressRow).default([]),
+    courseAttempts: z.array(courseAttemptRow).default([]),
     // T38: additive-with-default — pre-T38 snapshots restore under version 1.
     leechDismissals: z.array(leechDismissalRow).default([]),
     // T34: older backups have no quests — default to none.
@@ -473,6 +506,8 @@ export const USER_TABLE_NAMES: Record<UserTableKey, string> = {
   examAttempts: 'exam_attempts',
   examResponses: 'exam_responses',
   examItemCards: 'exam_item_cards',
+  courseProgress: 'course_progress',
+  courseAttempts: 'course_attempts',
   leechDismissals: 'leech_dismissals',
   dailyQuests: 'daily_quests',
   settings: 'settings',
