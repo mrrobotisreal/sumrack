@@ -61,7 +61,11 @@ export interface AncestorSection {
   /** Every pack this section can show — a family shelf lists all its rungs. */
   packIds: readonly string[];
   family?: { slug: string };
-  book?: { series: string; book: number; chapters: { chapter: number; section: AncestorSection }[] };
+  book?: {
+    series: string;
+    book: number;
+    chapters: { chapter: number; section: AncestorSection }[];
+  };
 }
 
 /**

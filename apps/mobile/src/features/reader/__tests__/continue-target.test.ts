@@ -107,7 +107,12 @@ describe('resolveContinueTarget (T84)', () => {
 
 describe('resolveContinueTarget series step (T86)', () => {
   const tb = (packId: string): ContinueStory[] =>
-    [1, 2].map((p) => ({ packId, id: `${packId}-p${p}`, orderIdx: p - 1, titleRu: `${packId} ${p}` }));
+    [1, 2].map((p) => ({
+      packId,
+      id: `${packId}-p${p}`,
+      orderIdx: p - 1,
+      titleRu: `${packId} ${p}`,
+    }));
   const placements: Record<string, { series: string; chapter: number; level: string }> = {
     'a2-three-body-ch04': { series: 'three-body', chapter: 4, level: 'A2' },
     'a2-three-body-ch05': { series: 'three-body', chapter: 5, level: 'A2' },

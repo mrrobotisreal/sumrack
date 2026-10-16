@@ -92,10 +92,12 @@ describe('sectionDataFor', () => {
 
 describe('summarizeStories', () => {
   it('counts finished over total', () => {
-    expect(summarizeStories([{ finished: true }, { finished: false }, { finished: true }])).toEqual({
-      finished: 2,
-      total: 3,
-    });
+    expect(summarizeStories([{ finished: true }, { finished: false }, { finished: true }])).toEqual(
+      {
+        finished: 2,
+        total: 3,
+      },
+    );
   });
 
   it('is zero for no stories', () => {

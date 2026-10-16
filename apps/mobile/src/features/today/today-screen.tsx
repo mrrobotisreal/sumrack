@@ -97,7 +97,12 @@ export function TodayScreen() {
     const placements = new Map<string, { series: string; chapter: number; level: string }>();
     for (const pack of packs.data ?? []) {
       const placed = parseSeriesTags(pack.tags);
-      if (placed) placements.set(pack.id, { series: placed.series, chapter: placed.chapter, level: pack.level });
+      if (placed)
+        placements.set(pack.id, {
+          series: placed.series,
+          chapter: placed.chapter,
+          level: pack.level,
+        });
     }
     return (packId: string) => placements.get(packId) ?? null;
   }, [packs.data]);

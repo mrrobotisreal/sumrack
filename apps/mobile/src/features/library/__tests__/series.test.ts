@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  chapterLabel,
-  groupBySeries,
-  parseSeriesTags,
-  seriesBookTitle,
-} from '../series';
+import { chapterLabel, groupBySeries, parseSeriesTags, seriesBookTitle } from '../series';
 
 const tags = (book: number, chapter: number) => [
   'scifi',
@@ -75,7 +70,10 @@ describe('chapterLabel', () => {
 describe('groupBySeries', () => {
   type Item = { id: string; tags: string[] };
   const get = (i: Item) => i.tags;
-  const item = (id: string, book: number, chapter: number): Item => ({ id, tags: tags(book, chapter) });
+  const item = (id: string, book: number, chapter: number): Item => ({
+    id,
+    tags: tags(book, chapter),
+  });
 
   it('orders chapters by number inside a book, and keeps untagged rows in place', () => {
     const items: Item[] = [
@@ -115,10 +113,9 @@ describe('groupBySeries', () => {
   });
 
   it('passes untagged and malformed packs through as plain rows', () => {
-    const out = groupBySeries(
-      [{ id: 'x', tags: ['series:three-body', 'book:1'] }],
-      get,
-    );
-    expect(out).toEqual([{ kind: 'plain', item: { id: 'x', tags: ['series:three-body', 'book:1'] } }]);
+    const out = groupBySeries([{ id: 'x', tags: ['series:three-body', 'book:1'] }], get);
+    expect(out).toEqual([
+      { kind: 'plain', item: { id: 'x', tags: ['series:three-body', 'book:1'] } },
+    ]);
   });
 });

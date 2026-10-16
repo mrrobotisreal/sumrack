@@ -393,27 +393,27 @@ export function LibraryScreen() {
     // T86: series packs (series + book + chapter tags) collapse into one book
     // per (series, book). Each chapter is a family/single section, its own
     // collapsed row; the book is positioned at its first member.
-    return groupBySeries(families, (section) => section.pack.tags).map(
-      (group): LibrarySection => {
-        if (group.kind === 'plain') return group.item;
-        const first = group.chapters[0]!.item;
-        const chapters = group.chapters.map(({ chapter, item }) => ({ chapter, section: item }));
-        const bookTitle = seriesBookTitle(group.series, group.book, first.pack.titleRu);
-        return {
-          pack: first.pack,
-          data: chapters.map(
-            (c): LibraryRow => ({ kind: 'chapter', section: c.section, chapter: c.chapter }),
-          ),
-          book: {
-            series: group.series,
-            book: group.book,
-            titleRu: bookTitle.title,
-            subtitle: bookTitle.subtitle,
-            chapters,
-          },
-        };
-      },
-    );
+    return groupBySeries(families, (section) => section.pack.tags).map((group): LibrarySection => {
+      if (group.kind === 'plain') return group.item;
+      const first = group.chapters[0]!.item;
+      const chapters = group.chapters.map(({ chapter, item }) => ({ chapter, section: item }));
+      const bookTitle = seriesBookTitle(group.series, group.book, first.pack.titleRu);
+      return {
+        pack: first.pack,
+        data: chapters.map((c): LibraryRow => ({
+          kind: 'chapter',
+          section: c.section,
+          chapter: c.chapter,
+        })),
+        book: {
+          series: group.series,
+          book: group.book,
+          titleRu: bookTitle.title,
+          subtitle: bookTitle.subtitle,
+          chapters,
+        },
+      };
+    });
   }, [remoteAll, category, effectiveGenre, progressByStory, rungChoice]);
 
   // The selected category has nothing installed while packs exist → the
@@ -464,7 +464,6 @@ export function LibraryScreen() {
       track('library_collapse_all', { expanded: true, sections: topLevelKeys.length });
     }
   }, [anyExpanded, continueAncestors, reduceMotion, setAllExpanded, topLevelKeys]);
-
 
   // M14 §4.5: chip presses persist through the store and log only on a real
   // change (a tap on the selected chip is a no-op, no event).
@@ -889,20 +888,22 @@ function SectionHeader({
       {expanded && section.book && (
         <BookHeader book={section.book} progressByStory={progressByStory} />
       )}
-      {expanded && !section.book && (section.family ? (
-        <FamilyShelfHeader
-          slug={section.family.slug}
-          titleRu={section.family.titleRu}
-          tags={section.family.tags}
-          rungs={section.family.rungs}
-          selectedLevel={section.family.selectedLevel}
-          onSelectRung={(to, via) =>
-            onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
-          }
-        />
-      ) : (
-        <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
-      ))}
+      {expanded &&
+        !section.book &&
+        (section.family ? (
+          <FamilyShelfHeader
+            slug={section.family.slug}
+            titleRu={section.family.titleRu}
+            tags={section.family.tags}
+            rungs={section.family.rungs}
+            selectedLevel={section.family.selectedLevel}
+            onSelectRung={(to, via) =>
+              onSelectRung(section.family!.slug, section.family!.selectedLevel, to, via)
+            }
+          />
+        ) : (
+          <PackHeader pack={section.pack} importedMeta={section.importedMeta} />
+        ))}
     </View>
   );
 }
@@ -1024,7 +1025,9 @@ function ChapterRow({
       )}
       {expanded &&
         section.data.map((row) => (
-          <React.Fragment key={row.kind === 'story' ? `${row.story.packId}/${row.story.id}` : row.kind}>
+          <React.Fragment
+            key={row.kind === 'story' ? `${row.story.packId}/${row.story.id}` : row.kind}
+          >
             {renderPartRow(row)}
           </React.Fragment>
         ))}
