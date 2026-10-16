@@ -274,15 +274,16 @@ export function LibraryScreen() {
                 .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
             ],
     });
+    // T89: course packs (HOTEL_PATH §3) are never a Library shelf, local or remote.
     const remoteAll = packs.data
-      .filter((p) => p.origin !== 'local')
+      .filter((p) => p.origin !== 'local' && p.type !== 'course')
       .map(build)
       .filter((section) => section.data.length > 0);
     // T28: local (imported) packs shelve together under «Импортировано»,
     // after the remote content (design V2 §4.3) — and under EVERY category
     // (M14 §4.4: an imported paste has no category and must never vanish).
     const local = packs.data
-      .filter((p) => p.origin === 'local')
+      .filter((p) => p.origin === 'local' && p.type !== 'course')
       .map(build)
       .filter((section) => section.data.length > 0)
       .map((section) => ({
