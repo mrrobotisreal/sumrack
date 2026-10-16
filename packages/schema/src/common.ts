@@ -21,6 +21,8 @@ export type CefrLevel = z.infer<typeof CefrLevelSchema>;
  *   stories in the same pack (T67, M18, TORFL_EXAM_PREP §3)
  * - `reference` — stories-free reference data: lemma lists the progress
  *   engine measures against (T38, V2 §7.7 — the core A1/A2 vocabulary)
+ * - `course` — one floor of the «Отель «Сумрак»» TORFL course: units of lesson
+ *   cards and scored exercise pools (T88, M25, ADR-0022, design HOTEL_PATH §2)
  */
 export const PackTypeSchema = z.enum([
   'stories',
@@ -31,6 +33,7 @@ export const PackTypeSchema = z.enum([
   'scenario',
   'exam',
   'reference',
+  'course',
 ]);
 export type PackType = z.infer<typeof PackTypeSchema>;
 
