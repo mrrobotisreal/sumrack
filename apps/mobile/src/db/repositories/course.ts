@@ -1,19 +1,19 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { CourseItemSchema, CourseSchema, type CourseItem } from '@sumrak/schema';
-
-type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { Rating, type Grade } from 'ts-fsrs';
 import { z } from 'zod';
 
 import { cooldownFor, passes, type CourseKind } from '@/features/hotel/hotel-model';
 import { ratingForDrillAnswer } from '@/features/torfl/pace';
+import { examItemKey } from '@/features/torfl/model';
 import { track } from '@/services/analytics';
 
 import { newId } from '../ids';
-import { examItemKey } from '@/features/torfl/model';
 import { courseAttempts, courseFloors, courseItems, courseProgress } from '../schema';
 import type { SumrakDB } from '../types';
 import { createExamsRepo } from './exams';
+
+type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
 /**
  * The hotel course repository (T89, HOTEL_PATH §3, decisions 4–7) — `repos.course`.
@@ -137,7 +137,12 @@ export function courseRating(outcome: 'half' | 'wrong', subtestKind: string): Gr
 
 /** Items that go into the exam deck: objective kinds only (writing/speaking are graded in T92). */
 function isDeckItem(item: CourseItem): boolean {
-  return item.kind === 'choice' || item.kind === 'typed' || item.kind === 'trigger' || item.kind === 'transform';
+  return (
+    item.kind === 'choice' ||
+    item.kind === 'typed' ||
+    item.kind === 'trigger' ||
+    item.kind === 'transform'
+  );
 }
 
 /**
@@ -270,7 +275,11 @@ export function createCourseRepo(db: SumrakDB) {
   }
 
   async function getFloorRow(packId: string): Promise<typeof courseFloors.$inferSelect | null> {
-    const rows = await db.select().from(courseFloors).where(eq(courseFloors.packId, packId)).limit(1);
+    const rows = await db
+      .select()
+      .from(courseFloors)
+      .where(eq(courseFloors.packId, packId))
+      .limit(1);
     return rows[0] ?? null;
   }
 
@@ -404,7 +413,10 @@ export function createCourseRepo(db: SumrakDB) {
     },
 
     /** Save the responses so far on an open sitting (so a kill can resume it). */
-    async saveResponses(attemptId: string, responses: Record<string, ResponseEntry>): Promise<void> {
+    async saveResponses(
+      attemptId: string,
+      responses: Record<string, ResponseEntry>,
+    ): Promise<void> {
       await db
         .update(courseAttempts)
         .set({ responsesJson: JSON.stringify(responses) })
@@ -453,7 +465,8 @@ export function createCourseRepo(db: SumrakDB) {
       const now = input.now ?? Date.now();
       const kind: CourseKind = input.kind;
       const pass = passes(input.kind, input.percent);
-      const key = input.unitId === null ? floorKey(input.packId) : unitKey(input.packId, input.unitId);
+      const key =
+        input.unitId === null ? floorKey(input.packId) : unitKey(input.packId, input.unitId);
       // Cooldown is a timestamp only where the rule has one (decision 6): a unit
       // fail and any pass leave it null, floor/экстерн/gate fails set it.
       const cooldownMs = pass ? 0 : cooldownFor(kind, false);
@@ -536,6 +549,25 @@ export function createCourseRepo(db: SumrakDB) {
         await db.run(sql`ROLLBACK`);
         throw err;
       }
+    },
+
+    /** Recent attempts (newest first) — the dev readout and later the floor's history. */
+    async listAttempts(opts: { limit?: number } = {}): Promise<AttemptRecord[]> {
+      const rows = await db
+        .select()
+        .from(courseAttempts)
+        .orderBy(sql`${courseAttempts.startedAt} DESC`)
+        .limit(opts.limit ?? 20);
+      return rows.flatMap((row) => {
+        const attempt = toAttempt(row);
+        return attempt ? [attempt] : [];
+      });
+    },
+
+    /** Total course item rows across installed course packs (the dev readout). */
+    async countItems(): Promise<number> {
+      const rows = await db.select({ n: sql<number>`COUNT(*)` }).from(courseItems);
+      return rows[0]?.n ?? 0;
     },
 
     /** DEV ONLY (the S25 fixture walk): wipe every course progress and attempt row. Guarded by __DEV__. */

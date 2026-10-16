@@ -5,7 +5,14 @@ import { describe, expect, it } from 'vitest';
 
 import { importPack, removePack } from '../importer';
 import { createContentRepo } from '../repositories/content';
-import { courseAttempts, courseFloors, courseItems, courseProgress, packs, stories } from '../schema';
+import {
+  courseAttempts,
+  courseFloors,
+  courseItems,
+  courseProgress,
+  packs,
+  stories,
+} from '../schema';
 import { createTestDb } from './helpers';
 
 /**

@@ -140,8 +140,7 @@ export function floorState(
       bestPercent: row?.bestPercent ?? 0,
       cooldownUntil: cooldown !== null && cooldown > now ? cooldown : null,
       units,
-      examUnlocked:
-        f.hasExam && floorUnlocked && units.length > 0 && units.every((u) => u.passed),
+      examUnlocked: f.hasExam && floorUnlocked && units.length > 0 && units.every((u) => u.passed),
     };
   });
 }

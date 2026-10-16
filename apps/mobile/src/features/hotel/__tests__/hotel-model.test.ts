@@ -219,11 +219,7 @@ describe('floorState: the lock rule (design §3, D12)', () => {
   });
 
   it('the floor exam unlocks only when every unit passed', () => {
-    const progress = [
-      passedFloor(pid(0)),
-      passedUnit(pid(1), 'u1'),
-      passedUnit(pid(1), 'u2'),
-    ];
+    const progress = [passedFloor(pid(0)), passedUnit(pid(1), 'u1'), passedUnit(pid(1), 'u2')];
     const f1 = floorState(allFloors(), progress, 0).find((s) => s.floor === 1)!;
     expect(f1.examUnlocked).toBe(true);
   });
