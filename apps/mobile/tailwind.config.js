@@ -15,8 +15,11 @@ module.exports = {
         text: 'rgb(var(--text) / <alpha-value>)',
         'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
-        // accent at 15% — selection washes, highlight, karaoke word bg
+        // accent at 15% — selection washes, highlight
         'accent-soft': 'rgb(var(--accent) / 0.15)',
+        // karaoke word bg — a brighter Sumrak orange-red, translucent so white
+        // reading text stays legible (Mitch 2026-10-17: the 15 % wash was invisible)
+        karaoke: 'rgb(var(--karaoke) / 0.42)',
         success: 'rgb(var(--success) / <alpha-value>)',
         danger: 'rgb(var(--danger) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
