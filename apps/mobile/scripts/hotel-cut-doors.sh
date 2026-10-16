@@ -40,7 +40,7 @@ for k in 1 2 3; do
     'BEGIN { f = w / s; printf "%d %d %d %d %.6f %d\n", ox*f+0.5, oy*f+0.5, ow*f+0.5, oh*f+0.5, f, seam*f+0.5 }')
   LEFT_W=$((SEAMX - X))
   RIGHT_W=$((X + OW - SEAMX))
-  SUFFIX="@${k}x"
+  if [ "$k" = 1 ]; then SUFFIX=""; else SUFFIX="@${k}x"; fi
 
   # Frame: the full image scaled to W, opening made transparent.
   magick "$SRC" -resize "${W}x" "$WORK/scaled$k.png"
