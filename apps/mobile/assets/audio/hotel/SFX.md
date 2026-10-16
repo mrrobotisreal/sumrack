@@ -33,3 +33,17 @@ Notes:
 **Ear-check: OPEN for Mitch.** Listen to every clip on the S24U or S25 and
 reject any take that sounds wrong. Regenerate under the ElevenLabs lock if
 needed.
+
+## Mitch's ear-check (2026-10-17) — CLOSED
+
+Mitch listened to every raw take in `_sfx-takes/hotel/` and chose the takes below. These replace the by-the-numbers picks above. The encode chain is unchanged (mono 48 kHz Opus 96 k).
+
+| Clip | Mitch's take | Out LUFS | Out peak dBFS | Note |
+|---|---|---|---|---|
+| `drop` | drop-1 | −16.0 | −2.7 | −6.5 dB gain, no loudnorm (as before) |
+| `flicker` | flicker-1 | −20.1 | −8.7 | |
+| `lift-blocked` | lift-blocked-3 | −20.0 | −0.4 | same take as before |
+| `lift-close` | lift-close-2 | −21.3 | −5.8 | |
+| `lift-ding` | lift-ding-1 | −24.8 | −2.1 | loudnorm −21 + limiter; this take is a soft bell, so it reads quieter by design |
+| `lift-open` | lift-open-3 | −20.5 | −4.0 | same take as before |
+| `lift-ride` | lift-ride-2 | −21.9 | −0.8 | 80 ms loop fades + limiter |
