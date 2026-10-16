@@ -109,6 +109,12 @@ export const SETTING_KEYS = {
    */
   libraryExpanded: 'library.expanded',
   /**
+   * boolean (T91, default true): the hotel lift's sound effects (doors,
+   * ride, the 13 flicker, the drop). Off = the lift stays silent; haptics and
+   * visuals still run. Read by features/hotel/lift/lift-sfx.ts.
+   */
+  hotelSfx: 'hotel.sfx',
+  /**
    * Словарь sort (T50, WORD_FORMS §2.4): { v: 1, key: BankSortKey,
    * familiarity: 'least' | 'most' }, defaults { 'added-asc', 'least' } —
    * Zod-validated on read (store/bank-prefs.ts); a malformed value heals

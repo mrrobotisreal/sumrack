@@ -31,6 +31,11 @@ export interface ColorTokens {
   flameYellow: string;
   flameOrange: string;
   flameRed: string;
+  /** M25 hotel lift (T91): indicator glow, its dim state, brass rim, plate. Mirrors global.css. */
+  hotelGlow: string;
+  hotelGlowDim: string;
+  hotelBrass: string;
+  hotelPlate: string;
 }
 
 export const colors: Record<ThemeScheme, ColorTokens> = {
@@ -51,6 +56,10 @@ export const colors: Record<ThemeScheme, ColorTokens> = {
     flameYellow: '#FFD23F',
     flameOrange: '#FF9124',
     flameRed: '#FF4A2E',
+    hotelGlow: '#FFB347',
+    hotelGlowDim: '#B07830',
+    hotelBrass: '#C09658',
+    hotelPlate: '#18100C',
   },
   light: {
     bg: '#F7F5F2',
@@ -69,5 +78,9 @@ export const colors: Record<ThemeScheme, ColorTokens> = {
     flameYellow: '#E8B400',
     flameOrange: '#EE7A0E',
     flameRed: '#E0361C',
+    hotelGlow: '#FFB347',
+    hotelGlowDim: '#B07830',
+    hotelBrass: '#C09658',
+    hotelPlate: '#18100C',
   },
 };
