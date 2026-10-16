@@ -24,7 +24,9 @@ export type ListeningAudio = {
   /** What the TTS engine says and the answer key: the banked surface, never the lemma. */
   text: string;
   /** Post-answer sentence highlight; null when the sentence is not eligible or no token resolves. */
-  context: { tokens: { text: string; spaceBefore: boolean; isPunct: boolean; isTarget: boolean }[] } | null;
+  context: {
+    tokens: { text: string; spaceBefore: boolean; isPunct: boolean; isTarget: boolean }[];
+  } | null;
 };
 
 /** The Russian a listener is expected to hear — the quiz answer key. */

@@ -159,7 +159,9 @@ function PhraseSheet({
             disabled={!canSpeak}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={canSpeak ? 'Pronounce phrase' : 'No audio available for this phrase'}
+            accessibilityLabel={
+              canSpeak ? 'Pronounce phrase' : 'No audio available for this phrase'
+            }
             accessibilityState={{ disabled: !canSpeak }}
             className={
               canSpeak

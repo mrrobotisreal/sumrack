@@ -10,11 +10,7 @@ import {
   WIDGET_SNAPSHOT_VERSION,
   WIDGET_STALE_MS,
 } from '../widget-contract';
-import {
-  buildWidgetSnapshot,
-  isStale,
-  WidgetSnapshotSchema,
-} from '../widget-snapshot';
+import { buildWidgetSnapshot, isStale, WidgetSnapshotSchema } from '../widget-snapshot';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const KOTLIN_DIR = path.resolve(
