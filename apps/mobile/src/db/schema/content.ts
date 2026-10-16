@@ -19,7 +19,8 @@ export const packs = sqliteTable('packs', {
   // content tables + importer support landed in T26); 'scenario' in T56
   // (type-level only — scenario content tables + importer land in T58);
   // 'exam' in T67 (type-level; the `exams` table + importer landed in T68);
-  // 'reference' in T38 (lemma lists → `core_lemmas`).
+  // 'reference' in T38 (lemma lists → `core_lemmas`); 'course' in T88 (type-only:
+  // the course tables + importer land in T89, so a course row is stored but not read).
   type: text('type')
     .$type<
       | 'stories'
@@ -30,6 +31,7 @@ export const packs = sqliteTable('packs', {
       | 'scenario'
       | 'exam'
       | 'reference'
+      | 'course'
     >()
     .notNull(),
   titleRu: text('title_ru').notNull(),
