@@ -21,6 +21,7 @@ import m0016 from './0016_core-lemmas.sql';
 import m0017 from './0017_card-management.sql';
 import m0018 from './0018_daily-quests.sql';
 import m0019 from './0019_encounter-token-index.sql';
+import m0020 from './0020_hotel.sql';
 
 export default {
   journal,
@@ -45,5 +46,6 @@ export default {
     m0017,
     m0018,
     m0019,
+    m0020,
   },
 };
