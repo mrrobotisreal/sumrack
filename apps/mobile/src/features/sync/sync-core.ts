@@ -10,6 +10,13 @@ import { SyncError } from './errors';
  * in sync-service.ts feeds it; unit tests exercise it directly.
  */
 
+/**
+ * T89 (HOTEL_PATH D18): packs the app has retired. Their manifest entries are
+ * ignored by the diff, so a retired pack is never reinstalled — even while the
+ * manifest still lists it (CT097 removes it from the manifest for good).
+ */
+export const RETIRED_PACKS: ReadonlySet<string> = new Set(['a1-checkpoint-001']);
+
 export interface ManifestDiff {
   /** In the manifest, not installed at all. */
   toInstall: ManifestEntry[];
@@ -59,6 +66,7 @@ export function diffManifest(manifest: Manifest, installed: SyncStateRow[]): Man
   };
 
   for (const entry of manifest.packs) {
+    if (RETIRED_PACKS.has(entry.id)) continue;
     if (localIds.has(entry.id)) {
       diff.localCollisions.push(entry);
       continue;

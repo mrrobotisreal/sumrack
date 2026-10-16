@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { normalizeRu, toFtsQuery } from '../normalize';
 import {
@@ -107,6 +107,9 @@ export function createContentRepo(db: SumrakDB) {
         })
         .from(stories)
         .innerJoin(packs, eq(stories.packId, packs.id))
+        // T89 (HOTEL_PATH §3): course packs are never a reader/library surface —
+        // their stories stay out of every story list (Library, Today, continue).
+        .where(ne(packs.type, 'course'))
         .orderBy(asc(stories.packId), asc(stories.orderIdx));
       return rows.map((r) => ({
         ...r.story,

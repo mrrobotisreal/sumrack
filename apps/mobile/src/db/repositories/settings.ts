@@ -115,6 +115,15 @@ export const SETTING_KEYS = {
    */
   hotelSfx: 'hotel.sfx',
   /**
+   * boolean (T89, D18): the one-time retirement of `a1-checkpoint-001` has run.
+   * Set after `removePack` in the bootstrap; never cleared (the pack is gone for good).
+   */
+  hotelRetiredCheckpoint: 'hotel.retiredCheckpoint',
+  /**
+   * number (T89): the last floor Mitch was on in the hotel (the lift's resume point).
+   */
+  hotelLastFloor: 'hotel.lastFloor',
+  /**
    * Словарь sort (T50, WORD_FORMS §2.4): { v: 1, key: BankSortKey,
    * familiarity: 'least' | 'most' }, defaults { 'added-asc', 'least' } —
    * Zod-validated on read (store/bank-prefs.ts); a malformed value heals

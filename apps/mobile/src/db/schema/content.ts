@@ -633,6 +633,53 @@ export const exams = sqliteTable(
 );
 
 /**
+ * Course floors (T89, HOTEL_PATH §2–§3): one row per `course` pack — the whole
+ * validated `pack.course` object as JSON (the `exams` precedent: new unit/card
+ * fields need no migration). The course repo Zod-parses `json` on read
+ * (`CourseSchema`). Stories of a course pack go through the ordinary story
+ * path; user data (`course_progress` / `course_attempts`) references
+ * `packId` / `unitId` / `itemId` as plain strings and survives reimport/removal.
+ */
+export const courseFloors = sqliteTable(
+  'course_floors',
+  {
+    packId: text('pack_id')
+      .primaryKey()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    /** The course family ('torfl' today; D20). */
+    ladder: text('ladder').notNull(),
+    level: text('level').$type<'A1' | 'A2' | 'B1' | 'B2' | 'C1'>().notNull(),
+    /** 0 = Вестибюль; 1–12, 14, 15 are the panel floors (no 13). */
+    floor: integer('floor').notNull(),
+    titleRu: text('title_ru').notNull(),
+    titleEn: text('title_en').notNull(),
+    /** `JSON.stringify(CourseSchema.parse(pack.course))` — Zod-parsed on read. */
+    json: text('json').notNull(),
+  },
+  (t) => [index('course_floors_ladder_idx').on(t.ladder, t.level, t.floor)],
+);
+
+/**
+ * Course items (T89): one row per `pack.items[i]` of a course pack — the
+ * scored and check items the units and floor exams reference by id. The item
+ * JSON is Zod-parsed on read (`CourseItemSchema`). Pack-scoped PK; cascades
+ * with its pack like every content table.
+ */
+export const courseItems = sqliteTable(
+  'course_items',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    itemId: text('item_id').notNull(),
+    kind: text('kind').notNull(),
+    topic: text('topic').notNull(),
+    json: text('json').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.itemId] })],
+);
+
+/**
  * Reference lemma lists (T38, V2 §7.7) — one row per list entry of a
  * `reference` pack's `lemmaLists`. `lemmaNorm` is the T03 fold (NFC +
  * lowercase + ё→е) so the coverage join against `tokens.lemma_norm` /

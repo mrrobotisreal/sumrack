@@ -6,6 +6,7 @@ import pack1 from '@sumrak/schema/fixtures/packs/a1-creepypasta-001/pack.json';
 import pack2 from '@sumrak/schema/fixtures/packs/a1-creepypasta-002/pack.json';
 import pack3 from '@sumrak/schema/fixtures/packs/a1-prompts-001/pack.json';
 
+import { retireCheckpointOnce } from '@/features/hotel/retire-checkpoint';
 import { initAnalyticsSink, track } from '@/services/analytics';
 
 import { importPack, reimportLocalPacks } from './importer';
@@ -72,6 +73,16 @@ export async function runBootstrap(db: SumrakDB, repos: Repositories): Promise<v
       // A broken bundled pack must never brick app start; surface loudly in dev.
       console.error(`[bootstrap] failed to import bundled pack ${packId}`, err);
     }
+  }
+
+  // T89 (D18): one-time retirement of the old Путь checkpoint pack. Idempotent
+  // (the settings flag), and it keeps every checkpoint_results row.
+  try {
+    if (await retireCheckpointOnce(db)) {
+      console.log('[bootstrap] retired a1-checkpoint-001 (M25 hotel)');
+    }
+  } catch (err) {
+    console.error('[bootstrap] checkpoint retirement failed (non-fatal)', err);
   }
 
   // T28: if a restore or interrupted commit left `imported_packs` rows

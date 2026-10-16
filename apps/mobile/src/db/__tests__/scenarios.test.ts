@@ -78,6 +78,7 @@ describe('scenario pack import', () => {
       scenarios: 1,
       exams: 0,
       lemmas: 0,
+      courseItems: 0,
       sentences: 54,
       tokens: 298,
     });

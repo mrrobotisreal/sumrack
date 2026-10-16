@@ -686,6 +686,58 @@ export const examItemCards = sqliteTable(
 );
 
 /**
+ * Hotel course progress (T89, HOTEL_PATH §3): one row per unit
+ * (`${packId}:${unitId}`) or per floor exam / экстерн (`${packId}:floor`).
+ * `packId` / `unitId` are unenforced content refs — progress survives a pack
+ * update or removal (the T68 rule). `passedVia` is 'course' for a floor passed
+ * by its exam and 'extern' for a floor passed by экстерн or the D12 cascade.
+ * Cooldown and best-score rules live in `features/hotel/hotel-model.ts`; the
+ * repo writes whatever the model decides.
+ */
+export const courseProgress = sqliteTable(
+  'course_progress',
+  {
+    key: text('key').primaryKey(),
+    packId: text('pack_id').notNull(),
+    /** NULL for the floor row. */
+    unitId: text('unit_id'),
+    bestPercent: integer('best_percent').notNull().default(0),
+    passedAt: integer('passed_at'),
+    passedVia: text('passed_via').$type<'course' | 'extern'>(),
+    attempts: integer('attempts').notNull().default(0),
+    lastAttemptAt: integer('last_attempt_at'),
+    cooldownUntil: integer('cooldown_until'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [index('course_progress_pack_idx').on(t.packId)],
+);
+
+/**
+ * Hotel course attempts (T89): one sitting of a unit exercise, a floor exam or
+ * an экстерн. `itemIds` is the drawn item list in order (JSON string[]);
+ * `responsesJson` maps item id → `{ answer, correct, half? }` (JSON). An
+ * unfinished row (`finishedAt` NULL) is a resumable sitting after a kill.
+ */
+export const courseAttempts = sqliteTable(
+  'course_attempts',
+  {
+    id: text('id').primaryKey(),
+    packId: text('pack_id').notNull(),
+    unitId: text('unit_id'),
+    kind: text('kind').$type<'unit' | 'floor' | 'extern'>().notNull(),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at'),
+    percent: integer('percent'),
+    passed: integer('passed', { mode: 'boolean' }),
+    /** JSON string[] — the drawn items, in order. */
+    itemIds: text('item_ids').notNull(),
+    /** JSON `{ [itemId]: { answer, correct, half? } }`. */
+    responsesJson: text('responses_json').notNull(),
+  },
+  (t) => [index('course_attempts_pack_idx').on(t.packId, t.unitId, t.startedAt)],
+);
+
+/**
  * Acknowledged leeches (T38). A card whose recent history trips the leech
  * rule (features/dashboard/leeches.ts) can be dismissed from the inbox; it
  * stays suppressed until it earns an `Again` reviewed AFTER `dismissedAt`

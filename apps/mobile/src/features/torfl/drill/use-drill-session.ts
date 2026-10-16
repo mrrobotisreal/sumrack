@@ -10,6 +10,7 @@ import {
   recordExamDeckSession,
   recordExamDrillFinished,
 } from '@/features/motivation/service';
+import { courseDrillEntry } from '@/features/hotel/course-drill';
 import { trackTorfl } from '@/services/analytics';
 import { logError } from '@/services/error-log';
 
@@ -293,10 +294,18 @@ async function buildQueue(
     const exams = new Map<string, Awaited<ReturnType<typeof repos.exams.getExam>>>();
     const out: DrillEntry[] = [];
     for (const card of cards) {
-      const key = `${card.packId}/${card.examId}`;
-      if (!exams.has(key)) exams.set(key, await repos.exams.getExam(card.packId, card.examId));
-      const entry = entryForDeckCard(card, exams.get(key) ?? null);
-      if (entry) out.push(entry);
+      // T89 (decision 9): a hotel course card resolves its item from course_items.
+      // A missing item is skipped, as a removed exam item is (§12).
+      if (card.examId === 'course') {
+        const item = await repos.course.getItem(card.packId, card.itemId);
+        const entry = item ? courseDrillEntry(card.packId, item, card.subtestKind) : null;
+        if (entry) out.push(entry);
+      } else {
+        const key = `${card.packId}/${card.examId}`;
+        if (!exams.has(key)) exams.set(key, await repos.exams.getExam(card.packId, card.examId));
+        const entry = entryForDeckCard(card, exams.get(key) ?? null);
+        if (entry) out.push(entry);
+      }
       if (out.length >= DECK_SESSION_MAX) break;
     }
     return { entries: out, skipped: none };
