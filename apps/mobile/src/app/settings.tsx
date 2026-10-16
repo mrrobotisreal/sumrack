@@ -258,6 +258,15 @@ export default function SettingsScreen() {
                 <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
               </Pressable>
             </Link>
+            <Link href="/dev-lift" asChild>
+              <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Lift gallery</Text>
+                  <Text variant="caption">Hotel lift doors, indicator, flicker and drop (T91)</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
             <Link href="/dev-scene" asChild>
               <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
                 <View className="gap-0.5">

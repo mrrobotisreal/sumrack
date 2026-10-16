@@ -34,6 +34,11 @@
     --level-b1: 117 104 61; /* #75683D dry olive */
     --level-b2: 130 85 47; /* #82552F rust */
     --level-c1: 160 56 40; /* #A03828 ember (= accent) */
+    /* M25 hotel lift (T91): the indicator plate and glow. Mitch has no light mode, so light mirrors dark. */
+    --hotel-glow: 255 179 71; /* #ffb347 amber indicator glow */
+    --hotel-glow-dim: 176 120 48; /* #B07830 dim amber (the unlit digits and the pulse trough) */
+    --hotel-brass: 192 150 88; /* #C09658 brass ring and button rim */
+    --hotel-plate: 24 16 12; /* #18100C dark brass plate behind the indicator */
   }
 
   /* Dark — near-black, desaturated ember (default identity) */
@@ -56,5 +61,10 @@
     --level-b1: 143 133 90; /* #8F855A dry olive */
     --level-b2: 156 107 69; /* #9C6B45 rust */
     --level-c1: 179 64 47; /* #B3402F ember (= accent) */
+    /* M25 hotel lift (T91): the indicator plate and glow. */
+    --hotel-glow: 255 179 71; /* #ffb347 amber indicator glow */
+    --hotel-glow-dim: 176 120 48; /* #B07830 dim amber (the unlit digits and the pulse trough) */
+    --hotel-brass: 192 150 88; /* #C09658 brass ring and button rim */
+    --hotel-plate: 24 16 12; /* #18100C dark brass plate behind the indicator */
   }
 }

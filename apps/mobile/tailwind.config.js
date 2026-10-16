@@ -36,6 +36,11 @@ module.exports = {
         'level-b1': 'rgb(var(--level-b1) / <alpha-value>)',
         'level-b2': 'rgb(var(--level-b2) / <alpha-value>)',
         'level-c1': 'rgb(var(--level-c1) / <alpha-value>)',
+        // M25 hotel lift (T91): indicator glow, dim glow, brass rim, plate.
+        'hotel-glow': 'rgb(var(--hotel-glow) / <alpha-value>)',
+        'hotel-glow-dim': 'rgb(var(--hotel-glow-dim) / <alpha-value>)',
+        'hotel-brass': 'rgb(var(--hotel-brass) / <alpha-value>)',
+        'hotel-plate': 'rgb(var(--hotel-plate) / <alpha-value>)',
       },
       fontFamily: {
         // UI chrome: Golos Text (Cyrillic-friendly, used for the Russian tab titles)
