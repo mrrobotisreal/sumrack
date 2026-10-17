@@ -54,6 +54,13 @@ export const SETTING_KEYS = {
   lastSyncCheckAt: 'sync.lastCheckAt',
   /** Narration playback prefs (T10): { rate } — validated on read in use-narration. */
   narrationPrefs: 'narration.prefs',
+  /**
+   * M26/T96: per-pack listen resume positions `{ v: 1, byPack }` — Zod-healed on
+   * read (features/listen/progress); rides the settings table into the backup.
+   */
+  listenProgress: 'listen.progress',
+  /** M26/T96: listen player prefs `{ v: 1, rate, volume, muted }` — Zod-healed on read. */
+  listenPrefs: 'listen.prefs',
   /** Study soundtrack: { enabled, volume (0–1), playDuringNarration }. */
   ambientAudio: 'audio.ambient',
   /**
@@ -108,6 +115,26 @@ export const SETTING_KEYS = {
    * (store/library-expansion.ts); malformed heals to [] (all collapsed).
    */
   libraryExpanded: 'library.expanded',
+  /**
+   * boolean (T91, default true): the hotel lift's sound effects (doors,
+   * ride, the 13 flicker, the drop). Off = the lift stays silent; haptics and
+   * visuals still run. Read by features/hotel/lift/lift-sfx.ts.
+   */
+  hotelSfx: 'hotel.sfx',
+  /**
+   * boolean (T89, D18): the one-time retirement of `a1-checkpoint-001` has run.
+   * Set after `removePack` in the bootstrap; never cleared (the pack is gone for good).
+   */
+  hotelRetiredCheckpoint: 'hotel.retiredCheckpoint',
+  /**
+   * number (T89): the last floor Mitch was on in the hotel (the lift's resume point).
+   */
+  hotelLastFloor: 'hotel.lastFloor',
+  /**
+   * `{ [packId:unitId]: cardIndex }` (T90): where the learner stopped in each
+   * unit's lesson. Parsed defensively by features/hotel/lesson/lesson-model.ts.
+   */
+  hotelLessonPos: 'hotel.lessonPos',
   /**
    * Словарь sort (T50, WORD_FORMS §2.4): { v: 1, key: BankSortKey,
    * familiarity: 'least' | 'most' }, defaults { 'added-asc', 'least' } —

@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { sql } from 'drizzle-orm';
+import { Asset } from 'expo-asset';
 import { Directory, File, Paths } from 'expo-file-system';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
@@ -71,6 +72,12 @@ const FIXTURE_PACKS = [
   // files/packs/core-lemmas-fixture/pack.json (e.g. the real core-lemmas-001 before its
   // push) wins over the bundled copy, like the exam fixture.
   { id: 'core-lemmas-fixture', note: 'reference · core-a1 10 · core-a2 5 lemmas' },
+  // T89 (M25): the hotel course fixture — one floor (floor 3, two units + floor exam).
+  // Dev import only; it must never survive on a phone that holds Mitch's data.
+  { id: 'a1-hotel-fixture', note: 'course · floor 3 · 2 units · 34 items' },
+  // T95 (M26): the three-part «listen to the whole story» fixture — real Opus part files plus the
+  // stitched full file, bundled and staged on import. Dev import only (device data hygiene).
+  { id: 'a1-listen-fixture', note: 'stories · 3 parts + stitched full track (5.9 s)' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -90,7 +97,41 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
     require('@sumrak/schema/fixtures/packs/a2-torfl-prompts-fixture/pack.json'),
   'core-lemmas-fixture': () =>
     require('@sumrak/schema/fixtures/packs/core-lemmas-fixture/pack.json'),
+  'a1-hotel-fixture': () => require('@sumrak/schema/fixtures/packs/a1-hotel-fixture/pack.json'),
+  'a1-listen-fixture': () => require('@sumrak/schema/fixtures/packs/a1-listen-fixture/pack.json'),
 };
+
+/** T95: bundled audio for fixtures that ship real files (pack-relative path → asset module). Lazy: `require` runs on call. */
+const FIXTURE_AUDIO: Partial<Record<FixtureId, () => Record<string, number>>> = {
+  'a1-listen-fixture': () => ({
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    'audio/lf-p1.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p1.opus'),
+    'audio/lf-p2.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p2.opus'),
+    'audio/lf-p3.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p3.opus'),
+    'audio/a1-listen-fixture-full.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/a1-listen-fixture-full.opus'),
+    /* eslint-enable @typescript-eslint/no-require-imports */
+  }),
+};
+
+/** Copy a fixture's bundled audio into documentDirectory/packs/<id>/… and return the importer's uri map. */
+async function stageFixtureAudio(id: FixtureId): Promise<Record<string, string>> {
+  const bundled = FIXTURE_AUDIO[id]?.();
+  if (!bundled) return {};
+  const staged: Record<string, string> = {};
+  for (const [relPath, moduleId] of Object.entries(bundled)) {
+    const asset = Asset.fromModule(moduleId);
+    await asset.downloadAsync();
+    if (!asset.localUri) continue;
+    const parts = relPath.split('/');
+    const fileName = parts.pop()!;
+    const dir = new Directory(Paths.document, 'packs', id, ...parts);
+    if (!dir.exists) dir.create({ intermediates: true });
+    const dest = new File(dir, fileName);
+    if (!dest.exists) new File(asset.localUri).copy(dest);
+    staged[relPath] = dest.uri;
+  }
+  return staged;
+}
 
 const EXAM_FIXTURE_ID = 'a1-exam-fixture';
 const LEXICON_FIXTURE_ID = 'a1-torfl-lexicon-fixture';
@@ -98,6 +139,14 @@ const PROMPTS_FIXTURE_ID = 'a1-torfl-prompts-fixture';
 // T75 (M19): the A2 exam + prompts fixtures.
 const A2_EXAM_FIXTURE_ID = 'a2-exam-fixture';
 const A2_PROMPTS_FIXTURE_ID = 'a2-torfl-prompts-fixture';
+
+/** T89 dev readout: installed course floors, item count, progress rows and the last attempts. */
+interface HotelReadout {
+  floors: Awaited<ReturnType<typeof repos.course.listFloors>>;
+  items: number;
+  progress: Awaited<ReturnType<typeof repos.course.getProgress>>;
+  attempts: Awaited<ReturnType<typeof repos.course.listAttempts>>;
+}
 
 /** T68 dev readout: installed exams + the last 5 attempts + response counts + deck counts. */
 interface ExamReadout {
@@ -319,6 +368,30 @@ export default function DevDbScreen() {
     const runs = await repos.scenarios.listRuns(undefined, { limit: 5 });
     setScenarioReadout({ families, perRung, runs });
   }, []);
+  // --- T89 «Hotel» readout (read-only) ----------------------------------------
+  const [hotelReadout, setHotelReadout] = React.useState<HotelReadout | null>(null);
+  const refreshHotel = React.useCallback(async () => {
+    const floors = await repos.course.listFloors({ ladder: 'torfl', level: 'A1' });
+    const progress = await repos.course.getProgress();
+    const attempts = await repos.course.listAttempts({ limit: 5 });
+    const items = await repos.course.countItems();
+    setHotelReadout({ floors, items, progress, attempts });
+  }, []);
+  React.useEffect(() => {
+    void refreshHotel();
+  }, [refreshHotel]);
+
+  // --- T95 «Full tracks» readout (read-only) -------------------------------
+  const [fullTracks, setFullTracks] = React.useState<Awaited<
+    ReturnType<typeof repos.listen.countFullTracks>
+  > | null>(null);
+  const refreshFullTracks = React.useCallback(async () => {
+    setFullTracks(await repos.listen.countFullTracks());
+  }, []);
+  React.useEffect(() => {
+    void refreshFullTracks();
+  }, [refreshFullTracks]);
+
   // --- T68 «Exams» readout + dev actions ------------------------------------
   const [examReadout, setExamReadout] = React.useState<ExamReadout | null>(null);
   const [examLog, setExamLog] = React.useState<string | null>(null);
@@ -583,6 +656,7 @@ export default function DevDbScreen() {
         const result: ImportResult = await importPack(db, planted ?? FIXTURE_JSON[id](), {
           source: 'bundled',
           origin: 'remote',
+          audioFiles: await stageFixtureAudio(id),
         });
         let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
         if (result.counts.lemmas > 0)
@@ -623,18 +697,31 @@ export default function DevDbScreen() {
           queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
           queryClient.invalidateQueries({ queryKey: queryKeys.scenarios }),
           queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
+          queryClient.invalidateQueries({ queryKey: ['hotel'] }),
           invalidateExams(),
         ]);
         await refreshScenarios();
         await refreshExams();
+        await refreshFullTracks();
       } catch (err) {
         setFixtureStatus((s) => ({ ...s, [id]: `failed: ${String(err)}` }));
       } finally {
         setBusy(null);
       }
     },
-    [busy, queryClient, refreshScenarios, refreshExams],
+    [busy, queryClient, refreshScenarios, refreshExams, refreshFullTracks],
   );
+
+  // Device walks (T93): `sumrak://dev-db?import=<fixture-id>` imports that fixture on mount, so a
+  // QA session does not have to scroll this long screen. __DEV__-only like the rest of the screen.
+  const { import: importParam } = useLocalSearchParams<{ import?: string }>();
+  const autoImported = React.useRef(false);
+  React.useEffect(() => {
+    if (!__DEV__ || autoImported.current || !importParam) return;
+    if (!FIXTURE_PACKS.some((f) => f.id === importParam)) return;
+    autoImported.current = true;
+    void importFixture(importParam as FixtureId);
+  }, [importParam, importFixture]);
   // Built-in FTS smoke test: known fixture lemma «стена» queried as "стена"
   // and ё-folded «чёрный» queried as "черный" — proves FTS5 MATCH works
   // on-device with ё/е tolerance without needing Cyrillic keyboard input.
@@ -922,6 +1009,50 @@ export default function DevDbScreen() {
             <Text variant="caption">No runs yet.</Text>
           )}
         </View>
+      </View>
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Hotel (M25 · T89)
+        </Text>
+        <View className="gap-2">
+          {hotelReadout?.floors.map((f) => (
+            <View key={f.packId} className="rounded-xl border border-border bg-surface p-3">
+              <Text className="font-ui-medium">
+                Этаж {f.floor} · {f.title.ru}
+              </Text>
+              <Text variant="caption" selectable>
+                {f.packId} · {f.unitCount} units · {f.course.floorExam?.size ?? 0} exam items
+              </Text>
+            </View>
+          ))}
+          {hotelReadout && hotelReadout.floors.length === 0 && (
+            <Text variant="caption">
+              No course floors installed — import a1-hotel-fixture above.
+            </Text>
+          )}
+        </View>
+        <Text variant="caption" className="mt-2" selectable>
+          {hotelReadout
+            ? `items ${hotelReadout.items} · progress rows ${hotelReadout.progress.length} · attempts (last 5) ${hotelReadout.attempts.length}`
+            : '…'}
+        </Text>
+        {hotelReadout?.progress.map((p) => (
+          <Text key={p.key} variant="caption" selectable>
+            {p.key} · best {p.bestPercent}% · passedVia {p.passedVia ?? '—'} · attempts {p.attempts}
+          </Text>
+        ))}
+      </View>
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Full tracks (M26 · T95)
+        </Text>
+        <Text variant="caption" selectable>
+          {fullTracks
+            ? `full audio: ${fullTracks.fullWithUri} with uri / ${fullTracks.fullWithoutUri} without · covers: ${fullTracks.coverWithUri} with uri / ${fullTracks.coverWithoutUri} without`
+            : '…'}
+        </Text>
       </View>
 
       <View>

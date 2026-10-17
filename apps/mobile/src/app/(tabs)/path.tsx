@@ -1,5 +1,5 @@
-import { PathScreen } from '@/features/path/path-screen';
+import { HotelScreen } from '@/features/hotel/hotel-screen';
 
 export default function PathTab() {
-  return <PathScreen />;
+  return <HotelScreen />;
 }

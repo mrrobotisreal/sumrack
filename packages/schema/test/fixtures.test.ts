@@ -16,6 +16,16 @@ describe('sample pack fixtures', () => {
     expect(pack.stories[0]!.sentences.length).toBeGreaterThanOrEqual(8);
   });
 
+  it('T94 a1-listen-fixture validates with a real stitched full-story track', () => {
+    const pack = loadPack('a1-listen-fixture');
+    expect(pack.stories).toHaveLength(3);
+    const full = pack.fullStory!;
+    expect(full.segments.map((s) => s.storyId)).toEqual(pack.stories.map((s) => s.id));
+    expect(full.gapMs).toBe(1200);
+    expect(pack.cover).toBeUndefined();
+    expect(statSync(join(packDir(pack.id), full.file)).size).toBeGreaterThan(0);
+  });
+
   it('a1-creepypasta-002 («Фотография») validates', () => {
     const pack = loadPack('a1-creepypasta-002');
     expect(pack.stories[0]!.sentences.length).toBeGreaterThanOrEqual(8);

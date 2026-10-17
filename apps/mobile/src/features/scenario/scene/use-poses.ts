@@ -11,7 +11,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { useAmbientValue } from '@/features/path/scenes/layers';
+import { useAmbientValue } from './layers';
 
 import {
   BLINK_GAPS_MS,

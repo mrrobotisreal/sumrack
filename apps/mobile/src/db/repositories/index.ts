@@ -4,11 +4,13 @@ import type { SumrakDB } from '../types';
 import { createBankRepo } from './bank';
 import { createBookmarksRepo } from './bookmarks';
 import { createContentRepo } from './content';
+import { createCourseRepo } from './course';
 import { createDashboardRepo } from './dashboard';
 import { createDialoguesRepo } from './dialogues';
 import { createExamsRepo } from './exams';
 import { createImportsRepo } from './imports';
 import { createJournalRepo } from './journal';
+import { createListenRepo } from './listen';
 import { createPathRepo } from './path';
 import { createQuestsRepo } from './quests';
 import { createReadingRepo } from './reading';
@@ -33,6 +35,7 @@ export function createRepositories(db: SumrakDB) {
   const reviews = createReviewsRepo(db);
   return {
     content: createContentRepo(db),
+    course: createCourseRepo(db),
     bank: createBankRepo(db, {
       afterAdd: async (item) => {
         await reviews.ensureCards(item.id);
@@ -52,6 +55,7 @@ export function createRepositories(db: SumrakDB) {
     exams: createExamsRepo(db),
     imports: createImportsRepo(db),
     journal: createJournalRepo(db),
+    listen: createListenRepo(db),
     path: createPathRepo(db),
     quests: createQuestsRepo(db),
     reading: createReadingRepo(db),
@@ -68,11 +72,13 @@ export type Repositories = ReturnType<typeof createRepositories>;
 export * from './bank';
 export * from './bookmarks';
 export * from './content';
+export * from './course';
 export * from './dashboard';
 export * from './dialogues';
 export * from './exams';
 export * from './imports';
 export * from './journal';
+export * from './listen';
 export * from './path';
 export * from './reading';
 export * from './reviews';

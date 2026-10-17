@@ -1,0 +1,2641 @@
+{
+  "id": "a1-hotel-fixture",
+  "version": 1,
+  "type": "course",
+  "title": {
+    "ru": "Отель «Сумрак»: тестовый этаж",
+    "en": "Hotel Sumrak: fixture floor"
+  },
+  "level": "A1",
+  "tags": [
+    "torfl",
+    "torfl:fixture",
+    "hotel"
+  ],
+  "stories": [
+    {
+      "id": "floor-exam",
+      "title": {
+        "ru": "Экзамен этажа",
+        "en": "Floor exam"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "fe01s01",
+          "ru": "Я живу в большом городе.",
+          "en": "I live in a big city.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живу",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "большом",
+              "lemma": "большой",
+              "translation": "big",
+              "pos": "adj",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "городе",
+              "lemma": "город",
+              "translation": "city",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s02",
+          "ru": "Мой брат работает на почте.",
+          "en": "My brother works at the post office.",
+          "tokens": [
+            {
+              "text": "Мой",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "брат",
+              "lemma": "брат",
+              "translation": "brother",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "работает",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "3sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "почте",
+              "lemma": "почта",
+              "translation": "post office",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s03",
+          "ru": "Мы говорим о работе.",
+          "en": "We are talking about work.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "говорим",
+              "lemma": "говорить",
+              "translation": "talk",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "работе",
+              "lemma": "работа",
+              "translation": "work",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s04",
+          "ru": "Она в школе.",
+          "en": "She is at school.",
+          "tokens": [
+            {
+              "text": "Она",
+              "lemma": "она",
+              "translation": "she",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "школе",
+              "lemma": "школа",
+              "translation": "school",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s05",
+          "ru": "Я на уроке.",
+          "en": "I am in class.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "уроке",
+              "lemma": "урок",
+              "translation": "class",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s06",
+          "ru": "Он живёт в доме.",
+          "en": "He lives in a house.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живёт",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "3sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "доме",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s07",
+          "ru": "Мы сидим на кухне.",
+          "en": "We sit in the kitchen.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "сидим",
+              "lemma": "сидеть",
+              "translation": "sit",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "кухне",
+              "lemma": "кухня",
+              "translation": "kitchen",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s08",
+          "ru": "Я думаю о доме.",
+          "en": "I think about home.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думаю",
+              "lemma": "думать",
+              "translation": "think",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "доме",
+              "lemma": "дом",
+              "translation": "home",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s09",
+          "ru": "Это моя комната.",
+          "en": "This is my room.",
+          "tokens": [
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "this",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "моя",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "комната",
+              "lemma": "комната",
+              "translation": "room",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "fe01s10",
+          "ru": "Мы гуляем в парке.",
+          "en": "We walk in the park.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "гуляем",
+              "lemma": "гулять",
+              "translation": "walk",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "парке",
+              "lemma": "парк",
+              "translation": "park",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "u1-ex",
+      "title": {
+        "ru": "Где? Ответ: в + предложный",
+        "en": "Where? Answer: в + prepositional"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "u1s01",
+          "ru": "Я живу в большом городе.",
+          "en": "I live in a big city.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живу",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "большом",
+              "lemma": "большой",
+              "translation": "big",
+              "pos": "adj",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "городе",
+              "lemma": "город",
+              "translation": "city",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s02",
+          "ru": "Мой брат работает в банке.",
+          "en": "My brother works at a bank.",
+          "tokens": [
+            {
+              "text": "Мой",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "брат",
+              "lemma": "брат",
+              "translation": "brother",
+              "pos": "noun",
+              "grammar": "m.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "работает",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "3sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "банке",
+              "lemma": "банк",
+              "translation": "bank",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s03",
+          "ru": "Мы говорим о школе.",
+          "en": "We are talking about school.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "говорим",
+              "lemma": "говорить",
+              "translation": "talk",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "школе",
+              "lemma": "школа",
+              "translation": "school",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s04",
+          "ru": "Она живёт на улице Мира.",
+          "en": "She lives on Mira Street.",
+          "tokens": [
+            {
+              "text": "Она",
+              "lemma": "она",
+              "translation": "she",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живёт",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "3sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "улице",
+              "lemma": "улица",
+              "translation": "street",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Мира",
+              "lemma": "мир",
+              "translation": "Mira",
+              "pos": "noun",
+              "grammar": "f.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s05",
+          "ru": "Мы сидим в кафе.",
+          "en": "We sit in a café.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "сидим",
+              "lemma": "сидеть",
+              "translation": "sit",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "кафе",
+              "lemma": "кафе",
+              "translation": "café",
+              "pos": "noun",
+              "grammar": "indecl.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s06",
+          "ru": "Я читаю о Москве.",
+          "en": "I read about Moscow.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "читаю",
+              "lemma": "читать",
+              "translation": "read",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Москве",
+              "lemma": "Москва",
+              "translation": "Moscow",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s07",
+          "ru": "Он был в театре вчера.",
+          "en": "He was at the theatre yesterday.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "был",
+              "lemma": "быть",
+              "translation": "was",
+              "pos": "verb",
+              "grammar": "m.sg. past",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "театре",
+              "lemma": "театр",
+              "translation": "theatre",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "вчера",
+              "lemma": "вчера",
+              "translation": "yesterday",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s08",
+          "ru": "В доме есть большая кухня.",
+          "en": "In the house there is a big kitchen.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "доме",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "есть",
+              "lemma": "есть",
+              "translation": "there is",
+              "pos": "verb",
+              "level": "A1"
+            },
+            {
+              "text": "большая",
+              "lemma": "большой",
+              "translation": "big",
+              "pos": "adj",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "кухня",
+              "lemma": "кухня",
+              "translation": "kitchen",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s09",
+          "ru": "Я думаю о работе.",
+          "en": "I think about work.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "думаю",
+              "lemma": "думать",
+              "translation": "think",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "о",
+              "lemma": "о",
+              "translation": "about",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "работе",
+              "lemma": "работа",
+              "translation": "work",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s10",
+          "ru": "Это моя комната в гостинице.",
+          "en": "This is my room in the hotel.",
+          "tokens": [
+            {
+              "text": "Это",
+              "lemma": "это",
+              "translation": "this",
+              "pos": "pron",
+              "level": "A1"
+            },
+            {
+              "text": "моя",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "комната",
+              "lemma": "комната",
+              "translation": "room",
+              "pos": "noun",
+              "grammar": "f.sg. nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "гостинице",
+              "lemma": "гостиница",
+              "translation": "hotel",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s11",
+          "ru": "Он живёт в Киеве.",
+          "en": "He lives in Kyiv.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живёт",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "3sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "Киеве",
+              "lemma": "Киев",
+              "translation": "Kyiv",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u1s12",
+          "ru": "Мы гуляем в парке.",
+          "en": "We walk in the park.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "гуляем",
+              "lemma": "гулять",
+              "translation": "walk",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "парке",
+              "lemma": "парк",
+              "translation": "park",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "u2-ex",
+      "title": {
+        "ru": "В или на",
+        "en": "в or на"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "u2s01",
+          "ru": "Я работаю на почте.",
+          "en": "I work at the post office.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "работаю",
+              "lemma": "работать",
+              "translation": "work",
+              "pos": "verb",
+              "grammar": "1sg. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "почте",
+              "lemma": "почта",
+              "translation": "post office",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s02",
+          "ru": "Мы живём на этаже пять.",
+          "en": "We live on floor five.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "живём",
+              "lemma": "жить",
+              "translation": "live",
+              "pos": "verb",
+              "grammar": "1pl. pres.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "on",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "этаже",
+              "lemma": "этаж",
+              "translation": "floor",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "пять",
+              "lemma": "пять",
+              "translation": "five",
+              "pos": "num",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s03",
+          "ru": "Я в школе.",
+          "en": "I am at school.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "школе",
+              "lemma": "школа",
+              "translation": "school",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s04",
+          "ru": "Он на концерте.",
+          "en": "He is at the concert.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "концерте",
+              "lemma": "концерт",
+              "translation": "concert",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s05",
+          "ru": "Она на вокзале.",
+          "en": "She is at the station.",
+          "tokens": [
+            {
+              "text": "Она",
+              "lemma": "она",
+              "translation": "she",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "вокзале",
+              "lemma": "вокзал",
+              "translation": "station",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s06",
+          "ru": "Мы в университете.",
+          "en": "We are at the university.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "университете",
+              "lemma": "университет",
+              "translation": "university",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s07",
+          "ru": "Я на уроке русского.",
+          "en": "I am in Russian class.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "уроке",
+              "lemma": "урок",
+              "translation": "class",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "русского",
+              "lemma": "русский",
+              "translation": "Russian",
+              "pos": "adj",
+              "grammar": "n.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s08",
+          "ru": "Он на работе.",
+          "en": "He is at work.",
+          "tokens": [
+            {
+              "text": "Он",
+              "lemma": "он",
+              "translation": "he",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "работе",
+              "lemma": "работа",
+              "translation": "work",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s09",
+          "ru": "Они на улице.",
+          "en": "They are outside.",
+          "tokens": [
+            {
+              "text": "Они",
+              "lemma": "они",
+              "translation": "they",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "outside",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "улице",
+              "lemma": "улица",
+              "translation": "street",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s10",
+          "ru": "Мы были в кино.",
+          "en": "We were at the cinema.",
+          "tokens": [
+            {
+              "text": "Мы",
+              "lemma": "мы",
+              "translation": "we",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "были",
+              "lemma": "быть",
+              "translation": "were",
+              "pos": "verb",
+              "grammar": "pl. past",
+              "level": "A1"
+            },
+            {
+              "text": "в",
+              "lemma": "в",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "кино",
+              "lemma": "кино",
+              "translation": "cinema",
+              "pos": "noun",
+              "grammar": "indecl.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s11",
+          "ru": "Вы на почте?",
+          "en": "Are you at the post office?",
+          "tokens": [
+            {
+              "text": "Вы",
+              "lemma": "вы",
+              "translation": "you",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "почте",
+              "lemma": "почта",
+              "translation": "post office",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "?",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "u2s12",
+          "ru": "Я на кухне.",
+          "en": "I am in the kitchen.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "на",
+              "lemma": "на",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "кухне",
+              "lemma": "кухня",
+              "translation": "kitchen",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "course": {
+    "ladder": "torfl",
+    "level": "A1",
+    "floor": 3,
+    "title": {
+      "ru": "Где? О чём?",
+      "en": "Where? About what?"
+    },
+    "subtitle": {
+      "ru": "Предложный падеж",
+      "en": "Prepositional case"
+    },
+    "gate": {
+      "passPercent": 80,
+      "extern": {
+        "passPercent": 90
+      }
+    },
+    "practice": [
+      {
+        "packId": "a1-torfl-lexgram-001",
+        "examId": "lg-case-prep"
+      }
+    ],
+    "units": [
+      {
+        "id": "u1",
+        "title": {
+          "ru": "в + где?",
+          "en": "в + where?"
+        },
+        "summary": {
+          "en": "In + where takes the prepositional case: в + -е."
+        },
+        "cards": [
+          {
+            "id": "u1-x1",
+            "kind": "explain",
+            "title": {
+              "ru": "В + предложный: мужской и средний род",
+              "en": "In + prepositional: masculine and neuter"
+            },
+            "body": "The prepositional case (предложный падеж) answers the question где? (where?) after the preposition в.\nThe ending is -е for most masculine and neuter nouns (в городе, в банке, в доме).\nFeminine nouns ending in -а or -я change to -е (в школе, в кухне, в комнате).\nUse this card before every later floor: the trigger is в or о + the question где? or о чём?\n",
+            "table": {
+              "caption": "Окончания",
+              "header": [
+                "род",
+                "ending",
+                "пример"
+              ],
+              "rows": [
+                [
+                  "m.",
+                  "-е",
+                  "в банке"
+                ],
+                [
+                  "n.",
+                  "-е",
+                  "в кафе"
+                ],
+                [
+                  "f. -а/-я",
+                  "-е",
+                  "в школе"
+                ]
+              ]
+            },
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s01"
+                },
+                "highlight": [
+                  "городе"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s02"
+                },
+                "highlight": [
+                  "банке"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s03"
+                },
+                "highlight": [
+                  "школе"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s04"
+                },
+                "highlight": [
+                  "улице"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s05"
+                },
+                "highlight": [
+                  "кафе"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u1-k1",
+            "kind": "check",
+            "items": [
+              "u1-k01"
+            ]
+          },
+          {
+            "id": "u1-x2",
+            "kind": "explain",
+            "title": {
+              "ru": "В + предложный: -ия, -ий и местоимения",
+              "en": "In + prepositional: -ия, -ий and pronouns"
+            },
+            "body": "Nouns ending in -ия and -ий change to -и, not -е (в Италии, в музее).\nAdjectives agree with the noun, so the ending moves too (в большом городе, в моей комнате).\nPronouns change as well (в нём, о нём, в ней).\nCheck the case first: the form follows the question, not the other way round.\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s06"
+                },
+                "highlight": [
+                  "Москве"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s07"
+                },
+                "highlight": [
+                  "театре"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s08"
+                },
+                "highlight": [
+                  "доме"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s09"
+                },
+                "highlight": [
+                  "работе"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s10"
+                },
+                "highlight": [
+                  "гостинице"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u1-k2",
+            "kind": "check",
+            "items": [
+              "u1-k02"
+            ]
+          },
+          {
+            "id": "u1-tr",
+            "kind": "traps",
+            "title": {
+              "ru": "Ловушки",
+              "en": "Traps"
+            },
+            "pairs": [
+              {
+                "wrong": "Я живу в большой город.",
+                "right": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s01"
+                },
+                "reason": "the city takes -е after в: в городе, not город"
+              },
+              {
+                "wrong": "Мой брат работает в банк.",
+                "right": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s02"
+                },
+                "reason": "the bank takes -е after в: в банке"
+              },
+              {
+                "wrong": "Мы говорим о школа.",
+                "right": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s03"
+                },
+                "reason": "after о the feminine ending is -е: о школе"
+              }
+            ]
+          },
+          {
+            "id": "u1-ed",
+            "kind": "edge",
+            "title": {
+              "ru": "Тонкости",
+              "en": "Edge cases"
+            },
+            "body": "Some masculine nouns stress the ending in the prepositional (в лесу, в шкафу) — learn the stressed form as a unit.\nWords like «в году» and «в 2020 году» use the same case for time.\nDo not confuse в + prepositional (where) with в + accusative (direction): the accusative answers куда? (where to?).\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s11"
+                },
+                "highlight": [
+                  "Киеве"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "u1s12"
+                },
+                "highlight": [
+                  "парке"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u1-lib",
+            "kind": "library",
+            "quotes": [
+              {
+                "packId": "a1-no-end-house-001",
+                "storyId": "part-1",
+                "sentenceId": "nea1p1-s04",
+                "highlight": [
+                  "колледже"
+                ],
+                "why": "в + где? → предложный",
+                "text": "Мы дружили в колледже."
+              },
+              {
+                "packId": "a1-no-end-house-001",
+                "storyId": "part-1",
+                "sentenceId": "nea1p1-s08",
+                "highlight": [
+                  "квартире"
+                ],
+                "why": "в + где? → предложный (квартира → квартире)",
+                "text": "После колледжа я жил в маленькой квартире и видел Питера редко."
+              }
+            ]
+          }
+        ],
+        "exercises": {
+          "size": 4,
+          "pool": [
+            "u1-c01",
+            "u1-c02",
+            "u1-c03",
+            "u1-c04",
+            "u1-t01",
+            "u1-t02",
+            "u1-g01",
+            "u1-g02",
+            "u1-r01",
+            "u1-r02"
+          ]
+        }
+      },
+      {
+        "id": "u2",
+        "title": {
+          "ru": "в или на?",
+          "en": "в or на?"
+        },
+        "summary": {
+          "en": "In or on/at: the same case, a different preposition."
+        },
+        "cards": [
+          {
+            "id": "u2-x1",
+            "kind": "explain",
+            "title": {
+              "ru": "На + предложный: поверхность, почта, работа",
+              "en": "На + prepositional: surfaces, post office, work"
+            },
+            "body": "Both в and на often translate as \"in\" or \"at\", so the choice is a question of the place, not the grammar.\nUse в for an enclosed space or a building you are inside (в школе, в университете, в кино).\nUse на for a surface, a public place, an event or a floor (на почте, на работе, на концерте, на этаже).\nLearn the groups as lexis: на почте, на работе, на вокзале, на уроке, на улице.\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s01"
+                },
+                "highlight": [
+                  "почте"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s02"
+                },
+                "highlight": [
+                  "этаже"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s05"
+                },
+                "highlight": [
+                  "вокзале"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s08"
+                },
+                "highlight": [
+                  "работе"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s09"
+                },
+                "highlight": [
+                  "улице"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u2-k1",
+            "kind": "check",
+            "items": [
+              "u2-k01"
+            ]
+          },
+          {
+            "id": "u2-x2",
+            "kind": "explain",
+            "title": {
+              "ru": "В или на: места и события",
+              "en": "В or на: places and events"
+            },
+            "body": "The case is the same (prepositional) for both; only the preposition changes.\nSome words only take на: на этаже, на улице, на кухне (the room is treated as a surface here).\nWhen a place is both an office and a building, the everyday exam answer is на почте, на работе.\nCompare: в школе (inside the building) and на уроке (in class, an event).\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s03"
+                },
+                "highlight": [
+                  "школе"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s04"
+                },
+                "highlight": [
+                  "концерте"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s06"
+                },
+                "highlight": [
+                  "университете"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s07"
+                },
+                "highlight": [
+                  "уроке"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s10"
+                },
+                "highlight": [
+                  "кино"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u2-k2",
+            "kind": "check",
+            "items": [
+              "u2-k02"
+            ]
+          },
+          {
+            "id": "u2-tr",
+            "kind": "traps",
+            "title": {
+              "ru": "Ловушки",
+              "en": "Traps"
+            },
+            "pairs": [
+              {
+                "wrong": "Я работаю в почте.",
+                "right": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s01"
+                },
+                "reason": "почта takes на when it means the post office"
+              },
+              {
+                "wrong": "Я в концерте.",
+                "right": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s04"
+                },
+                "reason": "an event takes на: на концерте"
+              },
+              {
+                "wrong": "Она в вокзале.",
+                "right": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s05"
+                },
+                "reason": "вокзал takes на: на вокзале"
+              }
+            ]
+          },
+          {
+            "id": "u2-ed",
+            "kind": "edge",
+            "title": {
+              "ru": "Тонкости",
+              "en": "Edge cases"
+            },
+            "body": "The word «работа» takes на: на работе. Its plural is on the same pattern.\nSome pairs differ only by the preposition and the meaning changes: в концерте is not a normal phrase; на концерте is.\n«Почта» takes на when it means the post office: на почте.\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s11"
+                },
+                "highlight": [
+                  "почте"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u2-ex",
+                  "sentenceId": "u2s12"
+                },
+                "highlight": [
+                  "кухне"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "u2-lib",
+            "kind": "library",
+            "quotes": [
+              {
+                "packId": "a1-no-end-house-001",
+                "storyId": "part-2",
+                "sentenceId": "nea1p2-s11",
+                "highlight": [
+                  "гостинице"
+                ],
+                "why": "в + где? → предложный (гостиница → гостинице)",
+                "text": "Внутри — обычный холл, как в гостинице, только с украшениями на Хеллоуин."
+              },
+              {
+                "packId": "a1-no-end-house-001",
+                "storyId": "part-2",
+                "sentenceId": "nea1p2-s19",
+                "highlight": [
+                  "конце"
+                ],
+                "why": "в + где? → предложный (конец → конце)",
+                "text": "В конце комнаты — выход."
+              }
+            ]
+          }
+        ],
+        "exercises": {
+          "size": 4,
+          "pool": [
+            "u2-c01",
+            "u2-c02",
+            "u2-c03",
+            "u2-c04",
+            "u2-t01",
+            "u2-t02",
+            "u2-g01",
+            "u2-g02",
+            "u2-r01",
+            "u2-r02"
+          ]
+        }
+      }
+    ],
+    "floorExam": {
+      "size": 5,
+      "pool": [
+        "fe-c01",
+        "fe-c02",
+        "fe-c03",
+        "fe-c04",
+        "fe-c05",
+        "fe-t01",
+        "fe-t02",
+        "fe-g01",
+        "fe-r01",
+        "fe-r02"
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "u1-c01",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Я живу в … городе.",
+      "stemEn": "I live in a … city.",
+      "options": [
+        "большом",
+        "большой",
+        "большого",
+        "большую"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s01"
+      }
+    },
+    {
+      "id": "u1-c02",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Мой брат работает в …",
+      "stemEn": "My brother works at a …",
+      "options": [
+        "банке",
+        "банк",
+        "банка",
+        "банку"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s02"
+      }
+    },
+    {
+      "id": "u1-c03",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Мы говорим о …",
+      "stemEn": "We are talking about …",
+      "options": [
+        "школе",
+        "школа",
+        "школу",
+        "школой"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s03"
+      }
+    },
+    {
+      "id": "u1-c04",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Мы сидим в …",
+      "stemEn": "We sit in a café.",
+      "options": [
+        "кафе",
+        "кафо",
+        "кафу",
+        "кафом"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s05"
+      }
+    },
+    {
+      "id": "u1-t01",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "typed",
+      "prompt": "Я читаю о (Москва).",
+      "accept": [
+        "Москве"
+      ],
+      "half": [
+        "Москва"
+      ],
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s06"
+      }
+    },
+    {
+      "id": "u1-t02",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "typed",
+      "prompt": "Он был в (театр) вчера.",
+      "accept": [
+        "театре"
+      ],
+      "half": [
+        "театр"
+      ],
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s07"
+      }
+    },
+    {
+      "id": "u1-g01",
+      "topic": "case-prep",
+      "kind": "trigger",
+      "sentence": "Я читаю о Москве.",
+      "tokens": [
+        "Я",
+        "читаю",
+        "о",
+        "Москве"
+      ],
+      "answer": 2,
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s06"
+      }
+    },
+    {
+      "id": "u1-g02",
+      "topic": "case-prep",
+      "kind": "trigger",
+      "sentence": "Он был в театре вчера.",
+      "tokens": [
+        "Он",
+        "был",
+        "в",
+        "театре",
+        "вчера"
+      ],
+      "answer": 2,
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s07"
+      }
+    },
+    {
+      "id": "u1-r01",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Это мой брат. → Мы говорим о …",
+      "accept": [
+        "брате"
+      ],
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s09"
+      }
+    },
+    {
+      "id": "u1-r02",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Это моя комната. → Я думаю о …",
+      "accept": [
+        "комнате"
+      ],
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s10"
+      }
+    },
+    {
+      "id": "u1-k01",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Он живёт в … (Киев).",
+      "stemEn": "He lives in Kyiv.",
+      "options": [
+        "Киеве",
+        "Киев",
+        "Киева",
+        "Киеву"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s11"
+      }
+    },
+    {
+      "id": "u1-k02",
+      "topic": "case-prep",
+      "explain": "Trigger: в + где? (in + where?). Rule: the prepositional case answers где? with в + -е for masculine and neuter nouns, and -е for feminine nouns ending in -а/-я. Why each wrong option is wrong: the nominative or accusative form does not answer где? so it is the wrong case for this place question.",
+      "kind": "choice",
+      "stem": "Мы гуляем в …",
+      "stemEn": "We walk in the …",
+      "options": [
+        "парке",
+        "парк",
+        "парку",
+        "парком"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "u1s12"
+      }
+    },
+    {
+      "id": "u2-c01",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Я работаю … почте.",
+      "stemEn": "I work … the post office.",
+      "options": [
+        "на",
+        "в",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s01"
+      }
+    },
+    {
+      "id": "u2-c02",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Мы живём … этаже пять.",
+      "stemEn": "We live … floor five.",
+      "options": [
+        "на",
+        "в",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s02"
+      }
+    },
+    {
+      "id": "u2-c03",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Он … концерте.",
+      "stemEn": "He is … the concert.",
+      "options": [
+        "на",
+        "в",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s04"
+      }
+    },
+    {
+      "id": "u2-c04",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Я … школе.",
+      "stemEn": "I am … school.",
+      "options": [
+        "в",
+        "на",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s03"
+      }
+    },
+    {
+      "id": "u2-t01",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "typed",
+      "prompt": "Она на (вокзал).",
+      "accept": [
+        "вокзале"
+      ],
+      "half": [
+        "вокзал"
+      ],
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s05"
+      }
+    },
+    {
+      "id": "u2-t02",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "typed",
+      "prompt": "Я работаю в (почта).",
+      "accept": [
+        "почте"
+      ],
+      "half": [
+        "почта"
+      ],
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s01"
+      }
+    },
+    {
+      "id": "u2-g01",
+      "topic": "case-prep",
+      "kind": "trigger",
+      "sentence": "Мы в университете.",
+      "tokens": [
+        "Мы",
+        "в",
+        "университете"
+      ],
+      "answer": 1,
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s06"
+      }
+    },
+    {
+      "id": "u2-g02",
+      "topic": "case-prep",
+      "kind": "trigger",
+      "sentence": "Я на уроке русского.",
+      "tokens": [
+        "Я",
+        "на",
+        "уроке",
+        "русского"
+      ],
+      "answer": 1,
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s07"
+      }
+    },
+    {
+      "id": "u2-r01",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Я работаю в банке. → Я работаю … (почта).",
+      "accept": [
+        "на почте"
+      ],
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s08"
+      }
+    },
+    {
+      "id": "u2-r02",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Я в школе. → Я … (урок).",
+      "accept": [
+        "на уроке"
+      ],
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s09"
+      }
+    },
+    {
+      "id": "u2-k01",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Мы в … (кухня).",
+      "stemEn": "We are in the kitchen.",
+      "options": [
+        "кухне",
+        "кухня",
+        "кухню",
+        "кухней"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s12"
+      }
+    },
+    {
+      "id": "u2-k02",
+      "topic": "case-prep",
+      "explain": "Trigger: на or в with a place noun. Rule: на marks a surface, a public place, a floor or an event; в marks an enclosed space or a building. Why each wrong option is wrong: the other preposition names the wrong kind of place, so the sentence means something else.",
+      "kind": "choice",
+      "stem": "Вы … почте?",
+      "stemEn": "Are you at the post office?",
+      "options": [
+        "на",
+        "в",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u2-ex",
+        "sentenceId": "u2s11"
+      }
+    },
+    {
+      "id": "fe-c01",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "choice",
+      "stem": "Я живу в … городе.",
+      "stemEn": "I live in a … city.",
+      "options": [
+        "большом",
+        "большой",
+        "большого",
+        "большую"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s01"
+      }
+    },
+    {
+      "id": "fe-c02",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "choice",
+      "stem": "Мой брат работает на …",
+      "stemEn": "My brother works at the …",
+      "options": [
+        "почте",
+        "почта",
+        "почту",
+        "почтой"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s02"
+      }
+    },
+    {
+      "id": "fe-c03",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "choice",
+      "stem": "Мы говорим о …",
+      "stemEn": "We are talking about …",
+      "options": [
+        "работе",
+        "работа",
+        "работу",
+        "работой"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s03"
+      }
+    },
+    {
+      "id": "fe-c04",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "choice",
+      "stem": "Она … школе.",
+      "stemEn": "She is … school.",
+      "options": [
+        "в",
+        "на"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s04"
+      }
+    },
+    {
+      "id": "fe-c05",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "choice",
+      "stem": "Я … уроке.",
+      "stemEn": "I am … class.",
+      "options": [
+        "на",
+        "в",
+        "по",
+        "за"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s05"
+      }
+    },
+    {
+      "id": "fe-t01",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "typed",
+      "prompt": "Он живёт в (дом).",
+      "accept": [
+        "доме"
+      ],
+      "half": [
+        "дом"
+      ],
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s06"
+      }
+    },
+    {
+      "id": "fe-t02",
+      "topic": "case-prep",
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "kind": "typed",
+      "prompt": "Мы сидим на (кухня).",
+      "accept": [
+        "кухне"
+      ],
+      "half": [
+        "кухня"
+      ],
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s07"
+      }
+    },
+    {
+      "id": "fe-g01",
+      "topic": "case-prep",
+      "kind": "trigger",
+      "sentence": "Я думаю о доме.",
+      "tokens": [
+        "Я",
+        "думаю",
+        "о",
+        "доме"
+      ],
+      "answer": 2,
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s08"
+      }
+    },
+    {
+      "id": "fe-r01",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Это моя комната. → Я думаю о … (дом).",
+      "accept": [
+        "доме"
+      ],
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s09"
+      }
+    },
+    {
+      "id": "fe-r02",
+      "topic": "case-prep",
+      "kind": "transform",
+      "prompt": "Мы гуляем в … (парк).",
+      "accept": [
+        "парке"
+      ],
+      "explain": "Trigger: в or на with a place or time noun. Rule: the prepositional case takes в for enclosed spaces and на for surfaces, offices, floors and events. Why each wrong option is wrong: the other preposition describes a different kind of place, and the accusative form answers куда? not где?.",
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "fe01s10"
+      }
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 import {
+  CourseItemSchema,
+  CourseSchema,
   ExamSchema,
   parsePack,
   scenarioLines,
@@ -14,6 +16,8 @@ import { eq, sql } from 'drizzle-orm';
 import { normalizeRu } from './normalize';
 import {
   audioTracks,
+  courseFloors,
+  courseItems,
   coreLemmas,
   dialogueChoices,
   dialogueEndings,
@@ -25,6 +29,7 @@ import {
   exerciseSpecs,
   journalPrompts,
   lessons,
+  packFullAudio,
   packs,
   scenarioAssets,
   scenarioGlossary,
@@ -57,6 +62,8 @@ export interface ImportResult {
     exams: number;
     /** T38: `core_lemmas` rows (every entry of every reference lemma list). */
     lemmas: number;
+    /** T89: `course_items` rows (every scored and check item of a course pack). */
+    courseItems: number;
     sentences: number;
     tokens: number;
   };
@@ -87,6 +94,12 @@ export interface ImportOptions {
    * so the Wi-Fi backfill knows what is still missing.
    */
   sceneFiles?: Record<string, { localUri: string | null; bytes: number | null }>;
+  /**
+   * T95: staged uri of the pack's cover image (`pack.cover`, "cover/cover.jpg").
+   * Written to `packs.cover_local_uri`; null/absent = not downloaded yet. The
+   * full-story file's uri rides `audioFiles[pack.fullStory.file]`.
+   */
+  coverFile?: string | null;
 }
 
 /** Effective space-before per the schema's reconstruction defaults. */
@@ -232,6 +245,7 @@ function countContent(pack: Pack) {
     scenarios: pack.scenarios?.length ?? 0,
     exams: pack.exams?.length ?? 0,
     lemmas: (pack.lemmaLists ?? []).reduce((n, l) => n + l.lemmas.length, 0),
+    courseItems: pack.items?.length ?? 0,
     sentences: sentenceCount,
     tokens: tokenCount,
   };
@@ -257,7 +271,25 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     // default via classifyPack() (LIBRARY_CATEGORIES §2.4).
     category: pack.category ?? null,
     genre: pack.genre ?? null,
+    // T95 (M26): cover path verbatim + the staged uri when sync had it.
+    coverFile: pack.cover ?? null,
+    coverLocalUri: pack.cover ? (opts.coverFile ?? null) : null,
   });
+
+  if (pack.fullStory) {
+    const full = pack.fullStory;
+    await db.insert(packFullAudio).values({
+      packId: pack.id,
+      trackId: full.id,
+      voice: full.voice,
+      style: full.style,
+      file: full.file,
+      localUri: opts.audioFiles?.[full.file] ?? null,
+      durationMs: full.durationMs,
+      gapMs: full.gapMs,
+      segments: full.segments,
+    });
+  }
 
   for (const [storyIdx, story] of pack.stories.entries()) {
     await db.insert(stories).values({
@@ -460,6 +492,37 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
       titleEn: exam.title.en,
       json: JSON.stringify(exam),
     });
+  }
+
+  // T89 (HOTEL_PATH §2–§3): a `course` pack = one floor. The whole validated
+  // `course` object goes in as JSON (re-parsed on read, `CourseSchema`), and
+  // every item becomes a `course_items` row keyed by its id. Stories of the
+  // pack went through the story path above. Re-import already deleted these
+  // rows via the pack cascade.
+  if (pack.course) {
+    const course = CourseSchema.parse(pack.course);
+    await db.insert(courseFloors).values({
+      packId: pack.id,
+      ladder: course.ladder,
+      level: course.level,
+      floor: course.floor,
+      titleRu: course.title.ru,
+      titleEn: course.title.en,
+      json: JSON.stringify(course),
+    });
+    const itemRows = (pack.items ?? []).map((raw) => {
+      const item = CourseItemSchema.parse(raw);
+      return {
+        packId: pack.id,
+        itemId: item.id,
+        kind: item.kind,
+        topic: item.topic,
+        json: JSON.stringify(item),
+      };
+    });
+    for (let i = 0; i < itemRows.length; i += 100) {
+      await db.insert(courseItems).values(itemRows.slice(i, i + 100));
+    }
   }
 
   // T38: reference lemma lists → `core_lemmas`, one row per entry with the

@@ -16,10 +16,13 @@ import { friendlySyncMessage, SyncError } from './errors';
 import { GithubContentClient } from './github-client';
 import {
   diffManifest,
+  fetchOrReuseFile,
   isAudioFile,
+  isCoverFile,
   isSceneFile,
   planPackFiles,
   verifyFileSha256,
+  type FetchOrReuseDeps,
   type Hasher,
 } from './sync-core';
 import { useSyncStatus, type SyncRunSummary } from './store';
@@ -76,6 +79,8 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
     installed: [],
     updated: [],
     audioDeferred: [],
+    reusedFiles: 0,
+    reusedBytes: 0,
     packErrors: [],
   };
 
@@ -146,7 +151,7 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
   for (const [i, entry] of changed.entries()) {
     try {
       const plan = planPackFiles(entry, { wifiOnlyAudio, onWifi });
-      const fileCount = 1 + plan.audio.length + plan.scene.length;
+      const fileCount = 1 + plan.cover.length + plan.audio.length + plan.scene.length;
       const progress = {
         packId: entry.id,
         titleEn: entry.title.en,
@@ -163,13 +168,30 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
       const rawPack = parsePackBytes(packBytes, entry.id);
       useSyncStatus.getState().setProgress({ ...progress, filesDone: 1 });
 
-      // 2. Audio: download → verify → stage into app storage (§4.3).
+      // 2. Cover (T95): small, never deferred. Audio: download → verify → stage
+      //    into app storage (§4.3). Both go through fetchOrReuseFile: a staged
+      //    file whose hash already matches the manifest is reused, not re-fetched
+      //    (CT101 bumps packs whose part audio is byte-identical).
+      const reuse = { files: 0, bytes: 0 };
+      const resolveFile = async (file: (typeof plan.audio)[number]) => {
+        const r = await fetchOrReuseFile(entry.id, file, stagedDeps(client, entry.id));
+        if (r.reused) {
+          reuse.files += 1;
+          reuse.bytes += r.bytes;
+        }
+        return r.uri;
+      };
+      let coverFile: string | null = null;
+      let done = 1;
+      for (const file of plan.cover) {
+        const uri = await resolveFile(file);
+        if (file.path === rawCoverPath(rawPack)) coverFile = uri;
+        useSyncStatus.getState().setProgress({ ...progress, filesDone: ++done });
+      }
       const audioFiles: Record<string, string> = {};
-      for (const [j, file] of plan.audio.entries()) {
-        const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
-        await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
-        audioFiles[file.path] = stageAudioFile(entry.id, file.path, bytes);
-        useSyncStatus.getState().setProgress({ ...progress, filesDone: 2 + j });
+      for (const file of plan.audio) {
+        audioFiles[file.path] = await resolveFile(file);
+        useSyncStatus.getState().setProgress({ ...progress, filesDone: ++done });
       }
       if (plan.deferredAudio.length > 0) {
         summary.audioDeferred.push(entry.id);
@@ -189,7 +211,7 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
         };
         useSyncStatus.getState().setProgress({
           ...progress,
-          filesDone: 2 + plan.audio.length + j,
+          filesDone: 1 + plan.cover.length + plan.audio.length + j + 1,
         });
       }
       for (const file of plan.deferredScene)
@@ -200,8 +222,19 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
 
       // 3. Import through T03 (validates again with Zod, upserts by stable
       //    ids, replaces content rows on version bump, preserves user refs).
-      const result = await importPack(db, rawPack, { source: 'github', audioFiles, sceneFiles });
+      const result = await importPack(db, rawPack, {
+        source: 'github',
+        audioFiles,
+        sceneFiles,
+        coverFile,
+      });
       await repos.syncState.setBytes(entry.id, entry.bytes);
+
+      if (reuse.files > 0) {
+        summary.reusedFiles += reuse.files;
+        summary.reusedBytes += reuse.bytes;
+        track('sync_file_reused', { packId: entry.id, files: reuse.files, bytes: reuse.bytes });
+      }
 
       if (result.action === 'installed') summary.installed.push(entry.id);
       else if (result.action === 'updated') summary.updated.push(entry.id);
@@ -243,6 +276,8 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
       queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
       // T69: the «ТРКИ» shelf/hub read exams through their own query root.
       queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
+      // M25: course packs feed the hotel (Путь) through its own root — new floors appear without a relaunch.
+      queryClient.invalidateQueries({ queryKey: ['hotel'] }),
     ]);
   }
 
@@ -258,6 +293,8 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
     updated: summary.updated.length,
     errors: summary.packErrors.length,
     audioDeferred: summary.audioDeferred.length,
+    reusedFiles: summary.reusedFiles,
+    reusedBytes: summary.reusedBytes,
   });
   useSyncStatus.getState().finishRun(summary);
   return summary;
@@ -316,6 +353,32 @@ function stageAudioFile(packId: string, relPath: string, bytes: Uint8Array): str
   return dest.uri;
 }
 
+/** `pack.cover` of a raw (not yet validated) pack object, or null. */
+function rawCoverPath(rawPack: unknown): string | null {
+  const c = (rawPack as { cover?: unknown } | null)?.cover;
+  return typeof c === 'string' ? c : null;
+}
+
+function stagedFile(packId: string, relPath: string): File {
+  const parts = relPath.split('/');
+  const fileName = parts.pop()!;
+  return new File(new Directory(Paths.document, 'packs', packId, ...parts), fileName);
+}
+
+/** Device wiring for `fetchOrReuseFile` (T95). */
+function stagedDeps(client: GithubContentClient, packId: string): FetchOrReuseDeps {
+  return {
+    fetchRawFile: (path) => client.fetchRawFile(path),
+    hasher: deviceHasher,
+    readStaged: async (relPath) => {
+      const f = stagedFile(packId, relPath);
+      return f.exists ? f.bytes() : null;
+    },
+    stage: (relPath, bytes) => stageAudioFile(packId, relPath, bytes),
+    stagedUri: (relPath) => stagedFile(packId, relPath).uri,
+  };
+}
+
 /**
  * For an installed, up-to-date pack: download any manifest audio file whose
  * audio_track (or dialogue_node_audio row, T26, or scenario_line_audio row,
@@ -354,6 +417,29 @@ async function backfillMissingAudio(client: GithubContentClient, entry: Manifest
     track('audio_backfilled', { packId: entry.id, file: file.path });
   }
 
+  // T95: the stitched full-story track + the cover, when the pack declares them
+  // and the staged file is missing (cover is never deferred, but a pack that
+  // existed before this build gets it here; the full track is Wi-Fi-gated by
+  // the caller exactly like part audio).
+  const refs = await repos.listen.getStagedRefs(entry.id);
+  const manifestFull = new Map(entry.files.map((f) => [f.path, f]));
+  if (refs.fullFile && (!refs.fullLocalUri || !new File(refs.fullLocalUri).exists)) {
+    const file = manifestFull.get(refs.fullFile);
+    if (file) {
+      const r = await fetchOrReuseFile(entry.id, file, stagedDeps(client, entry.id));
+      await repos.listen.setFullAudioLocalUri(entry.id, r.uri);
+      track('audio_backfilled', { packId: entry.id, file: file.path });
+    }
+  }
+  if (refs.coverFile && (!refs.coverLocalUri || !new File(refs.coverLocalUri).exists)) {
+    const file = manifestFull.get(refs.coverFile);
+    if (file && isCoverFile(file.path)) {
+      const r = await fetchOrReuseFile(entry.id, file, stagedDeps(client, entry.id));
+      await repos.listen.setCoverLocalUri(entry.id, r.uri);
+      track('audio_backfilled', { packId: entry.id, file: file.path });
+    }
+  }
+
   // T58: scene layers — every manifest `scene/**` file with no staged row.
   const sceneManifest = entry.files.filter((f) => !isAudioFile(f.path) && isSceneFile(f.path));
   if (sceneManifest.length === 0) return;
@@ -383,5 +469,6 @@ export async function removeInstalledPack(packId: string): Promise<void> {
     queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
     queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
     queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
+    queryClient.invalidateQueries({ queryKey: ['hotel'] }),
   ]);
 }

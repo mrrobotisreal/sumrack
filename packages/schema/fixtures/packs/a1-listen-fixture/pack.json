@@ -1,0 +1,174 @@
+{
+  "id": "a1-listen-fixture",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Тестовая история",
+    "en": "Listen fixture"
+  },
+  "level": "A1",
+  "tags": [
+    "fixture",
+    "listen"
+  ],
+  "stories": [
+    {
+      "id": "part-1",
+      "title": {
+        "ru": "Часть 1",
+        "en": "Part 1"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "lf1-s01",
+          "ru": "Я дома.",
+          "en": "I am home.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "level": "A1",
+              "grammar": "nom."
+            },
+            {
+              "text": "дома",
+              "lemma": "дома",
+              "translation": "at home",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "lf-p1",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/lf-p1.opus",
+          "durationMs": 1206,
+          "timestamps": []
+        }
+      ]
+    },
+    {
+      "id": "part-2",
+      "title": {
+        "ru": "Часть 2",
+        "en": "Part 2"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "lf2-s01",
+          "ru": "Здесь тихо.",
+          "en": "It is quiet here.",
+          "tokens": [
+            {
+              "text": "Здесь",
+              "lemma": "здесь",
+              "translation": "here",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "тихо",
+              "lemma": "тихо",
+              "translation": "quiet",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "lf-p2",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/lf-p2.opus",
+          "durationMs": 906,
+          "timestamps": []
+        }
+      ]
+    },
+    {
+      "id": "part-3",
+      "title": {
+        "ru": "Часть 3",
+        "en": "Part 3"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "lf3-s01",
+          "ru": "Ночь.",
+          "en": "Night.",
+          "tokens": [
+            {
+              "text": "Ночь",
+              "lemma": "ночь",
+              "translation": "night",
+              "pos": "noun",
+              "level": "A1",
+              "grammar": "nom."
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "lf-p3",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/lf-p3.opus",
+          "durationMs": 1406,
+          "timestamps": []
+        }
+      ]
+    }
+  ],
+  "fullStory": {
+    "id": "a1-listen-fixture-full",
+    "voice": "elevenlabs:Fixture",
+    "style": "full",
+    "file": "audio/a1-listen-fixture-full.opus",
+    "durationMs": 5906,
+    "gapMs": 1200,
+    "segments": [
+      {
+        "storyId": "part-1",
+        "trackId": "lf-p1",
+        "startMs": 0,
+        "endMs": 1200
+      },
+      {
+        "storyId": "part-2",
+        "trackId": "lf-p2",
+        "startMs": 2400,
+        "endMs": 3300
+      },
+      {
+        "storyId": "part-3",
+        "trackId": "lf-p3",
+        "startMs": 4500,
+        "endMs": 5900
+      }
+    ]
+  }
+}

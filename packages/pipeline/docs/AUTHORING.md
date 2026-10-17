@@ -1081,3 +1081,255 @@ An A2 mock (`level: A2`, `category: torfl-a2`, pack ids `a2-torfl-*`) follows de
 7. **Mock listening needs `audioPlays`;** drill listening does not (drills replay freely).
 8. **Item ids are per exam, not per subtest** — prefix by subtest (`lg01`, `rd01`, `ls01`, `wr01`, `sp01`).
 9. **The body is ignored** — anything below the closing `---` (a key, the answer table you derived, notes) never reaches the pack.
+
+## Course drafts (`*.course.md` — M25, T88)
+
+A **course pack** (`type: course`, ADR-0022, design `docs/design/HOTEL_PATH.md` §2 at the workspace root) is **one floor** of the «Отель «Сумрак»» TORFL course. A floor holds **units** (a lesson of cards, then a scored exercise pool) and a **floor exam** pool. Like an exam pack, it is authored as two kinds of file given to `annotate` **together**:
+
+1. **Story drafts** (ordinary `*.draft.md`, everything above applies unchanged): one story per unit, `<unit-id>-ex`, holding every example, trap right, edge example and check or exercise stem as a full sentence; plus one `floor-exam` story for the floor-exam pool. **No audio** is authored here — the course audio is rendered by the content kit, not by these drafts.
+2. **One course draft per pack** (`*.course.md`): **YAML frontmatter only**, so the whole file is a `---` fence, the YAML, and a closing `---` fence — the opening fence on line 1 and the closing fence after the last item. Inside the fences: a `course:` key (the floor), an `items:` list (the scored and check items) and an optional `pack:`. The markdown body below the closing `---` is author notes and is ignored. The pipeline recognizes a course draft by the `course:` key, never by filename. Two course drafts for one pack are an error. A file missing its closing fence fails with `frontmatter is never closed`.
+
+```bash
+pnpm pipeline annotate stories/*.draft.md floor-03.course.md -o packs/a1-hotel-f03/pack.json
+pnpm pipeline validate packs/a1-hotel-f03/pack.json --manifest ../sumrak-content/manifest.json
+```
+
+The pack header (`pack:`) must say `type: course`, `level`, `id` and `version`, and be byte-identical across the story drafts. Use `category` only if the course needs one (course packs never appear on a Library shelf, so usually none).
+
+Markdown bodies in YAML use **block scalars** (`|`), indented deeper than their key. Single-line strings use quotes (see the exam gotchas).
+
+### The course object (the sample below is the YAML **inside** the fences; a real `*.course.md` wraps it in `---` lines, with `items:` after `course:` and the closing `---` last)
+
+```yaml
+course:
+  ladder: torfl # the course family; a plain id, never a level
+  level: A1
+  floor: 3 # 0 = Вестибюль; 13 is never a floor (Номер 13 is the mock a1-torfl-mock-004)
+  title: { ru: 'Где? О чём?', en: 'Where? About what?' }
+  subtitle: { ru: 'Предложный падеж', en: 'Prepositional case' } # optional
+  gate: # FIXED values — the validator refuses anything else
+    passPercent: 80
+    extern:
+      passPercent: 90
+  practice: # existing drill exams on the shelf, shown as «Практика» on the floor (D16)
+    - packId: a1-torfl-lexgram-001
+      examId: lg-case-prep
+  units: # ≥ 1, in lesson order
+    - id: u1 # unique within the pack; never renumbered
+      title: { ru: 'в + где?', en: 'в + where?' }
+      summary: { en: 'In + where takes the prepositional case.' }
+      cards: [...] # the lesson, in order (see the card kinds below); ≥ 1
+      exercises: # the scored unit exercise
+        size: 4 # items per attempt
+        pool: [u1-c01, u1-c02, ...] # item ids; pool ≥ size + 6
+  floorExam: # absent ONLY on floor 0
+    size: 5
+    pool: [fe-c01, ...] # pool ≥ 2 × size
+```
+
+`ladder`, `level` and `floor` are plain fields; `gate` values are checked (80 and 90 are the design's D13 values, not defaults you can change). `grammarQuery` on a unit is reserved for a later ticket: leave it out.
+
+### Card kinds (`cards:` of a unit)
+
+A unit's cards run in order. Each card has a `kind` and an `id` unique across the whole pack.
+
+**`explain`** — the long lesson card: the rule in plain English with the Russian terms, an optional ending table, and the voiced examples. At least five `examples` per explain card.
+
+```yaml
+- id: u1-x1
+  kind: explain
+  title:
+    { ru: 'В + предложный: мужской и средний род', en: 'In + prepositional: masculine and neuter' }
+  body: |
+    The prepositional case (предложный падеж) answers где? after в.
+    The ending is -е for most masculine and neuter nouns.
+  table: # optional: markdown-free cells; every row has as many cells as the header
+    caption: 'Окончания'
+    header: [род, ending, пример]
+    rows:
+      - [m., -е, в банке]
+      - [n., -е, в кафе]
+  examples:
+    - sentenceRef: { storyId: u1-ex, sentenceId: u1s01 }
+      highlight: [городе] # token surfaces to colour
+      why: 'в + где? → предложный' # optional
+```
+
+**`check`** — «Проверь себя»: ungraded, one to four item ids, placed after every two or three explain cards. Its items may **not** appear in any scored pool.
+
+```yaml
+- id: u1-k1
+  kind: check
+  items: [u1-k01]
+```
+
+**`traps`** — «Ловушки»: every classic trap side by side, ✗ → ✓ with the reason. At least one pair.
+
+```yaml
+- id: u1-tr
+  kind: traps
+  title: { ru: 'Ловушки', en: 'Traps' }
+  pairs:
+    - wrong: 'Я живу в большой город.'
+      right: { storyId: u1-ex, sentenceId: u1s01 } # the correct sentence (in this pack)
+      reason: 'the city takes -е after в: в городе'
+```
+
+**`edge`** — «Тонкости»: exceptions and the things tests use to trick the learner. A `body` and at least one example.
+
+```yaml
+- id: u1-ed
+  kind: edge
+  title: { ru: 'Тонкости', en: 'Edge cases' }
+  body: |
+    Some masculine nouns stress the ending in the prepositional (в лесу, в шкафу).
+  examples:
+    - sentenceRef: { storyId: u1-ex, sentenceId: u1s11 }
+      highlight: [Киеве]
+```
+
+**`library`** — «Из библиотеки»: one to eight real sentences from **published** packs, each quoted byte-exact so the app can show it even when the source pack is not installed.
+
+```yaml
+- id: u1-lib
+  kind: library
+  quotes:
+    - packId: a1-no-end-house-001
+      storyId: part-1
+      sentenceId: nea1p1-s04
+      highlight: [колледже]
+      why: 'в + где? → предложный'
+      text: 'Мы дружили в колледже.' # copied byte-exact from that pack's pack.json
+```
+
+Library quotes come only from packs already in `sumrak-content/manifest.json` (never from a `Stories/**/OpenAI/` folder). `text` is checked against the published sentence by `validate --manifest`.
+
+Every **non-floor-0** unit needs at least one `traps` card and one `edge` card.
+
+### Item kinds (`items:` of the draft)
+
+Items are top-level, each with a unique `id` and a `topic` (a §3.4 slug, as for exams). **Every scored item** needs an `explain` of at least 120 characters, naming in order (a) the trigger, (b) the rule, (c) why each wrong option is wrong.
+
+**`choice`** — exam-style single choice. `stem` with one «…» gap, `stemEn`, `options` (2–4), `answer` (0-based), `explain`, `voiced`. Two options only for the **binary contrasts** (не/нет, в/на, уже/ещё, а/но, слушать/слышать, потому что/поэтому); anything else gets four. A two-option choice off that set is a validate warning.
+
+```yaml
+- id: u1-c01
+  topic: case-prep
+  kind: choice
+  stem: 'Я живу в … городе.'
+  stemEn: 'I live in a … city.'
+  options: [большом, большой, большого, большую]
+  answer: 0
+  explain: |
+    Trigger: в + где?. Rule: the prepositional answers где? with -е for masculine
+    and neuter nouns. Why each wrong option is wrong: большой and большого are not
+    prepositional; большую is accusative.
+  voiced: { storyId: u1-ex, sentenceId: u1s01 }
+```
+
+**`typed`** — the learner types the form. `prompt` (may hold one «…» or a bracketed stem), `accept` (≥ 1 full answers, ё/е-tolerant), `half` (right lemma, wrong ending), `explain`, `voiced`.
+
+```yaml
+- id: u1-t01
+  topic: case-prep
+  kind: typed
+  prompt: 'Мы сидим в (кафе) ….'
+  accept: [кафе]
+  half: [кофе]
+  explain: |
+    ...
+  voiced: { storyId: u1-ex, sentenceId: u1s05 }
+```
+
+**`trigger`** — find the word that forces the form. `sentence`, `tokens` (≥ 2, the sentence split into words), `answer` (0-based index into `tokens`), `explain`, `voiced`.
+
+```yaml
+- id: u1-g01
+  topic: case-prep
+  kind: trigger
+  sentence: 'Я читаю о Москве.'
+  tokens: [Я, читаю, о, Москве]
+  answer: 2 # о
+  explain: |
+    ...
+  voiced: { storyId: u1-ex, sentenceId: u1s06 }
+```
+
+**`transform`** — rewrite the prompt into the target form. `prompt`, `accept` (≥ 1), `half` (optional), `explain`, `voiced`.
+
+```yaml
+- id: u1-r01
+  topic: case-prep
+  kind: transform
+  prompt: 'Это мой брат. → Мы говорим о …'
+  accept: [брате]
+  explain: |
+    ...
+  voiced: { storyId: u1-ex, sentenceId: u1s09 }
+```
+
+**`writing`**, **`speaking-reply`** and **`speaking-situation`** are the exam item shapes (floors 12, 14, 15): they take the same fields as in the exam section, plus `voiced`. Their stories are story drafts of the same pack.
+
+**`voiced`** points at the story sentence whose text is the item's stem **with the gap filled by the correct answer**. The learner hears the right form only after answering. Every scored item has one, and the validate report counts the unvoiced ones.
+
+### The invariants
+
+`annotate` and `validate` refuse a pack that breaks any of these, each with the exact path:
+
+- **a.** Item ids unique across the pack; unit ids unique; card ids unique across the pack.
+- **b.** Every item id in a `check`, a unit `pool` or the `floorExam.pool` exists in `items`. Every `sentenceRef`, trap `right`, `voiced` and story ref resolves to a story and sentence **of this pack**.
+- **c.** `exercises.pool.length ≥ size + 6`; `floorExam.pool.length ≥ 2 × size`; `floorExam` is absent **only** on floor 0.
+- **d.** No item in both a unit pool and the floor-exam pool; a `check` item may not appear in **any** scored pool.
+- **e.** Every non-floor-0 unit has a `traps` card and an `edge` card.
+- **f.** `gate.passPercent` is 80, `gate.extern.passPercent` is 90, and floor 13 is refused.
+
+Plus the shape rules: `explain` ≥ 120 characters on every scored item; a table row as long as its header; `answer` in range (`choice` options, `trigger` tokens); `quotes` 1–8 per library card; `check` 1–4 items.
+
+Live-manifest checks are **not** schema: `validate --manifest <manifest.json>` (default `../sumrak-content/manifest.json` when present; otherwise a warning line) checks every `practice` ref exists in the manifest with that exam id, and every library quote's `packId/storyId/sentenceId` exists with a **byte-identical** `text`. A broken live ref is printed as `✗` but never changes the exit code.
+
+### The course report
+
+`validate` prints, after the other reports, per unit:
+
+- `cards explain N · check N · traps N · edge N · library N`
+- `voiced examples N` — the explain and edge examples
+- `pool N (choice a / typed b / trigger c / transform d)` and `size N`
+
+Then the floor exam (`pool N / size N`), the **binary-option** line (warning when a two-option choice is off the binary set), the **voiced** census (warning per unvoiced item), and the live-manifest lines. Warnings never change the exit code; schema errors do.
+
+### Course gotchas
+
+1. **Ids are stable and never renumbered.** A unit id, a card id and an item id are how a learner's progress is kept. Add new ids; never rename one that is published.
+2. **The gate values are fixed.** 80 and 90 are the design, not a setting. A pack that writes another number is refused.
+3. **Pool arithmetic.** A unit exercise `size: 4` needs a pool of at least 10; a floor exam `size: 5` needs a pool of at least 10. Count before you commit.
+4. **No item in two scored pools.** A unit pool and the floor-exam pool of the same floor are disjoint, so the gates measure learning, not memory. A `check` item is in neither.
+5. **`answer` is 0-based**, as for exams. `trigger.answer` indexes `tokens`, not the sentence.
+6. **`explain` is long on purpose.** Under 120 characters is refused, because the learner needs the trigger, the rule and the reason each wrong option fails, not just the answer.
+7. **Quote YAML strings** with `:`, `#`, `«»` or a leading `-`/`[`/`{` — single quotes are safest, and an inner single quote is doubled.
+8. **The body is ignored** — anything below the closing `---` never reaches the pack.
+
+## Full-story track (`pipeline stitch` — M26, T94)
+
+A `stories` pack may carry one continuous narration of all its parts plus a segment map, so the app can offer «Прослушайте всю историю». It is **built, never authored**: do not write `fullStory` or `cover` into a draft.
+
+```
+pnpm pipeline stitch <pack-dir> [--gap-ms 1200] [--track <style>] [--cover <image>] [--bump] [--dry-run]
+```
+
+- Per story it takes the first audio track (or the first whose `style` equals `--track`), decodes each to 48 kHz mono PCM, measures the exact length, joins the parts with `--gap-ms` of silence (default **1200 ms** — one breath; the parts already start and end in silence), and encodes once through the same `encodeOpus` as every other track. Output: `audio/<packId>-full.opus` and `pack.json` `fullStory` (`segments[]` = story id, track id, start/end ms).
+- `--cover <png|jpg>` squeezes any image into `cover/cover.jpg` (1024x1024, JPEG, quality stepped until <= 400,000 bytes) and sets `pack.cover`.
+- `--bump` increments `version` (needed when the pack is already published). `--dry-run` prints the segment table and writes nothing. Re-running overwrites both file and field (idempotent).
+- Needs `ffmpeg`/`ffprobe`; offline, no provider calls. `pipeline validate` prints a «Full track» line (parts · duration · gap · cover).
+- **Re-stitch after any audio change** to a part (re-render, restamp does not matter — it only touches `timestamps`), or the segment map no longer matches the parts.
+
+### Republishing without the stamp-audit
+
+```
+pnpm pipeline publish <pack-dir> --content <sumrak-content> --stitch-only
+```
+
+For a pack whose audio did not change: the pack minus `{fullStory, cover, version}` must deep-equal the published `packs/<id>/pack.json`, and every story track must hash exactly as the published manifest lists it. Then the stamp-audit is skipped («stitch-only: N tracks byte-identical, stamp-audit skipped»). Any other difference fails naming the first differing JSON path or file. It cannot be combined with `--allow-stamp-risk` / `--skip-stamp-audit`.
+
+### Gate L
+
+Older apps reject packs with `fullStory`/`cover` (strict schema). No such pack enters `manifest.json` until both phones run the T98 release (FULL_STORY_LISTEN §12).

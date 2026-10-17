@@ -44,6 +44,13 @@ export interface PublishOptions {
   stampAudit?: Aligner;
   /** Publish despite a failing stamp audit; the override is logged to `<packDir>/BUILD_NOTES.md`. */
   allowStampRisk?: boolean;
+  /**
+   * T94 fast path: republish a pack whose story audio is byte-identical to the
+   * published one and whose only other differences are `fullStory`/`cover`/
+   * `version`. Skips the stamp-audit. Incompatible with `stampAudit` and
+   * `allowStampRisk` (those are errors, not silently ignored).
+   */
+  stitchOnly?: boolean;
 }
 
 export interface PublishSummary {
@@ -53,6 +60,10 @@ export interface PublishSummary {
   totalBytes: number;
   /** Bytes under `scene/` (PNG layers, T57) — reported separately: they are the Wi-Fi-gated bulk. */
   sceneBytes: number;
+  /** Bytes of the stitched full-story track (T94); 0 when the pack has none. */
+  fullStoryBytes: number;
+  /** Set by `--stitch-only`: the «N tracks byte-identical, stamp-audit skipped» log line. */
+  stitchOnlyNote?: string;
   /** "published" | "unchanged" (no-op at the same version and hashes). */
   outcome: 'published' | 'unchanged';
   committed?: string;
@@ -107,7 +118,89 @@ export function packFileList(pack: Pack, packDir?: string): string[] {
   if (packDir !== undefined && (pack.scenarios?.length ?? 0) > 0) {
     files.push(...sceneFiles(packDir));
   }
+  // M26 (T94): the stitched full-story track and the cover ship like any file.
+  if (pack.fullStory) files.push(pack.fullStory.file);
+  if (pack.cover) files.push(pack.cover);
   return files;
+}
+
+/** Pack keys a stitch-only republish may change. */
+const STITCH_ONLY_KEYS = ['fullStory', 'cover', 'version'] as const;
+
+/** Key-order-independent JSON structural diff: the first differing path, or undefined. */
+export function firstJsonDiff(a: unknown, b: unknown, path = '$'): string | undefined {
+  if (a === b) return undefined;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const n = Math.max(a.length, b.length);
+    for (let i = 0; i < n; i++) {
+      const d = firstJsonDiff(a[i], b[i], `${path}[${i}]`);
+      if (d) return d;
+    }
+    return undefined;
+  }
+  if (
+    a !== null &&
+    b !== null &&
+    typeof a === 'object' &&
+    typeof b === 'object' &&
+    !Array.isArray(a) &&
+    !Array.isArray(b)
+  ) {
+    const ra = a as Record<string, unknown>;
+    const rb = b as Record<string, unknown>;
+    for (const k of [...new Set([...Object.keys(ra), ...Object.keys(rb)])].sort()) {
+      const d = firstJsonDiff(ra[k], rb[k], `${path}.${k}`);
+      if (d) return d;
+    }
+    return undefined;
+  }
+  return path;
+}
+
+function withoutStitchKeys(pack: object): Record<string, unknown> {
+  const copy = { ...(pack as Record<string, unknown>) };
+  for (const k of STITCH_ONLY_KEYS) delete copy[k];
+  return copy;
+}
+
+/**
+ * T94 `--stitch-only` guard: the pack must differ from the published one only
+ * in {fullStory, cover, version}, and every story track must hash as the
+ * published manifest lists it. Throws naming the first differing path / file.
+ * Returns the number of byte-identical story tracks.
+ */
+function assertStitchOnly(
+  pack: Pack,
+  packDir: string,
+  contentRepoDir: string,
+  existing: ManifestEntry | undefined,
+): number {
+  if (!existing)
+    throw new Error(`--stitch-only: ${pack.id} is not published yet — publish it normally first`);
+  const publishedFile = join(contentRepoDir, 'packs', pack.id, 'pack.json');
+  if (!existsSync(publishedFile)) {
+    throw new Error(`--stitch-only: ${publishedFile} does not exist`);
+  }
+  const published = JSON.parse(readFileSync(publishedFile, 'utf8')) as object;
+  const diff = firstJsonDiff(withoutStitchKeys(pack), withoutStitchKeys(published));
+  if (diff) {
+    throw new Error(`--stitch-only: pack differs from the published ${pack.id} at ${diff}`);
+  }
+  let tracks = 0;
+  for (const story of pack.stories) {
+    for (const track of story.audio) {
+      const listed = existing.files.find((f) => f.path === track.file);
+      if (!listed)
+        throw new Error(`--stitch-only: ${track.file} is not in the published manifest entry`);
+      const abs = join(packDir, track.file);
+      if (!existsSync(abs)) throw new Error(`--stitch-only: audio file missing: ${track.file}`);
+      if (sha256Hex(readFileSync(abs)) !== listed.sha256) {
+        throw new Error(`--stitch-only: ${track.file} differs from the published audio (sha256)`);
+      }
+      tracks++;
+    }
+  }
+  return tracks;
 }
 
 /** Every regular file under `<packDir>/scene/`, as pack-relative POSIX paths, sorted. */
@@ -144,6 +237,12 @@ export function runPublish(
   }
   const pack = parsed.data;
 
+  if (opts.stitchOnly && (opts.stampAudit || opts.allowStampRisk)) {
+    throw new Error(
+      '--stitch-only cannot be combined with a stamp-audit or --allow-stamp-risk (it skips the audit only for byte-identical tracks)',
+    );
+  }
+
   // 1b. T80 stamp-accuracy gate: stamps must match the audio they ship with.
   if (opts.stampAudit) {
     const audit = auditPack(pack, packDir, opts.stampAudit);
@@ -174,6 +273,9 @@ export function runPublish(
   const sceneBytes = files
     .filter((f) => f.path.startsWith(`${SCENE_DIR}/`))
     .reduce((n, f) => n + f.bytes, 0);
+  const fullStoryBytes = pack.fullStory
+    ? (files.find((f) => f.path === pack.fullStory!.file)?.bytes ?? 0)
+    : 0;
 
   // 3. Manifest + version discipline.
   const manifestFile = join(contentRepoDir, 'manifest.json');
@@ -181,6 +283,11 @@ export function runPublish(
     throw new Error(`${manifestFile} does not exist — is this the content repo?`);
   const manifest: Manifest = ManifestSchema.parse(JSON.parse(readFileSync(manifestFile, 'utf8')));
   const existing = manifest.packs.find((p) => p.id === pack.id);
+  let stitchOnlyNote: string | undefined;
+  if (opts.stitchOnly) {
+    const n = assertStitchOnly(pack, packDir, contentRepoDir, existing);
+    stitchOnlyNote = `stitch-only: ${n} tracks byte-identical, stamp-audit skipped`;
+  }
   if (existing) {
     if (existing.version > pack.version) {
       throw new Error(
@@ -200,6 +307,7 @@ export function runPublish(
           files,
           totalBytes,
           sceneBytes,
+          fullStoryBytes,
           outcome: 'unchanged',
           pushed: false,
         };
@@ -260,6 +368,8 @@ export function runPublish(
     files,
     totalBytes,
     sceneBytes,
+    fullStoryBytes,
+    ...(stitchOnlyNote ? { stitchOnlyNote } : {}),
     outcome: 'published',
     committed,
     pushed: opts.push === true,

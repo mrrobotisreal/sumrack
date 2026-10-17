@@ -20,6 +20,7 @@ import { alignSentence } from './align.ts';
 import { DraftError, type DraftIssue } from './errors.ts';
 import type { DraftSentence, DraftTokenRow, ParsedDraft } from './draft.ts';
 import type { DraftDialogueNode, ParsedDialogueDraft } from './dialogue-draft.ts';
+import type { ParsedCourseDraft } from './course-draft.ts';
 import { parseIssuePath, type ParsedExamDraft } from './exam-draft.ts';
 import type { PackExtras } from './extras.ts';
 import { assembleScenario } from './scenario-assemble.ts';
@@ -309,15 +310,18 @@ export function assemblePack(
   dialogueDrafts: readonly ParsedDialogueDraft[] = [],
   scenarioDrafts: readonly ParsedScenarioDraft[] = [],
   examDrafts: readonly ParsedExamDraft[] = [],
+  courseDrafts: readonly ParsedCourseDraft[] = [],
 ): Pack {
   const noDrafts =
     drafts.length === 0 && dialogueDrafts.length === 0 && scenarioDrafts.length === 0;
   // T67: an exam draft may carry `pack:` itself (the extras precedent).
+  // T88: so may a course draft (a course pack may be authored story-first or course-first).
   const examMeta = examDrafts.find((d) => d.pack !== undefined);
-  if (noDrafts && !extras && examDrafts.length === 0) {
+  const courseMeta = courseDrafts.find((d) => d.pack !== undefined);
+  if (noDrafts && !extras && examDrafts.length === 0 && courseDrafts.length === 0) {
     throw new DraftError([{ file: '(none)', message: 'no drafts given' }]);
   }
-  if (noDrafts && !extras && !examMeta) {
+  if (noDrafts && !extras && !examMeta && !courseMeta) {
     throw new DraftError([
       {
         file: examDrafts[0]!.file,
@@ -327,7 +331,7 @@ export function assemblePack(
       },
     ]);
   }
-  if (noDrafts && extras && !extras.pack && !examMeta) {
+  if (noDrafts && extras && !extras.pack && !examMeta && !courseMeta) {
     throw new DraftError([
       {
         file: extras.file,
@@ -348,6 +352,7 @@ export function assemblePack(
   // Exam drafts' optional `pack:` joins the comparison (after the drafts, so
   // a story draft stays the reference when there is one).
   for (const d of examDrafts) if (d.pack) metas.push({ file: d.file, pack: d.pack });
+  for (const d of courseDrafts) if (d.pack) metas.push({ file: d.file, pack: d.pack });
   const first = metas[0];
   const packMetaJson = JSON.stringify(first ? first.pack : extras!.pack);
   for (const m of metas.slice(1)) {
@@ -475,7 +480,25 @@ export function assemblePack(
     }
   }
 
+  // T88 course: exactly one course draft per pack (one floor); its items join
+  // the pack's `items`. Type and shape checks happen in PackSchema; here only
+  // the pack-level multiplicity needs a draft line.
+  if (courseDrafts.length > 1) {
+    issues.push({
+      file: courseDrafts[1]!.file,
+      line: 2,
+      message: `two course drafts for one pack (${courseDrafts[0]!.file} and ${courseDrafts[1]!.file}) — a course pack is one floor, so one *.course.md`,
+    });
+  }
+
   const meta = first ? first.pack : extras!.pack!;
+  if (courseDrafts.length > 0 && meta.type !== 'course') {
+    issues.push({
+      file: first?.file ?? courseDrafts[0]!.file,
+      line: 2,
+      message: `course draft given but the pack meta says type "${meta.type}" — a course pack has type: course`,
+    });
+  }
   if (examDrafts.length > 0 && meta.type !== 'exam') {
     issues.push({
       file: first?.file ?? extras!.file,
@@ -495,6 +518,11 @@ export function assemblePack(
   if (dialogues.length > 0) pack.dialogues = dialogues;
   if (scenarios.length > 0) pack.scenarios = scenarios;
   if (examDrafts.length > 0) pack.exams = examDrafts.map((d) => d.exam);
+  const courseDraft = courseDrafts[0];
+  if (courseDraft) {
+    pack.course = courseDraft.course;
+    pack.items = courseDraft.items;
+  }
   if (extras?.lesson) pack.lesson = extras.lesson;
   if (extras?.prompts) pack.prompts = extras.prompts;
   if (extras?.exercises) pack.exercises = extras.exercises;
@@ -540,6 +568,16 @@ export function assemblePack(
             file: examDraft.file,
             line: examDraft.lineAt(segs.slice(2)),
             message: `exam ${i.path.replace(/^exams\[\d+\]\.?/, '')}: ${i.message}`,
+          };
+        }
+        // T88: `course.…` and `items[…]` pack paths map back to the course draft
+        // line. The draft root IS the frontmatter, so the segments are used whole.
+        const courseDraftHit = courseDrafts[0];
+        if (courseDraftHit && (segs[0] === 'course' || segs[0] === 'items')) {
+          return {
+            file: courseDraftHit.file,
+            line: courseDraftHit.lineAt(segs),
+            message: `${i.path}: ${i.message}`,
           };
         }
         return {

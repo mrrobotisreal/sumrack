@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import comedyJson from '@sumrak/schema/fixtures/packs/a1-comedy-090/pack.json';
 import hallwayJson from '@sumrak/schema/fixtures/packs/a1-course-unit-090/pack.json';
 import greenhouseJson from '@sumrak/schema/fixtures/packs/a1-course-unit-093/pack.json';
+import listenJson from '@sumrak/schema/fixtures/packs/a1-listen-fixture/pack.json';
 import pack1Json from '@sumrak/schema/fixtures/packs/a1-creepypasta-001/pack.json';
 import pack2Json from '@sumrak/schema/fixtures/packs/a1-creepypasta-002/pack.json';
 import familyJson from '@sumrak/schema/fixtures/packs/a2-family-090/pack.json';
@@ -23,6 +24,7 @@ const hallwayPack = hallwayJson as unknown as Pack;
 const greenhousePack = greenhouseJson as unknown as Pack;
 const familyPack = familyJson as unknown as Pack;
 const newsPack = newsJson as unknown as Pack;
+const listenPack = listenJson as unknown as Pack;
 const comedyPack = comedyJson as unknown as Pack;
 
 /** The M14 story columns, selected raw so the test pins the SQL names too. */
@@ -326,6 +328,51 @@ describe('pack importer', () => {
       },
       { id: 'news-090-a2', ...NULL_STORY_COLUMNS },
     ]);
+  });
+
+  it('T95: writes the pack_full_audio row (3 segments in stories[] order) and the cover columns', async () => {
+    const db = createTestDb();
+    const withCover: Pack = { ...JSON.parse(JSON.stringify(listenPack)), cover: 'cover/cover.jpg' };
+    await importPack(db, withCover, {
+      audioFiles: { 'audio/a1-listen-fixture-full.opus': 'file:///p/full.opus' },
+      coverFile: 'file:///p/cover.jpg',
+    });
+    const rows = await db.all<Record<string, unknown>>(sql`SELECT * FROM pack_full_audio`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      pack_id: 'a1-listen-fixture',
+      track_id: 'a1-listen-fixture-full',
+      style: 'full',
+      file: 'audio/a1-listen-fixture-full.opus',
+      local_uri: 'file:///p/full.opus',
+      gap_ms: 1200,
+    });
+    const segs = JSON.parse(rows[0]!.segments as string) as { storyId: string }[];
+    expect(segs.map((x) => x.storyId)).toEqual(['part-1', 'part-2', 'part-3']);
+    const pk = await db.all<{ cover_file: string; cover_local_uri: string }>(
+      sql`SELECT cover_file, cover_local_uri FROM packs`,
+    );
+    expect(pk[0]).toEqual({
+      cover_file: 'cover/cover.jpg',
+      cover_local_uri: 'file:///p/cover.jpg',
+    });
+  });
+
+  it('T95: no audioFiles entry -> local_uri NULL; a higher version without fullStory/cover drops the row', async () => {
+    const db = createTestDb();
+    await importPack(db, listenPack);
+    const v1 = await db.all<{ local_uri: string | null }>(
+      sql`SELECT local_uri FROM pack_full_audio`,
+    );
+    expect(v1).toEqual([{ local_uri: null }]);
+    const v2: Pack = JSON.parse(JSON.stringify(listenPack));
+    v2.version = 2;
+    delete v2.fullStory;
+    await importPack(db, v2);
+    const n = await db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM pack_full_audio`);
+    expect(n[0]!.n).toBe(0);
+    const pk = await db.all<{ cover_file: string | null }>(sql`SELECT cover_file FROM packs`);
+    expect(pk[0]!.cover_file).toBeNull();
   });
 
   it('rejects invalid packs with precise schema errors before touching the DB', async () => {

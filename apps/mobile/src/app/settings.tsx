@@ -16,7 +16,6 @@ import { NotificationsSettingsSection } from '@/features/motivation/notification
 import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
 import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-section';
 import { RecordingsSettingsSection } from '@/features/scenario/recordings/recordings-settings-section';
-import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
 import { SchedulingSettingsSection } from '@/features/review/scheduling-settings-section';
 import { ScenarioSettingsSection } from '@/features/scenario/scenario-settings-section';
@@ -179,8 +178,6 @@ export default function SettingsScreen() {
 
       <SchedulingSettingsSection />
 
-      <PathSettingsSection />
-
       <VoicesSettingsSection />
       <AsrSettingsSection />
       <AssistSettingsSection />
@@ -254,6 +251,15 @@ export default function SettingsScreen() {
                   <Text variant="caption">
                     Scenario judge, meta-intents, endpointing, rescue (T60)
                   </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
+              </Pressable>
+            </Link>
+            <Link href="/dev-lift" asChild>
+              <Pressable className="flex-row items-center justify-between border-t border-border px-4 py-3.5 active:bg-surface-2">
+                <View className="gap-0.5">
+                  <Text className="font-ui-medium">Lift gallery</Text>
+                  <Text variant="caption">Hotel lift doors, indicator, flicker and drop (T91)</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={tokens.textMuted} />
               </Pressable>

@@ -94,12 +94,13 @@ export interface ParsedDialogueDraft {
   nodes: DraftDialogueNode[];
 }
 
-export type DraftKind = 'story' | 'dialogue' | 'scenario' | 'exam';
+export type DraftKind = 'story' | 'dialogue' | 'scenario' | 'exam' | 'course';
 
 /**
  * Decide which parser a draft belongs to by peeking at its frontmatter keys:
  * a `dialogue:` section marks a dialogue draft, a `scenario:` section a
- * scenario draft (T56), an `exam:` section an exam draft (T67), anything else
+ * scenario draft (T56), an `exam:` section an exam draft (T67), a `course:`
+ * section a course draft (T88, one floor), anything else
  * is a story draft (whose parser reports the real errors). Filename is deliberately not the signal — content is.
  */
 export function sniffDraftKind(file: string, source: string): DraftKind {
@@ -109,6 +110,7 @@ export function sniffDraftKind(file: string, source: string): DraftKind {
     if (raw !== null && typeof raw === 'object' && 'dialogue' in raw) return 'dialogue';
     if (raw !== null && typeof raw === 'object' && 'scenario' in raw) return 'scenario';
     if (raw !== null && typeof raw === 'object' && 'exam' in raw) return 'exam';
+    if (raw !== null && typeof raw === 'object' && 'course' in raw) return 'course';
   } catch {
     // not even YAML — the story parser will report it
   }

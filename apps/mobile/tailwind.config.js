@@ -15,8 +15,11 @@ module.exports = {
         text: 'rgb(var(--text) / <alpha-value>)',
         'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
-        // accent at 15% — selection washes, highlight, karaoke word bg
+        // accent at 15% — selection washes, highlight
         'accent-soft': 'rgb(var(--accent) / 0.15)',
+        // karaoke word bg — a brighter Sumrak orange-red, translucent so white
+        // reading text stays legible (Mitch 2026-10-17: the 15 % wash was invisible)
+        karaoke: 'rgb(var(--karaoke) / 0.42)',
         success: 'rgb(var(--success) / <alpha-value>)',
         danger: 'rgb(var(--danger) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
@@ -36,6 +39,11 @@ module.exports = {
         'level-b1': 'rgb(var(--level-b1) / <alpha-value>)',
         'level-b2': 'rgb(var(--level-b2) / <alpha-value>)',
         'level-c1': 'rgb(var(--level-c1) / <alpha-value>)',
+        // M25 hotel lift (T91): indicator glow, dim glow, brass rim, plate.
+        'hotel-glow': 'rgb(var(--hotel-glow) / <alpha-value>)',
+        'hotel-glow-dim': 'rgb(var(--hotel-glow-dim) / <alpha-value>)',
+        'hotel-brass': 'rgb(var(--hotel-brass) / <alpha-value>)',
+        'hotel-plate': 'rgb(var(--hotel-plate) / <alpha-value>)',
       },
       fontFamily: {
         // UI chrome: Golos Text (Cyrillic-friendly, used for the Russian tab titles)

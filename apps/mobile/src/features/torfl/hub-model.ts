@@ -7,6 +7,7 @@ import {
 } from '@sumrak/schema';
 
 import { diffDayKeys, isDayKey } from '@/lib/dates';
+import { GATE_PACK_ID, GATE_TAG, isHiddenGatePack } from '@/features/hotel/gate-model';
 
 import { ruleLine, torflLevelOf, type TorflLevel } from './level-profile';
 import type { ExamMode, ExamResults, ExamVerdict } from './model';
@@ -148,6 +149,13 @@ export function buildExamListItems(
   const out: ExamListItem[] = [];
   for (const s of summaries) {
     if (!s.exam) continue;
+    // D16: the unseen gate mock stays off every listing until it has been attempted.
+    const attempted = attempts.some((a) => a.packId === s.packId);
+    if (
+      s.packId === GATE_PACK_ID &&
+      isHiddenGatePack({ packId: s.packId, tags: [GATE_TAG] }, attempted)
+    )
+      continue;
     let best: ExamListItem['best'] = null;
     for (const a of attempts) {
       if (a.packId !== s.packId || a.examId !== s.examId || a.status !== 'finished') continue;

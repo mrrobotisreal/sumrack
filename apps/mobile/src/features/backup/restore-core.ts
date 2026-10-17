@@ -15,6 +15,8 @@ import {
   encounters,
   examAttempts,
   examItemCards,
+  courseProgress,
+  courseAttempts,
   leechDismissals,
   dailyQuests,
   examResponses,
@@ -87,6 +89,9 @@ const INSERT_ORDER: [UserTableKey, SQLiteTable][] = [
   ['examAttempts', examAttempts],
   ['examResponses', examResponses],
   ['examItemCards', examItemCards],
+  // T89: no FKs (progress and attempts are plain content refs).
+  ['courseProgress', courseProgress],
+  ['courseAttempts', courseAttempts],
   // T38: after cards (FK → cards).
   ['leechDismissals', leechDismissals],
   // T34: no FKs.

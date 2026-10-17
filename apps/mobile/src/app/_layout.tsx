@@ -30,6 +30,7 @@ import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
 import { AmbientAudioHost } from '@/features/ambient-audio/ambient-audio-host';
+import { ListenActivityBridge } from '@/features/listen/listen-activity-bridge';
 import { ShareIntentGate } from '@/features/import/share-gate';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
 import { NotificationRouter } from '@/features/motivation/notification-router';
@@ -115,6 +116,10 @@ export default function RootLayout() {
                   options={{ headerShown: false, animation: 'fade' }}
                 />
                 <Stack.Screen
+                  name="listen/[packId]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
                   name="review/session"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
                 />
@@ -167,6 +172,18 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="dialogue/[packId]/[dialogueId]"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="hotel/[packId]/[unitId]/index"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: true }}
+                />
+                <Stack.Screen
+                  name="hotel/[packId]/[unitId]/practice"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="hotel/[packId]/exam"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: false }}
                 />
                 <Stack.Screen name="torfl/index" options={{ title: 'ТРКИ' }} />
                 <Stack.Screen name="torfl/texts" options={{ title: 'Тексты' }} />
@@ -221,15 +238,6 @@ export default function RootLayout() {
                 <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
                 <Stack.Screen name="dashboard/leeches" options={{ title: 'Leeches' }} />
                 <Stack.Screen name="dashboard/core-gaps" options={{ title: 'Not met yet' }} />
-                <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />
-                <Stack.Screen
-                  name="path/[packId]/quiz"
-                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-                />
-                <Stack.Screen
-                  name="path/checkpoint/[packId]"
-                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-                />
                 <Stack.Screen
                   name="settings"
                   options={{ title: 'Settings', presentation: 'modal' }}
@@ -264,9 +272,11 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-assist" options={{ title: 'Assist bench' }} />
                 <Stack.Screen name="dev-judge" options={{ title: 'Judge lab' }} />
                 <Stack.Screen name="dev-scene" options={{ title: 'Scene gallery' }} />
+                <Stack.Screen name="dev-lift" options={{ title: 'Lift gallery' }} />
                 <Stack.Screen name="dev-exam-capture" options={{ title: 'A2 grading capture' }} />
               </Stack>
               <AmbientAudioHost ready={introDone} />
+              <ListenActivityBridge />
               <AutoSync />
               <AutoBackup />
               <AiQueue />

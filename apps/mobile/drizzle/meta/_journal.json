@@ -141,6 +141,20 @@
       "when": 1791717166217,
       "tag": "0019_encounter-token-index",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792192753709,
+      "tag": "0020_hotel",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792258536502,
+      "tag": "0021_full-story",
+      "breakpoints": true
     }
   ]
 }

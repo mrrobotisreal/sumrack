@@ -315,3 +315,101 @@ describe('ExerciseSpecSchema', () => {
     expect(cloze.success).toBe(false);
   });
 });
+
+describe('PackSchema fullStory + cover (T94)', () => {
+  /** A two-story pack, each story with one track, plus a consistent fullStory. */
+  function makeStitchedPack(): any {
+    const pack = makeValidPack() as any;
+    const second = structuredClone(pack.stories[0]);
+    pack.stories[0].id = 'part-1';
+    second.id = 'part-2';
+    second.sentences[0].id = 'test-s02';
+    pack.stories.push(second);
+    pack.stories.forEach((s: any, i: number) => {
+      s.audio = [
+        {
+          id: `p${i + 1}-a`,
+          voice: 'elevenlabs:Test',
+          style: 'neutral',
+          file: `audio/p${i + 1}-a.opus`,
+          durationMs: 1000,
+          timestamps: [],
+        },
+      ];
+    });
+    pack.fullStory = {
+      id: 'test-pack-001-full',
+      voice: 'elevenlabs:Test',
+      style: 'full',
+      file: 'audio/test-pack-001-full.opus',
+      durationMs: 3200,
+      gapMs: 1200,
+      segments: [
+        { storyId: 'part-1', trackId: 'p1-a', startMs: 0, endMs: 1000 },
+        { storyId: 'part-2', trackId: 'p2-a', startMs: 2200, endMs: 3200 },
+      ],
+    };
+    pack.cover = 'cover/cover.jpg';
+    return pack;
+  }
+
+  it('accepts a stories pack with a consistent fullStory and cover', () => {
+    expect(PackSchema.safeParse(makeStitchedPack()).success).toBe(true);
+  });
+
+  it('1: fullStory on a non-stories pack fails at fullStory', () => {
+    const pack = makeStitchedPack();
+    pack.type = 'prompts';
+    pack.prompts = [{ id: 'p', level: 'A1', prompt: { ru: 'x', en: 'x' } }];
+    expectIssue(pack, 'fullStory', 'allowed only on "stories"');
+  });
+
+  it('1: cover on a non-stories pack fails at cover', () => {
+    const pack = makeStitchedPack();
+    delete pack.fullStory;
+    pack.type = 'prompts';
+    expectIssue(pack, 'cover', 'allowed only on "stories"');
+  });
+
+  it('2: segments out of order fail at fullStory.segments', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.segments.reverse();
+    expectIssue(pack, 'fullStory.segments', 'in stories[] order');
+  });
+
+  it('2: a missing story fails at fullStory.segments', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.segments.pop();
+    expectIssue(pack, 'fullStory.segments', 'every story');
+  });
+
+  it('3: an unknown trackId fails at the segment', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.segments[1].trackId = 'ghost';
+    expectIssue(pack, 'fullStory.segments[1].trackId', 'not an audio track');
+  });
+
+  it('4: overlapping segments fail at the later startMs', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.segments[1].startMs = 900;
+    expectIssue(pack, 'fullStory.segments[1].startMs', 'before the previous one ends');
+  });
+
+  it('4: a segment past durationMs fails at the last endMs', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.durationMs = 3000;
+    expectIssue(pack, 'fullStory.segments[1].endMs', 'past fullStory.durationMs');
+  });
+
+  it('5: fullStory.file must be audio/*.opus', () => {
+    const pack = makeStitchedPack();
+    pack.fullStory.file = 'media/full.mp3';
+    expectIssue(pack, 'fullStory.file', 'audio/');
+  });
+
+  it('5: cover must be cover/*.jpg', () => {
+    const pack = makeStitchedPack();
+    pack.cover = 'cover/cover.png';
+    expectIssue(pack, 'cover', 'cover/');
+  });
+});

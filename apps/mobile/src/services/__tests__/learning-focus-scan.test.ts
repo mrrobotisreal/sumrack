@@ -18,7 +18,6 @@ const SPEAK_SURFACES = [
   'features/reader/phrase-card-sheet.tsx',
   'features/review/games/numbers/numbers-screen.tsx',
   'features/pronunciation/pronunciation-view.tsx',
-  'features/path/exercises/spec-pronunciation-view.tsx',
 ];
 
 describe('learning clips take transient focus', () => {

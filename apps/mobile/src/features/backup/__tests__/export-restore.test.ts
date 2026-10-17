@@ -17,6 +17,8 @@ import {
   encounters,
   examAttempts,
   examItemCards,
+  courseAttempts,
+  courseProgress,
   leechDismissals,
   dailyQuests,
   examResponses,
@@ -623,6 +625,8 @@ async function selectAllUserTables(db: SumrakDB) {
     examAttempts: await db.select().from(examAttempts),
     examResponses: await db.select().from(examResponses),
     examItemCards: await db.select().from(examItemCards),
+    courseProgress: await db.select().from(courseProgress),
+    courseAttempts: await db.select().from(courseAttempts),
     leechDismissals: await db.select().from(leechDismissals),
     dailyQuests: await db.select().from(dailyQuests),
     settings: await db.select().from(settings),
@@ -1049,6 +1053,83 @@ describe('restore-core (full pipeline: export → encrypt → decrypt → restor
   });
 });
 
+describe('course user tables round-trip (T89, decision 10)', () => {
+  async function seedCourse(db: SumrakDB) {
+    await db.insert(courseProgress).values([
+      {
+        key: 'a1-hotel-f03:u1',
+        packId: 'a1-hotel-f03',
+        unitId: 'u1',
+        bestPercent: 85,
+        passedAt: NOW,
+        passedVia: 'course',
+        attempts: 2,
+        lastAttemptAt: NOW,
+        cooldownUntil: null,
+        updatedAt: NOW,
+      },
+      {
+        key: 'a1-hotel-f03:floor',
+        packId: 'a1-hotel-f03',
+        unitId: null,
+        bestPercent: 40,
+        passedAt: null,
+        passedVia: null,
+        attempts: 1,
+        lastAttemptAt: NOW,
+        cooldownUntil: NOW + 20 * 60_000,
+        updatedAt: NOW,
+      },
+    ]);
+    await db.insert(courseAttempts).values({
+      id: 'catt-1',
+      packId: 'a1-hotel-f03',
+      unitId: 'u1',
+      kind: 'unit',
+      startedAt: NOW - 1000,
+      finishedAt: NOW - 500,
+      percent: 85,
+      passed: true,
+      itemIds: JSON.stringify(['u1-c01', 'u1-c02']),
+      responsesJson: JSON.stringify({ 'u1-c01': { answer: 0, correct: true } }),
+    });
+  }
+
+  it('course_progress + course_attempts round-trip through export → restore', async () => {
+    const source = createTestDb();
+    await seedCourse(source);
+    const { payload } = await exportUserData(source);
+    expect(payload.tables.courseProgress).toHaveLength(2);
+    expect(payload.tables.courseAttempts).toHaveLength(1);
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, JSON.parse(JSON.stringify(payload)));
+    expect(result.rowCounts.courseProgress).toBe(2);
+    expect(result.rowCounts.courseAttempts).toBe(1);
+    expect(await target.select().from(courseProgress)).toEqual(
+      await source.select().from(courseProgress),
+    );
+    expect(await target.select().from(courseAttempts)).toEqual(
+      await source.select().from(courseAttempts),
+    );
+  });
+
+  it('a pre-T89 payload (no course keys) still parses and restores with zero course rows', async () => {
+    const source = createTestDb();
+    await seedCourse(source);
+    const { payload } = await exportUserData(source);
+    const legacy = JSON.parse(JSON.stringify(payload)) as { tables: Record<string, unknown> };
+    delete legacy.tables.courseProgress;
+    delete legacy.tables.courseAttempts;
+
+    const target = createTestDb();
+    const result = await restoreUserData(target, legacy);
+    expect(result.rowCounts.courseProgress).toBe(0);
+    expect(result.rowCounts.courseAttempts).toBe(0);
+    expect(await target.select().from(courseProgress)).toHaveLength(0);
+  });
+});
+
 describe('user-table drift guard', () => {
   it('every non-content, non-infra table in the live schema is covered by the backup payload', async () => {
     const db = createTestDb();
@@ -1083,6 +1164,11 @@ describe('user-table drift guard', () => {
       'exams',
       // T38 reference lemma lists (rebuilt from packs, never backed up).
       'core_lemmas',
+      // T89 hotel course content (rebuilt from packs, never backed up).
+      'course_floors',
+      'course_items',
+      // T95 full-story track (rebuilt from packs, never backed up).
+      'pack_full_audio',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');

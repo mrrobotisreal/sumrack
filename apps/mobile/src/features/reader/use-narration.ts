@@ -8,6 +8,7 @@ import type { AudioTrackRow } from '@/db/repositories/content';
 import type { ClassificationEventProps } from '@/features/library/categories';
 import { track as trackEvent } from '@/services/analytics';
 import { getSpeechService } from '@/services/speech';
+import { claim as claimAudio } from '@/features/audio/arbiter';
 import { runSpan } from '@/features/audio/slice-window';
 import { useSlicePlayer } from '@/features/audio/use-slice-player';
 
@@ -376,6 +377,7 @@ export function useNarration({
         ...eventPropsRef.current,
       });
     } else {
+      claimAudio('narration', () => playerRef.current?.pause());
       applyLockScreen(player, currentTrack);
       // Play after the track ended = listen again from the top.
       const atEnd = Math.round(player.currentTime * 1000) >= currentTrack.durationMs - 250;

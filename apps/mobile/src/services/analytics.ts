@@ -59,6 +59,8 @@ export type AnalyticsEvent =
   // T58 scenario scene layers ride the same Wi-Fi gate (SPEAKING_SCENARIOS §3).
   | 'scene_deferred_wifi'
   | 'scene_backfilled'
+  // M26 (T95): staged audio/cover files reused on a pack bump (hash matched; no re-download).
+  | 'sync_file_reused'
   | 'sync_config_saved'
   | 'sync_pat_saved'
   | 'sync_pat_cleared'
@@ -338,11 +340,48 @@ export type AnalyticsEvent =
   // T31 ambient room scenes. Props carry the scene name / a boolean only.
   | 'room_scene_shown'
   | 'reduce_motion_toggled'
+  // M25 hotel lift (T91, HOTEL_PATH §4). Props are numbers, slugs and booleans only.
+  // hotel_floor_entered {floor, via} — the lift arrived on a floor (or a deep link opened it).
+  // hotel_lift_ride {from, to, passed13} — a ride finished (floor numbers; passed13 = crossed the missing 13).
+  // hotel_up_blocked {floor} — a tap on a dark ▲ (the «Сначала сдайте экзамен» toast).
+  // hotel_drop_played {reduced} — the Номер 13 drop ran (reduced = the fade variant).
+  | 'hotel_floor_entered'
+  | 'hotel_lift_ride'
+  | 'hotel_up_blocked'
+  | 'hotel_drop_played'
+  // M25 hotel lesson + runner (T90, HOTEL_PATH §3). Ids, slugs and numbers only.
+  // hotel_unit_opened {packId, unitId} — a lesson screen mounted.
+  // hotel_card_viewed {packId, unitId, cardId, kind} — once per card per visit.
+  // hotel_check_answered {itemId, correct} — a Проверь себя item answered (ungraded).
+  // hotel_unit_attempt {packId, unitId, percent, passed, attempt} — a unit exercise run finished.
+  // hotel_floor_exam {packId, percent, passed, attempt, weakestUnitId} — a floor exam finished.
+  // hotel_extern {packId, percent, passed} — an экстерн finished.
+  // hotel_cooldown_blocked {kind, minutesLeft} — a floor/экстерн start refused by its cooldown.
+  // hotel_explain_more {context, packId, id, model} — «Объясни ещё» requested (context = card | item).
+  // hotel_practice_opened {packId, examId} — a floor's «Практика» drill opened.
+  // hotel_library_quote_played {packId, storyId} — a library quote's ▶ played.
+  | 'hotel_unit_opened'
+  | 'hotel_card_viewed'
+  | 'hotel_check_answered'
+  | 'hotel_unit_attempt'
+  | 'hotel_floor_exam'
+  | 'hotel_extern'
+  | 'hotel_cooldown_blocked'
+  | 'hotel_explain_more'
+  | 'hotel_practice_opened'
+  | 'hotel_library_quote_played'
+  // hotel_gate_attempt {percent, verdict} — Номер 13 finished (T92c). verdict = pass | fail; percent = mean of subtests.
+  | 'hotel_gate_attempt'
   // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
   // story_source_link_opened {packId, storyId, category} fires from the reader header's source line.
   | 'library_category_switched'
   | 'library_genre_switched'
   | 'library_empty_category_viewed'
+  // M26 listen-to-the-whole-story (T97, FULL_STORY_LISTEN §8).
+  // listen_row_shown {packId, state, parts} — once per pack per Library visit.
+  // listen_row_tapped {packId} — a tap on «Прослушать всю историю».
+  | 'listen_row_shown'
+  | 'listen_row_tapped'
   | 'story_source_link_opened'
   // M15 themed ambience (T48). Props: theme/bed slugs + ms only.
   // ambient_theme_started {theme, bed, resumedMs} — a theme begins (fresh or resumed);
@@ -581,7 +620,26 @@ export type AnalyticsEvent =
   | 'quest_assigned'
   | 'quest_completed'
   | 'quest_launched'
-  | 'quest_progress';
+  | 'quest_progress'
+  // M26/T96 listen player (FULL_STORY_LISTEN §8). Ids/numbers/slugs only.
+  // listen_opened {packId, kind, parts, durationMs, resumedFromMs, source: library|now-playing|resume};
+  // listen_play/pause {packId, positionMs, partIndex}; listen_seek {packId, method:
+  // scrub|back15|forward30|part|lockscreen, fromMs, toMs}; listen_rate_changed {packId, rate};
+  // listen_volume_changed {packId, volume, muted}; listen_part_reached {packId, storyId, partIndex};
+  // listen_finished {packId, durationMs, listenedMs, rate}; listen_stopped {packId, positionMs,
+  // reason: user|replaced|error|reader}; listen_open_reader {packId, storyId, positionMs};
+  // listen_background {packId}. (listen_row_shown = T97, sync_file_reused = T95.)
+  | 'listen_opened'
+  | 'listen_play'
+  | 'listen_pause'
+  | 'listen_seek'
+  | 'listen_rate_changed'
+  | 'listen_volume_changed'
+  | 'listen_part_reached'
+  | 'listen_finished'
+  | 'listen_stopped'
+  | 'listen_open_reader'
+  | 'listen_background';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
