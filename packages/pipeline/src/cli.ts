@@ -19,6 +19,7 @@ import { DEFAULT_MODEL_ID, ElevenLabsClient } from './elevenlabs.ts';
 import { resolveEnvVar } from './env.ts';
 import { runModelsMirror } from './models.ts';
 import { runPublish } from './publish.ts';
+import { DEFAULT_GAP_MS, formatStitchTable, runStitch } from './stitch.ts';
 import {
   auditPack,
   formatAuditTable,
@@ -27,7 +28,7 @@ import {
   restampPack,
   type PackAudit,
 } from './stamp-audit.ts';
-import { runValidate } from './validate.ts';
+import { fullTrackLine, runValidate } from './validate.ts';
 import { safeParsePack, type Pack } from '@sumrak/schema';
 
 /**
@@ -105,12 +106,27 @@ Usage:
       run, so tracks/nodes/lines can be finalized in batches).
 
   pipeline publish <pack-dir> --content <sumrak-content-dir> [--push] [-m msg]
-                   [--allow-stamp-risk] [--skip-stamp-audit]
+                   [--allow-stamp-risk] [--skip-stamp-audit] [--stitch-only]
       Copy the pack into the content repo, recompute hashes, update
       manifest.json, and commit. Pushes only with --push. Runs stamp-audit
       first and refuses on failure (--allow-stamp-risk logs the override to
       <pack-dir>/BUILD_NOTES.md; --skip-stamp-audit is for packs with no
       word-sliced audio and needs the aligner venv otherwise).
+      --stitch-only (T94) republishes a pack whose audio is unchanged: the
+      pack minus {fullStory, cover, version} must deep-equal the published
+      one and every story track must hash as the manifest lists it; then the
+      stamp-audit is skipped. Conflicts with --allow-stamp-risk and
+      --skip-stamp-audit.
+
+  pipeline stitch <pack-dir> [--gap-ms ${DEFAULT_GAP_MS}] [--track <style>] [--cover <image>]
+                  [--bump] [--dry-run]
+      T94: build the pack's full-story track (audio/<packId>-full.opus: every
+      part's narration in order, --gap-ms of silence between) and write the
+      fullStory segment map into pack.json. --track picks each story's track
+      by style (default: its first). --cover squeezes a PNG/JPEG into a
+      1024x1024 cover/cover.jpg (<= 400 KB) and sets pack.cover. --bump
+      increments the pack version. --dry-run prints the segment table and
+      writes nothing. Idempotent. Offline; needs ffmpeg.
 
   pipeline stamp-audit <pack-dir|pack.json>... [--track id] [--json out.json]
       T80: offline word-stamp accuracy audit over the real audio (forced
@@ -270,6 +286,7 @@ function validateCommand(args: string[]): void {
       printScenarioReports(result.pack);
       printExamReports(result.pack);
       printReferenceReports(result.pack);
+      if (result.pack.type === 'stories') console.log(fullTrackLine(result.pack));
       if (result.pack.course) {
         console.log(`\n${renderCourseReport(result.pack)}`);
         const live = courseManifestIssues(
@@ -520,6 +537,7 @@ function publishCommand(args: string[]): void {
   let message: string | undefined;
   let allowStampRisk = false;
   let skipStampAudit = false;
+  let stitchOnly = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     const next = (): string => {
@@ -529,6 +547,7 @@ function publishCommand(args: string[]): void {
     };
     if (arg === '--allow-stamp-risk') allowStampRisk = true;
     else if (arg === '--skip-stamp-audit') skipStampAudit = true;
+    else if (arg === '--stitch-only') stitchOnly = true;
     else if (arg === '--content') content = next();
     else if (arg === '--push') push = true;
     else if (arg === '-m' || arg === '--message') message = next();
@@ -538,13 +557,20 @@ function publishCommand(args: string[]): void {
   }
   if (packDir === undefined) fail(`publish needs a <pack-dir>\n\n${USAGE}`, 2);
   if (content === undefined) fail(`publish needs --content <sumrak-content-dir>\n\n${USAGE}`, 2);
+  if (stitchOnly && (allowStampRisk || skipStampAudit)) {
+    fail(
+      `--stitch-only cannot be combined with --allow-stamp-risk or --skip-stamp-audit (it already skips the audit, only for byte-identical tracks)\n\n${USAGE}`,
+      2,
+    );
+  }
 
   try {
     const summary = runPublish(packDir, content, {
       push,
       message,
       allowStampRisk,
-      ...(skipStampAudit ? {} : { stampAudit: pythonAligner() }),
+      stitchOnly,
+      ...(skipStampAudit || stitchOnly ? {} : { stampAudit: pythonAligner() }),
     });
     if (summary.outcome === 'unchanged') {
       console.log(`= ${summary.packId} v${summary.version} already published, nothing to do`);
@@ -557,10 +583,47 @@ function publishCommand(args: string[]): void {
       summary.sceneBytes > 0
         ? `, of which scene/ ${(summary.sceneBytes / (1024 * 1024)).toFixed(2)} MB (Wi-Fi-gated PNG layers)`
         : '';
+    const full =
+      summary.fullStoryBytes > 0
+        ? `, full-story track ${(summary.fullStoryBytes / (1024 * 1024)).toFixed(2)} MB`
+        : '';
+    if (summary.stitchOnlyNote) console.log(summary.stitchOnlyNote);
     console.log(
-      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB${scene}) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
+      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB${scene}${full}) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
     );
     for (const f of summary.files) console.log(`  ${f.path} (${f.bytes} bytes) ${f.sha256}`);
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e), 1);
+  }
+}
+
+function stitchCommand(args: string[]): void {
+  let packDir: string | undefined;
+  let gapMs = DEFAULT_GAP_MS;
+  let trackStyle: string | undefined;
+  let coverSource: string | undefined;
+  let bump = false;
+  let dryRun = false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    const next = (): string => {
+      const v = args[++i];
+      if (v === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
+      return v;
+    };
+    if (arg === '--gap-ms') gapMs = Number(next());
+    else if (arg === '--track') trackStyle = next();
+    else if (arg === '--cover') coverSource = next();
+    else if (arg === '--bump') bump = true;
+    else if (arg === '--dry-run') dryRun = true;
+    else if (arg.startsWith('-')) fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
+    else if (packDir === undefined) packDir = arg;
+    else fail(`stitch takes exactly one <pack-dir>\n\n${USAGE}`, 2);
+  }
+  if (packDir === undefined) fail(`stitch needs a <pack-dir>\n\n${USAGE}`, 2);
+  try {
+    const result = runStitch(packDir, { gapMs, trackStyle, coverSource, bump, dryRun });
+    console.log(formatStitchTable(result));
   } catch (e) {
     fail(e instanceof Error ? e.message : String(e), 1);
   }
@@ -685,6 +748,9 @@ async function main(): Promise<void> {
       break;
     case 'publish':
       publishCommand(rest);
+      break;
+    case 'stitch':
+      stitchCommand(rest);
       break;
     case 'stamp-audit':
       stampAuditCommand(rest);

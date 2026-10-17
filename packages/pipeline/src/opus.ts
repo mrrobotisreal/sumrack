@@ -10,7 +10,7 @@ import { existsSync, unlinkSync } from 'node:fs';
 /** Voice-quality bitrate within the design §3.3 range. */
 export const OPUS_BITRATE = '32k';
 
-function run(cmd: string, args: string[]): string {
+export function run(cmd: string, args: string[]): string {
   const res = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (res.error) {
     if ((res.error as NodeJS.ErrnoException).code === 'ENOENT') {
