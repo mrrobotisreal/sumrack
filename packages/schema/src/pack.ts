@@ -59,6 +59,41 @@ export const StorySourceSchema = z.strictObject({
 export type StorySource = z.infer<typeof StorySourceSchema>;
 
 /**
+ * One part of a stitched full-story track (M26, FULL_STORY_LISTEN §3): where a
+ * story's narration sits inside the pack-level continuous file.
+ */
+export const FullStorySegmentSchema = z.strictObject({
+  /** A story of this pack. */
+  storyId: StableIdSchema,
+  /** The track of that story that was stitched in. */
+  trackId: StableIdSchema,
+  startMs: z.number().int().nonnegative(),
+  /** > startMs; <= fullStory.durationMs (checked in PackSchema). */
+  endMs: z.number().int().positive(),
+});
+export type FullStorySegment = z.infer<typeof FullStorySegmentSchema>;
+
+/**
+ * The pipeline-stitched continuous narration of every part of a `stories`
+ * pack, in order, plus its segment map (`pipeline stitch`, T94). Older apps
+ * reject packs carrying it (strict pack object) — see Gate L in the design.
+ */
+export const FullStorySchema = z.strictObject({
+  /** `<packId>-full`. */
+  id: StableIdSchema,
+  /** Provider-prefixed voice of the first stitched segment. */
+  voice: AudioTrackSchema.shape.voice,
+  style: z.literal('full'),
+  /** "audio/<packId>-full.opus". */
+  file: RelativePathSchema,
+  durationMs: z.number().int().positive(),
+  /** Silence inserted between parts, ms (stitch default 1200). */
+  gapMs: z.number().int().nonnegative(),
+  segments: z.array(FullStorySegmentSchema).min(1),
+});
+export type FullStory = z.infer<typeof FullStorySchema>;
+
+/**
  * A single readable text (story, article, or dialogue) inside a pack
  * (design §4.2 `Story`), composed of sentences.
  */
@@ -221,6 +256,93 @@ export const PackThemeSchema = z.strictObject({
 });
 export type PackTheme = z.infer<typeof PackThemeSchema>;
 
+/** FULL_STORY_LISTEN §3 invariants 1-5, each a path-precise issue. */
+function checkFullStoryInvariants(
+  pack: {
+    type: string;
+    stories: Array<{ id: string; audio: Array<{ id: string }> }>;
+    fullStory?: z.infer<typeof FullStorySchema> | undefined;
+    cover?: string | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const { fullStory, cover } = pack;
+  if (fullStory && pack.type !== 'stories') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['fullStory'],
+      message: `fullStory is allowed only on "stories" packs, not "${pack.type}"`,
+    });
+  }
+  if (cover !== undefined) {
+    if (pack.type !== 'stories') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cover'],
+        message: `cover is allowed only on "stories" packs, not "${pack.type}"`,
+      });
+    }
+    if (!cover.startsWith('cover/') || !cover.endsWith('.jpg')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cover'],
+        message: 'cover must start with "cover/" and end in ".jpg"',
+      });
+    }
+  }
+  if (!fullStory) return;
+  if (!fullStory.file.startsWith('audio/') || !fullStory.file.endsWith('.opus')) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['fullStory', 'file'],
+      message: 'fullStory.file must start with "audio/" and end in ".opus"',
+    });
+  }
+  const segs = fullStory.segments;
+  const sameOrder =
+    segs.length === pack.stories.length && segs.every((s, i) => s.storyId === pack.stories[i]!.id);
+  if (!sameOrder) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['fullStory', 'segments'],
+      message: `fullStory.segments must list every story of the pack exactly once, in stories[] order (${pack.stories.map((s) => s.id).join(', ')})`,
+    });
+  }
+  segs.forEach((seg, i) => {
+    const story = pack.stories.find((s) => s.id === seg.storyId);
+    if (story && !story.audio.some((a) => a.id === seg.trackId)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fullStory', 'segments', i, 'trackId'],
+        message: `trackId "${seg.trackId}" is not an audio track of story "${seg.storyId}"`,
+      });
+    }
+    if (seg.endMs <= seg.startMs) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fullStory', 'segments', i, 'endMs'],
+        message: `segment ends at ${seg.endMs}ms, not after its start ${seg.startMs}ms`,
+      });
+    }
+    const next = segs[i + 1];
+    if (next && seg.endMs > next.startMs) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fullStory', 'segments', i + 1, 'startMs'],
+        message: `segment starts at ${next.startMs}ms, before the previous one ends at ${seg.endMs}ms`,
+      });
+    }
+  });
+  const last = segs[segs.length - 1];
+  if (last && last.endMs > fullStory.durationMs) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['fullStory', 'segments', segs.length - 1, 'endMs'],
+      message: `last segment ends at ${last.endMs}ms, past fullStory.durationMs ${fullStory.durationMs}ms`,
+    });
+  }
+}
+
 /**
  * The content pack (design §4.2 `Pack`) — the unit of authoring, sync, and
  * versioning. Everything the app knows about Russian arrives in a pack.
@@ -310,8 +432,13 @@ export const PackSchema = z
      * `category`: a genre on a non-stories pack is simply ignored by the app.
      */
     genre: StableIdSchema.optional(),
+    /** M26 (T94): stitched full-story track + segment map. `stories` packs only. */
+    fullStory: FullStorySchema.optional(),
+    /** M26 (T94): pack cover image, "cover/cover.jpg". `stories` packs only. */
+    cover: RelativePathSchema.optional(),
   })
   .superRefine((pack, ctx) => {
+    checkFullStoryInvariants(pack, ctx);
     // type → required sections
     if (pack.type === 'stories' && pack.stories.length === 0) {
       ctx.addIssue({
