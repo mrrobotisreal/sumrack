@@ -395,3 +395,16 @@ export async function initMotivation(): Promise<void> {
   // T40: boot refresh (the widget may be a day stale after a closed-app gap).
   requestWidgetRefresh();
 }
+
+/**
+ * A hotel exercise run finished (T90, decision 8): the pass XP, once per
+ * pass. Unit first pass +10, floor exam +30, экстерн +30; a fail and check
+ * answers earn nothing. The caller computes `xp` with `hotelRunXp` and stores
+ * it on the attempt; this bumps the daily XP and re-evaluates achievements.
+ */
+export async function recordHotelRun(xp: number): Promise<number> {
+  if (xp <= 0) return 0;
+  await repos.stats.bumpDailyActivity({ xp });
+  await evaluateMotivation();
+  return xp;
+}

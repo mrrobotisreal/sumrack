@@ -168,6 +168,18 @@ export default function RootLayout() {
                   name="dialogue/[packId]/[dialogueId]"
                   options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
                 />
+                <Stack.Screen
+                  name="hotel/[packId]/[unitId]/index"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: true }}
+                />
+                <Stack.Screen
+                  name="hotel/[packId]/[unitId]/practice"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: false }}
+                />
+                <Stack.Screen
+                  name="hotel/[packId]/exam"
+                  options={{ headerShown: true, animation: 'fade', gestureEnabled: false }}
+                />
                 <Stack.Screen name="torfl/index" options={{ title: 'ТРКИ' }} />
                 <Stack.Screen name="torfl/texts" options={{ title: 'Тексты' }} />
                 <Stack.Screen

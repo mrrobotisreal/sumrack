@@ -9,6 +9,29 @@ import type { ChatMessage } from '../client';
 
 export type ExplainTarget =
   | {
+      kind: 'course-card';
+      /** Cache key: the course card id (`packId/unitId/cardId`, see explain.ts). */
+      id: string;
+      title: string;
+      body: string;
+      /** The card's example sentences in Russian (no translation: English is authored). */
+      examples: string[];
+    }
+  | {
+      kind: 'course-item';
+      /** Cache key: the course item id (`packId/itemId`). */
+      id: string;
+      stem: string;
+      options?: string[];
+      /** The learner's pick (the option text), when they answered wrong. */
+      chosen?: string;
+      /** The correct answer (the option text, or the accepted form). */
+      correct: string;
+      /** The authored explanation the learner already read. */
+      explain: string;
+      topic: string;
+    }
+  | {
       kind: 'sentence';
       ru: string;
       /** Pack translation when we have one (reader sentences). */
@@ -42,7 +65,44 @@ For a word or phrase: explain what it means, its grammar (declension/conjugation
 
 Keep it under ~250 words. No preamble — start with the content.`;
 
+/** Course prompts (T90 D9): English answer, ≤ 250 words, three new A1 examples, the chosen option named as wrong. */
+const COURSE_SYSTEM = `You are a Russian tutor for an English-speaking adult learner at A1. Answer in English, in markdown, at most 250 words, no preamble.
+
+Explain the grammar differently from the authored explanation the learner has already read: a new angle, a new picture of the rule. Give exactly three NEW A1 example sentences with English translations, none copied from the lesson. If the learner chose a wrong option, say plainly why that chosen option is wrong for this sentence. Keep the Russian plain (no Ukrainian letters: і ї є ґ).`;
+
+const COURSE_CARD_SYSTEM = `You are a Russian tutor for an English-speaking adult learner at A1. Answer in English, in markdown, at most 250 words, no preamble.
+
+Re-explain this lesson card in a fresh way: restate the rule in plain English, name the trigger, and give exactly three NEW A1 example sentences with English translations, none copied from the card. Keep the Russian plain (no Ukrainian letters: і ї є ґ).`;
+
 export function buildExplainMessages(target: ExplainTarget): ChatMessage[] {
+  if (target.kind === 'course-card') {
+    const parts = [
+      `Lesson card: «${target.title}»`,
+      target.body,
+      target.examples.length > 0
+        ? `Examples from the card:\n${target.examples.map((e) => `- ${e}`).join('\n')}`
+        : '',
+    ].filter((p) => p !== '');
+    return [
+      { role: 'system', content: COURSE_CARD_SYSTEM },
+      { role: 'user', content: parts.join('\n\n') },
+    ];
+  }
+  if (target.kind === 'course-item') {
+    const parts = [`Exercise sentence: «${target.stem}»`, `Topic: ${target.topic}`];
+    if (target.options && target.options.length > 0) {
+      parts.push(`Options: ${target.options.map((o) => `«${o}»`).join(', ')}`);
+    }
+    parts.push(`Correct answer: «${target.correct}»`);
+    if (target.chosen !== undefined && target.chosen !== target.correct) {
+      parts.push(`The learner chose: «${target.chosen}» (wrong)`);
+    }
+    parts.push(`The authored explanation the learner already read: ${target.explain}`);
+    return [
+      { role: 'system', content: COURSE_SYSTEM },
+      { role: 'user', content: parts.join('\n') },
+    ];
+  }
   let user: string;
   if (target.kind === 'sentence') {
     const parts = [`Explain this Russian sentence:\n\n«${target.ru}»`];

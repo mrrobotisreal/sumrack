@@ -14,6 +14,8 @@ import { ExplainResponseSchema } from './schemas';
 const cache = new Map<string, string>();
 
 export function cacheKey(target: ExplainTarget): string {
+  if (target.kind === 'course-card') return `course-card:${target.id}`;
+  if (target.kind === 'course-item') return `course-item:${target.id}`;
   if (target.kind === 'sentence') return `s:${target.ru}`;
   return `c:${target.headword}${target.leech ? ':leech' : ''}`;
 }

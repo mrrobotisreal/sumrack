@@ -124,6 +124,11 @@ export const SETTING_KEYS = {
    */
   hotelLastFloor: 'hotel.lastFloor',
   /**
+   * `{ [packId:unitId]: cardIndex }` (T90): where the learner stopped in each
+   * unit's lesson. Parsed defensively by features/hotel/lesson/lesson-model.ts.
+   */
+  hotelLessonPos: 'hotel.lessonPos',
+  /**
    * Словарь sort (T50, WORD_FORMS §2.4): { v: 1, key: BankSortKey,
    * familiarity: 'least' | 'most' }, defaults { 'added-asc', 'least' } —
    * Zod-validated on read (store/bank-prefs.ts); a malformed value heals

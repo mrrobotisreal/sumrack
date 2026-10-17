@@ -345,6 +345,27 @@ export type AnalyticsEvent =
   | 'hotel_lift_ride'
   | 'hotel_up_blocked'
   | 'hotel_drop_played'
+  // M25 hotel lesson + runner (T90, HOTEL_PATH §3). Ids, slugs and numbers only.
+  // hotel_unit_opened {packId, unitId} — a lesson screen mounted.
+  // hotel_card_viewed {packId, unitId, cardId, kind} — once per card per visit.
+  // hotel_check_answered {itemId, correct} — a Проверь себя item answered (ungraded).
+  // hotel_unit_attempt {packId, unitId, percent, passed, attempt} — a unit exercise run finished.
+  // hotel_floor_exam {packId, percent, passed, attempt, weakestUnitId} — a floor exam finished.
+  // hotel_extern {packId, percent, passed} — an экстерн finished.
+  // hotel_cooldown_blocked {kind, minutesLeft} — a floor/экстерн start refused by its cooldown.
+  // hotel_explain_more {context, packId, id, model} — «Объясни ещё» requested (context = card | item).
+  // hotel_practice_opened {packId, examId} — a floor's «Практика» drill opened.
+  // hotel_library_quote_played {packId, storyId} — a library quote's ▶ played.
+  | 'hotel_unit_opened'
+  | 'hotel_card_viewed'
+  | 'hotel_check_answered'
+  | 'hotel_unit_attempt'
+  | 'hotel_floor_exam'
+  | 'hotel_extern'
+  | 'hotel_cooldown_blocked'
+  | 'hotel_explain_more'
+  | 'hotel_practice_opened'
+  | 'hotel_library_quote_played'
   // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
   // story_source_link_opened {packId, storyId, category} fires from the reader header's source line.
   | 'library_category_switched'
