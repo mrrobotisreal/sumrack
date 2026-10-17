@@ -1,48 +1,48 @@
+import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
+import * as React from 'react';
 
 import { repos } from '@/db';
-
-// Local seam (T97): parses the `listen.progress` settings row written by T96.
-// The coordinator may swap this for features/listen/progress.ts on merge.
-const rowSchema = z.object({
-  v: z.literal(1),
-  byPack: z.record(
-    z.string(),
-    z.object({
-      positionMs: z.number(),
-      durationMs: z.number(),
-      updatedAt: z.number().optional(),
-      finishedAt: z.number().nullish(),
-    }),
-  ),
-});
+import { SETTING_KEYS } from '@/db/repositories/settings';
+import {
+  isFinished,
+  percentFor,
+  sanitizeProgress,
+  type ListenProgress,
+} from '@/features/listen/progress';
 
 export interface ListenPackProgress {
   percent: number;
   finished: boolean;
 }
 
-/** packId → {percent 0–100, finished}; absent packs have no entry. Never throws. */
+/**
+ * packId → {percent 0–100, finished} from the T96 `listen.progress` row.
+ * Packs never started have no entry. Never throws (malformed → empty).
+ */
 export function parseListenProgress(raw: unknown): Map<string, ListenPackProgress> {
+  const progress: ListenProgress = sanitizeProgress(raw);
   const out = new Map<string, ListenPackProgress>();
-  const parsed = rowSchema.safeParse(raw);
-  if (!parsed.success) return out;
-  for (const [packId, p] of Object.entries(parsed.data.byPack)) {
-    const finished = p.finishedAt != null;
-    const percent =
-      p.durationMs > 0
-        ? Math.max(0, Math.min(100, Math.round((p.positionMs / p.durationMs) * 100)))
-        : 0;
-    if (finished || percent > 0) out.set(packId, { percent: finished ? 100 : percent, finished });
+  for (const packId of Object.keys(progress.byPack)) {
+    const finished = isFinished(progress, packId);
+    const percent = percentFor(progress, packId);
+    if (finished || percent > 0) out.set(packId, { percent, finished });
   }
   return out;
 }
 
+/** Re-read on every Library focus: a listen session may have moved while away. */
 export function useListenProgress(): Map<string, ListenPackProgress> {
   const q = useQuery({
     queryKey: ['listen', 'progress'],
-    queryFn: async () => parseListenProgress(await repos.settings.get<unknown>('listen.progress')),
+    queryFn: async () =>
+      parseListenProgress(await repos.settings.get<unknown>(SETTING_KEYS.listenProgress)),
   });
+  const refetch = q.refetch;
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   return q.data ?? new Map();
 }

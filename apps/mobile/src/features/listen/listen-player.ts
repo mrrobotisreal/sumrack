@@ -4,12 +4,7 @@ import type { ListenSource } from '@/db/repositories/listen';
 import { claim as claimAudio, registerOwner } from '@/features/audio/arbiter';
 
 import { partAt } from './part-at';
-import {
-  LISTEN_PREFS_DEFAULTS,
-  toListenRate,
-  type ListenPrefs,
-  type ListenRate,
-} from './prefs';
+import { LISTEN_PREFS_DEFAULTS, toListenRate, type ListenPrefs, type ListenRate } from './prefs';
 import {
   EMPTY_PROGRESS,
   clearFinished,
@@ -232,7 +227,9 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       void player.seekTo(0);
       stopTimer();
       set({ playing: false, finished: true, positionMs: 0, partIndex: 0 });
-      writeProgress(markFinished(progress ?? EMPTY_PROGRESS, s.session.source.packId, dur, deps.now()));
+      writeProgress(
+        markFinished(progress ?? EMPTY_PROGRESS, s.session.source.packId, dur, deps.now()),
+      );
       deps.track('listen_finished', {
         ...props(),
         durationMs: dur,
@@ -302,7 +299,13 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       const source = await deps.getSource(packId);
       if (token !== openToken) return;
       if (!source) {
-        set({ ...INITIAL, rate: get().rate, volume: get().volume, muted: get().muted, error: 'Не удалось открыть аудио' });
+        set({
+          ...INITIAL,
+          rate: get().rate,
+          volume: get().volume,
+          muted: get().muted,
+          error: 'Не удалось открыть аудио',
+        });
         return;
       }
       set({
@@ -385,7 +388,11 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       player.play();
       set({ playing: true, finished: false });
       startTimer();
-      deps.track('listen_play', { ...props(), positionMs: readPositionMs(), partIndex: s.partIndex });
+      deps.track('listen_play', {
+        ...props(),
+        positionMs: readPositionMs(),
+        partIndex: s.partIndex,
+      });
     },
 
     pause() {
@@ -395,7 +402,11 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       stopTimer();
       set({ playing: false, positionMs: readPositionMs() });
       persistPosition();
-      deps.track('listen_pause', { ...props(), positionMs: readPositionMs(), partIndex: s.partIndex });
+      deps.track('listen_pause', {
+        ...props(),
+        positionMs: readPositionMs(),
+        partIndex: s.partIndex,
+      });
     },
 
     toggle() {

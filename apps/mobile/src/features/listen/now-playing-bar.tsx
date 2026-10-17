@@ -27,7 +27,10 @@ export function NowPlayingBar() {
     >
       <Pressable
         onPress={() =>
-          router.push({ pathname: '/listen/[packId]', params: { packId: source.packId, from: 'now-playing' } })
+          router.push({
+            pathname: '/listen/[packId]',
+            params: { packId: source.packId, from: 'now-playing' },
+          })
         }
         accessibilityRole="button"
         accessibilityLabel="Открыть плеер"

@@ -82,7 +82,14 @@ function source(id: string, over: Partial<ListenSource> = {}): ListenSource {
     coverUri: null,
     segments: [
       { storyId: 's1', trackId: 't1', titleRu: 'Раз', orderIdx: 0, startMs: 0, endMs: 40_000 },
-      { storyId: 's2', trackId: 't2', titleRu: 'Два', orderIdx: 1, startMs: 41_200, endMs: 100_000 },
+      {
+        storyId: 's2',
+        trackId: 't2',
+        titleRu: 'Два',
+        orderIdx: 1,
+        startMs: 41_200,
+        endMs: 100_000,
+      },
     ],
     ...over,
   };

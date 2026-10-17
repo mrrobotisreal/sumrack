@@ -709,7 +709,7 @@ export default function DevDbScreen() {
         setBusy(null);
       }
     },
-    [busy, queryClient, refreshScenarios, refreshExams],
+    [busy, queryClient, refreshScenarios, refreshExams, refreshFullTracks],
   );
 
   // Device walks (T93): `sumrak://dev-db?import=<fixture-id>` imports that fixture on mount, so a

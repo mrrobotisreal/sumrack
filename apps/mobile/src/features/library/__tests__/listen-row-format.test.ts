@@ -6,6 +6,8 @@ import { assembleRows, listenRowTrailing, withListenRow } from '../listen-row-mo
 import type { ListenAvailability } from '@/db/repositories/listen';
 
 vi.mock('@/db', () => ({ repos: {} }));
+vi.mock('expo-router', () => ({ useFocusEffect: () => undefined }));
+vi.mock('@/features/listen/listen-service', () => ({ useListenStore: () => null }));
 
 describe('partsLabel', () => {
   it.each([

@@ -39,7 +39,8 @@ export function ListenScreen() {
   const [partsOpen, setPartsOpen] = React.useState(false);
   const scrubbing = React.useRef(false);
 
-  const openSource = from === 'resume' ? 'resume' : from === 'now-playing' ? 'now-playing' : 'library';
+  const openSource =
+    from === 'resume' ? 'resume' : from === 'now-playing' ? 'now-playing' : 'library';
   const load = React.useCallback(() => {
     void listenPlayer.open(packId, { autoplay: false, source: openSource });
   }, [packId, openSource]);
@@ -148,9 +149,15 @@ export function ListenScreen() {
           className="items-center gap-0.5 px-2"
         >
           <Text numberOfLines={1} className="text-center">
-            {ready ? `Часть ${partIndex + 1} из ${total}${segment ? ` · ${segment.titleRu}` : ''}` : 'Загрузка…'}
+            {ready
+              ? `Часть ${partIndex + 1} из ${total}${segment ? ` · ${segment.titleRu}` : ''}`
+              : 'Загрузка…'}
           </Text>
-          {finished ? <Text variant="caption" className="text-accent">✓ Прослушано</Text> : null}
+          {finished ? (
+            <Text variant="caption" className="text-accent">
+              ✓ Прослушано
+            </Text>
+          ) : null}
         </Pressable>
       </View>
 
@@ -176,7 +183,12 @@ export function ListenScreen() {
           maximumTrackTintColor={tokens.textMuted}
           thumbTintColor={tokens.text}
           accessibilityLabel="Позиция"
-          accessibilityValue={{ min: 0, max: durationMs, now: Math.round(shownMs), text: formatTime(shownMs) }}
+          accessibilityValue={{
+            min: 0,
+            max: durationMs,
+            now: Math.round(shownMs),
+            text: formatTime(shownMs),
+          }}
         />
         <View className="flex-row justify-between px-1">
           <Text variant="caption" style={{ fontVariant: ['tabular-nums'] }}>
@@ -244,11 +256,7 @@ export function ListenScreen() {
           accessibilityLabel={muted ? 'Включить звук' : 'Выключить звук'}
           className="min-w-[56px] items-center"
         >
-          <Ionicons
-            name={muted ? 'volume-mute' : 'volume-high'}
-            size={26}
-            color={tokens.text}
-          />
+          <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={26} color={tokens.text} />
         </Pressable>
       </View>
 

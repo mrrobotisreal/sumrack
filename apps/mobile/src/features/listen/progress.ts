@@ -85,7 +85,12 @@ export function markFinished(
     v: 1,
     byPack: cap({
       ...progress.byPack,
-      [packId]: { positionMs: 0, durationMs: Math.round(durationMs), updatedAt: now, finishedAt: now },
+      [packId]: {
+        positionMs: 0,
+        durationMs: Math.round(durationMs),
+        updatedAt: now,
+        finishedAt: now,
+      },
     }),
   };
 }
