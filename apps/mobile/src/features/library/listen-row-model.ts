@@ -29,3 +29,17 @@ export function assembleRows<R extends { kind: string }>(rows: R[], orderedStori
     ...rows.filter((r) => r.kind !== 'story' && r.kind !== 'listen'),
   ];
 }
+
+/** The right-hand state of the row: nothing · NN % · finished · now playing. */
+export function listenRowTrailing(args: {
+  nowPlaying: boolean;
+  finished: boolean;
+  progressPercent: number | null;
+}): { kind: 'none' } | { kind: 'playing' } | { kind: 'done' } | { kind: 'percent'; text: string } {
+  if (args.nowPlaying) return { kind: 'playing' };
+  if (args.finished) return { kind: 'done' };
+  if (args.progressPercent != null && args.progressPercent > 0) {
+    return { kind: 'percent', text: `${args.progressPercent} %` };
+  }
+  return { kind: 'none' };
+}

@@ -4,7 +4,7 @@ vi.mock('@/db', () => ({ repos: {} }));
 
 import { listenCaption, minutesLabel, partsLabel, voiceLabel } from '../listen-row-format';
 import { parseListenProgress } from '../listen-progress';
-import { assembleRows, withListenRow } from '../listen-row-model';
+import { assembleRows, listenRowTrailing, withListenRow } from '../listen-row-model';
 import type { ListenAvailability } from '@/db/repositories/listen';
 
 describe('partsLabel', () => {
@@ -83,5 +83,23 @@ describe('withListenRow / assembleRows', () => {
     const all = withListenRow(rows, { id: 'p', type: 'stories' }, new Map([['p', ready]]));
     const out = assembleRows(all, [{ kind: 'story' }]);
     expect(out.map((r) => r.kind)).toEqual(['listen', 'story', 'dialogue']);
+  });
+});
+
+describe('listenRowTrailing', () => {
+  it('prioritises now-playing, then finished, then percent', () => {
+    expect(listenRowTrailing({ nowPlaying: true, finished: true, progressPercent: 5 }).kind).toBe(
+      'playing',
+    );
+    expect(
+      listenRowTrailing({ nowPlaying: false, finished: true, progressPercent: 100 }).kind,
+    ).toBe('done');
+    expect(listenRowTrailing({ nowPlaying: false, finished: false, progressPercent: 42 })).toEqual({
+      kind: 'percent',
+      text: '42 %',
+    });
+    expect(
+      listenRowTrailing({ nowPlaying: false, finished: false, progressPercent: null }).kind,
+    ).toBe('none');
   });
 });
