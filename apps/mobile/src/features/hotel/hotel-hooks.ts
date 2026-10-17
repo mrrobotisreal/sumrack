@@ -9,7 +9,14 @@ import { fileExists } from '@/features/torfl/drill/drill-item';
 import { loadRefAudio, type ExamAudio } from '@/features/torfl/items/exam-audio';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 
-import { floorState, reveal13, type FloorInput } from './hotel-model';
+import {
+  drillBeforeAfter,
+  firstUnitStart,
+  floorState,
+  parseLastFloor,
+  reveal13,
+  type FloorInput,
+} from './hotel-model';
 import { cooldownLeft, GATE_PACK_ID, nextHotelAction } from './gate-model';
 import {
   lessonSentenceRefs,
@@ -209,6 +216,94 @@ export function useHotelState() {
     gatePassed,
     reveal13: reveal13Now,
     lastFloor,
+    now,
     loaded: floors.isSuccess && progress.isSuccess,
   };
+}
+
+/** `hotel.lastFloor` (T92 decision 4): the floor the lift was on, or null. Reads defensively. */
+export function useLastFloor() {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ['hotel', 'lastFloor'],
+    queryFn: async () =>
+      parseLastFloor(await repos.settings.get<unknown>(SETTING_KEYS.hotelLastFloor)),
+  });
+  const save = React.useCallback(
+    async (floor: number) => {
+      qc.setQueryData(['hotel', 'lastFloor'], floor);
+      try {
+        await repos.settings.set(SETTING_KEYS.hotelLastFloor, floor);
+      } catch {
+        // A failed write only loses the resume floor; the lift still works.
+      }
+    },
+    [qc],
+  );
+  return { lastFloor: query.data ?? null, loaded: query.isSuccess, save };
+}
+
+/**
+ * The lesson-opened set (carried T92 decision 2): a unit whose lesson has a
+ * saved card position was opened at least once. Keys are `packId:unitId`.
+ */
+export function useLessonOpened() {
+  const positions = useLessonPositions();
+  const opened = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const key of Object.keys(positions.positions)) {
+      const at = key.indexOf(':');
+      if (at > 0) set.add(key.slice(at + 1));
+    }
+    return set;
+  }, [positions.positions]);
+  return opened;
+}
+
+/**
+ * «Практика» rows for a floor (decision 2): one per `course.practice` ref whose
+ * drill exam is installed (a missing pack hides the row), with its before/after
+ * bests from `exam_attempts` scope `drill`, split at the floor's first unit attempt.
+ */
+export function usePracticeRows(
+  floorPackId: string | null,
+  practice: readonly { packId: string; examId: string }[],
+) {
+  return useQuery({
+    queryKey: [
+      'hotel',
+      'practice',
+      floorPackId ?? '',
+      practice.map((p) => `${p.packId}/${p.examId}`).join(','),
+    ],
+    enabled: floorPackId !== null && practice.length > 0,
+    queryFn: async () => {
+      const [exams, attempts] = await Promise.all([
+        repos.exams.listExams({ mode: 'drill' }),
+        repos.course.listAttempts({ limit: 500 }),
+      ]);
+      const floorStart = firstUnitStart(attempts, floorPackId ?? '');
+      const rows = [];
+      for (const ref of practice) {
+        const exam = exams.find((e) => e.packId === ref.packId && e.examId === ref.examId);
+        if (!exam) continue;
+        const drill = await repos.exams.listAttempts({
+          scope: 'drill',
+          packId: ref.packId,
+          examId: ref.examId,
+          limit: 500,
+        });
+        const { before, after } = drillBeforeAfter(
+          drill.map((a) => ({
+            startedAt: a.startedAt,
+            finishedAt: a.finishedAt,
+            results: a.results,
+          })),
+          floorStart,
+        );
+        rows.push({ packId: ref.packId, examId: ref.examId, title: exam.titleRu, before, after });
+      }
+      return rows;
+    },
+  });
 }
