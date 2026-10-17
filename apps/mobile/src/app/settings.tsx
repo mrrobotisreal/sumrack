@@ -16,7 +16,6 @@ import { NotificationsSettingsSection } from '@/features/motivation/notification
 import { AsrSettingsSection } from '@/features/pronunciation/asr-settings-section';
 import { AssistSettingsSection } from '@/features/pronunciation/assist-settings-section';
 import { RecordingsSettingsSection } from '@/features/scenario/recordings/recordings-settings-section';
-import { PathSettingsSection } from '@/features/path/path-settings-section';
 import { DailySettingsSection } from '@/features/review/daily/daily-settings-section';
 import { SchedulingSettingsSection } from '@/features/review/scheduling-settings-section';
 import { ScenarioSettingsSection } from '@/features/scenario/scenario-settings-section';
@@ -178,8 +177,6 @@ export default function SettingsScreen() {
       <DailySettingsSection />
 
       <SchedulingSettingsSection />
-
-      <PathSettingsSection />
 
       <VoicesSettingsSection />
       <AsrSettingsSection />

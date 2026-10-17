@@ -2,13 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 
 import { repos } from '@/db';
-import { SETTING_KEYS } from '@/db/repositories/settings';
+import { GATE_PACK_ID, ladderLevel } from '@/features/hotel/gate-model';
 import { track } from '@/services/analytics';
 
 import {
-  DEFAULT_LEVEL,
   localDayKey,
-  PathPositionSchema,
   PromptRowSchema,
   selectDailyPrompt,
   type Cefr,
@@ -31,10 +29,13 @@ async function loadPrompts(): Promise<PromptRow[]> {
   });
 }
 
+/**
+ * D18: the journal reads the hotel ladder, not the old path position. The gate
+ * (a passed Номер 13 attempt) decides A1 vs A2; the stored `pathPosition` is ignored.
+ */
 async function loadUserLevel(): Promise<Cefr> {
-  const stored = await repos.settings.get<unknown>(SETTING_KEYS.pathPosition);
-  const parsed = PathPositionSchema.safeParse(stored);
-  return parsed.success ? (parsed.data.level as Cefr) : DEFAULT_LEVEL;
+  const gate = await repos.course.getProgress([GATE_PACK_ID]).catch(() => []);
+  return ladderLevel(gate.some((g) => g.packId === GATE_PACK_ID && g.passedAt !== null)) as Cefr;
 }
 
 /** The rotating, skippable prompt of the day. `skip` is ephemeral by design. */

@@ -9,6 +9,8 @@ import { fileExists } from '@/features/torfl/drill/drill-item';
 import { loadRefAudio, type ExamAudio } from '@/features/torfl/items/exam-audio';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 
+import { floorState, reveal13, type FloorInput } from './hotel-model';
+import { cooldownLeft, GATE_PACK_ID, nextHotelAction } from './gate-model';
 import {
   lessonSentenceRefs,
   parseLessonPositions,
@@ -135,3 +137,78 @@ export function useLessonPositions() {
 }
 
 export type { CourseFloorRow, ProgressRecord, CourseItem };
+
+/** Every installed A1 hotel floor, as the lock rule reads it (course packs on the TORFL ladder). */
+export function useHotelFloors() {
+  return useQuery({
+    queryKey: ['hotel', 'floors', 'A1'],
+    queryFn: async () => repos.course.listFloors({ ladder: 'torfl', level: 'A1' }),
+  });
+}
+
+/**
+ * The hotel's live state (Today card, Путь tab, journal): the panel with the
+ * lock rule applied, the gate, and the next action. Re-evaluates every 30 s so
+ * cooldown countdowns tick from the rows (carried T90 decision 4).
+ */
+export function useHotelState() {
+  const floors = useHotelFloors();
+  const progress = useCourseProgress();
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const gateInstalled = useQuery({
+    queryKey: ['hotel', 'gate-installed'],
+    queryFn: async () => (await repos.content.listPacks()).some((p) => p.id === GATE_PACK_ID),
+  });
+  const installed = (floors.data ?? []).map((f) => ({
+    packId: f.packId,
+    floor: f.floor,
+    unitIds: f.course.units.map((u) => u.id),
+    hasExam: f.course.floorExam !== undefined,
+  }));
+  const rows = progress.data ?? [];
+  const states = floorState(installed, rows, now);
+  const gateRow = rows.find((r) => r.packId === GATE_PACK_ID && r.unitId === null);
+  const gatePassed = gateRow?.passedAt != null;
+  const reveal13Now = reveal13(installed, rows, { mockInstalled: gateInstalled.data === true });
+  const lastFloor = states.find((s) => !s.passed) ?? states[states.length - 1];
+  const action = nextHotelAction(
+    states.map((s) => {
+      const f = floors.data?.find((x) => x.packId === s.packId);
+      const cooldown = s.cooldownUntil !== null ? cooldownLeft(s.cooldownUntil, now) : null;
+      return {
+        packId: s.packId,
+        floor: s.floor,
+        unlocked: s.unlocked,
+        passed: s.passed,
+        examUnlocked: s.examUnlocked,
+        examCooldownMinutes: cooldown?.minutesLeft ?? null,
+        units: (f?.course.units ?? []).map((u) => {
+          const us = s.units.find((x) => x.unitId === u.id);
+          return {
+            unitId: u.id,
+            title: u.title.ru,
+            passed: us?.passed ?? false,
+            lessonOpened: rows.some(
+              (r) => r.packId === s.packId && r.unitId === u.id && r.attempts > 0,
+            ),
+          };
+        }),
+      };
+    }),
+    { gatePassed, reveal13: reveal13Now },
+  );
+
+  return {
+    states,
+    action,
+    gatePassed,
+    reveal13: reveal13Now,
+    lastFloor,
+    loaded: floors.isSuccess && progress.isSuccess,
+  };
+}

@@ -3,8 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect as SvgRect, Stop } from 'react-native-svg';
 
-import { RadialGlow, Vignette } from '@/features/path/scenes/layers';
-import { scenePalette, withAlpha } from '@/features/path/scenes/scene-palette';
+import { RadialGlow, Vignette } from './layers';
+import { scenePalette, withAlpha } from './scene-palette';
 import { useReduceMotion } from '@/store/motion-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 

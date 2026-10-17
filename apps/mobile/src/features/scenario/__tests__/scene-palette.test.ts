@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { colors } from '@/theme/colors';
 
-import { HOUSE_ROOMS } from '../house-map/rooms';
 import {
   SCENE_IDS,
   SCENE_PRIMARY_LOOP_MS,
@@ -10,13 +9,9 @@ import {
   THRESHOLD_ENTER_MS,
   THRESHOLD_EXIT_MS,
   withAlpha,
-} from '../scenes/scene-palette';
+} from '../scene/scene-palette';
 
 describe('scene registry identity (T31)', () => {
-  it('SCENE_IDS matches HOUSE_ROOMS exactly — rooms.ts is the room-identity registry', () => {
-    expect([...SCENE_IDS].sort()).toEqual(HOUSE_ROOMS.map((r) => r.scene).sort());
-  });
-
   it('every scene has a primary loop inside the 8–20 s motion budget (V2 §5.3)', () => {
     for (const scene of SCENE_IDS) {
       const loop = SCENE_PRIMARY_LOOP_MS[scene];

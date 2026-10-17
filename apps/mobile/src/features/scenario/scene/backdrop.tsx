@@ -2,8 +2,8 @@ import { Image } from 'expo-image';
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 
-import { SceneWash, shadowWash } from '@/features/path/scenes/layers';
-import { withAlpha, type ScenePalette } from '@/features/path/scenes/scene-palette';
+import { SceneWash, shadowWash } from './layers';
+import { withAlpha, type ScenePalette } from './scene-palette';
 
 /**
  * Layer 1 (§8.1): the staged `scene/backdrop.png` through expo-image
