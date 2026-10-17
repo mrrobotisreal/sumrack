@@ -25,6 +25,7 @@ export function CardPages({
   onWordPress,
   onReadMore,
   onQuotePlayed,
+  onCheckFinished,
 }: {
   packId: string;
   unit: CourseUnit;
@@ -34,6 +35,8 @@ export function CardPages({
   onWordPress: (token: TokenRow, storyId: string, sentenceId: string) => void;
   onReadMore: (quote: LibraryQuote) => void;
   onQuotePlayed: (quote: LibraryQuote) => void;
+  /** A check card finished — advance the pager (checks have no other advance control). */
+  onCheckFinished?: () => void;
 }) {
   // The sentence's story id is the one a sentence ref names; the cards pass it on lookup.
   const cb = {
@@ -56,7 +59,7 @@ export function CardPages({
         <LibraryCardView card={card} sentences={sentences} sourceTitles={sourceTitles} cb={cb} />
       );
     case 'check':
-      return <CheckCardView packId={packId} unit={unit} card={card} />;
+      return <CheckCardView packId={packId} unit={unit} card={card} onFinished={onCheckFinished} />;
   }
 }
 

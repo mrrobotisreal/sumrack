@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CourseItem, CourseUnit } from '@sumrak/schema';
+import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
@@ -79,6 +81,8 @@ export function RunnerScreen({
 }) {
   const { tokens: theme } = useAppTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const floor = useCourseFloor(packId);
   const progress = useCourseProgress();
   const course = floor.data?.course ?? null;
@@ -140,9 +144,12 @@ export function RunnerScreen({
         kind: mode,
         itemIds: drawn,
       });
+      // startRun needs the drawn ITEMS (it keeps only servable kinds); passing [] dropped every id and the
+      // sitting opened as «1 из 0» (T93c chunk C3 on the S25).
+      const drawnItems = await repos.course.getItems(packId, drawn);
       if (cancelled) return;
       setAttemptId(started.id);
-      setState(startRun(mode, [], drawn));
+      setState(startRun(mode, drawnItems, drawn));
     })();
     return () => {
       cancelled = true;
@@ -197,6 +204,9 @@ export function RunnerScreen({
       responses: state.responses,
       items: loaded,
     });
+    // The run just wrote progress (best %, pass, cooldown): refresh every hotel query so the retry
+    // below, the lobby and the lift see it — a stale row let a floor retry skip its cooldown (T93c chunk D).
+    await queryClient.invalidateQueries({ queryKey: ['hotel'] });
     const units = course.units.map((u) => ({ id: u.id, items: u.exercises.pool }));
     const exam =
       mode === 'unit' ? null : examOutcome({ kind: mode, percent, drawn, points, units });
@@ -300,9 +310,14 @@ export function RunnerScreen({
             setAttemptId(null);
             setRetryKey((k) => k + 1);
           }}
+          // A failed floor exam / экстерн cools down (D13): no immediate retry from the result screen.
+          disabled={mode !== 'unit' && !finished.passed && finished.cooldownMinutes > 0}
           accessibilityRole="button"
           testID="runner-retry"
           className="items-center rounded-xl bg-accent py-3.5"
+          style={{
+            opacity: mode !== 'unit' && !finished.passed && finished.cooldownMinutes > 0 ? 0.4 : 1,
+          }}
         >
           <Text className="font-ui-medium text-bg">Повторить</Text>
         </Pressable>
@@ -490,13 +505,26 @@ export function RunnerScreen({
                     )
                 : undefined
             }
-            onNext={() => state && setState(moveTo(state, state.cursor + 1))}
+            // Unit mode has no «Сдать» bar (feedback is on), so the last item's «Далее» finishes the run —
+            // before this it clamped at the last item and the sitting never ended (T93c chunk C4).
+            nextLabel={
+              state && state.cursor >= state.itemIds.length - 1 ? 'Завершить →' : undefined
+            }
+            onNext={() => {
+              if (!state) return;
+              if (state.cursor >= state.itemIds.length - 1) void finish();
+              else setState(moveTo(state, state.cursor + 1));
+            }}
           />
         ) : null}
       </ScrollView>
 
       {!feedbackOn && state ? (
-        <View className="flex-row items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <View
+          className="flex-row items-center justify-between gap-3 border-t border-border px-4 pt-3"
+          // The exam bar sat under Android's navigation bar: «Сдать» taps hit the system Home (T93c chunk D).
+          style={{ paddingBottom: 12 + insets.bottom }}
+        >
           <Pressable
             onPress={() => setState(moveTo(state, state.cursor - 1))}
             accessibilityRole="button"

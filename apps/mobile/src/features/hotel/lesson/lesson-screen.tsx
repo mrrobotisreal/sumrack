@@ -116,6 +116,7 @@ export function LessonScreen({ packId, unitId }: { packId: string; unitId: strin
             onQuotePlayed={(q) =>
               track('hotel_library_quote_played', { packId: q.packId, storyId: q.storyId })
             }
+            onCheckFinished={() => go(current + 1)}
           />
           <View className="flex-row items-center justify-between gap-3 pt-4">
             <Pressable
@@ -129,7 +130,7 @@ export function LessonScreen({ packId, unitId }: { packId: string; unitId: strin
             >
               <Text className="font-ui-medium">← Назад</Text>
             </Pressable>
-            {last ? null : (
+            {last || card?.kind === 'check' ? null : (
               <Pressable
                 onPress={() => go(current + 1)}
                 accessibilityRole="button"

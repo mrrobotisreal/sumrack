@@ -22,10 +22,13 @@ import { checkAnswered, checkChosen, checkCorrect, type CheckResponse } from './
 export function CheckCardView({
   packId,
   card,
+  onFinished,
 }: {
   packId: string;
   unit?: CourseUnit;
   card: CheckCard;
+  /** Every item answered and the last «Готово» pressed — the lesson pager moves on (the only advance control on a check). */
+  onFinished?: () => void;
 }) {
   const items = useCourseItems(packId, card.items);
   const [responses, setResponses] = React.useState<Record<string, CheckResponse>>({});
@@ -63,8 +66,12 @@ export function CheckCardView({
           chosenText={checkChosen(item, response)}
           correctSentence={correctText(item)}
           explain={item.explain ?? ''}
-          onNext={() => setStep((s) => Math.min(s + 1, list.length - 1))}
-          nextLabel={index < list.length - 1 ? 'Далее →' : 'Готово'}
+          onNext={() =>
+            index < list.length - 1
+              ? setStep((s) => Math.min(s + 1, list.length - 1))
+              : allDone && onFinished?.()
+          }
+          nextLabel={index < list.length - 1 ? 'Далее →' : 'Дальше по уроку →'}
         />
       ) : null}
       {!allDone ? (

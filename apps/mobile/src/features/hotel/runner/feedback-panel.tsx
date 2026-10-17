@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { MarkdownView } from '@/components/markdown-view';
 import { Text } from '@/components/ui/text';
+import { useOnline } from '@/features/ai/connectivity';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import type { Verdict } from './runner-model';
@@ -38,6 +39,7 @@ export function FeedbackPanel({
   onNext: () => void;
   nextLabel?: string;
 }) {
+  const online = useOnline();
   const { tokens: theme } = useAppTheme();
   const ok = verdict === 'full';
   const half = verdict === 'half';
@@ -83,11 +85,16 @@ export function FeedbackPanel({
         {onExplainMore ? (
           <Pressable
             onPress={onExplainMore}
+            disabled={!online}
             accessibilityRole="button"
+            accessibilityState={{ disabled: !online }}
             testID="feedback-explain-more"
             className="rounded-xl border border-border px-4 py-2.5 active:bg-surface-2"
+            style={{ opacity: online ? 1 : 0.45 }}
           >
-            <Text className="font-ui-medium text-sm">Объясни ещё ✦</Text>
+            <Text className="font-ui-medium text-sm">
+              {online ? 'Объясни ещё ✦' : 'Объясни ещё ✦ · нужен интернет'}
+            </Text>
           </Pressable>
         ) : null}
         {onOpenCard ? (

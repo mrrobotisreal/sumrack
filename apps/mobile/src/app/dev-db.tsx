@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { sql } from 'drizzle-orm';
 import { Directory, File, Paths } from 'expo-file-system';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
@@ -648,6 +648,7 @@ export default function DevDbScreen() {
           queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
           queryClient.invalidateQueries({ queryKey: queryKeys.scenarios }),
           queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
+          queryClient.invalidateQueries({ queryKey: ['hotel'] }),
           invalidateExams(),
         ]);
         await refreshScenarios();
@@ -660,6 +661,17 @@ export default function DevDbScreen() {
     },
     [busy, queryClient, refreshScenarios, refreshExams],
   );
+
+  // Device walks (T93): `sumrak://dev-db?import=<fixture-id>` imports that fixture on mount, so a
+  // QA session does not have to scroll this long screen. __DEV__-only like the rest of the screen.
+  const { import: importParam } = useLocalSearchParams<{ import?: string }>();
+  const autoImported = React.useRef(false);
+  React.useEffect(() => {
+    if (!__DEV__ || autoImported.current || !importParam) return;
+    if (!FIXTURE_PACKS.some((f) => f.id === importParam)) return;
+    autoImported.current = true;
+    void importFixture(importParam as FixtureId);
+  }, [importParam, importFixture]);
   // Built-in FTS smoke test: known fixture lemma «стена» queried as "стена"
   // and ё-folded «чёрный» queried as "черный" — proves FTS5 MATCH works
   // on-device with ё/е tolerance without needing Cyrillic keyboard input.
@@ -965,7 +977,9 @@ export default function DevDbScreen() {
             </View>
           ))}
           {hotelReadout && hotelReadout.floors.length === 0 && (
-            <Text variant="caption">No course floors installed — import a1-hotel-fixture above.</Text>
+            <Text variant="caption">
+              No course floors installed — import a1-hotel-fixture above.
+            </Text>
           )}
         </View>
         <Text variant="caption" className="mt-2" selectable>

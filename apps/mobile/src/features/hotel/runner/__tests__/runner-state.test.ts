@@ -35,6 +35,12 @@ describe('startRun', () => {
   it('drops drawn ids the pool no longer holds', () => {
     expect(startRun('floor', items, ['a', 'gone']).itemIds).toEqual(['a']);
   });
+
+  it('needs the drawn ITEMS, not just ids — an empty item list yields an empty sitting (the «1 из 0» S25 bug)', () => {
+    // runner-screen must load the drawn items (repos.course.getItems) before calling startRun.
+    expect(startRun('unit', [], ['a', 'b', 'c']).itemIds).toEqual([]);
+    expect(startRun('unit', items, ['a', 'b', 'c']).itemIds).toEqual(['a', 'b', 'c']);
+  });
 });
 
 describe('answer and scoring', () => {
