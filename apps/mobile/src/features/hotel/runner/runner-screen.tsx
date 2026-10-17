@@ -26,6 +26,7 @@ import { ReviewList } from './review-list';
 import { reviewRows } from './review-model';
 import { TriggerItemView } from './trigger-item-view';
 import { WritingItemView } from './skill-items-view';
+import { SpeakingItemView } from './skill-speaking-view';
 import { CoursePassageAudio } from './course-passage-audio';
 import {
   allowsExplainMore,
@@ -425,6 +426,23 @@ export function RunnerScreen({
             }}
           />
         ) : null}
+        {item && (item.kind === 'speaking-reply' || item.kind === 'speaking-situation') ? (
+          <SpeakingItemView
+            key={item.id}
+            item={item}
+            mode={mode}
+            packId={packId}
+            stored={response}
+            onAnswer={(entry) => {
+              if (!state || state.phase !== 'run') return;
+              const next = { ...state, responses: { ...state.responses, [item.id]: entry } };
+              setState(next);
+              if (attemptId) {
+                void repos.course.saveResponses(attemptId, next.responses).catch(() => undefined);
+              }
+            }}
+          />
+        ) : null}
         {item && drill && drill.kind === 'typed' ? (
           <TypedItemView
             key={item.id}
@@ -435,7 +453,7 @@ export function RunnerScreen({
           />
         ) : null}
 
-        {feedbackOn && item && response ? (
+        {feedbackOn && item && response && !isSkillKind(item.kind) ? (
           <FeedbackPanel
             verdict={verdictOf(response.correct ? 1 : response.half ? 0.5 : 0)}
             chosenText={
@@ -523,6 +541,11 @@ function fresh(pool: readonly string[], size: number, history: readonly AttemptR
   const missed = last ? last.itemIds.filter((id) => last.responses[id]?.correct !== true) : [];
   const previous = last?.itemIds ?? [];
   return drawItems(pool, size, { missedLastTime: missed, previous, seed: Date.now() % 2147483647 });
+}
+
+/** Skill items (writing, speaking) show their own grader's result, not the drill feedback panel (T93 wart). */
+function isSkillKind(kind: CourseItem['kind']): boolean {
+  return kind === 'writing' || kind === 'speaking-reply' || kind === 'speaking-situation';
 }
 
 function correctSentenceOf(item: CourseItem): string {

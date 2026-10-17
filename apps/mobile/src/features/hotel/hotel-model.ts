@@ -288,6 +288,10 @@ export interface ResponseLike {
 }
 
 /** A skill item's stored response counts once the runner has graded it (a verdict is present). */
+function isSkillKind(kind: CourseItem['kind']): boolean {
+  return kind === 'writing' || kind === 'speaking-reply' || kind === 'speaking-situation';
+}
+
 function isGradedSkill(r: ResponseLike | undefined): boolean {
   return r !== undefined && typeof r.correct === 'boolean';
 }
@@ -307,7 +311,7 @@ export interface AttemptScore {
   total: number;
   /** Whole-number percent of `total`; 0 when nothing is scored. */
   percent: number;
-  /** Ids of writing/speaking items, graded later (T92), not counted. */
+  /** Ids of writing/speaking items not yet graded (no stored verdict); not counted. */
   pending: string[];
   items: ScoredItem[];
 }
@@ -333,8 +337,9 @@ export function scoreAttempt(
       const outcome = scoreTyped(typed, text, 1).outcome;
       const points = outcome === 'full' ? 1 : outcome === 'half' ? 0.5 : 0;
       scored.push({ itemId: item.id, points, correct: outcome === 'full', pending: false });
-    } else if (item.kind === 'writing' && isGradedSkill(responses[item.id])) {
-      // A course writing item is graded offline (T92d); the runner stores the verdict.
+    } else if (isSkillKind(item.kind) && isGradedSkill(responses[item.id])) {
+      // A course writing item is graded offline (T92d); a speaking turn by the
+      // offline judge (T93). The runner stores the verdict.
       const ok = responses[item.id]?.correct === true;
       scored.push({ itemId: item.id, points: ok ? 1 : 0, correct: ok, pending: false });
     } else {

@@ -19,13 +19,21 @@ import { passes, weakestUnit, type PassKind } from '../hotel-model';
 export type RunMode = 'unit' | 'floor' | 'extern';
 
 /**
- * Item kinds the runner serves and scores: the drill views plus writing (T92d,
- * the offline-graded letter). Speaking is still deferred: it needs the live mic
- * recorder and the AI judge, which T93 verifies on the device.
+ * Item kinds the runner serves and scores: the drill views, writing (T92d, the
+ * offline-graded letter) and the two speaking turns (T93, the T73 recorder and
+ * the offline turn judge).
  */
-const SERVED_KINDS = new Set(['choice', 'typed', 'trigger', 'transform', 'writing']);
+const SERVED_KINDS = new Set([
+  'choice',
+  'typed',
+  'trigger',
+  'transform',
+  'writing',
+  'speaking-reply',
+  'speaking-situation',
+]);
 
-/** True when the runner must skip an item (speaking, until its recorder is wired). */
+/** True when the runner must skip an item (a kind it does not serve yet, e.g. monologue). */
 export function isDeferredItem(item: Pick<CourseItem, 'kind'>): boolean {
   return !SERVED_KINDS.has(item.kind);
 }
