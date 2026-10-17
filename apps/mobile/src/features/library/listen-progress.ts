@@ -31,7 +31,9 @@ export function parseListenProgress(raw: unknown): Map<string, ListenPackProgres
   for (const [packId, p] of Object.entries(parsed.data.byPack)) {
     const finished = p.finishedAt != null;
     const percent =
-      p.durationMs > 0 ? Math.max(0, Math.min(100, Math.round((p.positionMs / p.durationMs) * 100))) : 0;
+      p.durationMs > 0
+        ? Math.max(0, Math.min(100, Math.round((p.positionMs / p.durationMs) * 100)))
+        : 0;
     if (finished || percent > 0) out.set(packId, { percent: finished ? 100 : percent, finished });
   }
   return out;
