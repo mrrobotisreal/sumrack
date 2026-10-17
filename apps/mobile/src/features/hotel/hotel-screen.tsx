@@ -151,7 +151,7 @@ export function HotelScreen() {
           void lastFloor.save(n);
         }}
         onBlockedUp={() => setToast(true)}
-        onRide13={() => router.push('/hotel/a1-torfl-mock-004/room-13' as never)}
+        onRide13={() => router.push('/hotel/room-13' as never)}
       >
         {state ? (
           <FloorLobby

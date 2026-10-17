@@ -402,6 +402,14 @@ export async function initMotivation(): Promise<void> {
  * answers earn nothing. The caller computes `xp` with `hotelRunXp` and stores
  * it on the attempt; this bumps the daily XP and re-evaluates achievements.
  */
+/**
+ * Номер 13 passed (T92c D6): unlock `hotel-a1-complete`. Idempotent — the
+ * unlock path re-checks, so a repeat pass never re-toasts.
+ */
+export async function recordHotelGatePassed(): Promise<void> {
+  await unlock('hotel-a1-complete');
+}
+
 export async function recordHotelRun(xp: number): Promise<number> {
   if (xp <= 0) return 0;
   await repos.stats.bumpDailyActivity({ xp });

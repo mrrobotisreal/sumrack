@@ -248,3 +248,62 @@ export function hotelCardLine(action: HotelNextAction): string {
   const verb = action.kind === 'lesson' ? 'урок' : 'упражнения';
   return `Этаж ${action.floor} · ${action.unitTitle} · ${verb} ${action.index} из ${action.total}`;
 }
+
+/**
+ * The floors that carry a glowing debrief marker (T92c D6): every floor a
+ * failed gate's debrief named, minus those whose floor exam has since been
+ * passed (`passedFloors`). Sorted, unique. Pure.
+ */
+export function markedFloors(
+  debrief: readonly { floors: readonly number[] }[],
+  passedFloors: ReadonlySet<number>,
+): number[] {
+  const out = new Set<number>();
+  for (const d of debrief) for (const f of d.floors) if (!passedFloors.has(f)) out.add(f);
+  return [...out].sort((a, b) => a - b);
+}
+
+/** Where the Номер 13 room stands (T92c D6). `open` = no attempt, or the cooldown has run out. */
+export type RoomStatus =
+  | { kind: 'open' }
+  | { kind: 'passed' }
+  | { kind: 'cooling'; until: number; left: { minutesLeft: number; text: string } };
+
+/**
+ * The room's state from the last gate attempt (no new table): a pass is the
+ * steady «A1 пройден» state; a fail cools for 6 h from its `finishedAt`.
+ */
+export function roomStatus(input: {
+  verdict: 'pass' | 'pass-borderline' | 'fail' | null;
+  lastFinishedAt: number | null;
+  now: number;
+}): RoomStatus {
+  if (input.verdict === null || input.lastFinishedAt === null) return { kind: 'open' };
+  if (input.verdict !== 'fail') return { kind: 'passed' };
+  const until = gateCooldownUntil(input.lastFinishedAt, false);
+  const left = until === null ? null : cooldownLeft(until, input.now);
+  if (until === null || left === null) return { kind: 'open' };
+  return { kind: 'cooling', until, left };
+}
+
+/** One scored response of a finished attempt, as the debrief reads it. */
+export interface GradedResponse {
+  itemId: string;
+  subtestKind: string;
+  topic: string;
+  points: number;
+  maxPoints: number;
+}
+
+/**
+ * The missed items of a finished gate attempt, grouped by subtest kind (T92c
+ * D6). An item is missed when it earned less than its maximum. Pure.
+ */
+export function missedByKind(responses: readonly GradedResponse[]): Record<string, MissedItem[]> {
+  const out: Record<string, MissedItem[]> = {};
+  for (const r of responses) {
+    if (r.points >= r.maxPoints) continue;
+    (out[r.subtestKind] ??= []).push({ itemId: r.itemId, topic: r.topic });
+  }
+  return out;
+}

@@ -171,6 +171,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: 'mic-outline',
   },
   {
+    id: 'hotel-a1-complete',
+    title: 'A1 пройден',
+    description: 'Pass Номер 13, the TORFL A1 gate of the hotel',
+    icon: 'key-outline',
+  },
+  {
     id: 'level-5',
     title: 'Пятый уровень',
     description: 'Reach XP level 5',
