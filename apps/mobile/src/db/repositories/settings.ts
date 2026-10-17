@@ -54,6 +54,13 @@ export const SETTING_KEYS = {
   lastSyncCheckAt: 'sync.lastCheckAt',
   /** Narration playback prefs (T10): { rate } — validated on read in use-narration. */
   narrationPrefs: 'narration.prefs',
+  /**
+   * M26/T96: per-pack listen resume positions `{ v: 1, byPack }` — Zod-healed on
+   * read (features/listen/progress); rides the settings table into the backup.
+   */
+  listenProgress: 'listen.progress',
+  /** M26/T96: listen player prefs `{ v: 1, rate, volume, muted }` — Zod-healed on read. */
+  listenPrefs: 'listen.prefs',
   /** Study soundtrack: { enabled, volume (0–1), playDuringNarration }. */
   ambientAudio: 'audio.ambient',
   /**
