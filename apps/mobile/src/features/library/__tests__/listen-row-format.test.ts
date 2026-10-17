@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/db', () => ({ repos: {} }));
-
 import { listenCaption, minutesLabel, partsLabel, voiceLabel } from '../listen-row-format';
 import { parseListenProgress } from '../listen-progress';
 import { assembleRows, listenRowTrailing, withListenRow } from '../listen-row-model';
 import type { ListenAvailability } from '@/db/repositories/listen';
+
+vi.mock('@/db', () => ({ repos: {} }));
 
 describe('partsLabel', () => {
   it.each([
