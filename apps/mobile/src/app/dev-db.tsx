@@ -648,6 +648,7 @@ export default function DevDbScreen() {
           queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
           queryClient.invalidateQueries({ queryKey: queryKeys.scenarios }),
           queryClient.invalidateQueries({ queryKey: syncQueryKeys.installedPacks }),
+          queryClient.invalidateQueries({ queryKey: ['hotel'] }),
           invalidateExams(),
         ]);
         await refreshScenarios();

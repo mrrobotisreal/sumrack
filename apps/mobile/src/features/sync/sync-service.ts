@@ -243,6 +243,8 @@ async function doRunSync({ trigger }: RunSyncOptions): Promise<SyncRunSummary> {
       queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
       // T69: the «ТРКИ» shelf/hub read exams through their own query root.
       queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
+      // M25: course packs feed the hotel (Путь) through its own root — new floors appear without a relaunch.
+      queryClient.invalidateQueries({ queryKey: ['hotel'] }),
     ]);
   }
 
@@ -383,5 +385,6 @@ export async function removeInstalledPack(packId: string): Promise<void> {
     queryClient.invalidateQueries({ queryKey: queryKeys.packs }),
     queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
     queryClient.invalidateQueries({ queryKey: queryKeys.exams.all }),
+    queryClient.invalidateQueries({ queryKey: ['hotel'] }),
   ]);
 }
