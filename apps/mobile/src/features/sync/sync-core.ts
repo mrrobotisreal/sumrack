@@ -98,6 +98,56 @@ export function isSceneFile(path: string): boolean {
   return path.startsWith('scene/') || /\.png$/i.test(path);
 }
 
+/**
+ * T95 (FULL_STORY_LISTEN §4.3): the pack cover (`cover/cover.jpg`, <= 400 KB).
+ * Checked BEFORE audio/scene and never deferred — it is small and the Library
+ * row needs it immediately.
+ */
+export function isCoverFile(path: string): boolean {
+  return path.startsWith('cover/');
+}
+
+/**
+ * T95 unchanged-file reuse (design §4.3): a staged file whose SHA-256 equals
+ * the manifest's is byte-identical to what the pack ships, so no fetch.
+ */
+export function shouldReuseStaged(
+  existingSha: string | null | undefined,
+  manifestSha: string,
+): boolean {
+  return !!existingSha && existingSha.toLowerCase() === manifestSha.toLowerCase();
+}
+
+export interface FetchOrReuseDeps {
+  fetchRawFile: (path: string) => Promise<Uint8Array>;
+  hasher: Hasher;
+  /** Bytes of the already-staged copy of `relPath`, or null when absent. */
+  readStaged: (relPath: string) => Promise<Uint8Array | null>;
+  /** Write verified bytes to the staged location; returns the file uri. */
+  stage: (relPath: string, bytes: Uint8Array) => string;
+  /** Uri of an existing staged file (no write needed). */
+  stagedUri: (relPath: string) => string;
+}
+
+/**
+ * T95: resolve one audio/cover file of a changed pack. A staged copy whose
+ * SHA-256 equals the manifest's is reused untouched (no fetch); otherwise the
+ * file is fetched, verified, and (over)written. Never imports unverified bytes.
+ */
+export async function fetchOrReuseFile(
+  packId: string,
+  file: ManifestFile,
+  deps: FetchOrReuseDeps,
+): Promise<{ uri: string; bytes: number; reused: boolean }> {
+  const existing = await deps.readStaged(file.path).catch(() => null);
+  if (existing && shouldReuseStaged(await deps.hasher(existing), file.sha256)) {
+    return { uri: deps.stagedUri(file.path), bytes: existing.byteLength, reused: true };
+  }
+  const bytes = await deps.fetchRawFile(`packs/${packId}/${file.path}`);
+  await verifyFileSha256(bytes, file.sha256, file.path, deps.hasher);
+  return { uri: deps.stage(file.path, bytes), bytes: bytes.byteLength, reused: false };
+}
+
 /** Every Wi-Fi-gated file class (the `isLargeAsset` check the design names). */
 export function isLargeAsset(path: string): boolean {
   return isAudioFile(path) || isSceneFile(path);
@@ -105,6 +155,8 @@ export function isLargeAsset(path: string): boolean {
 
 export interface PackFilePlan {
   packJson: ManifestFile;
+  /** Cover image(s) to download this run — never deferred (T95). */
+  cover: ManifestFile[];
   /** Audio files to download this run. */
   audio: ManifestFile[];
   /** Audio files deferred by the Wi-Fi-only setting (downloaded on a later Wi-Fi sync). */
@@ -133,11 +185,14 @@ export function planPackFiles(
     throw new SyncError('invalid-manifest', `manifest entry "${entry.id}" lists no pack.json`);
   }
   const rest = entry.files.filter((f) => f.path !== 'pack.json');
-  const audioAll = rest.filter((f) => isAudioFile(f.path));
-  const sceneAll = rest.filter((f) => !isAudioFile(f.path) && isSceneFile(f.path));
+  const cover = rest.filter((f) => isCoverFile(f.path));
+  const others = rest.filter((f) => !isCoverFile(f.path));
+  const audioAll = others.filter((f) => isAudioFile(f.path));
+  const sceneAll = others.filter((f) => !isAudioFile(f.path) && isSceneFile(f.path));
   const defer = opts.wifiOnlyAudio && !opts.onWifi;
   return {
     packJson,
+    cover,
     audio: defer ? [] : audioAll,
     deferredAudio: defer ? audioAll : [],
     scene: defer ? [] : sceneAll,

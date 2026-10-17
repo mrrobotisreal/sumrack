@@ -28,6 +28,9 @@ export interface SyncRunSummary {
   updated: string[];
   /** Packs whose audio was deferred by the Wi-Fi-only setting. */
   audioDeferred: string[];
+  /** T95: staged audio/cover files reused (hash matched the manifest) instead of re-fetched. */
+  reusedFiles: number;
+  reusedBytes: number;
   /** Per-pack failures ({packId, message}); run continues past them. */
   packErrors: { packId: string; message: string }[];
   /** Run-fatal error (manifest fetch/parse) — plain-language, PAT-free. */

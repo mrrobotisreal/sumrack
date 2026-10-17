@@ -7,11 +7,14 @@ import type { SyncStateRow } from '@/db/repositories/sync-state';
 import { SyncError } from '../errors';
 import {
   diffManifest,
+  fetchOrReuseFile,
   formatBytes,
   isAudioFile,
+  isCoverFile,
   isLargeAsset,
   isSceneFile,
   planPackFiles,
+  shouldReuseStaged,
   verifyFileSha256,
   type Hasher,
 } from '../sync-core';
@@ -257,5 +260,88 @@ describe('formatBytes', () => {
     [4_400_000, '4.2 MB'],
   ])('%s → %s', (bytes, expected) => {
     expect(formatBytes(bytes)).toBe(expected);
+  });
+});
+
+describe('T95 cover class + staged-file reuse', () => {
+  const full = entry('p', 2, [
+    { path: 'pack.json', sha256: 'a'.repeat(64) },
+    { path: 'cover/cover.jpg', sha256: 'c'.repeat(64) },
+    { path: 'audio/x.opus', sha256: 'd'.repeat(64) },
+    { path: 'audio/x-full.opus', sha256: 'e'.repeat(64) },
+  ]);
+
+  it('isCoverFile matches cover/ only; cover is checked before audio/scene', () => {
+    expect(isCoverFile('cover/cover.jpg')).toBe(true);
+    expect(isCoverFile('audio/x.opus')).toBe(false);
+    const plan = planPackFiles(full, { wifiOnlyAudio: true, onWifi: false });
+    expect(plan.cover.map((f) => f.path)).toEqual(['cover/cover.jpg']);
+    expect(plan.audio).toEqual([]);
+    expect(plan.deferredAudio.map((f) => f.path)).toEqual(['audio/x.opus', 'audio/x-full.opus']);
+    expect(plan.scene).toEqual([]);
+    expect(plan.deferredScene).toEqual([]);
+    const wifi = planPackFiles(full, { wifiOnlyAudio: true, onWifi: true });
+    expect(wifi.cover).toHaveLength(1);
+    expect(wifi.audio).toHaveLength(2);
+  });
+
+  it('shouldReuseStaged compares hashes case-insensitively and rejects missing', () => {
+    expect(shouldReuseStaged('ABC', 'abc')).toBe(true);
+    expect(shouldReuseStaged('abc', 'abd')).toBe(false);
+    expect(shouldReuseStaged(null, 'abc')).toBe(false);
+  });
+
+  describe('fetchOrReuseFile', () => {
+    const bytes = new TextEncoder().encode('opus-bytes');
+    const sha = createHash('sha256').update(bytes).digest('hex');
+    const file = { path: 'audio/x.opus', sha256: sha };
+
+    function deps(staged: Uint8Array | null, fetched = bytes) {
+      const calls = { fetch: [] as string[], stage: [] as string[] };
+      return {
+        calls,
+        d: {
+          fetchRawFile: async (p: string) => {
+            calls.fetch.push(p);
+            return fetched;
+          },
+          hasher: nodeHasher,
+          readStaged: async () => staged,
+          stage: (p: string) => {
+            calls.stage.push(p);
+            return `file:///new/${p}`;
+          },
+          stagedUri: (p: string) => `file:///old/${p}`,
+        },
+      };
+    }
+
+    it('matching staged hash: no fetch, existing uri reused', async () => {
+      const { calls, d } = deps(bytes);
+      const r = await fetchOrReuseFile('p', file, d);
+      expect(r).toEqual({ uri: 'file:///old/audio/x.opus', bytes: bytes.byteLength, reused: true });
+      expect(calls.fetch).toEqual([]);
+      expect(calls.stage).toEqual([]);
+    });
+
+    it('mismatched staged hash: fetched, verified, overwritten', async () => {
+      const { calls, d } = deps(new TextEncoder().encode('stale'));
+      const r = await fetchOrReuseFile('p', file, d);
+      expect(r.reused).toBe(false);
+      expect(calls.fetch).toEqual(['packs/p/audio/x.opus']);
+      expect(calls.stage).toEqual(['audio/x.opus']);
+      expect(r.uri).toBe('file:///new/audio/x.opus');
+    });
+
+    it('no staged file: fetched; a bad download still fails the hash check', async () => {
+      const { calls, d } = deps(null);
+      expect((await fetchOrReuseFile('p', file, d)).reused).toBe(false);
+      expect(calls.fetch).toHaveLength(1);
+      const bad = deps(null, new TextEncoder().encode('tampered'));
+      await expect(fetchOrReuseFile('p', file, bad.d)).rejects.toMatchObject({
+        code: 'sha256-mismatch',
+      });
+      expect(bad.calls.stage).toEqual([]);
+    });
   });
 });

@@ -59,6 +59,8 @@ export type AnalyticsEvent =
   // T58 scenario scene layers ride the same Wi-Fi gate (SPEAKING_SCENARIOS §3).
   | 'scene_deferred_wifi'
   | 'scene_backfilled'
+  // M26 (T95): staged audio/cover files reused on a pack bump (hash matched; no re-download).
+  | 'sync_file_reused'
   | 'sync_config_saved'
   | 'sync_pat_saved'
   | 'sync_pat_cleared'

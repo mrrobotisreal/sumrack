@@ -1167,6 +1167,8 @@ describe('user-table drift guard', () => {
       // T89 hotel course content (rebuilt from packs, never backed up).
       'course_floors',
       'course_items',
+      // T95 full-story track (rebuilt from packs, never backed up).
+      'pack_full_audio',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');
