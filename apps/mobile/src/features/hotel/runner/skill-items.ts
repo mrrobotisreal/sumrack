@@ -52,3 +52,15 @@ export function keepPass(
   if (previouslyPassed || offlinePassed) return true;
   return writingCorrect(aiPct);
 }
+
+/**
+ * The stored response for a writing item (T92d). The letter text is the answer;
+ * `correct` is the offline provisional verdict (≥ 66 %). The verdict is final
+ * for the run: the AI grade later raises the stored best % but never revokes it.
+ */
+export function writingResponse(
+  text: string,
+  offlinePct: number,
+): { answer: { kind: 'writing'; text: string }; correct: boolean } {
+  return { answer: { kind: 'writing', text }, correct: writingCorrect(offlinePct) };
+}

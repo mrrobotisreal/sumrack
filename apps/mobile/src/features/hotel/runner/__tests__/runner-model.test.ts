@@ -22,8 +22,9 @@ describe('deferred items (decision 9)', () => {
     }
   });
 
-  it('defers writing and every speaking kind, and skips them from scoring', () => {
-    for (const kind of ['writing', 'speaking-reply', 'speaking-situation', 'speaking-turn']) {
+  it('serves writing (T92d) and defers every speaking kind, skipping them from scoring', () => {
+    expect(isDeferredItem({ kind: 'writing' } as CourseItem)).toBe(false);
+    for (const kind of ['speaking-reply', 'speaking-situation', 'speaking-turn']) {
       expect(isDeferredItem({ kind } as CourseItem)).toBe(true);
     }
     const { served, deferred } = servableItems([
@@ -32,8 +33,8 @@ describe('deferred items (decision 9)', () => {
       item('t', 'trigger'),
       item('s', 'speaking-reply'),
     ]);
-    expect(served.map((i) => i.id)).toEqual(['a', 't']);
-    expect(deferred).toEqual(['w', 's']);
+    expect(served.map((i) => i.id)).toEqual(['a', 'w', 't']);
+    expect(deferred).toEqual(['s']);
   });
 });
 

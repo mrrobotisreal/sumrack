@@ -36,9 +36,11 @@ export interface IndicatorProps {
   reduced: boolean;
   /** Dim the whole plate (the lights stutter during the drop). */
   dimmed?: boolean;
+  /** A debrief marker on this floor (T92d): a small amber dot beside the number. */
+  marked?: boolean;
 }
 
-export function Indicator({ display, titles, reduced, dimmed }: IndicatorProps) {
+export function Indicator({ display, titles, reduced, dimmed, marked }: IndicatorProps) {
   const { tokens: t } = useAppTheme();
   const pulse = useSharedValue(1);
 
@@ -65,7 +67,17 @@ export function Indicator({ display, titles, reduced, dimmed }: IndicatorProps) 
       style={{ backgroundColor: t.hotelPlate, borderColor: t.hotelBrass }}
       className="items-center rounded-2xl border px-6 py-4"
     >
-      <Animated.View style={[glowStyle, { opacity: dimmed ? DIM_OPACITY : undefined }]}>
+      <Animated.View
+        style={[glowStyle, { opacity: dimmed ? DIM_OPACITY : undefined }]}
+        className="flex-row items-center gap-2"
+      >
+        {marked ? (
+          <View
+            testID="indicator-marker"
+            accessibilityLabel="Отмечено на лифте"
+            style={{ backgroundColor: t.hotelGlow, width: 8, height: 8, borderRadius: 4 }}
+          />
+        ) : null}
         <Text
           accessibilityRole="header"
           accessibilityLabel={`Этаж ${display}`}

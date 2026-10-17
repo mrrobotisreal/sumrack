@@ -15,9 +15,18 @@ import {
   floorState,
   parseLastFloor,
   reveal13,
-  type FloorInput,
 } from './hotel-model';
-import { cooldownLeft, GATE_PACK_ID, nextHotelAction } from './gate-model';
+import {
+  cooldownLeft,
+  debriefForSubtests,
+  GATE_PACK_ID,
+  missedByKind,
+  nextHotelAction,
+  type GradedResponse,
+  type SubtestResult,
+} from './gate-model';
+import { findExamItem } from '@/features/torfl/model';
+import { overallPct } from '@/features/torfl/hub-model';
 import {
   lessonSentenceRefs,
   parseLessonPositions,
@@ -306,4 +315,52 @@ export function usePracticeRows(
       return rows;
     },
   });
+}
+
+/**
+ * The last finished Номер 13 attempt (T92d): its subtest results, the engine's
+ * overall SPbU % (Σ points / Σ max, the same total the results screen shows),
+ * and the debrief (the floors to revisit, per subtest under 66 %). Shared by the
+ * room and the lift's debrief markers, so both read one source.
+ */
+export function useLastGateDetail() {
+  const attempts = useQuery({
+    queryKey: ['hotel', 'gate-attempts'],
+    queryFn: () => repos.exams.listAttempts({ packId: GATE_PACK_ID, limit: 20 }),
+  });
+  const last = (attempts.data ?? []).find((a) => a.status === 'finished') ?? null;
+  const detail = useQuery({
+    queryKey: ['hotel', 'gate-detail', last?.id ?? ''],
+    enabled: last !== null,
+    queryFn: async () => {
+      if (!last) return null;
+      const exam = await repos.exams.getExam(GATE_PACK_ID, last.examId);
+      const full = await repos.exams.getAttempt(last.id);
+      if (!exam || !full) return null;
+      const results: SubtestResult[] = exam.subtests.flatMap((s) => {
+        const r = (last.results ?? {})[s.id];
+        return r ? [{ kind: s.kind, percent: r.pct }] : [];
+      });
+      const responses: GradedResponse[] = [];
+      for (const resp of full.responses) {
+        if (resp.points === null) continue;
+        const located = findExamItem(exam, resp.itemId, resp.subtestId);
+        if (!located) continue;
+        responses.push({
+          itemId: resp.itemId,
+          subtestKind: located.subtest.kind,
+          topic: located.item.topic,
+          points: resp.points,
+          maxPoints: resp.maxPoints,
+        });
+      }
+      return {
+        results,
+        overall: overallPct(last.results ?? null),
+        responses,
+        debrief: debriefForSubtests(results, missedByKind(responses)),
+      };
+    },
+  });
+  return { last, attempts, detail };
 }

@@ -92,3 +92,23 @@ export function planRide(panel: readonly number[], from: number, to: number): Ri
   const durationMs = Math.min(RIDE_CAP_MS, RIDE_BASE_MS + RIDE_PER_FLOOR_MS * passed);
   return { steps, passes13, durationMs };
 }
+
+/**
+ * Debrief markers (T92d): the lift's marker state for the indicator and the
+ * ▲ / ▼ buttons. `here` = the current floor is marked; `up` / `down` = the next
+ * floor in that direction is marked (the dot sits on that button).
+ */
+export function markerState(
+  panel: readonly number[],
+  floor: number,
+  markers: readonly number[],
+): { here: boolean; up: boolean; down: boolean } {
+  const set = new Set(markers);
+  const above = floorAbove(panel, floor);
+  const below = floorBelow(panel, floor);
+  return {
+    here: set.has(floor),
+    up: above !== null && set.has(above),
+    down: below !== null && set.has(below),
+  };
+}

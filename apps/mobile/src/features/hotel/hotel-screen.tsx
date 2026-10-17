@@ -16,13 +16,14 @@ import {
   startFloor,
   type FloorState,
 } from './hotel-model';
-import { cooldownLeft } from './gate-model';
+import { cooldownLeft, gatePasses, markedFloors, passedFloorsOf } from './gate-model';
 import {
   useHotelFloors,
   useCourseProgress,
   useHotelState,
   useLastFloor,
   useLessonOpened,
+  useLastGateDetail,
   usePracticeRows,
 } from './hotel-hooks';
 import { Lift } from './lift/lift';
@@ -46,6 +47,7 @@ export function HotelScreen() {
   const hotel = useHotelState();
   const lastFloor = useLastFloor();
   const lessonOpened = useLessonOpened();
+  const gate = useLastGateDetail();
   // The lift's floor: null until the saved/deep-linked start is known, then user-driven.
   const [picked, setFloor] = React.useState<number | null>(null);
   const [toast, setToast] = React.useState(false);
@@ -86,6 +88,12 @@ export function HotelScreen() {
     enteredFor.current = floor;
     track('hotel_floor_entered', { floor, via: 'lift' });
   }, [floor]);
+
+  // Debrief markers (T92d): the last Номер 13 debrief's floors, minus the ones already passed.
+  const gateResults = gate.detail.data?.results ?? [];
+  const gateFailed = gateResults.length > 0 && !gatePasses(gateResults);
+  const passedFloors = passedFloorsOf(progress.data ?? []);
+  const markers = gateFailed ? markedFloors(gate.detail.data?.debrief ?? [], passedFloors) : [];
 
   const shownFloor = floor ?? 0;
   const state = states.find((s) => s.floor === shownFloor);
@@ -152,6 +160,7 @@ export function HotelScreen() {
         }}
         onBlockedUp={() => setToast(true)}
         onRide13={() => router.push('/hotel/room-13' as never)}
+        markers={markers}
       >
         {state ? (
           <FloorLobby

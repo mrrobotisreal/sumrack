@@ -33,6 +33,8 @@ export interface CallButtonProps {
   /** Warm red-amber glow variant for the Номер 13 button. */
   accentGlow?: boolean;
   testID?: string;
+  /** A debrief marker on the next floor this button calls (T92d): a small amber dot. */
+  marked?: boolean;
 }
 
 export function CallButton({
@@ -43,6 +45,7 @@ export function CallButton({
   reduced,
   accentGlow,
   testID,
+  marked,
 }: CallButtonProps) {
   const { tokens: t } = useAppTheme();
   const glow = useSharedValue(lit ? 1 : 0);
@@ -130,6 +133,21 @@ export function CallButton({
         >
           {label}
         </Text>
+        {marked ? (
+          <View
+            testID={testID ? `${testID}-marker` : undefined}
+            accessibilityLabel="Отмечено на лифте"
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              width: 7,
+              height: 7,
+              borderRadius: 4,
+              backgroundColor: t.hotelGlow,
+            }}
+          />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -145,6 +163,9 @@ export interface CallPanelProps {
   show13: boolean;
   onRide13: () => void;
   disabled?: boolean;
+  /** Debrief markers (T92d): which way has a marked floor next. */
+  markUp?: boolean;
+  markDown?: boolean;
 }
 
 export function CallPanel({
@@ -156,6 +177,8 @@ export function CallPanel({
   show13,
   onRide13,
   disabled,
+  markUp,
+  markDown,
 }: CallPanelProps) {
   return (
     <View className="items-center gap-3">
@@ -177,6 +200,7 @@ export function CallPanel({
         reduced={reduced}
         onPress={onUp}
         testID="lift-up"
+        marked={markUp}
       />
       <CallButton
         label="▼"
@@ -185,6 +209,7 @@ export function CallPanel({
         reduced={reduced}
         onPress={onDown}
         testID="lift-down"
+        marked={markDown}
       />
     </View>
   );

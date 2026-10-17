@@ -17,7 +17,7 @@ import type { ExplainTarget } from '@/features/ai/explain';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { courseDrillItem } from '../course-drill';
+import { courseDrillEntry, courseDrillItem } from '../course-drill';
 import { cardForTopic, topicLabel } from '../lesson/lesson-model';
 import { useCourseFloor, useCourseItems, useCourseProgress } from '../hotel-hooks';
 import { FeedbackPanel } from './feedback-panel';
@@ -25,6 +25,8 @@ import { hotelRunXp } from './hotel-rewards';
 import { ReviewList } from './review-list';
 import { reviewRows } from './review-model';
 import { TriggerItemView } from './trigger-item-view';
+import { WritingItemView } from './skill-items-view';
+import { CoursePassageAudio } from './course-passage-audio';
 import {
   allowsExplainMore,
   allowsTranslation,
@@ -346,6 +348,10 @@ export function RunnerScreen({
 
   const cursorNo = state ? Math.min(state.cursor + 1, Math.max(1, state.itemIds.length)) : 0;
   const drill = item ? courseDrillItem(item) : null;
+  // Floor-14 items carry a passage or audio ref: they render it above the question (T92d).
+  const hasRef =
+    !!item && (item.kind === 'choice' || item.kind === 'typed') && !!(item.passage || item.audio);
+  const passageEntry = item && hasRef ? courseDrillEntry(packId, item, 'lexgram') : null;
   const stateChoiceIndex = typeof response?.answer === 'number' ? response.answer : null;
   const stateText = typeof response?.answer === 'string' ? response.answer : '';
 
@@ -372,6 +378,9 @@ export function RunnerScreen({
       </View>
 
       <ScrollView contentContainerClassName="gap-5 px-4 pb-10" testID="runner-items">
+        {passageEntry ? (
+          <CoursePassageAudio entry={passageEntry} mode={mode} answered={response !== undefined} />
+        ) : null}
         {item && drill && drill.kind === 'choice' ? (
           <View className="gap-2">
             {translate && item.kind === 'choice' && item.stemEn ? (
@@ -398,6 +407,22 @@ export function RunnerScreen({
             feedback={feedbackOn ? 'instant' : 'none'}
             initialIndex={stateChoiceIndex}
             onAnswer={onAnswer}
+          />
+        ) : null}
+        {item && item.kind === 'writing' ? (
+          <WritingItemView
+            key={item.id}
+            item={item}
+            mode={mode}
+            stored={response}
+            onAnswer={(entry) => {
+              if (!state || state.phase !== 'run') return;
+              const next = { ...state, responses: { ...state.responses, [item.id]: entry } };
+              setState(next);
+              if (attemptId) {
+                void repos.course.saveResponses(attemptId, next.responses).catch(() => undefined);
+              }
+            }}
           />
         ) : null}
         {item && drill && drill.kind === 'typed' ? (

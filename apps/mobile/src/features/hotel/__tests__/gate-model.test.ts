@@ -9,6 +9,7 @@ import {
   gateCooldownUntil,
   gatePasses,
   GATE_PACK_ID,
+  passedFloorsOf,
   hotelCardLine,
   nextHotelAction,
   isHiddenGatePack,
@@ -289,5 +290,17 @@ describe('missedByKind (T92c D6): the debrief input', () => {
       lexgram: [{ itemId: 'a', topic: 'case-dat' }],
       writing: [{ itemId: 'c', topic: 'writing' }],
     });
+  });
+});
+
+describe('passedFloorsOf (T92d): the one passed set the room and the lift share', () => {
+  it('reads the course floor rows only (unit rows and unpassed floors excluded)', () => {
+    const rows = [
+      { packId: 'a1-hotel-f07', unitId: null, passedAt: 1 },
+      { packId: 'a1-hotel-f08', unitId: null, passedAt: null },
+      { packId: 'a1-hotel-f09', unitId: 'u1', passedAt: 1 },
+      { packId: 'a1-torfl-mock-004', unitId: null, passedAt: 1 },
+    ];
+    expect([...passedFloorsOf(rows)]).toEqual([7]);
   });
 });
