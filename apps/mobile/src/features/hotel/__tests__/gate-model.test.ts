@@ -12,6 +12,9 @@ import {
   hotelCardLine,
   nextHotelAction,
   isHiddenGatePack,
+  markedFloors,
+  missedByKind,
+  roomStatus,
   visiblePacks,
 } from '../gate-model';
 
@@ -218,5 +221,73 @@ describe('nextHotelAction (Today card, D18)', () => {
       none,
     );
     expect(hotelCardLine(a!)).toBe('Этаж 6 · T u1 · урок 1 из 2');
+  });
+});
+
+describe('markers (T92c D6): floors to retake after a gate fail', () => {
+  it('marks the debrief floors until their floor exam is retaken', () => {
+    const debrief = [
+      { kind: 'lexgram', percent: 50, floors: [7, 4] },
+      { kind: 'writing', percent: 60, floors: [12] },
+    ];
+    expect(markedFloors(debrief, new Set())).toEqual([4, 7, 12]);
+  });
+
+  it('clears a marker once that floor exam is passed', () => {
+    const debrief = [{ kind: 'lexgram', percent: 50, floors: [7, 4] }];
+    expect(markedFloors(debrief, new Set([4]))).toEqual([7]);
+  });
+
+  it('is empty when there is no debrief', () => {
+    expect(markedFloors([], new Set())).toEqual([]);
+  });
+});
+
+describe('room 13 model (T92c D6)', () => {
+  it('reports the gate open when there is no attempt', () => {
+    expect(roomStatus({ verdict: null, lastFinishedAt: null, now: 0 })).toEqual({
+      kind: 'open',
+    });
+  });
+
+  it('reports a pass as passed (steady gold, no cooldown)', () => {
+    expect(roomStatus({ verdict: 'pass', lastFinishedAt: 1_000, now: 2_000 })).toEqual({
+      kind: 'passed',
+    });
+  });
+
+  it('reports a fail as cooling until 6 h after the finished attempt', () => {
+    const finishedAt = 1_000_000;
+    const status = roomStatus({
+      verdict: 'fail',
+      lastFinishedAt: finishedAt,
+      now: finishedAt + HOUR,
+    });
+    expect(status).toEqual({
+      kind: 'cooling',
+      until: finishedAt + 6 * HOUR,
+      left: { minutesLeft: 300, text: '5 ч' },
+    });
+  });
+
+  it('reopens the gate once the cooldown has passed', () => {
+    const finishedAt = 1_000_000;
+    expect(
+      roomStatus({ verdict: 'fail', lastFinishedAt: finishedAt, now: finishedAt + 6 * HOUR }),
+    ).toEqual({ kind: 'open' });
+  });
+});
+
+describe('missedByKind (T92c D6): the debrief input', () => {
+  it('groups the items a gate attempt missed by subtest kind', () => {
+    const out = missedByKind([
+      { itemId: 'a', subtestKind: 'lexgram', topic: 'case-dat', points: 0, maxPoints: 1 },
+      { itemId: 'b', subtestKind: 'lexgram', topic: 'case-acc', points: 1, maxPoints: 1 },
+      { itemId: 'c', subtestKind: 'writing', topic: 'writing', points: 2, maxPoints: 5 },
+    ]);
+    expect(out).toEqual({
+      lexgram: [{ itemId: 'a', topic: 'case-dat' }],
+      writing: [{ itemId: 'c', topic: 'writing' }],
+    });
   });
 });

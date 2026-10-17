@@ -94,7 +94,7 @@ export function HotelScreen() {
           void hotel.lastFloor;
         }}
         onBlockedUp={() => setToast(true)}
-        onRide13={() => router.push('/hotel/a1-torfl-mock-004/room-13' as never)}
+        onRide13={() => router.push('/hotel/room-13' as never)}
       >
         {state ? (
           <FloorLobby state={state} floorTitle={titleFor(floor)} packs={floors.data ?? []} />

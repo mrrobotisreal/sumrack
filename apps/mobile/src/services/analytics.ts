@@ -368,6 +368,8 @@ export type AnalyticsEvent =
   | 'hotel_explain_more'
   | 'hotel_practice_opened'
   | 'hotel_library_quote_played'
+  // hotel_gate_attempt {percent, verdict} — Номер 13 finished (T92c). verdict = pass | fail; percent = mean of subtests.
+  | 'hotel_gate_attempt'
   // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
   // story_source_link_opened {packId, storyId, category} fires from the reader header's source line.
   | 'library_category_switched'
