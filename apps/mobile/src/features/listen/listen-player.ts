@@ -128,8 +128,10 @@ export interface ListenPlayer {
   setRate(rate: number): void;
   setVolume(volume: number): void;
   setMuted(muted: boolean): void;
-  /** Pause for the reader hand-off and record why. */
+  /** Pause for the reader hand-off. */
   pauseForReader(): void;
+  /** Analytics passthrough for screen-level events (listen_open_reader). */
+  track(event: string, props: Record<string, string | number | boolean>): void;
   /** Persist the position now (pause/background/unmount). */
   saveNow(): void;
   onBackground(): void;
@@ -452,6 +454,10 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       prefs = { ...(prefs ?? LISTEN_PREFS_DEFAULTS), muted };
       void deps.savePrefs(prefs);
       deps.track('listen_volume_changed', { ...props(), volume: get().volume, muted });
+    },
+
+    track(event, p) {
+      deps.track(event, p);
     },
 
     pauseForReader() {
