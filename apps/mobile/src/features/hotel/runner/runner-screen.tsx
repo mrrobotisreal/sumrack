@@ -493,7 +493,16 @@ export function RunnerScreen({
                     )
                 : undefined
             }
-            onNext={() => state && setState(moveTo(state, state.cursor + 1))}
+            // Unit mode has no «Сдать» bar (feedback is on), so the last item's «Далее» finishes the run —
+            // before this it clamped at the last item and the sitting never ended (T93c chunk C4).
+            nextLabel={
+              state && state.cursor >= state.itemIds.length - 1 ? 'Завершить →' : undefined
+            }
+            onNext={() => {
+              if (!state) return;
+              if (state.cursor >= state.itemIds.length - 1) void finish();
+              else setState(moveTo(state, state.cursor + 1));
+            }}
           />
         ) : null}
       </ScrollView>

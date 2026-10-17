@@ -1,4 +1,5 @@
 import * as Network from 'expo-network';
+import * as React from 'react';
 
 /**
  * The small shared "am I online" utility the ticket asks for. T07's sync
@@ -27,4 +28,24 @@ export function onConnectivityRegained(callback: () => void): () => void {
     wasOffline = offline;
   });
   return () => sub.remove();
+}
+
+/**
+ * Live online flag for UI that must look disabled offline (the hotel's «Объясни ещё», T90 D9).
+ * Same semantics as `isOnline`; starts optimistic and follows network changes.
+ */
+export function useOnline(): boolean {
+  const [online, setOnline] = React.useState(true);
+  React.useEffect(() => {
+    let alive = true;
+    void isOnline().then((v) => alive && setOnline(v));
+    const sub = Network.addNetworkStateListener((state) =>
+      setOnline(state.isInternetReachable !== false),
+    );
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return online;
 }
