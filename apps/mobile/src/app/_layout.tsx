@@ -233,15 +233,6 @@ export default function RootLayout() {
                 <Stack.Screen name="dashboard/assessment" options={{ title: 'AI assessment' }} />
                 <Stack.Screen name="dashboard/leeches" options={{ title: 'Leeches' }} />
                 <Stack.Screen name="dashboard/core-gaps" options={{ title: 'Not met yet' }} />
-                <Stack.Screen name="path/[packId]/lesson" options={{ title: 'Lesson' }} />
-                <Stack.Screen
-                  name="path/[packId]/quiz"
-                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-                />
-                <Stack.Screen
-                  name="path/checkpoint/[packId]"
-                  options={{ headerShown: false, animation: 'fade', gestureEnabled: false }}
-                />
                 <Stack.Screen
                   name="settings"
                   options={{ title: 'Settings', presentation: 'modal' }}

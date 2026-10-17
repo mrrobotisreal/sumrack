@@ -339,9 +339,11 @@ export type AnalyticsEvent =
   | 'room_scene_shown'
   | 'reduce_motion_toggled'
   // M25 hotel lift (T91, HOTEL_PATH §4). Props are numbers, slugs and booleans only.
+  // hotel_floor_entered {floor, via} — the lift arrived on a floor (or a deep link opened it).
   // hotel_lift_ride {from, to, passed13} — a ride finished (floor numbers; passed13 = crossed the missing 13).
   // hotel_up_blocked {floor} — a tap on a dark ▲ (the «Сначала сдайте экзамен» toast).
   // hotel_drop_played {reduced} — the Номер 13 drop ran (reduced = the fade variant).
+  | 'hotel_floor_entered'
   | 'hotel_lift_ride'
   | 'hotel_up_blocked'
   | 'hotel_drop_played'

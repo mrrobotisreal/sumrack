@@ -305,3 +305,24 @@ describe('intro', () => {
     ]);
   });
 });
+
+describe('gate mock hiding (T92 D16)', () => {
+  it('hides the gate pack from the hub until it has an attempt', () => {
+    const gate = summary(mock, 'a1-torfl-mock-004');
+    expect(buildExamListItems([gate], [])).toEqual([]);
+    const attempted = [
+      {
+        packId: 'a1-torfl-mock-004',
+        examId: mock.id,
+        status: 'abandoned',
+        results: null,
+        verdict: null,
+      },
+    ];
+    expect(buildExamListItems([gate], attempted)).toHaveLength(1);
+  });
+
+  it('never hides an ordinary mock', () => {
+    expect(buildExamListItems([summary(mock)], [])).toHaveLength(1);
+  });
+});
