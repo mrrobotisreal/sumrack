@@ -185,6 +185,25 @@ export function createListenRepo(db: SumrakDB) {
       return out;
     },
 
+    /** Sync backfill: the full-track + cover files a pack declares and where they are staged. */
+    async getStagedRefs(packId: string): Promise<{
+      fullFile: string | null;
+      fullLocalUri: string | null;
+      coverFile: string | null;
+      coverLocalUri: string | null;
+    }> {
+      const pack = (await db.select().from(packs).where(eq(packs.id, packId)).limit(1))[0];
+      const full = (
+        await db.select().from(packFullAudio).where(eq(packFullAudio.packId, packId)).limit(1)
+      )[0];
+      return {
+        fullFile: full?.file ?? null,
+        fullLocalUri: full?.localUri ?? null,
+        coverFile: pack?.coverFile ?? null,
+        coverLocalUri: pack?.coverLocalUri ?? null,
+      };
+    },
+
     /** Backfill / reuse: record the staged uri of the stitched track. */
     async setFullAudioLocalUri(packId: string, localUri: string | null): Promise<void> {
       await db.update(packFullAudio).set({ localUri }).where(eq(packFullAudio.packId, packId));
