@@ -30,6 +30,7 @@ import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
 import { AmbientAudioHost } from '@/features/ambient-audio/ambient-audio-host';
+import { ListenActivityBridge } from '@/features/listen/listen-activity-bridge';
 import { ShareIntentGate } from '@/features/import/share-gate';
 import { AchievementToastHost } from '@/features/motivation/achievement-toast';
 import { NotificationRouter } from '@/features/motivation/notification-router';
@@ -112,6 +113,10 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="reader/[packId]/[storyId]"
+                  options={{ headerShown: false, animation: 'fade' }}
+                />
+                <Stack.Screen
+                  name="listen/[packId]"
                   options={{ headerShown: false, animation: 'fade' }}
                 />
                 <Stack.Screen
@@ -271,6 +276,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-exam-capture" options={{ title: 'A2 grading capture' }} />
               </Stack>
               <AmbientAudioHost ready={introDone} />
+              <ListenActivityBridge />
               <AutoSync />
               <AutoBackup />
               <AiQueue />

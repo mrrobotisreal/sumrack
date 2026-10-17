@@ -15,8 +15,13 @@ export function registerOwner(name: AudioOwner, pause: () => void): () => void {
   };
 }
 
-/** Call right before `play()`: pauses every other registered owner. */
-export function claim(name: AudioOwner): void {
+/**
+ * Call right before `play()`: pauses every other registered owner. Passing
+ * `pause` (re)registers this owner lazily, so a hook needs no separate
+ * registration effect.
+ */
+export function claim(name: AudioOwner, pause?: () => void): void {
+  if (pause) owners.set(name, pause);
   for (const [other, pause] of owners) {
     if (other !== name) pause();
   }

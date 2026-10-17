@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
+// expo-router does not re-export BottomTabBar from its root; the package has no
+// `exports` map, so the deep build path resolves under Metro and tsc.
+import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
 import * as React from 'react';
 import { Pressable, type ColorValue } from 'react-native';
 
+import { NowPlayingBar } from '@/features/listen/now-playing-bar';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 /**
@@ -32,6 +36,12 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => (
+        <>
+          <NowPlayingBar />
+          <BottomTabBar {...props} />
+        </>
+      )}
       screenOptions={{
         tabBarActiveTintColor: tokens.accent,
         tabBarInactiveTintColor: tokens.textMuted,
