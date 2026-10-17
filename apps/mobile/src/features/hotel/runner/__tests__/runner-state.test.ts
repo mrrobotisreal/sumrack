@@ -20,11 +20,15 @@ const writing = (id: string) => ({ id, topic: 't', kind: 'writing' }) as unknown
 const items = [choice('a', 0), choice('b', 1), writing('w'), choice('c', 2)];
 
 describe('startRun', () => {
-  it('keeps the drawn order, serves writing (T92d), and reports only deferred items', () => {
-    const withSpeaking = [...items, { id: 's', topic: 't', kind: 'speaking-reply' } as never];
-    const s = startRun('unit', withSpeaking, ['a', 'w', 'b', 'c', 's']);
-    expect(s.itemIds).toEqual(['a', 'w', 'b', 'c']);
-    expect(s.deferred).toEqual(['s']);
+  it('keeps the drawn order, serves writing and speaking (T93), and reports only deferred items', () => {
+    const withSpeaking = [
+      ...items,
+      { id: 's', topic: 't', kind: 'speaking-reply' } as never,
+      { id: 'm', topic: 't', kind: 'speaking-monologue' } as never,
+    ];
+    const s = startRun('unit', withSpeaking, ['a', 'w', 'b', 'c', 's', 'm']);
+    expect(s.itemIds).toEqual(['a', 'w', 'b', 'c', 's']);
+    expect(s.deferred).toEqual(['m']);
     expect(s.phase).toBe('run');
   });
 

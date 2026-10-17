@@ -456,6 +456,27 @@ describe('scoreAttempt (decision 5): choice/trigger exact, typed/transform via s
     expect(res.percent).toBe(0);
   });
 
+  it('a graded speaking turn (T93) counts by its stored judge verdict; ungraded stays pending', () => {
+    const speaking = { id: 's1', topic: 'speak', kind: 'speaking-reply' as const, prompt: {} };
+    const passed = scoreAttempt(
+      [speaking] as never,
+      {
+        s1: { answer: { kind: 'speaking' }, correct: true },
+      } as never,
+    );
+    expect(passed.pending).toEqual([]);
+    expect(passed.percent).toBe(100);
+    const failed = scoreAttempt(
+      [speaking] as never,
+      {
+        s1: { answer: { kind: 'speaking' }, correct: false },
+      } as never,
+    );
+    expect(failed.percent).toBe(0);
+    expect(failed.pending).toEqual([]);
+    expect(scoreAttempt([speaking] as never, {} as never).pending).toEqual(['s1']);
+  });
+
   it('percent rounds to a whole number', () => {
     const items = [choice, trigger, typed];
     const res = scoreAttempt(items as never, { c1: { answer: 0 } } as never);
