@@ -10,6 +10,7 @@ import { createDialoguesRepo } from './dialogues';
 import { createExamsRepo } from './exams';
 import { createImportsRepo } from './imports';
 import { createJournalRepo } from './journal';
+import { createListenRepo } from './listen';
 import { createPathRepo } from './path';
 import { createQuestsRepo } from './quests';
 import { createReadingRepo } from './reading';
@@ -54,6 +55,7 @@ export function createRepositories(db: SumrakDB) {
     exams: createExamsRepo(db),
     imports: createImportsRepo(db),
     journal: createJournalRepo(db),
+    listen: createListenRepo(db),
     path: createPathRepo(db),
     quests: createQuestsRepo(db),
     reading: createReadingRepo(db),
@@ -76,6 +78,7 @@ export * from './dialogues';
 export * from './exams';
 export * from './imports';
 export * from './journal';
+export * from './listen';
 export * from './path';
 export * from './reading';
 export * from './reviews';
