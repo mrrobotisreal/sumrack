@@ -1307,3 +1307,29 @@ Then the floor exam (`pool N / size N`), the **binary-option** line (warning whe
 6. **`explain` is long on purpose.** Under 120 characters is refused, because the learner needs the trigger, the rule and the reason each wrong option fails, not just the answer.
 7. **Quote YAML strings** with `:`, `#`, `«»` or a leading `-`/`[`/`{` — single quotes are safest, and an inner single quote is doubled.
 8. **The body is ignored** — anything below the closing `---` never reaches the pack.
+
+## Full-story track (`pipeline stitch` — M26, T94)
+
+A `stories` pack may carry one continuous narration of all its parts plus a segment map, so the app can offer «Прослушайте всю историю». It is **built, never authored**: do not write `fullStory` or `cover` into a draft.
+
+```
+pnpm pipeline stitch <pack-dir> [--gap-ms 1200] [--track <style>] [--cover <image>] [--bump] [--dry-run]
+```
+
+- Per story it takes the first audio track (or the first whose `style` equals `--track`), decodes each to 48 kHz mono PCM, measures the exact length, joins the parts with `--gap-ms` of silence (default **1200 ms** — one breath; the parts already start and end in silence), and encodes once through the same `encodeOpus` as every other track. Output: `audio/<packId>-full.opus` and `pack.json` `fullStory` (`segments[]` = story id, track id, start/end ms).
+- `--cover <png|jpg>` squeezes any image into `cover/cover.jpg` (1024x1024, JPEG, quality stepped until <= 400,000 bytes) and sets `pack.cover`.
+- `--bump` increments `version` (needed when the pack is already published). `--dry-run` prints the segment table and writes nothing. Re-running overwrites both file and field (idempotent).
+- Needs `ffmpeg`/`ffprobe`; offline, no provider calls. `pipeline validate` prints a «Full track» line (parts · duration · gap · cover).
+- **Re-stitch after any audio change** to a part (re-render, restamp does not matter — it only touches `timestamps`), or the segment map no longer matches the parts.
+
+### Republishing without the stamp-audit
+
+```
+pnpm pipeline publish <pack-dir> --content <sumrak-content> --stitch-only
+```
+
+For a pack whose audio did not change: the pack minus `{fullStory, cover, version}` must deep-equal the published `packs/<id>/pack.json`, and every story track must hash exactly as the published manifest lists it. Then the stamp-audit is skipped («stitch-only: N tracks byte-identical, stamp-audit skipped»). Any other difference fails naming the first differing JSON path or file. It cannot be combined with `--allow-stamp-risk` / `--skip-stamp-audit`.
+
+### Gate L
+
+Older apps reject packs with `fullStory`/`cover` (strict schema). No such pack enters `manifest.json` until both phones run the T98 release (FULL_STORY_LISTEN §12).
