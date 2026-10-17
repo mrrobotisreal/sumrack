@@ -307,3 +307,21 @@ export function missedByKind(responses: readonly GradedResponse[]): Record<strin
   }
   return out;
 }
+
+/** Floor number of a floor pack: the course pack id ends in its floor (`a1-hotel-f07` → 7). */
+export function floorOfPack(packId: string): number | null {
+  const m = /-f(\d+)$/.exec(packId);
+  return m ? Number(m[1]) : null;
+}
+
+/** The floors whose own course row is passed (T92d: the one passed set the room and the lift share). */
+export function passedFloorsOf(
+  rows: readonly { packId: string; unitId: string | null; passedAt: number | null }[],
+): Set<number> {
+  return new Set(
+    rows
+      .filter((r) => r.unitId === null && r.passedAt != null)
+      .map((r) => floorOfPack(r.packId))
+      .filter((n): n is number => n !== null),
+  );
+}

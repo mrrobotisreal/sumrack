@@ -51,6 +51,7 @@ import {
   downLit,
   floorAbove,
   floorBelow,
+  markerState,
   MISSING_FLOOR,
   planRide,
   upLit,
@@ -94,6 +95,8 @@ export interface LiftProps {
   reveal13: boolean;
   /** Fires after the drop's doors finish opening on Номер 13. */
   onRide13: () => void;
+  /** Debrief markers (T92d): floors the last Номер 13 debrief sent the learner back to. */
+  markers?: readonly number[];
 }
 
 export function Lift({
@@ -106,6 +109,7 @@ export function Lift({
   children,
   reveal13,
   onRide13,
+  markers = [],
 }: LiftProps) {
   const { tokens: t } = useAppTheme();
   const reduced = useReduceMotion();
@@ -352,6 +356,7 @@ export function Lift({
     upWasOn.current = upOn;
   }, [upOn, riding]);
   const downOn = downLit(panel, shownFloor);
+  const marks = markerState(panel, shownFloor, markers);
 
   return (
     <Animated.View style={[shakeStyle, fadeStyle, { alignItems: 'center', gap: 16 }]}>
@@ -360,6 +365,7 @@ export function Lift({
         titles={titleFor(shownFloor)}
         reduced={reduced}
         dimmed={dimmed}
+        marked={marks.here}
       />
 
       <Doors open={open} width={DOORS_WIDTH_DP}>
@@ -375,6 +381,8 @@ export function Lift({
         show13={reveal13}
         onRide13={runDrop}
         disabled={riding}
+        markUp={marks.up}
+        markDown={marks.down}
       />
 
       {toast ? (

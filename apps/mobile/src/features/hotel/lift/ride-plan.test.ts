@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { crossesMissing13, downLit, floorAbove, floorBelow, planRide, upLit } from './ride-plan';
+import {
+  crossesMissing13,
+  downLit,
+  floorAbove,
+  floorBelow,
+  markerState,
+  planRide,
+  upLit,
+} from './ride-plan';
 
 /** The panel with 13 hidden (D5). */
 const PANEL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15];
@@ -137,5 +145,19 @@ describe('downLit', () => {
 
   it('is dark only on the ground floor', () => {
     expect(downLit(PANEL, 0)).toBe(false);
+  });
+});
+
+describe('markerState (T92d debrief markers)', () => {
+  it('marks the current floor and the next floor in each direction, skipping the missing 13', () => {
+    // At 12 the floor above on the panel is 14 (13 is hidden), below is 11.
+    expect(markerState(PANEL, 12, [14])).toEqual({ here: false, up: true, down: false });
+    expect(markerState(PANEL, 12, [12])).toEqual({ here: true, up: false, down: false });
+    expect(markerState(PANEL, 5, [4, 6])).toEqual({ here: false, up: true, down: true });
+  });
+
+  it('has no marker on an edge or with nothing marked', () => {
+    expect(markerState(PANEL, 15, [])).toEqual({ here: false, up: false, down: false });
+    expect(markerState(PANEL, 0, [1])).toEqual({ here: false, up: true, down: false });
   });
 });

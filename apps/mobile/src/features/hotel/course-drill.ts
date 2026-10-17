@@ -60,6 +60,8 @@ export function courseDrillItem(item: CourseItem): ChoiceItem | TypedItem | null
         options: item.options,
         answer: item.answer,
         explain: item.explain,
+        passage: item.passage,
+        audio: item.audio,
       } as ChoiceItem;
     case 'trigger':
       return {
@@ -81,6 +83,8 @@ export function courseDrillItem(item: CourseItem): ChoiceItem | TypedItem | null
         accept: item.accept,
         half: item.half,
         explain: item.explain,
+        passage: item.passage,
+        audio: item.audio,
       } as TypedItem;
     case 'transform':
       return {

@@ -56,7 +56,9 @@ export function ListeningPlayer({
   const [showText, setShowText] = React.useState(false);
   const [target, setTarget] = React.useState<WordPopupTarget | null>(null);
   const exam = mode === 'exam';
-  const capped = exam && maxPlays !== undefined && controls.playCount >= maxPlays;
+  // The play cap (T92d): the exam engine enforces it; a runner's floor exam caps a drill
+  // player the same way (`maxPlays` set). Practice passes no cap → unlimited plays.
+  const capped = maxPlays !== undefined && controls.playCount >= maxPlays;
 
   // Exam mode: the engine owns the clock. A new play number in the `playing` phase starts the
   // span (rate locked at 1.0); leaving `playing` (gap, done, resume, quit) silences it.

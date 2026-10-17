@@ -1,38 +1,20 @@
 import { Stack, useRouter } from 'expo-router';
 import type { ExamSubtestKind } from '@sumrak/schema';
-import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { QueryError } from '@/components/query-error';
-import { repos } from '@/db';
-import { findExamItem } from '@/features/torfl/model';
 import { SUBTEST_LABELS } from '@/features/torfl/topics';
 import { recordHotelGatePassed } from '@/features/motivation/service';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { useCourseProgress } from './hotel-hooks';
-import {
-  debriefForSubtests,
-  gatePasses,
-  GATE_PACK_ID,
-  markedFloors,
-  missedByKind,
-  roomStatus,
-  type GradedResponse,
-  type SubtestResult,
-} from './gate-model';
+import { useCourseProgress, useLastGateDetail } from './hotel-hooks';
+import { gatePasses, GATE_PACK_ID, markedFloors, passedFloorsOf, roomStatus } from './gate-model';
 
 /** The gate mock's exam id inside `a1-torfl-mock-004` (the mock intro route). */
 const GATE_EXAM_ID = 'a1-mock-04';
-
-/** Floor number of a floor pack: the course pack id ends in its floor (`a1-hotel-f07` → 7). */
-function floorOfPack(packId: string): number | null {
-  const m = /-f(\d+)$/.exec(packId);
-  return m ? Number(m[1]) : null;
-}
 
 /**
  * Номер 13 (T92c D6): the dark room behind the brass «13» plate. The exam text
@@ -43,89 +25,37 @@ function floorOfPack(packId: string): number | null {
 export default function Room13Screen() {
   const { tokens } = useAppTheme();
   const router = useRouter();
-  // The gate pack's own attempts, filtered in SQL (not the shared 50-row history).
-  const attempts = useQuery({
-    queryKey: ['hotel', 'gate-attempts'],
-    queryFn: () => repos.exams.listAttempts({ packId: GATE_PACK_ID, limit: 20 }),
-  });
+  const { last, attempts, detail: gate } = useLastGateDetail();
   const progress = useCourseProgress();
   const [now] = React.useState(() => Date.now());
-  const [detail, setDetail] = React.useState<{
-    results: SubtestResult[];
-    responses: GradedResponse[];
-  } | null>(null);
 
-  const finished = (attempts.data ?? []).filter((a) => a.status === 'finished');
-  const last = finished[0] ?? null;
   const status = roomStatus({
     verdict: last?.verdict ?? null,
     lastFinishedAt: last?.finishedAt ?? null,
     now,
   });
 
-  // The last finished attempt's subtest results and graded responses (for the bars and the debrief).
-  React.useEffect(() => {
-    let cancelled = false;
-    if (!last) return;
-    void (async () => {
-      const exam = await repos.exams.getExam(GATE_PACK_ID, last.examId);
-      const full = await repos.exams.getAttempt(last.id);
-      if (cancelled || !exam || !full) return;
-      const results: SubtestResult[] = exam.subtests.flatMap((s) => {
-        const r = (last.results ?? {})[s.id];
-        return r ? [{ kind: s.kind, percent: r.pct }] : [];
-      });
-      const responses: GradedResponse[] = [];
-      for (const resp of full.responses) {
-        if (resp.points === null) continue;
-        const located = findExamItem(exam, resp.itemId, resp.subtestId);
-        if (!located) continue;
-        responses.push({
-          itemId: resp.itemId,
-          subtestKind: located.subtest.kind,
-          topic: located.item.topic,
-          points: resp.points,
-          maxPoints: resp.maxPoints,
-        });
-      }
-      setDetail({ results, responses });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [last]);
-
-  const results = React.useMemo(() => detail?.results ?? [], [detail]);
+  const results = React.useMemo(() => gate.data?.results ?? [], [gate.data]);
   const passed = results.length > 0 && gatePasses(results);
   const debrief = React.useMemo(() => {
-    if (!detail || passed || detail.results.length === 0) return [];
-    return debriefForSubtests(detail.results, missedByKind(detail.responses));
-  }, [detail, passed]);
+    if (!gate.data || passed) return [];
+    return gate.data.debrief;
+  }, [gate.data, passed]);
 
-  const passedFloors = React.useMemo(
-    () =>
-      new Set(
-        (progress.data ?? [])
-          .filter((r) => r.unitId === null && r.passedAt != null)
-          .map((r) => floorOfPack(r.packId))
-          .filter((n): n is number => n !== null),
-      ),
-    [progress.data],
-  );
+  const passedFloors = React.useMemo(() => passedFloorsOf(progress.data ?? []), [progress.data]);
   const markers = markedFloors(debrief, passedFloors);
 
-  // One analytics event per finished gate attempt, once it has been read.
+  // One analytics event per finished gate attempt, once it has been read (T92d: the engine's overall %).
   const reported = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (!last || !detail || reported.current === last.id) return;
+    if (!last || !gate.data || reported.current === last.id) return;
     reported.current = last.id;
-    const pct =
-      results.length > 0
-        ? Math.round(results.reduce((n, r) => n + r.percent, 0) / results.length)
-        : 0;
-    track('hotel_gate_attempt', { percent: pct, verdict: passed ? 'pass' : 'fail' } as never);
+    track('hotel_gate_attempt', {
+      percent: gate.data.overall ?? 0,
+      verdict: passed ? 'pass' : 'fail',
+    } as never);
     if (passed) void recordHotelGatePassed();
-  }, [last, detail, results, passed]);
+  }, [last, gate.data, passed]);
 
   if (attempts.isPending) {
     return (

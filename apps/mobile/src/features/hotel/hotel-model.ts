@@ -283,6 +283,13 @@ export function weakestUnit(
 /** A recorded answer as the scorer reads it. `answer` is the raw payload (choice index / typed text). */
 export interface ResponseLike {
   answer: unknown;
+  /** Stored verdict for a skill item the runner graded (writing: ≥ 66 % offline). */
+  correct?: boolean;
+}
+
+/** A skill item's stored response counts once the runner has graded it (a verdict is present). */
+function isGradedSkill(r: ResponseLike | undefined): boolean {
+  return r !== undefined && typeof r.correct === 'boolean';
 }
 
 export interface ScoredItem {
@@ -326,6 +333,10 @@ export function scoreAttempt(
       const outcome = scoreTyped(typed, text, 1).outcome;
       const points = outcome === 'full' ? 1 : outcome === 'half' ? 0.5 : 0;
       scored.push({ itemId: item.id, points, correct: outcome === 'full', pending: false });
+    } else if (item.kind === 'writing' && isGradedSkill(responses[item.id])) {
+      // A course writing item is graded offline (T92d); the runner stores the verdict.
+      const ok = responses[item.id]?.correct === true;
+      scored.push({ itemId: item.id, points: ok ? 1 : 0, correct: ok, pending: false });
     } else {
       scored.push({ itemId: item.id, points: 0, correct: false, pending: true });
     }

@@ -130,3 +130,20 @@ describe('courseDrillEntry', () => {
     expect(courseDrillEntry('a1-hotel-f12', writing, 'writing')).toBeNull();
   });
 });
+
+describe('passage and audio refs survive the mapper (T92d)', () => {
+  it("carries a floor-14 choice item's passage and audio into the drill item", () => {
+    const passage = { storyId: 'story-a', sentenceIds: ['s1'] };
+    const audio = { storyId: 'story-a', sentenceIds: ['s1', 's2'] };
+    const item = { ...choice, passage, audio } as CourseItem;
+    const drill = courseDrillItem(item) as unknown as { passage?: unknown; audio?: unknown };
+    expect(drill.passage).toEqual(passage);
+    expect(drill.audio).toEqual(audio);
+  });
+
+  it('leaves refs off an item that has none', () => {
+    const drill = courseDrillItem(choice) as unknown as { passage?: unknown; audio?: unknown };
+    expect(drill.passage).toBeUndefined();
+    expect(drill.audio).toBeUndefined();
+  });
+});
