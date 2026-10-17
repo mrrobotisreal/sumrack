@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import { repos } from '@/db';
 import type { AttemptRecord } from '@/db/repositories/course';
 import { canAttempt, drawItems } from '../hotel-model';
+import { formatCooldownRu } from '../gate-model';
 import { recordHotelRun } from '@/features/motivation/service';
 import { ChoiceItemView } from '@/features/torfl/items/choice-item-view';
 import { TypedItemView } from '@/features/torfl/items/typed-item-view';
@@ -94,11 +95,15 @@ export function RunnerScreen({
   const [explainTarget, setExplainTarget] = React.useState<ExplainTarget | null>(null);
 
   // The cooldown is data: a floor/экстерн row with a live cooldown blocks the start (decision 2).
-  // The clock is read once per mount (lazy initial state), so the gate never calls Date.now() in render.
-  const [mountedAt] = React.useState(() => Date.now());
+  // The clock ticks every 30 s while mounted, so the countdown follows the row (carried T90 #4).
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const gate = React.useMemo(
-    () => (progress.isLoading ? null : canAttempt(row, mode, mountedAt)),
-    [progress.isLoading, row, mode, mountedAt],
+    () => (progress.isLoading ? null : canAttempt(row, mode, now)),
+    [progress.isLoading, row, mode, now],
   );
   const blockedMinutes = gate && !gate.ok ? gate.minutesLeft : null;
 
@@ -238,7 +243,7 @@ export function RunnerScreen({
       >
         <Stack.Screen options={{ title: 'Упражнения' }} />
         <Ionicons name="time-outline" size={36} color={theme.textMuted} />
-        <Text className="font-ui-medium text-base">{`Можно снова через ${blockedMinutes} мин`}</Text>
+        <Text className="font-ui-medium text-base">{`Можно снова через ${formatCooldownRu(blockedMinutes)}`}</Text>
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -273,7 +278,7 @@ export function RunnerScreen({
           <Text
             variant="muted"
             testID="runner-cooldown-note"
-          >{`Следующая попытка через ${finished.cooldownMinutes} мин`}</Text>
+          >{`Следующая попытка через ${formatCooldownRu(finished.cooldownMinutes)}`}</Text>
         ) : null}
         {finished.weakestUnitId ? (
           <Pressable
@@ -307,6 +312,21 @@ export function RunnerScreen({
                 finished.review.responses,
                 (id) => finished.review.points[id] ?? 0,
               )}
+              onExplainMore={
+                allowsExplainMore(mode, 'review')
+                  ? (item, chosen) => {
+                      const target = explainTargetFor(packId, item, chosen);
+                      if (!target) return;
+                      track('hotel_explain_more', {
+                        context: 'item',
+                        packId,
+                        id: item.id,
+                        model: 'grammar',
+                      } as never);
+                      setExplainTarget(target);
+                    }
+                  : undefined
+              }
             />
           </View>
         ) : null}

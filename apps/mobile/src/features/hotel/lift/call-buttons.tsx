@@ -46,6 +46,20 @@ export function CallButton({
 }: CallButtonProps) {
   const { tokens: t } = useAppTheme();
   const glow = useSharedValue(lit ? 1 : 0);
+  // The unlock moment (HOTEL_PATH D4): a button that lights while mounted
+  // flashes brighter for 300 ms before settling into its pulse.
+  const flash = useSharedValue(1);
+  const wasLit = React.useRef(lit);
+
+  React.useEffect(() => {
+    if (lit && !wasLit.current && !reduced) {
+      flash.value = withSequence(
+        withTiming(1.6, { duration: 150 }),
+        withTiming(1, { duration: 150 }),
+      );
+    }
+    wasLit.current = lit;
+  }, [lit, reduced, flash]);
 
   React.useEffect(() => {
     if (!lit || reduced) {
@@ -66,6 +80,8 @@ export function CallButton({
   const ringStyle = useAnimatedStyle(() => ({
     opacity: glow.value,
     shadowOpacity: lit ? glow.value : 0,
+    transform: [{ scale: flash.value > 1 ? 1 + (flash.value - 1) * 0.15 : 1 }],
+    shadowRadius: 10 * flash.value,
   }));
 
   const ringColor = accentGlow ? '#E0602E' : t.hotelGlow;
@@ -90,7 +106,6 @@ export function CallButton({
             borderWidth: lit ? 2 : 1,
             borderColor: lit ? ringColor : t.hotelBrass,
             shadowColor: ringColor,
-            shadowRadius: 10,
             shadowOffset: { width: 0, height: 0 },
           },
         ]}

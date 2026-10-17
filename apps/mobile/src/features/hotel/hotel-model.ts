@@ -9,6 +9,8 @@ import { scoreTyped } from '@/features/torfl/scoring';
  */
 
 export const MINUTE_MS = 60_000;
+/** The экстерн pass line (D13): ≥ 90 %. Mirrors `passes('extern', …)`. */
+export const EXTERN_PASS_PERCENT = 90;
 const HOUR_MS = 60 * MINUTE_MS;
 
 /** D5: the A1 panel reads 0 (Вестибюль), 1–12, 14, 15 — there is no 13. */
@@ -338,4 +340,82 @@ export function scoreAttempt(
     pending: scored.filter((s) => s.pending).map((s) => s.itemId),
     items: scored,
   };
+}
+
+/**
+ * T92b: the экстерн menu (D12, decision 3). Every locked floor on the panel that
+ * owns a floor exam, in panel order. Floor 0 (no exam) is never offered.
+ */
+export function externMenu(states: readonly FloorState[]): FloorState[] {
+  return states.filter((s) => !s.unlocked && s.hasExam);
+}
+
+/** The экстерн confirm copy (decision 3): «90 %, без подсказок, при неудаче — пауза 1 час». */
+export const EXTERN_CONFIRM = {
+  title: 'Сдать экстерном',
+  body: `${EXTERN_PASS_PERCENT} %, без подсказок, при неудаче — пауза 1 час`,
+} as const;
+
+/** The last floor Mitch was on (`hotel.lastFloor`): an integer 0–99, anything else is null. */
+export function parseLastFloor(raw: unknown): number | null {
+  return typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 && raw <= 99 ? raw : null;
+}
+
+/**
+ * The floor the lift shows when the tab opens: the saved floor when it is on the
+ * panel, else the panel's first floor (floor 0, or the lowest installed one).
+ */
+export function startFloor(panel: readonly number[], saved: number | null): number {
+  if (saved !== null && panel.includes(saved)) return saved;
+  return panel[0] ?? 0;
+}
+
+/**
+ * A floor's «Практика» before/after (decision 2). `attempts` are the drill
+ * attempts of the practice exam; `firstUnitStartedAt` is the floor's first unit
+ * attempt (null = the learner has not started the floor). «до» = the best drill
+ * finished before that moment; «после» = the best started at or after it.
+ */
+export interface DrillAttemptLike {
+  startedAt: number;
+  finishedAt: number | null;
+  results: Readonly<Record<string, { pct: number }>> | null;
+}
+
+/** One drill attempt's percent: the mean of its subtests' pct, null when unscored. */
+export function drillPercent(results: DrillAttemptLike['results']): number | null {
+  if (!results) return null;
+  const pcts = Object.values(results).map((r) => r.pct);
+  if (pcts.length === 0) return null;
+  return Math.round(pcts.reduce((n, p) => n + p, 0) / pcts.length);
+}
+
+export function drillBeforeAfter(
+  attempts: readonly DrillAttemptLike[],
+  firstUnitStartedAt: number | null,
+): { before: number | null; after: number | null } {
+  const scored = attempts.flatMap((a) => {
+    const percent = a.finishedAt === null ? null : drillPercent(a.results);
+    return percent === null ? [] : [{ startedAt: a.startedAt, percent }];
+  });
+  const best = (xs: readonly { percent: number }[]) =>
+    xs.length === 0 ? null : Math.max(...xs.map((x) => x.percent));
+  if (firstUnitStartedAt === null) return { before: best(scored), after: null };
+  return {
+    before: best(scored.filter((x) => x.startedAt < firstUnitStartedAt)),
+    after: best(scored.filter((x) => x.startedAt >= firstUnitStartedAt)),
+  };
+}
+
+/** The floor's first unit attempt start (null when no unit attempt exists for the pack). */
+export function firstUnitStart(
+  attempts: readonly { packId: string; unitId: string | null; startedAt: number }[],
+  packId: string,
+): number | null {
+  let first: number | null = null;
+  for (const a of attempts) {
+    if (a.packId !== packId || a.unitId === null) continue;
+    if (first === null || a.startedAt < first) first = a.startedAt;
+  }
+  return first;
 }
