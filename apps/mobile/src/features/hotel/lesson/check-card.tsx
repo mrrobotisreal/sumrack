@@ -1,6 +1,6 @@
 import type { CheckCard, CourseItem, CourseUnit } from '@sumrak/schema';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { courseDrillItem } from '@/features/hotel/course-drill';
@@ -76,16 +76,6 @@ export function CheckCardView({
           Проверка пройдена. Можно идти дальше.
         </Text>
       )}
-      <Pressable
-        onPress={() => setStep((s) => Math.min(s + 1, list.length - 1))}
-        disabled={!allDone || index >= list.length - 1}
-        accessibilityRole="button"
-        testID="check-next"
-        className="items-center rounded-xl border border-border py-3 active:bg-surface-2"
-        style={{ opacity: allDone ? 1 : 0.4 }}
-      >
-        <Text className="font-ui-medium">Дальше по проверке</Text>
-      </Pressable>
     </View>
   );
 }

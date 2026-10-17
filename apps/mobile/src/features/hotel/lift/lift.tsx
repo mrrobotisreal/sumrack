@@ -345,6 +345,12 @@ export function Lift({
   const fadeStyle = useAnimatedStyle(() => ({ opacity: motion.fade.value }));
 
   const upOn = upLit(panel, shownFloor, highestUnlocked);
+  // The unlock moment (D4): ▲ lights while the car stands on this floor → one ding.
+  const upWasOn = React.useRef(upOn);
+  React.useEffect(() => {
+    if (upOn && !upWasOn.current && !riding) sfxRef.current?.play('ding');
+    upWasOn.current = upOn;
+  }, [upOn, riding]);
   const downOn = downLit(panel, shownFloor);
 
   return (
