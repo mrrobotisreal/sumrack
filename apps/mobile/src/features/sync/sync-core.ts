@@ -111,7 +111,10 @@ export function isCoverFile(path: string): boolean {
  * T95 unchanged-file reuse (design §4.3): a staged file whose SHA-256 equals
  * the manifest's is byte-identical to what the pack ships, so no fetch.
  */
-export function shouldReuseStaged(existingSha: string | null | undefined, manifestSha: string): boolean {
+export function shouldReuseStaged(
+  existingSha: string | null | undefined,
+  manifestSha: string,
+): boolean {
   return !!existingSha && existingSha.toLowerCase() === manifestSha.toLowerCase();
 }
 

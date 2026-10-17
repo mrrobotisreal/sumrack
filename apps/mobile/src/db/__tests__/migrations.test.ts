@@ -823,9 +823,9 @@ describe('0021_full-story', () => {
       .run();
     migrate(drizzle(sqlite, { schema }), { migrationsFolder });
     expect(await columnNames(db, 'pack_full_audio')).toEqual(FULL_AUDIO_COLUMNS);
-    expect(
-      sqlite.prepare('SELECT id, cover_file, cover_local_uri FROM packs').all(),
-    ).toEqual([{ id: 'p1', cover_file: null, cover_local_uri: null }]);
+    expect(sqlite.prepare('SELECT id, cover_file, cover_local_uri FROM packs').all()).toEqual([
+      { id: 'p1', cover_file: null, cover_local_uri: null },
+    ]);
   });
 
   it('deleting a pack cascades its pack_full_audio row', () => {

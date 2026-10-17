@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { sql } from 'drizzle-orm';
+import { Asset } from 'expo-asset';
 import { Directory, File, Paths } from 'expo-file-system';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
@@ -74,6 +75,9 @@ const FIXTURE_PACKS = [
   // T89 (M25): the hotel course fixture — one floor (floor 3, two units + floor exam).
   // Dev import only; it must never survive on a phone that holds Mitch's data.
   { id: 'a1-hotel-fixture', note: 'course · floor 3 · 2 units · 34 items' },
+  // T95 (M26): the three-part «listen to the whole story» fixture — real Opus part files plus the
+  // stitched full file, bundled and staged on import. Dev import only (device data hygiene).
+  { id: 'a1-listen-fixture', note: 'stories · 3 parts + stitched full track (5.9 s)' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -94,7 +98,40 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
   'core-lemmas-fixture': () =>
     require('@sumrak/schema/fixtures/packs/core-lemmas-fixture/pack.json'),
   'a1-hotel-fixture': () => require('@sumrak/schema/fixtures/packs/a1-hotel-fixture/pack.json'),
+  'a1-listen-fixture': () => require('@sumrak/schema/fixtures/packs/a1-listen-fixture/pack.json'),
 };
+
+/** T95: bundled audio for fixtures that ship real files (pack-relative path → asset module). Lazy: `require` runs on call. */
+const FIXTURE_AUDIO: Partial<Record<FixtureId, () => Record<string, number>>> = {
+  'a1-listen-fixture': () => ({
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    'audio/lf-p1.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p1.opus'),
+    'audio/lf-p2.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p2.opus'),
+    'audio/lf-p3.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p3.opus'),
+    'audio/a1-listen-fixture-full.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/a1-listen-fixture-full.opus'),
+    /* eslint-enable @typescript-eslint/no-require-imports */
+  }),
+};
+
+/** Copy a fixture's bundled audio into documentDirectory/packs/<id>/… and return the importer's uri map. */
+async function stageFixtureAudio(id: FixtureId): Promise<Record<string, string>> {
+  const bundled = FIXTURE_AUDIO[id]?.();
+  if (!bundled) return {};
+  const staged: Record<string, string> = {};
+  for (const [relPath, moduleId] of Object.entries(bundled)) {
+    const asset = Asset.fromModule(moduleId);
+    await asset.downloadAsync();
+    if (!asset.localUri) continue;
+    const parts = relPath.split('/');
+    const fileName = parts.pop()!;
+    const dir = new Directory(Paths.document, 'packs', id, ...parts);
+    if (!dir.exists) dir.create({ intermediates: true });
+    const dest = new File(dir, fileName);
+    if (!dest.exists) new File(asset.localUri).copy(dest);
+    staged[relPath] = dest.uri;
+  }
+  return staged;
+}
 
 const EXAM_FIXTURE_ID = 'a1-exam-fixture';
 const LEXICON_FIXTURE_ID = 'a1-torfl-lexicon-fixture';
@@ -343,6 +380,17 @@ export default function DevDbScreen() {
   React.useEffect(() => {
     void refreshHotel();
   }, [refreshHotel]);
+
+  // --- T95 «Full tracks» readout (read-only) -------------------------------
+  const [fullTracks, setFullTracks] = React.useState<Awaited<
+    ReturnType<typeof repos.listen.countFullTracks>
+  > | null>(null);
+  const refreshFullTracks = React.useCallback(async () => {
+    setFullTracks(await repos.listen.countFullTracks());
+  }, []);
+  React.useEffect(() => {
+    void refreshFullTracks();
+  }, [refreshFullTracks]);
 
   // --- T68 «Exams» readout + dev actions ------------------------------------
   const [examReadout, setExamReadout] = React.useState<ExamReadout | null>(null);
@@ -608,6 +656,7 @@ export default function DevDbScreen() {
         const result: ImportResult = await importPack(db, planted ?? FIXTURE_JSON[id](), {
           source: 'bundled',
           origin: 'remote',
+          audioFiles: await stageFixtureAudio(id),
         });
         let status = `${result.action} · v${result.version}${planted ? ' · from packs dir' : ''}`;
         if (result.counts.lemmas > 0)
@@ -653,6 +702,7 @@ export default function DevDbScreen() {
         ]);
         await refreshScenarios();
         await refreshExams();
+        await refreshFullTracks();
       } catch (err) {
         setFixtureStatus((s) => ({ ...s, [id]: `failed: ${String(err)}` }));
       } finally {
@@ -992,6 +1042,17 @@ export default function DevDbScreen() {
             {p.key} · best {p.bestPercent}% · passedVia {p.passedVia ?? '—'} · attempts {p.attempts}
           </Text>
         ))}
+      </View>
+
+      <View>
+        <Text variant="caption" className="mb-2 uppercase tracking-wider">
+          Full tracks (M26 · T95)
+        </Text>
+        <Text variant="caption" selectable>
+          {fullTracks
+            ? `full audio: ${fullTracks.fullWithUri} with uri / ${fullTracks.fullWithoutUri} without · covers: ${fullTracks.coverWithUri} with uri / ${fullTracks.coverWithoutUri} without`
+            : '…'}
+        </Text>
       </View>
 
       <View>

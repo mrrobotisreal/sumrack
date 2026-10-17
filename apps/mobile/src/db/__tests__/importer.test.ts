@@ -352,13 +352,18 @@ describe('pack importer', () => {
     const pk = await db.all<{ cover_file: string; cover_local_uri: string }>(
       sql`SELECT cover_file, cover_local_uri FROM packs`,
     );
-    expect(pk[0]).toEqual({ cover_file: 'cover/cover.jpg', cover_local_uri: 'file:///p/cover.jpg' });
+    expect(pk[0]).toEqual({
+      cover_file: 'cover/cover.jpg',
+      cover_local_uri: 'file:///p/cover.jpg',
+    });
   });
 
   it('T95: no audioFiles entry -> local_uri NULL; a higher version without fullStory/cover drops the row', async () => {
     const db = createTestDb();
     await importPack(db, listenPack);
-    const v1 = await db.all<{ local_uri: string | null }>(sql`SELECT local_uri FROM pack_full_audio`);
+    const v1 = await db.all<{ local_uri: string | null }>(
+      sql`SELECT local_uri FROM pack_full_audio`,
+    );
     expect(v1).toEqual([{ local_uri: null }]);
     const v2: Pack = JSON.parse(JSON.stringify(listenPack));
     v2.version = 2;
