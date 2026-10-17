@@ -148,6 +148,13 @@
       "when": 1792192753709,
       "tag": "0020_hotel",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792258536502,
+      "tag": "0021_full-story",
+      "breakpoints": true
     }
   ]
 }

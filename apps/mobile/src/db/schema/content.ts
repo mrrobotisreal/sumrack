@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import type { FullStorySegment } from '@sumrak/schema';
+
 /**
  * Content tables — the denormalized form of a validated `Pack` from
  * `@sumrak/schema` (design §4.3/§5). Rebuilt wholesale by the importer:
@@ -57,6 +59,12 @@ export const packs = sqliteTable('packs', {
    */
   themeScene: text('theme_scene'),
   themeAccent: text('theme_accent'),
+  /**
+   * Cover image (T95, FULL_STORY_LISTEN §4): pack-relative path as authored
+   * ("cover/cover.jpg") + the staged file uri once downloaded. NULL = no cover.
+   */
+  coverFile: text('cover_file'),
+  coverLocalUri: text('cover_local_uri'),
   /**
    * Path track (T30, V2 §6.1), e.g. 'family'. NULL = authored without a
    * track = the main track — the 'main' default lives at the app layer
@@ -707,3 +715,24 @@ export const coreLemmas = sqliteTable(
     index('core_lemmas_level_idx').on(t.level),
   ],
 );
+
+/**
+ * The pipeline-stitched full-story narration of a `stories` pack (T95,
+ * FULL_STORY_LISTEN §3/§4). At most one row per pack; cascades with the pack.
+ * `segments` mirror `fullStory.segments` (stories[] order = orderIdx).
+ */
+export const packFullAudio = sqliteTable('pack_full_audio', {
+  packId: text('pack_id')
+    .primaryKey()
+    .references(() => packs.id, { onDelete: 'cascade' }),
+  trackId: text('track_id').notNull(),
+  voice: text('voice').notNull(),
+  style: text('style').notNull(),
+  /** Pack-relative path as authored, e.g. "audio/<packId>-full.opus". */
+  file: text('file').notNull(),
+  /** Absolute local URI once the file landed in app storage (null until then). */
+  localUri: text('local_uri'),
+  durationMs: integer('duration_ms').notNull(),
+  gapMs: integer('gap_ms').notNull(),
+  segments: text('segments', { mode: 'json' }).$type<FullStorySegment[]>().notNull(),
+});
