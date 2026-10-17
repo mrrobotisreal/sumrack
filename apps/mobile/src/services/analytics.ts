@@ -615,7 +615,26 @@ export type AnalyticsEvent =
   | 'quest_assigned'
   | 'quest_completed'
   | 'quest_launched'
-  | 'quest_progress';
+  | 'quest_progress'
+  // M26/T96 listen player (FULL_STORY_LISTEN §8). Ids/numbers/slugs only.
+  // listen_opened {packId, kind, parts, durationMs, resumedFromMs, source: library|now-playing|resume};
+  // listen_play/pause {packId, positionMs, partIndex}; listen_seek {packId, method:
+  // scrub|back15|forward30|part|lockscreen, fromMs, toMs}; listen_rate_changed {packId, rate};
+  // listen_volume_changed {packId, volume, muted}; listen_part_reached {packId, storyId, partIndex};
+  // listen_finished {packId, durationMs, listenedMs, rate}; listen_stopped {packId, positionMs,
+  // reason: user|replaced|error|reader}; listen_open_reader {packId, storyId, positionMs};
+  // listen_background {packId}. (listen_row_shown = T97, sync_file_reused = T95.)
+  | 'listen_opened'
+  | 'listen_play'
+  | 'listen_pause'
+  | 'listen_seek'
+  | 'listen_rate_changed'
+  | 'listen_volume_changed'
+  | 'listen_part_reached'
+  | 'listen_finished'
+  | 'listen_stopped'
+  | 'listen_open_reader'
+  | 'listen_background';
 
 export type AnalyticsProps = Record<string, string | number | boolean>;
 
