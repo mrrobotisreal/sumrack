@@ -8,6 +8,11 @@ const load = (name: string) => JSON.parse(readFileSync(join(malformedDir, `${nam
 
 /** Each malformed fixture must fail with a specific issue at a precise path. */
 const cases: Array<{ fixture: string; path: string; message: string }> = [
+  {
+    fixture: 'fullstory-out-of-order',
+    path: 'fullStory.segments',
+    message: 'in stories[] order',
+  },
   { fixture: 'bad-cefr-level', path: 'level', message: 'Invalid option' },
   { fixture: 'version-zero', path: 'version', message: '>=1' },
   { fixture: 'missing-sentence-en', path: 'stories[0].sentences[0].en', message: 'Invalid input' },
