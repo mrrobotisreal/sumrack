@@ -29,6 +29,7 @@ import {
   exerciseSpecs,
   journalPrompts,
   lessons,
+  packFullAudio,
   packs,
   scenarioAssets,
   scenarioGlossary,
@@ -93,6 +94,12 @@ export interface ImportOptions {
    * so the Wi-Fi backfill knows what is still missing.
    */
   sceneFiles?: Record<string, { localUri: string | null; bytes: number | null }>;
+  /**
+   * T95: staged uri of the pack's cover image (`pack.cover`, "cover/cover.jpg").
+   * Written to `packs.cover_local_uri`; null/absent = not downloaded yet. The
+   * full-story file's uri rides `audioFiles[pack.fullStory.file]`.
+   */
+  coverFile?: string | null;
 }
 
 /** Effective space-before per the schema's reconstruction defaults. */
@@ -264,7 +271,25 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
     // default via classifyPack() (LIBRARY_CATEGORIES §2.4).
     category: pack.category ?? null,
     genre: pack.genre ?? null,
+    // T95 (M26): cover path verbatim + the staged uri when sync had it.
+    coverFile: pack.cover ?? null,
+    coverLocalUri: pack.cover ? (opts.coverFile ?? null) : null,
   });
+
+  if (pack.fullStory) {
+    const full = pack.fullStory;
+    await db.insert(packFullAudio).values({
+      packId: pack.id,
+      trackId: full.id,
+      voice: full.voice,
+      style: full.style,
+      file: full.file,
+      localUri: opts.audioFiles?.[full.file] ?? null,
+      durationMs: full.durationMs,
+      gapMs: full.gapMs,
+      segments: full.segments,
+    });
+  }
 
   for (const [storyIdx, story] of pack.stories.entries()) {
     await db.insert(stories).values({
