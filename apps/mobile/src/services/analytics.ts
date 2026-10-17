@@ -377,6 +377,11 @@ export type AnalyticsEvent =
   | 'library_category_switched'
   | 'library_genre_switched'
   | 'library_empty_category_viewed'
+  // M26 listen-to-the-whole-story (T97, FULL_STORY_LISTEN §8).
+  // listen_row_shown {packId, state, parts} — once per pack per Library visit.
+  // listen_row_tapped {packId} — a tap on «Прослушать всю историю».
+  | 'listen_row_shown'
+  | 'listen_row_tapped'
   | 'story_source_link_opened'
   // M15 themed ambience (T48). Props: theme/bed slugs + ms only.
   // ambient_theme_started {theme, bed, resumedMs} — a theme begins (fresh or resumed);
