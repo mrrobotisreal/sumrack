@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { LevelChip, type CefrLevel } from '@/components/level-chip';
 import { QueryError } from '@/components/query-error';
@@ -32,6 +32,14 @@ import { readStateOf, type StoryProgressRow } from '@/db/repositories/reading';
 import { DialogueRow } from '@/features/dialogue/dialogues-list-screen';
 import { useImportedPackMeta } from '@/features/import/hooks';
 import { ChipRow } from '@/features/library/category-chips';
+import { ListenRow } from '@/features/library/listen-row';
+import {
+  assembleRows,
+  withListenRow,
+  type ListenRowItem,
+} from '@/features/library/listen-row-model';
+import { useListenNowPlaying } from '@/features/library/listen-now-playing';
+import { useListenProgress } from '@/features/library/listen-progress';
 import {
   ALL_GENRES,
   classificationEventProps,
@@ -87,6 +95,8 @@ type LibraryRow =
   | { kind: 'story'; story: StoryListItem }
   | { kind: 'dialogue'; dialogue: DialogueListItem }
   | { kind: 'exam'; exam: ExamListItem }
+  /** M26 (T97): «Прослушать всю историю» — first row of a stories section with listenable audio. */
+  | ListenRowItem
   /** T86: a chapter inside a series book (its own family/pack section, collapsed by default). */
   | { kind: 'chapter'; section: LibrarySection; chapter: number };
 
@@ -169,6 +179,15 @@ export function LibraryScreen() {
   const bookmarkedKeys = useBookmarkedStoryKeys();
   const importedMeta = useImportedPackMeta();
   const examItems = useExamListItems();
+  // M26 (T97): full-story listen availability per pack (one query over all packs).
+  const packIds = React.useMemo(() => (packs.data ?? []).map((p) => p.id), [packs.data]);
+  const listenAvailability = useQuery({
+    queryKey: ['listen', 'availability', packIds],
+    queryFn: () => repos.listen.listListenAvailability(packIds),
+    enabled: packIds.length > 0,
+  });
+  const listenProgress = useListenProgress();
+  const listenNowPlaying = useListenNowPlaying();
   // M14 (T45): the persisted shelf selection — category chips + genre sub-row.
   const category = useLibraryPrefs((s) => s.category);
   const genre = useLibraryPrefs((s) => s.genre);
@@ -265,14 +284,18 @@ export function LibraryScreen() {
           ? examItems.items
               .filter((e) => e.packId === pack.id)
               .map((exam): LibraryRow => ({ kind: 'exam', exam }))
-          : [
-              ...stories.data
-                .filter((s) => s.packId === pack.id)
-                .map((story): LibraryRow => ({ kind: 'story', story })),
-              ...(dialogues.data ?? [])
-                .filter((d) => d.packId === pack.id)
-                .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
-            ],
+          : withListenRow<LibraryRow>(
+              [
+                ...stories.data
+                  .filter((s) => s.packId === pack.id)
+                  .map((story): LibraryRow => ({ kind: 'story', story })),
+                ...(dialogues.data ?? [])
+                  .filter((d) => d.packId === pack.id)
+                  .map((dialogue): LibraryRow => ({ kind: 'dialogue', dialogue })),
+              ],
+              pack,
+              listenAvailability.data,
+            ),
     });
     // T89: course packs (HOTEL_PATH §3) are never a Library shelf, local or remote.
     const remoteAll = packs.data
@@ -297,7 +320,14 @@ export function LibraryScreen() {
       }));
     if (local[0]) local[0] = { ...local[0], shelfHeader: 'Импортировано' };
     return { remoteAll, local };
-  }, [packs.data, stories.data, dialogues.data, importedMeta.data, examItems.items]);
+  }, [
+    packs.data,
+    stories.data,
+    dialogues.data,
+    importedMeta.data,
+    examItems.items,
+    listenAvailability.data,
+  ]);
 
   // M14 (T45): chip data — counts over every remote pack; the genre sub-row
   // only when ≥2 distinct genre values are installed under «Истории».
@@ -352,10 +382,8 @@ export function LibraryScreen() {
         category,
         storyRows.map((row) => ({ row, ...row.story })),
       ).map(({ row }) => row);
-      return {
-        ...section,
-        data: [...ordered, ...section.data.filter((row) => row.kind !== 'story')],
-      };
+      // M26 (T97): the listen row stays first, then stories, then the rest.
+      return { ...section, data: assembleRows(section.data, ordered) };
     };
     // T30.1: remote sections sharing a `family:<slug>` tag collapse into one
     // shelf at the lowest installed rung's list position (the CT002b fix —
@@ -532,6 +560,45 @@ export function LibraryScreen() {
         .join('|'),
     [sections],
   );
+  // M26 (T97): one listen_row_shown per pack per Library visit. The signature
+  // carries pack identity + state + parts; the viewed set clears on blur.
+  const listenSignature = React.useMemo(
+    () =>
+      sections
+        .flatMap((s) => {
+          const row = s.data.find((r): r is ListenRowItem => r.kind === 'listen');
+          return row ? [`${row.packId}:${row.availability.state}:${row.availability.parts}`] : [];
+        })
+        .join('|'),
+    [sections],
+  );
+  const listenShownRef = React.useRef(new Set<string>());
+  useFocusEffect(
+    React.useCallback(() => {
+      const shown = listenShownRef.current;
+      return () => shown.clear();
+    }, []),
+  );
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!listenSignature) return;
+      const shown = listenShownRef.current;
+      for (const entry of listenSignature.split('|')) {
+        const [packId = '', state = '', parts = '0'] = entry.split(':');
+        if (shown.has(packId)) continue;
+        shown.add(packId);
+        track('listen_row_shown', { packId, state, parts: Number(parts) });
+      }
+    }, [listenSignature]),
+  );
+  // Audio may have finished downloading while away — refresh on focus.
+  const refetchListen = listenAvailability.refetch;
+  useFocusEffect(
+    React.useCallback(() => {
+      if (packIds.length > 0) void refetchListen();
+    }, [packIds.length, refetchListen]),
+  );
+
   useFocusEffect(
     React.useCallback(() => {
       if (!familySignature) return;
@@ -700,9 +767,11 @@ export function LibraryScreen() {
           ? `story/${item.story.packId}/${item.story.id}`
           : item.kind === 'exam'
             ? `exam/${item.exam.packId}/${item.exam.examId}`
-            : item.kind === 'chapter'
-              ? `chapter/${item.section.pack.id}/${item.chapter}`
-              : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
+            : item.kind === 'listen'
+              ? `listen/${item.packId}`
+              : item.kind === 'chapter'
+                ? `chapter/${item.section.pack.id}/${item.chapter}`
+                : `dialogue/${item.dialogue.packId}/${item.dialogue.id}`
       }
       stickySectionHeadersEnabled={false}
       contentContainerClassName="px-4 pb-12 pt-2"
@@ -743,7 +812,19 @@ export function LibraryScreen() {
 
   /** A story / dialogue / exam row (inside a chapter it is indented). */
   function renderPartRow(item: LibraryRow) {
-    return item.kind === 'exam' ? (
+    return item.kind === 'listen' ? (
+      <ListenRow
+        packId={item.packId}
+        availability={item.availability}
+        progressPercent={listenProgress.get(item.packId)?.percent ?? null}
+        finished={listenProgress.get(item.packId)?.finished ?? false}
+        nowPlaying={listenNowPlaying === item.packId}
+        onPress={() => {
+          track('listen_row_tapped', { packId: item.packId });
+          router.push(`/listen/${item.packId}` as never);
+        }}
+      />
+    ) : item.kind === 'exam' ? (
       <ExamRow
         item={item.exam}
         onPress={() =>
@@ -1027,7 +1108,13 @@ function ChapterRow({
       {expanded &&
         section.data.map((row) => (
           <React.Fragment
-            key={row.kind === 'story' ? `${row.story.packId}/${row.story.id}` : row.kind}
+            key={
+              row.kind === 'story'
+                ? `${row.story.packId}/${row.story.id}`
+                : row.kind === 'listen'
+                  ? `listen/${row.packId}`
+                  : row.kind
+            }
           >
             {renderPartRow(row)}
           </React.Fragment>
