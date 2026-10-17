@@ -140,9 +140,12 @@ export function RunnerScreen({
         kind: mode,
         itemIds: drawn,
       });
+      // startRun needs the drawn ITEMS (it keeps only servable kinds); passing [] dropped every id and the
+      // sitting opened as «1 из 0» (T93c chunk C3 on the S25).
+      const drawnItems = await repos.course.getItems(packId, drawn);
       if (cancelled) return;
       setAttemptId(started.id);
-      setState(startRun(mode, [], drawn));
+      setState(startRun(mode, drawnItems, drawn));
     })();
     return () => {
       cancelled = true;
