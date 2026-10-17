@@ -216,6 +216,22 @@ describe('nextHotelAction (Today card, D18)', () => {
     });
   });
 
+  it('keeps a card when every installed floor is passed but Номер 13 is not reachable yet', () => {
+    const passedFloor = {
+      packId: 'a1-hotel-f03',
+      floor: 3,
+      unlocked: true,
+      passed: true,
+      examUnlocked: true,
+      examCooldownMinutes: null,
+      units: [],
+    };
+    expect(
+      nextHotelAction([passedFloor] as never, { gatePassed: false, reveal13: false }),
+    ).toMatchObject({ kind: 'done-all', label: 'Новые этажи скоро' });
+    expect(nextHotelAction([], { gatePassed: false, reveal13: false })).toBeNull();
+  });
+
   it('formats the card line with floor, unit and position', () => {
     const a = nextHotelAction(
       [floor(6, [unit('u1', false, false), unit('u2', false, false)])],

@@ -155,7 +155,11 @@ export function ladderLevel(gatePassed: boolean): 'A1' | 'A2' {
 
 /** What Today shows on the hotel card (decision 10), as plain data. */
 export type HotelNextAction =
-  | { kind: 'done-all'; label: 'A1 пройден ✓' | 'Номер 13 ждёт'; route: string }
+  | {
+      kind: 'done-all';
+      label: 'A1 пройден ✓' | 'Номер 13 ждёт' | 'Новые этажи скоро';
+      route: string;
+    }
   | {
       kind: 'lesson';
       floor: number;
@@ -234,6 +238,11 @@ export function nextHotelAction(
   }
   if (opts.gatePassed) return { kind: 'done-all', label: 'A1 пройден ✓', route: '/(tabs)/path' };
   if (opts.reveal13) return { kind: 'done-all', label: 'Номер 13 ждёт', route: '/(tabs)/path' };
+  // Every installed floor is passed but more are still to come (content arrives floor by floor):
+  // the Today card stays visible instead of vanishing (T93c chunk D).
+  if (floors.length > 0 && floors.every((f) => f.passed)) {
+    return { kind: 'done-all', label: 'Новые этажи скоро', route: '/(tabs)/path' };
+  }
   return null;
 }
 
