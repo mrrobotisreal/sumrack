@@ -162,23 +162,32 @@ export function HotelScreen() {
         onRide13={() => router.push('/hotel/room-13' as never)}
         markers={markers}
       >
-        {state ? (
-          <FloorLobby
-            state={state}
-            floorTitle={titleFor(shownFloor)}
-            lessonOpened={lessonOpened}
-            practice={practiceRows}
-            externCount={externCount}
-            onExtern={() => setExternMenuOpen(true)}
-            examCooldownMinutes={examCooldownMinutes}
-          />
-        ) : shownFloor === 0 ? (
-          <View className="gap-2 p-4" testID="hotel-empty">
-            <Text className="font-ui-medium text-lg">Вестибюль</Text>
-            <Text variant="caption">Этажи скоро появятся</Text>
-          </View>
-        ) : null}
+        {/* Through the open doors: just the floor's plate. The lobby itself sits below the lift as a normal
+            scrolling panel — inside the clipped door opening it was cut off and the frame art swallowed taps. */}
+        <View className="flex-1 items-center justify-center gap-1 p-4" testID="hotel-doorway">
+          <Text className="font-ui-medium text-lg text-center">{titleFor(shownFloor).ru}</Text>
+          <Text variant="caption" className="text-center">
+            {state ? `Этаж ${shownFloor}` : shownFloor === 0 ? 'Этажи скоро появятся' : ''}
+          </Text>
+        </View>
       </Lift>
+
+      {state ? (
+        <FloorLobby
+          state={state}
+          floorTitle={titleFor(shownFloor)}
+          lessonOpened={lessonOpened}
+          practice={practiceRows}
+          externCount={externCount}
+          onExtern={() => setExternMenuOpen(true)}
+          examCooldownMinutes={examCooldownMinutes}
+        />
+      ) : shownFloor === 0 ? (
+        <View className="gap-2 p-4" testID="hotel-empty">
+          <Text className="font-ui-medium text-lg">Вестибюль</Text>
+          <Text variant="caption">Этажи скоро появятся</Text>
+        </View>
+      ) : null}
 
       {toast ? (
         <Pressable onPress={() => setToast(false)} accessibilityRole="button">
