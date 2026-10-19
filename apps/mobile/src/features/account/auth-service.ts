@@ -9,7 +9,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-  type FirebaseAuthTypes,
+  type User,
 } from '@react-native-firebase/auth';
 import { GoogleSignin, isCancelledResponse } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
@@ -19,7 +19,7 @@ import Constants from 'expo-constants';
  * sync engine talk to this, never to the SDKs. Firebase persists the session
  * natively, so a signed-in phone stays signed in offline across launches.
  */
-export type AuthUser = FirebaseAuthTypes.User;
+export type AuthUser = User;
 export type AuthProviderKind = 'password' | 'google';
 
 let googleConfigured = false;
