@@ -30,6 +30,7 @@ import { AutoBackup } from '@/components/auto-backup';
 import { AutoSync } from '@/components/auto-sync';
 import { DbProvider } from '@/db/provider';
 import { AuthSession } from '@/features/account/use-auth-session';
+import { SyncHost } from '@/features/account-sync/use-sync';
 import { AmbientAudioHost } from '@/features/ambient-audio/ambient-audio-host';
 import { ListenActivityBridge } from '@/features/listen/listen-activity-bridge';
 import { ShareIntentGate } from '@/features/import/share-gate';
@@ -285,6 +286,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dev-exam-capture" options={{ title: 'A2 grading capture' }} />
               </Stack>
               <AuthSession ready={introDone} />
+              <SyncHost />
               <AmbientAudioHost ready={introDone} />
               <ListenActivityBridge />
               <AutoSync />

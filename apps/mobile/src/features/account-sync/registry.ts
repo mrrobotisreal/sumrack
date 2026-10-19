@@ -236,6 +236,7 @@ export const DEVICE_LOCAL_SETTING_KEYS: ReadonlySet<string> = new Set([
   'sync.lastSyncAt',
   'sync.serverUrl',
   'sync.linked',
+  'sync.registeredUid',
   'sync.contentRepo',
   'sync.wifiOnlyAudio',
   'sync.lastCheckAt',

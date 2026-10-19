@@ -6,6 +6,7 @@ import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
 import * as React from 'react';
 import { Pressable, type ColorValue } from 'react-native';
 
+import { SyncCloud } from '@/features/account-sync/sync-cloud';
 import { markDashboardTap } from '@/features/dashboard/load-state';
 import { NowPlayingBar } from '@/features/listen/now-playing-bar';
 import { useAppTheme } from '@/theme/use-app-theme';
@@ -70,6 +71,7 @@ export default function TabsLayout() {
           // Dashboard entry lives on the Today header (design §10 / UI_DESIGN §3).
           headerRight: () => (
             <>
+              <SyncCloud />
               <Pressable
                 onPress={() => {
                   markDashboardTap();

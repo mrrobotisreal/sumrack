@@ -272,6 +272,14 @@ export type AnalyticsEvent =
   | 'auth_skipped'
   | 'auth_password_reset_sent'
   | 'auth_signed_out'
+  // M29 sync (T104). Counts / ms / table names only — never a uid, email or row
+  // data. sync_run_started {trigger}, sync_run_completed {pushed, pulled, merged,
+  // rebuiltCards, parked, ms, pages}, sync_run_failed {stage: token|push|pull|apply,
+  // code, attempt}, sync_conflict {tbl, kind} (first 20 per run).
+  | 'sync_run_started'
+  | 'sync_run_completed'
+  | 'sync_run_failed'
+  | 'sync_conflict'
   // T38 progress science. Props are counts / levels / kinds only — never
   // lemma text: core_coverage_viewed {levels, a1Pct?, a2Pct?},
   // core_gaps_opened {level, gaps}, forecast_viewed {today, overdue,

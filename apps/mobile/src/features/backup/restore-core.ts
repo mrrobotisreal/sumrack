@@ -127,6 +127,11 @@ export async function restoreUserData(db: SumrakDB, raw: unknown): Promise<Resto
   const { tables } = payload;
 
   let packsToRedownload: string[] = [];
+  // T104: this phone's identity survives a restore (a backup must never carry
+  // another phone's device id onto this one).
+  const keptDevice = await db.all<{ value: string }>(
+    sql`SELECT value FROM settings WHERE key = 'sync.deviceId'`,
+  );
   await db.run(sql`BEGIN`);
   try {
     for (const [, table] of [...INSERT_ORDER].reverse()) {
@@ -171,6 +176,8 @@ export async function restoreUserData(db: SumrakDB, raw: unknown): Promise<Resto
     }
     packsToRedownload = stale.map((row) => row.packId);
 
+    await resetSyncAfterRestore(db, keptDevice[0]?.value ?? null);
+
     await db.run(sql`COMMIT`);
   } catch (err) {
     await db.run(sql`ROLLBACK`);
@@ -200,4 +207,33 @@ async function insertAll(db: SumrakDB, table: SQLiteTable, rows: unknown[]): Pro
   for (let i = 0; i < rows.length; i += chunkSize) {
     await db.insert(table).values(rows.slice(i, i + chunkSize) as never);
   }
+}
+
+/**
+ * T104 restore interplay: a restore makes this phone a FRESH sync device until
+ * T105 relinks it. Own daily contributions become exactly the restored merged
+ * totals; peers, outbox, id map, parked changes and the server clocks are
+ * dropped (the restore's own trigger noise is not a user edit); the pull
+ * cursor goes back to 0 and the phone is unlinked (both = key absent).
+ */
+async function resetSyncAfterRestore(db: SumrakDB, deviceIdJson: string | null): Promise<void> {
+  await db.run(sql`DELETE FROM daily_activity_own`);
+  await db.run(sql`INSERT INTO daily_activity_own (date, reviews_done, reading_ms, stories_finished, goal_met_at, xp, updated_at)
+    SELECT date, reviews_done, reading_ms, stories_finished, goal_met_at, xp, updated_at FROM daily_activity`);
+  await db.run(sql`DELETE FROM daily_activity_peers`);
+  await db.run(sql`DELETE FROM sync_outbox`);
+  await db.run(sql`DELETE FROM sync_id_map`);
+  await db.run(sql`DELETE FROM sync_parked`);
+  await db.run(sql`DELETE FROM sync_row_hlc`);
+  await db.run(sql`DELETE FROM sync_dirty_cards`);
+  // Backups can carry sync.* rows from the source phone; this phone's are its own.
+  await db.run(sql`DELETE FROM settings WHERE key IN
+    ('sync.deviceId', 'sync.cursor', 'sync.lastSyncAt', 'sync.serverUrl', 'sync.linked', 'sync.registeredUid')`);
+  const now = Date.now();
+  if (deviceIdJson != null) {
+    await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('sync.deviceId', ${deviceIdJson}, ${now})`);
+  }
+  // Cursor 0 and unlinked == the keys being absent (engine defaults); leaving
+  // them unwritten keeps restore an exact reproduction of the backed-up rows.
+  await db.run(sql`DELETE FROM sync_outbox`); // sync.* are device-local; belt and braces
 }

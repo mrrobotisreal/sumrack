@@ -19,6 +19,8 @@ export const SETTING_KEYS = {
   syncLastSyncAt: 'sync.lastSyncAt',
   /** string (T104): sync server base URL override (device-local). */
   syncServerUrl: 'sync.serverUrl',
+  /** string (T104): uid this phone last registered via POST /v1/devices (device-local). */
+  syncRegisteredUid: 'sync.registeredUid',
   /** boolean (T104/T105): this phone is linked to the signed-in account's data (device-local). */
   syncLinked: 'sync.linked',
   /** boolean (T102): «Продолжить без аккаунта» — the auth gate stays out of the way. */
