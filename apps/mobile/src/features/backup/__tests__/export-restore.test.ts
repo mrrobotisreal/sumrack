@@ -1179,6 +1179,7 @@ describe('user-table drift guard', () => {
       'sync_id_map',
       'sync_parked',
       'sync_row_hlc',
+      'sync_dirty_cards',
       'daily_activity_own',
       'daily_activity_peers',
     ]);

@@ -192,6 +192,7 @@ export const DEVICE_LOCAL_TABLES: string[] = [
   'sync_id_map',
   'sync_parked',
   'sync_row_hlc',
+  'sync_dirty_cards',
   'daily_activity_peers',
 ];
 
@@ -206,6 +207,7 @@ export const SYNC_INFRA_TABLES: string[] = [
   'sync_id_map',
   'sync_parked',
   'sync_row_hlc',
+  'sync_dirty_cards',
   'daily_activity_own',
   'daily_activity_peers',
 ];

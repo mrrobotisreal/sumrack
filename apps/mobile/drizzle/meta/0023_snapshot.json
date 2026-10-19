@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8e4a6fc4-ce6f-4666-855e-f2550c3eb42a",
+  "id": "386ad68b-fc2f-4188-9cb6-f1b4c1db0fdb",
   "prevId": "02bf6623-b3c2-46dd-8ceb-8cc6280b3a0f",
   "tables": {
     "audio_tracks": {
@@ -5582,6 +5582,23 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "sync_dirty_cards": {
+      "name": "sync_dirty_cards",
+      "columns": {
+        "card_id": {
+          "name": "card_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {},

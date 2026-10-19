@@ -109,3 +109,8 @@ export const syncRowHlc = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.tbl, t.pk] })],
 );
+
+/** Cards that gained foreign review_log rows and must be re-scheduled by log replay (T104 H). */
+export const syncDirtyCards = sqliteTable('sync_dirty_cards', {
+  cardId: text('card_id').primaryKey(),
+});
