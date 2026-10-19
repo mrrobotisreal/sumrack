@@ -950,3 +950,21 @@ describe('0022_stats-aggregates (T100)', () => {
     expect(await count(id)).toEqual({ ts: 0, tl: 0 });
   });
 });
+
+describe('0022_stats-aggregates leftovers (T100)', () => {
+  it('a stray half-built aggregate table from an aborted attempt does not wedge the upgrade', async () => {
+    const { sqlite, db } = createDbUpTo('0021_full-story');
+    sqlite.exec(
+      'CREATE TABLE topic_lemmas (pack_id text, lvl integer, topic text, lemma_norm text)',
+    );
+    sqlite.exec("INSERT INTO topic_lemmas VALUES ('x', 1, 't', 'l')");
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+    expect(await columnNames(db, 'topic_lemmas')).toEqual([
+      'pack_id',
+      'lvl',
+      'topic',
+      'lemma_norm',
+    ]);
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM topic_lemmas').get()).toEqual({ n: 0 });
+  });
+});

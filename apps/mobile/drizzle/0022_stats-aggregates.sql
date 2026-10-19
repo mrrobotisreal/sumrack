@@ -1,3 +1,8 @@
+-- T100: both tables are pure functions of installed content, so start clean —
+-- a half-applied earlier attempt (seen once on a dev client mid hot-reload)
+-- can never wedge the upgrade with "table already exists".
+DROP TABLE IF EXISTS `topic_lemmas`;--> statement-breakpoint
+DROP TABLE IF EXISTS `topic_sentences`;--> statement-breakpoint
 CREATE TABLE `topic_lemmas` (
 	`pack_id` text NOT NULL,
 	`lvl` integer NOT NULL,
