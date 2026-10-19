@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 
 import { STABILITY_MATURE_MIN, STABILITY_YOUNG_MIN } from '@/lib/mastery';
 import { computeStreak } from '@/lib/streak';
@@ -186,7 +186,17 @@ const CORE_JOIN = sql`
     GROUP BY b.lemma_norm
   )`;
 
-export function createDashboardRepo(db: SumrakDB) {
+/**
+ * How the repo runs a read (T99). Default = the drizzle handle (sync on the
+ * JS thread — what unit tests on better-sqlite3 use); on device db/index.ts
+ * binds the background read connection so aggregations never block the UI.
+ */
+export type DashboardReader = <T>(query: SQL) => Promise<T[]>;
+
+export function createDashboardRepo(
+  db: SumrakDB,
+  read: DashboardReader = async <T>(query: SQL) => db.all<T>(query),
+) {
   return {
     /**
      * Core-vocabulary coverage (T38, V2 §7.7): each installed reference
@@ -196,7 +206,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * Several lists at one level union by folded lemma.
      */
     async getCoreCoverage(): Promise<CoreCoverage[]> {
-      const rows = await db.all<{
+      const rows = await read<{
         level: Cefr;
         total: number;
         encountered: number;
@@ -226,7 +236,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * lemma (first authored entry wins for display), authored order.
      */
     async getCoreGaps(level: Cefr): Promise<CoreGapLemma[]> {
-      return db.all<CoreGapLemma>(sql`
+      return read<CoreGapLemma>(sql`
         WITH ${READ_SENTENCES}, ${CORE_JOIN},
         first_entry AS (
           SELECT cl.lemma_norm, cl.lemma, cl.pos, cl.translation,
@@ -249,7 +259,7 @@ export function createDashboardRepo(db: SumrakDB) {
     /** Every card the forecast counts (T38): the review queue's active directions. */
     async getForecastCards(): Promise<{ dueAt: number; direction: string }[]> {
       // T39: suspended cards are absent; a buried card lands on its unbury day.
-      return db.all<{ dueAt: number; direction: string }>(sql`
+      return read<{ dueAt: number; direction: string }>(sql`
         SELECT MAX(due_at, COALESCE(buried_until, 0)) AS dueAt, direction FROM cards
         WHERE direction IN ('ru-en', 'en-ru', 'production', 'listening')
           AND suspended_at IS NULL
@@ -266,7 +276,7 @@ export function createDashboardRepo(db: SumrakDB) {
         storiesFinished: number;
       }[]
     > {
-      return db.all(sql`
+      return read(sql`
         SELECT date, xp, reviews_done AS reviewsDone, reading_ms AS readingMs,
                stories_finished AS storiesFinished
         FROM daily_activity WHERE date >= ${since} ORDER BY date
@@ -280,7 +290,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * the pure `isVisibleLeech` so the SQL and the unit tests share one rule.
      */
     async getLeechCandidates(minAgain: number): Promise<LeechCandidate[]> {
-      return db.all<LeechCandidate>(sql`
+      return read<LeechCandidate>(sql`
         WITH ranked AS (
           SELECT card_id, rating, reviewed_at,
                  ROW_NUMBER() OVER (PARTITION BY card_id ORDER BY reviewed_at DESC, id DESC) AS rn
@@ -318,7 +328,7 @@ export function createDashboardRepo(db: SumrakDB) {
 
     /** Vocab-by-level rollup (§7.6) — one row per CEFR level with lemmas. */
     async getVocabByLevel(): Promise<VocabLevelStats[]> {
-      const rows = await db.all<{
+      const rows = await read<{
         lvl: number | null;
         encountered: number;
         collected: number;
@@ -386,7 +396,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * "practiced" = ≥ 1 of its sentence lemmas has a reviewed core card.
      */
     async getGrammarCoverage(): Promise<GrammarTopicStats[]> {
-      const sentenceRows = await db.all<{
+      const sentenceRows = await read<{
         lvl: number;
         topic: string;
         sentences: number;
@@ -419,7 +429,7 @@ export function createDashboardRepo(db: SumrakDB) {
         LEFT JOIN reviewed_lemmas rl ON rl.lemma_norm = t.lemma_norm
         GROUP BY ts.lvl, ts.topic
       `);
-      const lessonRows = await db.all<{ lvl: number; topic: string }>(sql`
+      const lessonRows = await read<{ lvl: number; topic: string }>(sql`
         SELECT ${sql.raw(LEVEL_TO_ORD.replace(/level/g, 'p.level'))} AS lvl, je.value AS topic
         FROM lessons l
         JOIN packs p ON p.id = l.pack_id,
@@ -469,13 +479,13 @@ export function createDashboardRepo(db: SumrakDB) {
      * walk the Today ring uses, so the two can never disagree.
      */
     async getActivityTotals(now: Date = new Date()): Promise<ActivityTotals> {
-      const totals = await db.all<{ reviews: number; reading: number; stories: number }>(sql`
+      const totals = await read<{ reviews: number; reading: number; stories: number }>(sql`
         SELECT COALESCE(SUM(reviews_done), 0) AS reviews,
                COALESCE(SUM(reading_ms), 0) AS reading,
                COALESCE(SUM(stories_finished), 0) AS stories
         FROM daily_activity
       `);
-      const days = await db.all<{
+      const days = await read<{
         date: string;
         reviews_done: number;
         reading_ms: number;
@@ -487,10 +497,10 @@ export function createDashboardRepo(db: SumrakDB) {
         ORDER BY date DESC
       `);
 
-      const metRows = await db.all<{ date: string }>(
+      const metRows = await read<{ date: string }>(
         sql`SELECT date FROM daily_activity WHERE goal_met_at IS NOT NULL`,
       );
-      const frozenRows = await db.all<{ date: string }>(sql`SELECT date FROM frozen_days`);
+      const frozenRows = await read<{ date: string }>(sql`SELECT date FROM frozen_days`);
       const activityStreak = computeStreak(localDateKey(now), {
         met: new Set(metRows.map((r) => r.date)),
         frozen: new Set(frozenRows.map((r) => r.date)),
@@ -536,7 +546,7 @@ export function createDashboardRepo(db: SumrakDB) {
       overallAvg: number | null;
     }> {
       const windowStart = Date.now() - 180 * 24 * 60 * 60 * 1000;
-      const rows = await db.all<{ created_at: number; score: number }>(sql`
+      const rows = await read<{ created_at: number; score: number }>(sql`
         SELECT created_at, CAST(json_extract(props, '$.bestScore') AS REAL) AS score
         FROM analytics_events
         WHERE event = 'pron_item_graded'
@@ -573,7 +583,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * (they're the "known" set).
      */
     async getWeakestLemmas(limit = 8, now = Date.now()): Promise<WeakLemma[]> {
-      const rows = await db.all<{
+      const rows = await read<{
         id: string;
         lemma: string | null;
         surface: string;
@@ -614,7 +624,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * is common and the stability ranking carries those).
      */
     async getWeakestPronunciation(limit = 6): Promise<WeakPronunciationItem[]> {
-      const rows = await db.all<{
+      const rows = await read<{
         id: string;
         surface: string;
         lemma: string | null;
@@ -628,7 +638,7 @@ export function createDashboardRepo(db: SumrakDB) {
         ORDER BY c.stability ASC
         LIMIT ${limit}
       `);
-      const sessions = await db.all<{ detail: string }>(sql`
+      const sessions = await read<{ detail: string }>(sql`
         SELECT detail FROM game_sessions
         WHERE mode = 'pronunciation' AND detail IS NOT NULL
         ORDER BY started_at DESC
@@ -670,7 +680,7 @@ export function createDashboardRepo(db: SumrakDB) {
      * sentence tagged with the topic, weakest core card first.
      */
     async getTopicPracticeItemIds(level: Cefr, topic: string, limit = 12): Promise<string[]> {
-      const rows = await db.all<{ id: string }>(sql`
+      const rows = await read<{ id: string }>(sql`
         WITH topic_sent AS (
           SELECT s.pack_id, s.id AS sentence_id
           FROM sentences s

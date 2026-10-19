@@ -5,7 +5,7 @@ import { createBankRepo } from './bank';
 import { createBookmarksRepo } from './bookmarks';
 import { createContentRepo } from './content';
 import { createCourseRepo } from './course';
-import { createDashboardRepo } from './dashboard';
+import { createDashboardRepo, type DashboardReader } from './dashboard';
 import { createDialoguesRepo } from './dialogues';
 import { createExamsRepo } from './exams';
 import { createImportsRepo } from './imports';
@@ -31,7 +31,12 @@ import { createWordFormsRepo } from './word-forms';
  * is idempotent, and running it on deduped adds too quietly heals items
  * that predate T06.
  */
-export function createRepositories(db: SumrakDB) {
+export interface RepositoryOptions {
+  /** T99: background reader for the dashboard aggregations (device only). */
+  dashboardReader?: DashboardReader;
+}
+
+export function createRepositories(db: SumrakDB, opts: RepositoryOptions = {}) {
   const reviews = createReviewsRepo(db);
   return {
     content: createContentRepo(db),
@@ -50,7 +55,7 @@ export function createRepositories(db: SumrakDB) {
     }),
     reviews,
     bookmarks: createBookmarksRepo(db),
-    dashboard: createDashboardRepo(db),
+    dashboard: createDashboardRepo(db, opts.dashboardReader),
     dialogues: createDialoguesRepo(db),
     exams: createExamsRepo(db),
     imports: createImportsRepo(db),
