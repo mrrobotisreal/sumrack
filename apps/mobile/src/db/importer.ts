@@ -43,6 +43,7 @@ import {
   wordStamps,
 } from './schema';
 import { createImportsRepo, gunzipPackJson } from './repositories/imports';
+import { fillStatsAggregates } from './repositories/stats-aggregates';
 import type { PackSource } from './repositories/sync-state';
 import { createSyncStateRepo } from './repositories/sync-state';
 import type { SumrakDB } from './types';
@@ -153,6 +154,8 @@ export async function importPack(
     // Cascade-delete all previous content rows for this pack (no-op when new).
     await db.delete(packs).where(eq(packs.id, pack.id));
     await insertPackRows(db, pack, opts);
+    // T100: the dashboard's content-side aggregates for this pack.
+    await fillStatsAggregates(db, pack.id);
     await db.run(sql`COMMIT`);
   } catch (err) {
     await db.run(sql`ROLLBACK`);
