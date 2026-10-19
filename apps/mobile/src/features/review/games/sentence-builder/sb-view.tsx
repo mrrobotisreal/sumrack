@@ -15,8 +15,8 @@ interface SbViewProps {
  * Sentence builder (design §7.3 mode 4): the English gloss on top, shuffled
  * word tiles below; tapping moves a tile into the answer row, tapping it
  * there takes it back (counted — take-backs cap the rating at Hard, see
- * mapping.ts). Check compares the arrangement positionally with the tolerant
- * matcher; the reveal always shows the authored sentence (punctuation
+ * mapping.ts). Check accepts the authored order or any valid free-word-order
+ * variant (word-order.ts) with the tolerant matcher; the reveal always shows the authored sentence (punctuation
  * auto-placed from `ru`, never scored — T13 decision). Remounted per item.
  */
 export function SbView({ entry, onDone }: SbViewProps) {
@@ -50,6 +50,7 @@ export function SbView({ entry, onDone }: SbViewProps) {
     const correct = arrangementCorrect(
       texts,
       entry.answerTokens.map((t) => t.text),
+      entry.source.tokens,
     );
     Vibration.vibrate(correct ? 8 : 24);
     setResult({ correct });

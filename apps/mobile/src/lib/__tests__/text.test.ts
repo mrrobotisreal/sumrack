@@ -28,6 +28,17 @@ describe('foldForAnswer', () => {
 });
 
 describe('answersMatch', () => {
+  it('ignores punctuation, hyphens included', () => {
+    expect(answersMatch('тем хуже мне.', 'тем хуже мне')).toBe(true);
+    expect(
+      answersMatch('Я открываю её — и на меня идёт туман.', 'я открываю ее и на меня идет туман'),
+    ).toBe(true);
+    expect(answersMatch('«Кто там?» — спросил он.', 'кто там спросил он')).toBe(true);
+    expect(answersMatch('кто-то', 'кто то')).toBe(true);
+    expect(answersMatch('.', '')).toBe(true);
+    expect(answersMatch('кто', 'кот')).toBe(false);
+  });
+
   it('accepts е for ё in both directions (acceptance criterion)', () => {
     expect(answersMatch('ещё', 'еще')).toBe(true);
     expect(answersMatch('еще', 'ещё')).toBe(true);

@@ -26,6 +26,51 @@ describe('arrangementCorrect', () => {
     expect(arrangementCorrect(['я', 'вижу'], answer)).toBe(false);
   });
 
+  it('accepts a valid free-word-order variant when given the sentence tokens', () => {
+    // «Я открываю её — и на меня идёт туман.»
+    const tok = (text: string, pos: string | null = null, isPunct = false) => ({
+      text,
+      pos,
+      isPunct,
+    });
+    const tokens = [
+      tok('Я', 'pron'),
+      tok('открываю', 'verb'),
+      tok('её', 'pron'),
+      tok('—', null, true),
+      tok('и', 'conj'),
+      tok('на', 'prep'),
+      tok('меня', 'pron'),
+      tok('идёт', 'verb'),
+      tok('туман', 'noun'),
+      tok('.', null, true),
+    ];
+    const answer = tokens.filter((t) => !t.isPunct).map((t) => t.text);
+    const ok = (s: string) => arrangementCorrect(s.split(' '), answer, tokens);
+    expect(ok('я открываю ее и туман идет на меня')).toBe(true);
+    expect(ok('я ее открываю и туман на меня идет')).toBe(true);
+    // a preposition never leaves its word; clauses and their conjunction keep their place
+    expect(ok('я открываю ее и меня на идет туман')).toBe(false);
+    expect(ok('я открываю ее туман и на меня идет')).toBe(false);
+    expect(ok('и на меня идет туман я открываю ее')).toBe(false);
+  });
+
+  it('keeps adjectives/numerals with their noun and «не» with its word', () => {
+    const tok = (text: string, pos: string) => ({ text, pos, isPunct: false });
+    const tokens = [
+      tok('Я', 'pron'),
+      tok('не', 'part'),
+      tok('вижу', 'verb'),
+      tok('два', 'num'),
+      tok('дома', 'noun'),
+    ];
+    const answer = tokens.map((t) => t.text);
+    const ok = (s: string) => arrangementCorrect(s.split(' '), answer, tokens);
+    expect(ok('два дома я не вижу')).toBe(true);
+    expect(ok('я не вижу дома два')).toBe(false);
+    expect(ok('я вижу не два дома')).toBe(false);
+  });
+
   it('treats duplicate words as interchangeable tiles', () => {
     const answer = ['тук', 'тук', 'в', 'стене'];
     expect(arrangementCorrect(['тук', 'тук', 'в', 'стене'], answer)).toBe(true);

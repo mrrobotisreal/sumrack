@@ -11,6 +11,7 @@ import {
   type ReadIndex,
   type SourcedSentence,
 } from '../sentence-source';
+import { flexibleOrderMatch, type OrderToken } from './word-order';
 
 export const SB_SESSION_SIZE = 10;
 
@@ -62,14 +63,20 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
- * Positional check of an arrangement against the canonical word-token order,
- * tolerant per tile (ё/е, case) via the shared comparator — so duplicate
- * words are interchangeable and a distractor that happens to equal a correct
- * word counts at that slot.
+ * Check of an arrangement against the canonical word-token order, tolerant
+ * per tile (ё/е, case) via the shared comparator — so duplicate words are
+ * interchangeable and a distractor that happens to equal a correct word
+ * counts at that slot. With the sentence's full `sourceTokens`, a valid
+ * Russian reordering (whole chunks moved within a clause) also passes.
  */
-export function arrangementCorrect(chosen: string[], answer: string[]): boolean {
+export function arrangementCorrect(
+  chosen: string[],
+  answer: string[],
+  sourceTokens?: readonly OrderToken[],
+): boolean {
   if (chosen.length !== answer.length) return false;
-  return chosen.every((text, i) => answersMatch(answer[i]!, text));
+  if (chosen.every((text, i) => answersMatch(answer[i]!, text))) return true;
+  return !!sourceTokens && flexibleOrderMatch(chosen, sourceTokens);
 }
 
 /**
