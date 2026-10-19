@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import type {
@@ -27,7 +27,8 @@ export function NeedsWorkSection({
   onPracticePronunciation,
 }: {
   weakLemmas: WeakLemma[];
-  grammar: GrammarTopicStats[];
+  /** null = the grammar read is still running (T99) — topics fill in later. */
+  grammar: GrammarTopicStats[] | null;
   weakPronunciation: WeakPronunciationItem[];
   onPracticeLemmas: (ids: string[]) => void;
   onPracticeTopic: (level: GrammarTopicStats['level'], topic: string) => void;
@@ -36,9 +37,10 @@ export function NeedsWorkSection({
   const { tokens } = useAppTheme();
 
   // Weakest *seen* topics with the lowest practiced ratio (T18 ranking).
+  const topicsLoading = grammar == null;
   const weakTopics = React.useMemo(
     () =>
-      grammar
+      (grammar ?? [])
         .filter((t) => t.readSentenceCount > 0 && t.lemmasTotal > 0)
         .sort(
           (a, b) =>
@@ -51,7 +53,10 @@ export function NeedsWorkSection({
   );
 
   const empty =
-    weakLemmas.length === 0 && weakTopics.length === 0 && weakPronunciation.length === 0;
+    !topicsLoading &&
+    weakLemmas.length === 0 &&
+    weakTopics.length === 0 &&
+    weakPronunciation.length === 0;
 
   return (
     <SectionCard title="What needs work">
@@ -82,6 +87,16 @@ export function NeedsWorkSection({
                 label="Practice these words"
                 onPress={() => onPracticeLemmas(weakLemmas.map((w) => w.bankItemId))}
               />
+            </View>
+          )}
+
+          {topicsLoading && (
+            <View
+              className="flex-row items-center gap-2 py-1"
+              accessibilityLabel="Weakest grammar topics, loading"
+            >
+              <ActivityIndicator size="small" color={tokens.accent} />
+              <Text variant="caption">Weakest grammar topics…</Text>
             </View>
           )}
 

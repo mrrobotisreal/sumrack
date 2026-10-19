@@ -6,6 +6,7 @@ import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
 import * as React from 'react';
 import { Pressable, type ColorValue } from 'react-native';
 
+import { markDashboardTap } from '@/features/dashboard/load-state';
 import { NowPlayingBar } from '@/features/listen/now-playing-bar';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -70,7 +71,10 @@ export default function TabsLayout() {
           headerRight: () => (
             <>
               <Pressable
-                onPress={() => router.push('/dashboard')}
+                onPress={() => {
+                  markDashboardTap();
+                  router.push('/dashboard');
+                }}
                 hitSlop={8}
                 accessibilityLabel="Progress dashboard"
                 className="mr-4"

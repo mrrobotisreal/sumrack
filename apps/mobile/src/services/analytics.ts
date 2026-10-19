@@ -252,6 +252,14 @@ export type AnalyticsEvent =
   | 'assessment_completed'
   | 'assessment_failed'
   | 'assessment_screen_opened'
+  // M28 (T99) instant dashboard. Props: section ids / ms / booleans only.
+  // dashboard_first_paint {ms} (Stats tap → first frame), dashboard_section_loaded
+  // {section, ms, cached}, dashboard_section_failed {section}, dashboard_ready
+  // {ms, sections} (every card loaded); ms from the visit's focus.
+  | 'dashboard_first_paint'
+  | 'dashboard_section_loaded'
+  | 'dashboard_section_failed'
+  | 'dashboard_ready'
   // T38 progress science. Props are counts / levels / kinds only — never
   // lemma text: core_coverage_viewed {levels, a1Pct?, a2Pct?},
   // core_gaps_opened {level, gaps}, forecast_viewed {today, overdue,
