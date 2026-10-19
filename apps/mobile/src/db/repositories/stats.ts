@@ -7,6 +7,7 @@ import {
   assessments,
   checkpointResults,
   dailyActivity,
+  dailyActivityOwn,
   frozenDays,
   gameSessions,
   scenarioRuns,
@@ -32,38 +33,46 @@ export function localDateKey(d: Date = new Date()): string {
  */
 export function createStatsRepo(db: SumrakDB) {
   return {
-    /** Increment today's counters (upsert). */
+    /**
+     * Increment today's counters (upsert). T104: `daily_activity` is the MERGED
+     * total every reader uses; `daily_activity_own` is this phone's own share
+     * (what sync pushes). Both get the same delta.
+     */
     async bumpDailyActivity(
       delta: { reviewsDone?: number; readingMs?: number; storiesFinished?: number; xp?: number },
       date: string = localDateKey(),
     ): Promise<void> {
       const now = Date.now();
-      await db
-        .insert(dailyActivity)
-        .values({
-          date,
-          reviewsDone: delta.reviewsDone ?? 0,
-          readingMs: delta.readingMs ?? 0,
-          storiesFinished: delta.storiesFinished ?? 0,
-          xp: delta.xp ?? 0,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: dailyActivity.date,
-          set: {
-            reviewsDone: sql`${dailyActivity.reviewsDone} + ${delta.reviewsDone ?? 0}`,
-            readingMs: sql`${dailyActivity.readingMs} + ${delta.readingMs ?? 0}`,
-            storiesFinished: sql`${dailyActivity.storiesFinished} + ${delta.storiesFinished ?? 0}`,
-            xp: sql`${dailyActivity.xp} + ${delta.xp ?? 0}`,
+      for (const t of [dailyActivity, dailyActivityOwn]) {
+        await db
+          .insert(t)
+          .values({
+            date,
+            reviewsDone: delta.reviewsDone ?? 0,
+            readingMs: delta.readingMs ?? 0,
+            storiesFinished: delta.storiesFinished ?? 0,
+            xp: delta.xp ?? 0,
             updatedAt: now,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: t.date,
+            set: {
+              reviewsDone: sql`${t.reviewsDone} + ${delta.reviewsDone ?? 0}`,
+              readingMs: sql`${t.readingMs} + ${delta.readingMs ?? 0}`,
+              storiesFinished: sql`${t.storiesFinished} + ${delta.storiesFinished ?? 0}`,
+              xp: sql`${t.xp} + ${delta.xp ?? 0}`,
+              updatedAt: now,
+            },
+          });
+      }
     },
 
     /**
      * Stamp the day's goal as met (once — the stamp never moves, and a later
      * goal-config change never un-stamps history). Returns true when newly
      * stamped, so the caller can fire goal-met side effects exactly once.
+     * T104: the stamp is mirrored onto this phone's own row (the sync source);
+     * a day already stamped by a peer (merged row set) is not re-stamped.
      */
     async markGoalMet(date: string = localDateKey()): Promise<boolean> {
       const now = Date.now();
@@ -78,6 +87,13 @@ export function createStatsRepo(db: SumrakDB) {
         .update(dailyActivity)
         .set({ goalMetAt: now, updatedAt: now })
         .where(eq(dailyActivity.date, date));
+      await db
+        .insert(dailyActivityOwn)
+        .values({ date, goalMetAt: now, updatedAt: now })
+        .onConflictDoUpdate({
+          target: dailyActivityOwn.date,
+          set: { goalMetAt: sql`COALESCE(${dailyActivityOwn.goalMetAt}, ${now})`, updatedAt: now },
+        });
       return true;
     },
 
