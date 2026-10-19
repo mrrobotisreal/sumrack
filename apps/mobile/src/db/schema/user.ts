@@ -805,6 +805,14 @@ export const analyticsEvents = sqliteTable(
     event: text('event').notNull(),
     props: text('props', { mode: 'json' }).$type<Record<string, string | number | boolean>>(),
     createdAt: integer('created_at').notNull(),
+    /**
+     * T104: set ONLY on rows pulled from another phone (`<deviceId>:<id>`), so a
+     * re-pulled event is skipped. Own rows keep NULL (their sync pk is derived).
+     */
+    syncKey: text('sync_key'),
   },
-  (t) => [index('analytics_events_event_idx').on(t.event, t.createdAt)],
+  (t) => [
+    index('analytics_events_event_idx').on(t.event, t.createdAt),
+    uniqueIndex('analytics_events_sync_key_uq').on(t.syncKey).where(sql`sync_key IS NOT NULL`),
+  ],
 );

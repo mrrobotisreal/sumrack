@@ -417,6 +417,8 @@ const analyticsEventRow = z.strictObject({
   event: z.string(),
   props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).nullable(),
   createdAt: int,
+  /** T104: set on events pulled from another phone; absent in pre-T104 payloads. */
+  syncKey: z.string().nullable().optional(),
 });
 
 export const BackupPayloadSchema = z.strictObject({

@@ -4,3 +4,4 @@
 // tests) share one shape.
 export * from './content';
 export * from './user';
+export * from './sync';

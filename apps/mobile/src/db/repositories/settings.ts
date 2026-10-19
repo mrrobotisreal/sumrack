@@ -13,6 +13,14 @@ export const SETTING_KEYS = {
    * synced, never restored onto another phone (design §5.2 device-local).
    */
   syncDeviceId: 'sync.deviceId',
+  /** number (T104): last pulled server `seq` (device-local). */
+  syncCursor: 'sync.cursor',
+  /** number (T104): epoch ms of the last successful sync run (device-local). */
+  syncLastSyncAt: 'sync.lastSyncAt',
+  /** string (T104): sync server base URL override (device-local). */
+  syncServerUrl: 'sync.serverUrl',
+  /** boolean (T104/T105): this phone is linked to the signed-in account's data (device-local). */
+  syncLinked: 'sync.linked',
   /** boolean (T102): «Продолжить без аккаунта» — the auth gate stays out of the way. */
   authSkipped: 'auth.skipped',
   /** 'dark' | 'light' | 'system' — migrated from the T01 AsyncStorage store. */

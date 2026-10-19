@@ -1172,6 +1172,15 @@ describe('user-table drift guard', () => {
       // T100 stats aggregates (filled at import + by migration 0022).
       'topic_sentences',
       'topic_lemmas',
+      // T104 device-local sync infra (never in a backup payload; restore resets them).
+      'sync_outbox',
+      'sync_control',
+      'sync_clock',
+      'sync_id_map',
+      'sync_parked',
+      'sync_row_hlc',
+      'daily_activity_own',
+      'daily_activity_peers',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');
