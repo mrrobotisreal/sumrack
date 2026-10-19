@@ -20,10 +20,15 @@
         {
           "action": "SEND",
           "category": ["DEFAULT"],
-          "data": [{ "mimeType": "text/plain" }]
+          "data": [
+            {
+              "mimeType": "text/plain"
+            }
+          ]
         }
       ],
-      "versionCode": 24
+      "versionCode": 24,
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",
@@ -52,6 +57,10 @@
           "defaultChannel": "reminders"
         }
       ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      "./plugins/with-google-web-client-id.js",
       "./plugins/with-release-signing.js"
     ],
     "experiments": {

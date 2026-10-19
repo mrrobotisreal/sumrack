@@ -6,6 +6,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { AccountSettingsSection } from '@/features/account/account-settings-section';
 import { AiSettingsSection } from '@/features/ai/ai-settings-section';
 import { ExamGradingPresetSection } from '@/features/ai/exam-grading-preset-section';
 import { GrammarPresetSection } from '@/features/ai/grammar-preset-section';
@@ -64,6 +65,7 @@ export default function SettingsScreen() {
       contentContainerClassName="px-4 pb-12 pt-6"
       keyboardShouldPersistTaps="handled"
     >
+      <AccountSettingsSection />
       <Text variant="caption" className="mb-2 uppercase tracking-wider">
         Appearance
       </Text>

@@ -8,6 +8,13 @@ import type { SumrakDB } from '../types';
  * strings stay discoverable in one place.
  */
 export const SETTING_KEYS = {
+  /**
+   * T102 (M29): this phone's stable sync identity — generated once, never
+   * synced, never restored onto another phone (design §5.2 device-local).
+   */
+  syncDeviceId: 'sync.deviceId',
+  /** boolean (T102): «Продолжить без аккаунта» — the auth gate stays out of the way. */
+  authSkipped: 'auth.skipped',
   /** 'dark' | 'light' | 'system' — migrated from the T01 AsyncStorage store. */
   themeMode: 'themeMode',
   /** Guided-path position (T17). */

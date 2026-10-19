@@ -31,3 +31,7 @@ yarn-error.*
 
 # Local Expo module build intermediates (gradle output, was accidentally tracked in T11)
 apps/mobile/modules/*/android/build/
+
+# Firebase client config (carries an API key) — never committed (workspace secrets policy, T102)
+google-services.json
+GoogleService-Info.plist

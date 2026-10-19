@@ -3,8 +3,10 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  '@firebase/util': false
   better-sqlite3: true
   esbuild: true
+  protobufjs: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.17'

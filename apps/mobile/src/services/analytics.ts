@@ -260,6 +260,18 @@ export type AnalyticsEvent =
   | 'dashboard_section_loaded'
   | 'dashboard_section_failed'
   | 'dashboard_ready'
+  // M29 (T102) accounts. Never an email or uid in props: methods, modes,
+  // Firebase error codes and booleans only. auth_screen_viewed {mode, from},
+  // auth_submit {method: email|google, mode: sign_in|sign_up}, auth_succeeded
+  // {method, isNewUser}, auth_failed {method, code}, auth_skipped,
+  // auth_password_reset_sent, auth_signed_out.
+  | 'auth_screen_viewed'
+  | 'auth_submit'
+  | 'auth_succeeded'
+  | 'auth_failed'
+  | 'auth_skipped'
+  | 'auth_password_reset_sent'
+  | 'auth_signed_out'
   // T38 progress science. Props are counts / levels / kinds only — never
   // lemma text: core_coverage_viewed {levels, a1Pct?, a2Pct?},
   // core_gaps_opened {level, gaps}, forecast_viewed {today, overdue,

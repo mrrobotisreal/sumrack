@@ -22,6 +22,7 @@ import { hydrateBankPrefsFromDb } from '@/store/bank-prefs';
 import { hydrateLibraryExpansionFromDb } from '@/store/library-expansion';
 import { hydrateLibraryPrefsFromDb } from '@/store/library-prefs';
 import { hydrateLookupPrefsFromDb } from '@/store/lookup-prefs';
+import { hydrateAccountFromDb } from '@/features/account/store';
 import { hydrateMotionPrefsFromDb } from '@/store/motion-prefs';
 import { hydrateNotificationPrefsFromDb } from '@/store/notification-prefs';
 import { hydrateReaderPrefsFromDb } from '@/store/reader-prefs';
@@ -67,6 +68,8 @@ export function DbProvider({ children }: { children: React.ReactNode }) {
         // T62: «Сценарии» run prefs (subtitles, hold-to-talk, rescue, endpointing, bed).
         await hydrateScenarioPrefsFromDb();
         await hydrateMotionPrefsFromDb();
+        // T102: `auth.skipped` + this phone's sync device id.
+        await hydrateAccountFromDb();
         await hydrateDailyPrefsFromDb();
         await hydrateGoalPrefsFromDb();
         await hydrateNotificationPrefsFromDb();

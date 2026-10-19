@@ -52,6 +52,13 @@ function withReleaseSigning(config) {
     );
     if (existing && existing.type === 'property') existing.value = 'arm64-v8a';
     else props.push({ type: 'property', key: 'reactNativeArchitectures', value: 'arm64-v8a' });
+    // T102: with the Firebase + Google Sign-In modules the stock 512m
+    // metaspace runs out mid-build ("Metaspace" in PlatformAttrTransform).
+    const jvm = props.find((p) => p.type === 'property' && p.key === 'org.gradle.jvmargs');
+    const args =
+      '-Xmx6g -XX:MaxMetaspaceSize=2g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
+    if (jvm && jvm.type === 'property') jvm.value = args;
+    else props.push({ type: 'property', key: 'org.gradle.jvmargs', value: args });
     return config;
   });
   return withAppBuildGradle(config, (config) => {
