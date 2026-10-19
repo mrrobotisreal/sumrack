@@ -18,7 +18,7 @@ import { makePhone, type Phone } from './phones';
 type Row = Record<string, unknown>;
 const q = (db: SumrakDB, query: string) => db.all<Row>(sql.raw(query));
 
-async function canonical(db: SumrakDB): Promise<Record<string, Row[]>> {
+async function canonical(db: SumrakDB) {
   const card = `SELECT b.lemma_norm AS lemma, c.direction, c.due_at, c.stability, c.difficulty, c.elapsed_days,
       c.scheduled_days, c.learning_steps, c.reps, c.lapses, c.state, c.last_review_at, c.suspended_at, c.buried_until, c.created_at AS created_at
       FROM cards c JOIN bank_items b ON b.id = c.bank_item_id ORDER BY lemma, direction`;
@@ -113,7 +113,9 @@ describe('two phones converge through the T103 contract', () => {
     // ---- assertions
     const ca = await canonical(A.db);
     const cb = await canonical(B.db);
-    for (const t of Object.keys(ca)) expect({ t, rows: ca[t] }).toEqual({ t, rows: cb[t] });
+    for (const t of Object.keys(ca) as (keyof typeof ca)[]) {
+      expect({ t, rows: ca[t] }).toEqual({ t, rows: cb[t] });
+    }
 
     // Both reviews' logs merged on both; card schedule == replay of the merged log.
     expect(ca.review_log).toHaveLength(5);

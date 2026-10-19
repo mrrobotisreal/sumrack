@@ -31,8 +31,9 @@ import type { WirePullChange, WirePushChange } from './wire';
 type Row = Record<string, unknown>;
 type DB = SumrakDB;
 
-const q = (id: string): SQL => sql.identifier(id);
-const list = (items: SQL[]): SQL => sql.join(items, sql`, `);
+const q = (id: string) => sql.identifier(id);
+const list = (items: SQL[] | ReturnType<typeof q>[]): SQL =>
+  sql.join(items as SQL[], sql`, `);
 
 async function all<T = Row>(db: DB, query: SQL): Promise<T[]> {
   return db.all<T>(query);

@@ -92,6 +92,8 @@ export async function runSync(
     }
     stats.pages++;
     cursor = page.nextSince;
+    // Hand the JS thread back between pages so a big pull never freezes the UI.
+    await new Promise<void>((r) => setTimeout(r, 0));
     if (!page.hasMore) break;
   }
 
