@@ -1169,6 +1169,9 @@ describe('user-table drift guard', () => {
       'course_items',
       // T95 full-story track (rebuilt from packs, never backed up).
       'pack_full_audio',
+      // T100 stats aggregates (filled at import + by migration 0022).
+      'topic_sentences',
+      'topic_lemmas',
     ]);
     const isInfra = (n: string) =>
       n.startsWith('sqlite_') || n.startsWith('__drizzle') || n.includes('_fts');

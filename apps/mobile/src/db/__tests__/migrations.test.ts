@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import journal from '../../../drizzle/meta/_journal.json';
+import { importPack, removePack } from '../importer';
 import * as schema from '../schema';
 import type { SumrakDB } from '../types';
 import { createTestDb } from './helpers';
@@ -810,7 +811,7 @@ describe('0021_full-story', () => {
     const packCols = await columnNames(db, 'packs');
     expect(packCols).toContain('cover_file');
     expect(packCols).toContain('cover_local_uri');
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 21, tag: '0021_full-story' });
+    expect(journal.entries.find((e) => e.tag === '0021_full-story')).toMatchObject({ idx: 21 });
   });
 
   it('upgrades a device that ran 0020; prior pack rows survive with NULL cover', async () => {
@@ -843,5 +844,109 @@ describe('0021_full-story', () => {
       .run();
     sqlite.prepare(`DELETE FROM packs WHERE id = 'p1'`).run();
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM pack_full_audio').get()).toEqual({ n: 0 });
+  });
+});
+
+describe('0022_stats-aggregates (T100)', () => {
+  const FIXTURES = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../../../../packages/schema/fixtures/packs',
+  );
+  const CONTENT = ['packs', 'stories', 'sentences', 'tokens'] as const;
+
+  /** Every fixture imported with the current importer (which fills both aggregates). */
+  async function importedFresh(): Promise<SumrakDB> {
+    const db = createTestDb();
+    for (const id of fs.readdirSync(FIXTURES).sort()) {
+      const raw = JSON.parse(fs.readFileSync(path.join(FIXTURES, id, 'pack.json'), 'utf8'));
+      await importPack(db, raw, { source: 'local-file' });
+    }
+    return db;
+  }
+
+  const rowsOf = (db: SumrakDB, table: string) =>
+    db.all<Record<string, unknown>>(sql.raw(`SELECT * FROM ${table} ORDER BY 1, 2, 3, 4`));
+
+  it('fresh DB has both aggregate tables, WITHOUT ROWID, cascading with the pack', async () => {
+    const db = createTestDb();
+    expect(await columnNames(db, 'topic_sentences')).toEqual([
+      'pack_id',
+      'sentence_id',
+      'story_id',
+      'order_idx',
+      'lvl',
+      'topic',
+    ]);
+    expect(await columnNames(db, 'topic_lemmas')).toEqual([
+      'pack_id',
+      'lvl',
+      'topic',
+      'lemma_norm',
+    ]);
+    const ddl = await db.all<{ sql: string }>(
+      sql`SELECT sql FROM sqlite_master WHERE name IN ('topic_sentences', 'topic_lemmas')`,
+    );
+    for (const { sql: s } of ddl) expect(s).toMatch(/WITHOUT ROWID/);
+    expect(journal.entries.find((e) => e.tag === '0022_stats-aggregates')).toMatchObject({
+      idx: 22,
+    });
+  });
+
+  it('upgrade from 0021 backfills exactly the rows the importer writes', async () => {
+    const fresh = await importedFresh();
+    const expectedTs = await rowsOf(fresh, 'topic_sentences');
+    const expectedTl = await rowsOf(fresh, 'topic_lemmas');
+    expect(expectedTs.length).toBeGreaterThan(30);
+    expect(expectedTl.length).toBeGreaterThan(100);
+
+    // A device at 0021 with the same content installed (rows copied, as the
+    // pre-T100 importer wrote them), then the app updates and migrates.
+    const { sqlite, db } = createDbUpTo('0021_full-story');
+    for (const table of CONTENT) {
+      const rows = await rowsOf(fresh, table);
+      if (rows.length === 0) continue;
+      const cols = (await columnNames(db, table)).filter((c) => c in rows[0]!);
+      const stmt = sqlite.prepare(
+        `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+      );
+      for (const r of rows) {
+        stmt.run(
+          ...cols.map((c) => {
+            const v = r[c];
+            return v != null && typeof v === 'object' ? JSON.stringify(v) : (v as never);
+          }),
+        );
+      }
+    }
+    migrate(drizzle(sqlite, { schema }), { migrationsFolder });
+
+    expect(await rowsOf(db, 'topic_sentences')).toEqual(expectedTs);
+    expect(await rowsOf(db, 'topic_lemmas')).toEqual(expectedTl);
+  });
+
+  it('a pack bump replaces its aggregates; removing the pack cascades them away', async () => {
+    const db = await importedFresh();
+    const count = async (packId: string) =>
+      (
+        await db.all<{ ts: number; tl: number }>(sql`
+          SELECT (SELECT COUNT(*) FROM topic_sentences WHERE pack_id = ${packId}) AS ts,
+                 (SELECT COUNT(*) FROM topic_lemmas WHERE pack_id = ${packId}) AS tl`)
+      )[0]!;
+    const id = 'a1-creepypasta-001';
+    const before = await count(id);
+    expect(before.ts).toBeGreaterThan(0);
+
+    const v2 = JSON.parse(fs.readFileSync(path.join(FIXTURES, id, 'pack.json'), 'utf8'));
+    v2.version += 1;
+    // v2 drops every grammar tag but the first sentence's.
+    for (const sn of v2.stories[0].sentences.slice(1)) delete sn.grammarTopics;
+    expect((await importPack(db, v2, { source: 'local-file' })).action).toBe('updated');
+    const after = await count(id);
+    expect(after.ts).toBe(v2.stories[0].sentences[0].grammarTopics.length);
+    expect(after.ts).toBeLessThan(before.ts);
+    expect(after.tl).toBeLessThan(before.tl);
+
+    await removePack(db, id);
+    expect(await count(id)).toEqual({ ts: 0, tl: 0 });
   });
 });

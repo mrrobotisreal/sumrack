@@ -736,3 +736,48 @@ export const packFullAudio = sqliteTable('pack_full_audio', {
   gapMs: integer('gap_ms').notNull(),
   segments: text('segments', { mode: 'json' }).$type<FullStorySegment[]>().notNull(),
 });
+
+/**
+ * Stats aggregates (T100, M28) — content-side joins the dashboard used to
+ * redo on every open, computed once per pack at import (and backfilled by
+ * migration 0022). Both cascade with the pack like every content table;
+ * `lvl` is the PACK level as an ordinal (A1=1 … C1=5), the same key
+ * getGrammarCoverage groups on. The fill SQL lives in
+ * repositories/stats-aggregates.ts and is shared by importer + migration.
+ */
+export const topicSentences = sqliteTable(
+  'topic_sentences',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    sentenceId: text('sentence_id').notNull(),
+    storyId: text('story_id').notNull(),
+    orderIdx: integer('order_idx').notNull(),
+    lvl: integer('lvl').notNull(),
+    /** One grammar topic of the sentence (json_each of `sentences.grammar_topics`). */
+    topic: text('topic').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.packId, t.sentenceId, t.topic] }),
+    // Read counts are driven from the few story_progress rows.
+    index('topic_sentences_story_idx').on(t.packId, t.storyId, t.orderIdx),
+  ],
+);
+
+/** Distinct non-punct lemmas per (pack, level, grammar topic) — T100. */
+export const topicLemmas = sqliteTable(
+  'topic_lemmas',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    lvl: integer('lvl').notNull(),
+    topic: text('topic').notNull(),
+    lemmaNorm: text('lemma_norm').notNull(),
+  },
+  // Key order = the grammar query's GROUP BY + COUNT(DISTINCT lemma), so
+  // it streams the table with no temp b-tree and no extra index (each
+  // extra index here costs ~24 MB on a 110-pack device — T100 measured).
+  (t) => [primaryKey({ columns: [t.lvl, t.topic, t.lemmaNorm, t.packId] })],
+);
