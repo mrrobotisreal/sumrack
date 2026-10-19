@@ -138,6 +138,8 @@ export function DashboardScreen() {
   const [online, setOnline] = React.useState(false);
   const [autoRunning, setAutoRunning] = React.useState(false);
   const [ready, setReady] = React.useState(false);
+  // Bumped per focus so a fully-cached revisit still reports its visit.
+  const [visit, setVisit] = React.useState(0);
 
   // One load tracker per visit (focus): loaded/failed/ready analytics.
   const tracker = React.useRef(createLoadTracker(Date.now()));
@@ -148,6 +150,7 @@ export function DashboardScreen() {
       const now = Date.now();
       track('dashboard_opened');
       tracker.current = createLoadTracker(now);
+      setVisit((v) => v + 1);
       refreshOnFocus(queryClient, now);
       void isOnline().then(setOnline);
     }, [queryClient]),
@@ -180,9 +183,9 @@ export function DashboardScreen() {
   React.useEffect(() => {
     for (const e of tracker.current.observe(statuses, Date.now())) emitLoadEvent(e);
     if (tracker.current.isReady) setReady(true);
-    // statusKey captures every input of `statuses`.
+    // statusKey captures every input of `statuses`; visit = a new tracker.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusKey]);
+  }, [statusKey, visit]);
 
   function emitLoadEvent(e: LoadEvent) {
     if (e.kind === 'ready') {
