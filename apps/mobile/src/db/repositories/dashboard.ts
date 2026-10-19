@@ -165,15 +165,21 @@ export interface LeechCandidate {
 /** T38 leech window (features/dashboard/science/leeches.ts owns the constants). */
 const LEECH_SQL_WINDOW = 10;
 
-/** Core lemmas joined to the T18 encountered universe — shared by coverage + gaps. */
+/**
+ * Core lemmas joined to the T18 encountered universe — shared by coverage + gaps.
+ * T100: `seen` (here and in getVocabByLevel) is driven FROM `read_sent` via
+ * CROSS JOIN (SQLite's join-order hint). Left to itself the planner walked
+ * every token by lemma index and probed outward — 1 s on 366k tokens; read
+ * sentences are the small side, so starting there is ~10 ms.
+ */
 const CORE_JOIN = sql`
   core AS (
     SELECT DISTINCT level, lemma_norm FROM core_lemmas
   ),
   seen AS (
     SELECT DISTINCT t.lemma_norm
-    FROM tokens t
-    JOIN read_sent rs ON rs.pack_id = t.pack_id AND rs.sentence_id = t.sentence_id
+    FROM read_sent rs
+    CROSS JOIN tokens t ON t.pack_id = rs.pack_id AND t.sentence_id = rs.sentence_id
     WHERE t.is_punct = 0 AND t.lemma_norm IS NOT NULL
   ),
   bank_words AS (
@@ -345,8 +351,8 @@ export function createDashboardRepo(
         ),
         seen AS (
           SELECT DISTINCT t.lemma_norm
-          FROM tokens t
-          JOIN read_sent rs ON rs.pack_id = t.pack_id AND rs.sentence_id = t.sentence_id
+          FROM read_sent rs
+          CROSS JOIN tokens t ON t.pack_id = rs.pack_id AND t.sentence_id = rs.sentence_id
           WHERE t.is_punct = 0 AND t.lemma_norm IS NOT NULL
         ),
         bank_words AS (
@@ -396,6 +402,11 @@ export function createDashboardRepo(
      * "practiced" = ≥ 1 of its sentence lemmas has a reviewed core card.
      */
     async getGrammarCoverage(): Promise<GrammarTopicStats[]> {
+      // T100: on the import-time aggregates (topic_sentences / topic_lemmas)
+      // instead of re-joining every topic sentence to `tokens` per open.
+      // Read counts start from the few story_progress rows (CROSS JOIN =
+      // SQLite's join-order hint; the READ_SENTENCES rule, inlined); lemma
+      // counts stream topic_lemmas in its (lvl, topic, lemma) key order.
       const sentenceRows = await read<{
         lvl: number;
         topic: string;
@@ -404,30 +415,32 @@ export function createDashboardRepo(
         lemmas: number;
         reviewed: number;
       }>(sql`
-        WITH ${READ_SENTENCES},
-        ${REVIEWED_LEMMAS},
-        topic_sent AS (
-          SELECT ${sql.raw(LEVEL_TO_ORD.replace(/level/g, 'p.level'))} AS lvl,
-                 je.value AS topic, s.pack_id, s.id AS sentence_id,
-                 EXISTS (SELECT 1 FROM read_sent rs
-                          WHERE rs.pack_id = s.pack_id AND rs.sentence_id = s.id) AS is_read
-          FROM sentences s
-          JOIN packs p ON p.id = s.pack_id,
-               json_each(s.grammar_topics) je
-          WHERE s.grammar_topics IS NOT NULL
+        WITH ${REVIEWED_LEMMAS},
+        totals AS (
+          SELECT lvl, topic, COUNT(*) AS sentences
+          FROM topic_sentences GROUP BY lvl, topic
+        ),
+        read_counts AS (
+          SELECT ts.lvl, ts.topic, COUNT(*) AS read_sentences
+          FROM story_progress p
+          CROSS JOIN topic_sentences ts ON ts.pack_id = p.pack_id AND ts.story_id = p.story_id
+          WHERE p.finished_at IS NOT NULL OR ts.order_idx <= p.current_sentence_idx
+          GROUP BY ts.lvl, ts.topic
+        ),
+        lemma_counts AS (
+          SELECT lvl, topic,
+                 COUNT(DISTINCT lemma_norm) AS lemmas,
+                 COUNT(DISTINCT CASE WHEN lemma_norm IN (SELECT lemma_norm FROM reviewed_lemmas)
+                                     THEN lemma_norm END) AS reviewed
+          FROM topic_lemmas GROUP BY lvl, topic
         )
-        SELECT ts.lvl, ts.topic,
-               COUNT(DISTINCT ts.pack_id || '|' || ts.sentence_id) AS sentences,
-               COUNT(DISTINCT CASE WHEN ts.is_read THEN ts.pack_id || '|' || ts.sentence_id END)
-                 AS read_sentences,
-               COUNT(DISTINCT t.lemma_norm) AS lemmas,
-               COUNT(DISTINCT CASE WHEN rl.lemma_norm IS NOT NULL THEN t.lemma_norm END)
-                 AS reviewed
-        FROM topic_sent ts
-        LEFT JOIN tokens t ON t.pack_id = ts.pack_id AND t.sentence_id = ts.sentence_id
-                          AND t.is_punct = 0 AND t.lemma_norm IS NOT NULL
-        LEFT JOIN reviewed_lemmas rl ON rl.lemma_norm = t.lemma_norm
-        GROUP BY ts.lvl, ts.topic
+        SELECT t.lvl, t.topic, t.sentences,
+               COALESCE(rc.read_sentences, 0) AS read_sentences,
+               COALESCE(lc.lemmas, 0) AS lemmas,
+               COALESCE(lc.reviewed, 0) AS reviewed
+        FROM totals t
+        LEFT JOIN read_counts rc ON rc.lvl = t.lvl AND rc.topic = t.topic
+        LEFT JOIN lemma_counts lc ON lc.lvl = t.lvl AND lc.topic = t.topic
       `);
       const lessonRows = await read<{ lvl: number; topic: string }>(sql`
         SELECT ${sql.raw(LEVEL_TO_ORD.replace(/level/g, 'p.level'))} AS lvl, je.value AS topic
