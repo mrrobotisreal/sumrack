@@ -1,6 +1,7 @@
 import type { SumrakDB } from '@/db/types';
 
 import { pendingCount, readSetting, writeSetting } from './engine';
+import { relinkForAccount } from './first-link';
 import { runSync, SyncRunError, type RunStats } from './run';
 import type { SyncErrorInfo, SyncStatus } from './store';
 import { SyncHttpError, type SyncClient, type WireDeviceRequest } from './wire';
@@ -110,6 +111,12 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     deps.onRunStarted(trigger);
     try {
       const deviceId = await deps.deviceId();
+      // Linked under a different account (sign-out + sign-in as someone
+      // else): never keep syncing the old account's bookkeeping — reset it
+      // and send this phone's whole history to the account now signed in.
+      if ((await readSetting<string>(deps.db, 'sync.linkedUid')) !== uid) {
+        await relinkForAccount(deps.db, uid, deps.now());
+      }
       await ensureRegistered(uid, deviceId);
       const stats = await runSync(deps.db, deps.client(), deviceId);
       attempt = 0;

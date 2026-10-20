@@ -78,3 +78,51 @@ export async function linkDevice(
   await writeSetting(db, 'sync.linked', true);
   return { seeded, already: false };
 }
+
+/**
+ * The signed-in account is not the one this phone was linked to (Mitch,
+ * 2026-10-20: linked under the test account by mistake, signed out mid-run,
+ * signed in with the real one — ~1,000 rows had already been acked to the
+ * test account and were never sent to the real one). Everything that is
+ * per-ACCOUNT is reset — pull cursor, server clocks, id map, parked
+ * changes, peer daily totals (merged totals fall back to this phone's own)
+ * — and every row is seeded again for the new account. Local user data is
+ * never touched.
+ */
+export async function relinkForAccount(
+  db: SumrakDB,
+  uid: string,
+  now = Date.now(),
+): Promise<number> {
+  await db.run(sql`BEGIN`);
+  try {
+    await db.run(sql`UPDATE sync_control SET applying = 1`);
+    await db.run(sql`DELETE FROM sync_outbox`);
+    await db.run(sql`DELETE FROM sync_row_hlc`);
+    await db.run(sql`DELETE FROM sync_id_map`);
+    await db.run(sql`DELETE FROM sync_parked`);
+    await db.run(sql`DELETE FROM sync_dirty_cards`);
+    // Peer totals belonged to the old account: merged = own again on those dates.
+    await db.run(sql`DELETE FROM daily_activity
+      WHERE date IN (SELECT date FROM daily_activity_peers)
+        AND date NOT IN (SELECT date FROM daily_activity_own)`);
+    await db.run(sql`UPDATE daily_activity SET
+        reviews_done = (SELECT o.reviews_done FROM daily_activity_own o WHERE o.date = daily_activity.date),
+        reading_ms = (SELECT o.reading_ms FROM daily_activity_own o WHERE o.date = daily_activity.date),
+        stories_finished = (SELECT o.stories_finished FROM daily_activity_own o WHERE o.date = daily_activity.date),
+        goal_met_at = (SELECT o.goal_met_at FROM daily_activity_own o WHERE o.date = daily_activity.date),
+        xp = (SELECT o.xp FROM daily_activity_own o WHERE o.date = daily_activity.date)
+      WHERE date IN (SELECT date FROM daily_activity_peers)`);
+    await db.run(sql`DELETE FROM daily_activity_peers`);
+    await db.run(sql`DELETE FROM settings WHERE key IN ('sync.cursor', 'sync.registeredUid')`);
+    await db.run(sql`UPDATE sync_control SET applying = 0`);
+    await db.run(sql`COMMIT`);
+  } catch (e) {
+    await db.run(sql`ROLLBACK`);
+    throw e;
+  }
+  const seeded = await seedOutbox(db, now);
+  await writeSetting(db, 'sync.linkedUid', uid);
+  await writeSetting(db, 'sync.linked', true);
+  return seeded;
+}

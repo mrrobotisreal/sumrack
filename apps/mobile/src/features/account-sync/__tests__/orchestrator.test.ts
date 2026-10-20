@@ -17,7 +17,10 @@ import { makePhone } from './phones';
 async function setup(opts: { linked?: boolean; online?: boolean; uid?: string | null } = {}) {
   const server = new FakeServer();
   const phone = await makePhone('A', 'dev-A', server.client());
-  if (opts.linked !== false) await writeSetting(phone.db, 'sync.linked', true);
+  if (opts.linked !== false) {
+    await writeSetting(phone.db, 'sync.linked', true);
+    await writeSetting(phone.db, 'sync.linkedUid', opts.uid === undefined ? 'u1' : opts.uid);
+  }
   const registered: unknown[] = [];
   const timers: { fn: () => void; ms: number }[] = [];
   const events: string[] = [];
@@ -51,6 +54,18 @@ async function setup(opts: { linked?: boolean; online?: boolean; uid?: string | 
 }
 
 describe('orchestrator', () => {
+  it('account switch: linked to another uid → resets account bookkeeping and reseeds for the signed-in uid', async () => {
+    const t = await setup();
+    await writeSetting(t.phone.db, 'sync.linkedUid', 'u-old');
+    await writeSetting(t.phone.db, 'sync.cursor', 999);
+    await t.phone.repos.bank.addWord({ lemma: 'тьма', surface: 'тьма', translation: 'x' });
+    await t.phone.db.run(sql`DELETE FROM sync_outbox`); // as if already acked to u-old
+    await t.orch.run('sign-in');
+    expect(await readSetting<string>(t.phone.db, 'sync.linkedUid')).toBe('u1');
+    expect(t.server.pushes).toBeGreaterThan(0); // the old rows went to u1 too
+    expect(await readSetting<number>(t.phone.db, 'sync.cursor')).not.toBe(999);
+  });
+
   it('does nothing when signed out or not linked (T105 sets linked)', async () => {
     const a = await setup({ uid: null });
     expect(await a.orch.run('manual')).toBeNull();

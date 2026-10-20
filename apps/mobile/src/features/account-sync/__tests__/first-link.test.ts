@@ -111,3 +111,46 @@ describe('T105 first link', () => {
     expect(flat).not.toContain('backup.syncd');
   });
 });
+
+describe('T105 account switch (Mitch, 2026-10-20)', () => {
+  it('linked under the wrong account, partly synced, then signed in with the right one → the right account gets EVERYTHING', async () => {
+    const wrong = new FakeServer();
+    const right = new FakeServer();
+    const p = await makePhone('S24U', 'dev-s24u', wrong.client());
+    await p.db.run(sql`UPDATE sync_control SET applying = 1`);
+    for (const l of ['тьма', 'ночь', 'дом']) {
+      await p.repos.bank.addWord({ lemma: l, surface: l, translation: 'x' });
+    }
+    await p.repos.reading.savePosition('pack-1', 'story-1', 6);
+    await p.db.run(sql`UPDATE sync_control SET applying = 0`);
+
+    // Linked + fully synced to the WRONG (test) account.
+    await linkDevice(p.db, 'uid-test');
+    await p.sync();
+    expect(await count(p.db, 'sync_outbox')).toBe(0);
+
+    // Signs in with the real account: the orchestrator detects the switch.
+    const { relinkForAccount } = await import('../first-link');
+    const reseeded = await relinkForAccount(p.db, 'uid-real');
+    expect(reseeded).toBeGreaterThan(5);
+    expect(await readSetting<number>(p.db, 'sync.cursor')).toBeNull();
+    expect(await readSetting<string>(p.db, 'sync.linkedUid')).toBe('uid-real');
+
+    const { runSync } = await import('../run');
+    await runSync(p.db, right.client(), 'dev-s24u');
+
+    // A fresh phone on the RIGHT account sees all of it; local data untouched.
+    const s25 = await makePhone('S25', 'dev-s25', right.client());
+    await linkDevice(s25.db, 'uid-real');
+    await s25.sync();
+    const words = await s25.db.all<{ l: string }>(
+      sql`SELECT lemma AS l FROM bank_items ORDER BY lemma`,
+    );
+    expect(words.map((w) => w.l)).toEqual(['дом', 'ночь', 'тьма']);
+    expect(await count(p.db, 'bank_items')).toBe(3);
+    const prog = await s25.db.all<{ i: number }>(
+      sql`SELECT current_sentence_idx AS i FROM story_progress`,
+    );
+    expect(prog[0]!.i).toBe(6);
+  });
+});
