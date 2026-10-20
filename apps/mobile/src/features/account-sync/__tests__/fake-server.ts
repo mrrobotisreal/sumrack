@@ -37,6 +37,13 @@ export class FakeServer {
     };
   }
 
+  /** Live (non-tombstoned) records — what GET /v1/me reports as recordCount. */
+  recordCount(): number {
+    let n = 0;
+    for (const r of this.records.values()) if (!r.deleted) n++;
+    return n;
+  }
+
   private maybeFail() {
     if (this.failNext) {
       const f = this.failNext;

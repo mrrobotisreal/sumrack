@@ -28,12 +28,23 @@ export function linkModeFor(me: Pick<WireMe, 'recordCount'>): LinkMode {
 const pkJson = (pk: string[]) => `json_array(${pk.map((c) => `"${c}"`).join(', ')})`;
 
 /** Enqueue every existing synced row. Returns the number of rows enqueued. */
-export async function seedOutbox(db: SumrakDB, now = Date.now()): Promise<number> {
+export async function seedOutbox(
+  db: SumrakDB,
+  now = Date.now(),
+  mode: LinkMode = 'seed',
+): Promise<number> {
   let total = 0;
   await db.run(sql`BEGIN`);
   try {
-    // One HLC above everything seen so far; every seeded row shares it.
+    // 'seed' (first phone, empty account): a normal fresh clock.
+    // 'merge' (the account already has data): the LOWEST clock (1) — this
+    // phone's copies are history, not edits, and must never beat the
+    // account's (2026-10-20: the S25's seed overwrote the S24U's ai.model,
+    // 3 daily quests and a finished story). A row the account lacks still
+    // arrives; monotonic/append-only rows merge by value regardless; real
+    // edits after the link get normal clocks and win as usual.
     await db.run(sql`UPDATE sync_clock SET last = MAX(last + 1, ${now})`);
+    const seedHlc = mode === 'merge' ? 1 : null;
     for (const spec of SYNCED_TABLES) {
       const where =
         spec.cls === 'settings'
@@ -46,7 +57,7 @@ export async function seedOutbox(db: SumrakDB, now = Date.now()): Promise<number
       for (const r of rows) {
         if (spec.cls === 'settings' && r.key != null && isDeviceLocalSetting(r.key)) continue;
         await db.run(sql`INSERT INTO sync_outbox (tbl, pk, op, hlc, created_at)
-          VALUES (${spec.name}, ${r.pk}, 'upsert', (SELECT last FROM sync_clock), ${now})`);
+          VALUES (${spec.name}, ${r.pk}, 'upsert', ${seedHlc ?? sql`(SELECT last FROM sync_clock)`}, ${now})`);
         total++;
       }
     }
@@ -68,12 +79,13 @@ export async function linkDevice(
   db: SumrakDB,
   uid: string,
   now = Date.now(),
+  mode: LinkMode = 'seed',
 ): Promise<{ seeded: number; already: boolean }> {
   const linkedUid = await readSetting<string>(db, 'sync.linkedUid');
   if (linkedUid === uid && (await readSetting<boolean>(db, 'sync.linked')) === true) {
     return { seeded: 0, already: true };
   }
-  const seeded = await seedOutbox(db, now);
+  const seeded = await seedOutbox(db, now, mode);
   await writeSetting(db, 'sync.linkedUid', uid);
   await writeSetting(db, 'sync.linked', true);
   return { seeded, already: false };
@@ -93,6 +105,7 @@ export async function relinkForAccount(
   db: SumrakDB,
   uid: string,
   now = Date.now(),
+  mode: LinkMode = 'merge',
 ): Promise<number> {
   await db.run(sql`BEGIN`);
   try {
@@ -121,7 +134,7 @@ export async function relinkForAccount(
     await db.run(sql`ROLLBACK`);
     throw e;
   }
-  const seeded = await seedOutbox(db, now);
+  const seeded = await seedOutbox(db, now, mode);
   await writeSetting(db, 'sync.linkedUid', uid);
   await writeSetting(db, 'sync.linked', true);
   return seeded;

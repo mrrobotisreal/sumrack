@@ -141,7 +141,7 @@ describe('T105 account switch (Mitch, 2026-10-20)', () => {
 
     // A fresh phone on the RIGHT account sees all of it; local data untouched.
     const s25 = await makePhone('S25', 'dev-s25', right.client());
-    await linkDevice(s25.db, 'uid-real');
+    await linkDevice(s25.db, 'uid-real', Date.now(), 'merge');
     await s25.sync();
     const words = await s25.db.all<{ l: string }>(
       sql`SELECT lemma AS l FROM bank_items ORDER BY lemma`,
@@ -152,5 +152,43 @@ describe('T105 account switch (Mitch, 2026-10-20)', () => {
       sql`SELECT current_sentence_idx AS i FROM story_progress`,
     );
     expect(prog[0]!.i).toBe(6);
+  });
+});
+
+describe('T105 second-phone seed never overwrites the account (2026-10-20 S25 regression)', () => {
+  it('older copies of LWW rows on the linking phone lose; rows the account lacks still arrive', async () => {
+    const server = new FakeServer();
+    const a = await makePhone('S24U', 'dev-a', server.client());
+    const b = await makePhone('S25', 'dev-b', server.client());
+    for (const p of [a, b]) await p.db.run(sql`UPDATE sync_control SET applying = 1`);
+    await a.repos.settings.set('ai.model', 'anthropic/claude-opus-5');
+    await a.db
+      .run(sql`INSERT INTO daily_quests (date, kind, target, progress, snapshot, assigned_at, completed_at, xp)
+      VALUES ('2026-10-12', 'journal-1', 1, 1, '{}', 1, 2, 15)`);
+    await b.repos.settings.set('ai.model', 'anthropic/claude-sonnet-5'); // stale S25 value
+    await b.db
+      .run(sql`INSERT INTO daily_quests (date, kind, target, progress, snapshot, assigned_at, completed_at, xp)
+      VALUES ('2026-10-12', 'numbers-round', 1, 0, '{}', 1, NULL, 0)`);
+    await b.db
+      .run(sql`INSERT INTO daily_quests (date, kind, target, progress, snapshot, assigned_at, completed_at, xp)
+      VALUES ('2026-10-20', 'journal-1', 1, 0, '{}', 1, NULL, 0)`); // only the S25 has today
+    for (const p of [a, b]) await p.db.run(sql`UPDATE sync_control SET applying = 0`);
+
+    await linkDevice(a.db, 'uid', Date.now(), 'seed');
+    await a.sync();
+    await linkDevice(b.db, 'uid', Date.now(), linkModeFor({ recordCount: server.recordCount() }));
+    await b.sync();
+    await a.sync();
+
+    for (const p of [a, b]) {
+      expect(await readSetting<string>(p.db, 'ai.model')).toBe('anthropic/claude-opus-5');
+      const q = await p.db.all<{ date: string; kind: string; xp: number }>(
+        sql`SELECT date, kind, xp FROM daily_quests ORDER BY date`,
+      );
+      expect(q).toEqual([
+        { date: '2026-10-12', kind: 'journal-1', xp: 15 },
+        { date: '2026-10-20', kind: 'journal-1', xp: 0 },
+      ]);
+    }
   });
 });

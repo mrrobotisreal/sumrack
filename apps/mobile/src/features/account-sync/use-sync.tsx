@@ -13,7 +13,12 @@ export const OUTBOX_DEBOUNCE_MS = 20_000;
 const POLL_MS = 5_000;
 
 async function outboxHead(): Promise<number> {
-  const rows = await db.all<{ m: number | null }>(sql`SELECT MAX(id) AS m FROM sync_outbox`);
+  // analytics_events never wake a run on their own: each run writes its own
+  // sync_run_* rows, which would otherwise re-trigger a run every 25 s
+  // forever (seen on both phones 2026-10-20). They ride the next real run.
+  const rows = await db.all<{ m: number | null }>(
+    sql`SELECT MAX(id) AS m FROM sync_outbox WHERE tbl <> 'analytics_events'`,
+  );
   return rows[0]?.m ?? 0;
 }
 

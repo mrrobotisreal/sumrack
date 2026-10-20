@@ -130,7 +130,7 @@ export async function linkThisPhone(): Promise<{
   if (!dir.exists) dir.create({ intermediates: true });
   const target = new File(dir, snapshot).uri.replace(/^file:\/\//, '');
   await db.run(sql`VACUUM INTO ${target}`);
-  const { seeded } = await linkDevice(db, uid);
+  const { seeded } = await linkDevice(db, uid, Date.now(), mode);
   useSyncStore.getState().set({ linked: true });
   track('sync_first_link', { mode, rows: seeded, ms: Date.now() - t0 });
   void syncNow('sign-in');

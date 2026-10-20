@@ -19,7 +19,10 @@ export type Trigger = 'launch' | 'foreground' | 'connectivity' | 'outbox' | 'man
 
 export interface OrchestratorDeps {
   db: SumrakDB;
-  client: () => SyncClient & { registerDevice(req: WireDeviceRequest): Promise<unknown> };
+  client: () => SyncClient & {
+    registerDevice(req: WireDeviceRequest): Promise<unknown>;
+    me?(): Promise<{ recordCount: number }>;
+  };
   deviceId: () => Promise<string>;
   deviceInfo: () => WireDeviceRequest extends infer R ? Omit<R & object, 'deviceId'> : never;
   uid: () => string | null;
@@ -115,7 +118,10 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       // else): never keep syncing the old account's bookkeeping — reset it
       // and send this phone's whole history to the account now signed in.
       if ((await readSetting<string>(deps.db, 'sync.linkedUid')) !== uid) {
-        await relinkForAccount(deps.db, uid, deps.now());
+        // The new account may already hold data: merge-mode clocks (never overwrite it).
+        const c = deps.client();
+        const me = c.me ? await c.me() : { recordCount: 1 };
+        await relinkForAccount(deps.db, uid, deps.now(), me.recordCount > 0 ? 'merge' : 'seed');
       }
       await ensureRegistered(uid, deviceId);
       const stats = await runSync(deps.db, deps.client(), deviceId);
