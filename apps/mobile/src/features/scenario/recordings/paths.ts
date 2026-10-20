@@ -12,12 +12,13 @@ import { Directory, File, Paths } from 'expo-file-system';
  * t<task>-<itemId>.wav|ogg`.
  */
 
-export type RecordingsRoot = 'scenario' | 'exam';
+export type RecordingsRoot = 'scenario' | 'exam' | 'practice';
 
 export const RECORDINGS_ROOT_SEGMENTS = ['recordings', 'scenario'] as const;
 export const EXAM_RECORDINGS_ROOT_SEGMENTS = ['recordings', 'exam'] as const;
 
 export function rootSegments(root: RecordingsRoot): readonly string[] {
+  if (root === 'practice') return ['recordings', 'practice'];
   return root === 'exam' ? EXAM_RECORDINGS_ROOT_SEGMENTS : RECORDINGS_ROOT_SEGMENTS;
 }
 

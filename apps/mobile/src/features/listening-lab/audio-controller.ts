@@ -1,5 +1,14 @@
 import type { SegmentAudio } from './source';
 
+export interface LabPlaybackStatus {
+  playing: boolean;
+  isLoaded: boolean;
+  isBuffering: boolean;
+  currentTime: number;
+  didJustFinish: boolean;
+  error?: string | null;
+}
+export type LabPlaybackSource = SegmentAudio & { stopAtFileEnd?: boolean };
 export interface LabPlayer {
   currentTime: number;
   seekTo(seconds: number): Promise<void>;
@@ -7,6 +16,10 @@ export interface LabPlayer {
   pause(): void;
   remove(): void;
   setPlaybackRate(rate: number): void;
+  addListener(
+    event: 'playbackStatusUpdate',
+    listener: (status: LabPlaybackStatus) => void,
+  ): { remove(): void };
 }
 export type AudioPhase = 'idle' | 'loading' | 'playing' | 'recording' | 'processing';
 export interface Take {
@@ -18,6 +31,7 @@ export interface AudioDependencies {
   focus: { acquire(): Promise<void>; release(): void };
   silence(): Promise<void>;
   permission(): Promise<boolean>;
+  isActive?(): boolean;
   recorder: { start(): Promise<void>; stop(): Promise<Take>; cancel(): Promise<void> };
   deleteTake(path: string): void;
   changed(phase: AudioPhase, error: string | null): void;
@@ -33,10 +47,13 @@ export function createLabAudio(deps: AudioDependencies) {
   let timer: ReturnType<typeof setInterval> | null = null;
   let cap: ReturnType<typeof setTimeout> | null = null;
   let take: Take | null = null;
+  let statusSubscription: { remove(): void } | null = null;
   const changed = (phase: AudioPhase, error: string | null = null) => {
     if (!disposed) deps.changed(phase, error);
   };
   const playbackCleanup = () => {
+    statusSubscription?.remove();
+    statusSubscription = null;
     if (timer) clearInterval(timer);
     if (cap) clearTimeout(cap);
     timer = null;
@@ -88,7 +105,7 @@ export function createLabAudio(deps: AudioDependencies) {
     changed('idle', message);
   };
   return {
-    async play(source: SegmentAudio, rate: number, onStarted?: () => void) {
+    async play(source: LabPlaybackSource, rate: number, onStarted?: () => void) {
       if (disposed) return;
       const mine = ++epoch;
       playbackCleanup();
@@ -105,23 +122,68 @@ export function createLabAudio(deps: AudioDependencies) {
           }
           const p = deps.player(source.uri);
           player = p;
-          p.setPlaybackRate(rate);
-          await p.seekTo(source.startMs / 1000);
-          if (mine !== epoch || disposed) return;
-          p.play();
-          changed('playing');
-          onStarted?.();
-          const started = Date.now();
-          timer = setInterval(() => {
-            if (mine !== epoch || disposed) return;
-            if (p.currentTime * 1000 >= source.endMs - 25) {
+          let commanded = false;
+          let counted = false;
+          const requestedAt = Date.now();
+          const isCurrent = () => mine === epoch && !disposed && player === p;
+          statusSubscription = p.addListener('playbackStatusUpdate', (status) => {
+            if (!isCurrent()) return;
+            if (status.error) {
+              playbackCleanup();
+              changed('idle', 'Audio could not play. Retry or check the pack download.');
+              return;
+            }
+            // A play command and a ready event alone do not prove audible progress.
+            // Expo's native playhead must advance before an exposure is recorded.
+            if (
+              commanded &&
+              !counted &&
+              status.isLoaded &&
+              !status.isBuffering &&
+              (status.playing || status.didJustFinish) &&
+              status.currentTime * 1000 > source.startMs
+            ) {
+              counted = true;
+              changed('playing');
+              onStarted?.();
+            }
+            if (commanded && status.didJustFinish) {
               playbackCleanup();
               changed('idle');
-            } else if (Date.now() - started > (source.endMs - source.startMs) / rate + 10_000) {
-              playbackCleanup();
-              changed('idle', 'Audio did not finish. Check the downloaded narration and retry.');
             }
-          }, 30);
+          });
+          // Loading, seek and asynchronous decoder failure all have a bounded recovery.
+          // For bundled/retained files, the decoder owns the stop boundary; JS cannot
+          // spill into a neighbouring sentence even if this timer is delayed.
+          timer = setInterval(
+            () => {
+              if (!isCurrent()) return;
+              try {
+                if (!source.stopAtFileEnd && commanded && p.currentTime * 1000 >= source.endMs) {
+                  playbackCleanup();
+                  changed('idle');
+                } else if (
+                  Date.now() - requestedAt >
+                  (source.endMs - source.startMs) / rate + 10_000
+                ) {
+                  playbackCleanup();
+                  changed(
+                    'idle',
+                    'Audio did not finish. Check the downloaded narration and retry.',
+                  );
+                }
+              } catch {
+                playbackCleanup();
+                changed('idle', 'Audio was interrupted. Try again.');
+              }
+            },
+            source.stopAtFileEnd ? 250 : 30,
+          );
+          p.setPlaybackRate(rate);
+          await p.seekTo(source.startMs / 1000);
+          if (!isCurrent()) return;
+          commanded = true;
+          p.play();
         } catch {
           if (mine === epoch) await fail('Audio could not play. Retry or check the pack download.');
         }
@@ -145,6 +207,11 @@ export function createLabAudio(deps: AudioDependencies) {
             return;
           }
           if (mine !== epoch || disposed) return;
+          // The permission activity may finish after the user has left the app.
+          if (deps.isActive?.() === false) {
+            changed('idle', 'Return to this screen and tap Record a take to begin.');
+            return;
+          }
           await deps.silence();
           await deps.focus.acquire();
           if (mine !== epoch || disposed) {

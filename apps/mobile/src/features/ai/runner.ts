@@ -17,6 +17,7 @@ import { USAGE_EXTRAS, type ResolvedRun } from './run-profile';
  * decision 4 / design decision 6 — the five legacy features are untouched).
  */
 export type AiFeature =
+  | 'retelling-feedback'
   | 'journal-feedback'
   | 'enrichment'
   | 'explain'

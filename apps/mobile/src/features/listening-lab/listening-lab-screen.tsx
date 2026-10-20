@@ -64,9 +64,12 @@ export function ListeningLabScreen() {
           Saved attempts
         </Text>
         <Text variant="caption" className="mb-3 mt-2">
-          Completed text and results are included in your app backup and sync. Temporary recordings
-          are not retained.
+          Completed text and results are included in your app backup and sync. Use Keep recording
+          during practice to retain original audio in a separate encrypted media bundle.
         </Text>
+        <LabButton onPress={() => router.push('/practice-recordings')}>
+          Open kept practice recordings
+        </LabButton>
         {history.isPending ? (
           <ActivityIndicator color={tokens.accent} />
         ) : history.isError ? (

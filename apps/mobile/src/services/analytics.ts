@@ -8,6 +8,9 @@ import type { TorflLevel } from '@/features/torfl/level-profile';
  * progress engine / dashboard in T18+).
  */
 export type AnalyticsEvent =
+  // T112 retained practice media and versioned feedback (ids/counts only).
+  | 'practice_recording_action'
+  | 'retelling_feedback_action'
   // M30 learning pilots: identifiers, counts, provenance and durations only.
   | 'daily_plan_unavailable'
   | 'learning_evidence_unavailable'

@@ -1,6 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 import { Text } from '@/components/ui/text';
 import { safeBack } from '@/lib/safe-back';
@@ -37,6 +37,7 @@ export function LabHeader({ title }: { title: string }) {
     insets = useSafeAreaInsets();
   return (
     <View className="border-b border-border px-5 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <Stack.Screen options={{ headerShown: false }} />
       <Pressable
         onPress={() => safeBack(router)}
         accessibilityRole="button"

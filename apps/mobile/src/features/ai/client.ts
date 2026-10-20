@@ -19,6 +19,8 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   messages: ChatMessage[];
+  /** Optional user cancellation; no automatic resend is implied. */
+  signal?: AbortSignal;
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
@@ -100,6 +102,7 @@ function logRequestBody(body: Record<string, unknown>): void {
 }
 
 export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<ChatResult> {
+  if (req.signal?.aborted) throw new AiError('timeout', 'The request was cancelled.');
   const key = await deps.getApiKey();
   if (!key) throw new AiError('no-key', 'no OpenRouter key configured');
   const model = req.model ?? (await deps.getModel());
@@ -107,6 +110,9 @@ export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<
   logRequestBody(body);
 
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (req.signal?.aborted) throw new AiError('timeout', 'The request was cancelled.');
+  req.signal?.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => controller.abort(), req.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const fetchFn = deps.fetchFn ?? fetch;
 
@@ -125,6 +131,7 @@ export async function chatCompletion(req: ChatRequest, deps: ChatDeps): Promise<
     throw toAiError(err);
   } finally {
     clearTimeout(timer);
+    req.signal?.removeEventListener('abort', cancel);
   }
 
   if (!response.ok) {

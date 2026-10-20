@@ -9,6 +9,7 @@ import { catalog, LISTENING_MODE, type ListeningSegment } from './catalog';
 import { exposureCount } from './attempt';
 import { createDraftStore, newDraft } from './draft';
 import { resolveSegment } from './source';
+import { bundledSegmentAudio } from './bundled-audio';
 
 export const draftStore = createDraftStore(AsyncStorage);
 export const historyKey = ['listening-lab-history'];
@@ -57,7 +58,14 @@ export function useLabSession(segment: ListeningSegment) {
               exposureCount(rows, segment.id),
               false,
             );
-      return { loaded, draft };
+      // Preserve source eligibility, then play a bounded native file. A JS stall
+      // can no longer run the original track into the neighbouring sentence.
+      return {
+        loaded: loaded.available
+          ? { available: true as const, audio: await bundledSegmentAudio(segment.id) }
+          : loaded,
+        draft,
+      };
     },
   });
 }

@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { useFocusEffect } from 'expo-router';
 import { AppState } from 'react-native';
-import { createAudioPlayer, requestRecordingPermissionsAsync } from 'expo-audio';
+import {
+  createAudioPlayer,
+  getRecordingPermissionsAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 
@@ -14,31 +18,44 @@ import { pauseAll } from '@/features/audio/arbiter';
 import { useQuietStudy } from '@/features/ambient-audio/activity';
 import { createSliceFocus } from '@/services/learning-focus';
 import { getSpeechService } from '@/services/speech';
+import { practiceAudioOwner } from '@/features/practice-retelling/audio-owner';
 
 import { createLabAudio, type AudioPhase, type Take } from './audio-controller';
+import { createRecordingPermissionGate } from './recording-permission';
+import { copyCapturedTake } from './capture-take';
 
 export function useLabAudio() {
   useQuietStudy();
   const [phase, setPhase] = React.useState<AudioPhase>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const [take, setTake] = React.useState<Take | null>(null);
-  const [controller] = React.useState(() =>
-    createLabAudio({
+  const [owner] = React.useState(() => Symbol('practice-audio'));
+  const [permission] = React.useState(() =>
+    createRecordingPermissionGate({
+      read: getRecordingPermissionsAsync,
+      request: requestRecordingPermissionsAsync,
+    }),
+  );
+  const [controller] = React.useState(() => {
+    const audio: ReturnType<typeof createLabAudio> = createLabAudio({
       player: (uri) => createAudioPlayer({ uri }, { updateInterval: 100 }),
       focus: createSliceFocus('listening-lab'),
-      silence: () => {
+      silence: async () => {
+        await practiceAudioOwner.claim(owner, () => audio.stop());
         pauseAll();
-        return getSpeechService().stop();
+        await getSpeechService().stop();
       },
-      permission: async () => (await requestRecordingPermissionsAsync()).granted,
+      permission: permission.ensure,
+      isActive: () => AppState.currentState === 'active',
       recorder: {
         start: startAttemptRecording,
         cancel: cancelAttemptRecording,
         stop: async () => {
           const result = await stopAttemptRecording();
           const file = new File(Paths.cache, `listening-lab-${Crypto.randomUUID()}.wav`);
-          new File(result.path).copy(file);
-          return { path: file.uri, durationMs: result.durationMs };
+          return copyCapturedTake(result, file.uri, (sourceUri, destinationUri) =>
+            new File(sourceUri).copy(new File(destinationUri)),
+          );
         },
       },
       deleteTake: (path) => {
@@ -53,29 +70,32 @@ export function useLabAudio() {
         setPhase(next);
         setError(message);
       },
-    }),
-  );
+    });
+    return audio;
+  });
   useFocusEffect(
     React.useCallback(
       () => () => {
+        practiceAudioOwner.release(owner);
         void controller
           .clearTake()
           .then(() => setTake(null))
           .catch(() => {});
       },
-      [controller],
+      [controller, owner],
     ),
   );
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state !== 'active')
-        void controller.stop().catch(() => setError('Audio was interrupted. Your text is kept.'));
+      void permission
+        .onAppStateChange(state, controller.stop)
+        .catch(() => setError('Audio was interrupted. Your text is kept.'));
     });
     return () => {
       subscription.remove();
       void controller.dispose().catch(() => {});
     };
-  }, [controller]);
+  }, [controller, permission]);
   return {
     phase,
     error,
@@ -89,7 +109,10 @@ export function useLabAudio() {
     },
     playTake: () =>
       take
-        ? controller.play({ uri: take.path, startMs: 0, endMs: take.durationMs }, 1)
+        ? controller.play(
+            { uri: take.path, startMs: 0, endMs: take.durationMs, stopAtFileEnd: true },
+            1,
+          )
         : Promise.resolve(),
   };
 }

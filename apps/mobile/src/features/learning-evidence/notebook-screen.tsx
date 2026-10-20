@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
+import { RetellingNotebookSection } from '@/features/practice-retelling/ui';
 import { QueryError } from '@/components/query-error';
 import { repos } from '@/db';
 import { newId } from '@/db/ids';
@@ -143,8 +144,9 @@ export function NotebookScreen({ skill }: { skill?: PilotSkill }) {
       <Stack.Screen options={{ title: skill ? SKILLS[skill].title : 'Mistake notebook' }} />
       <Text variant="muted">
         Hotel and exam evidence, followed by short everyday practice. This pilot covers three A1
-        distinctions; journal and spoken corrections are not yet included.
+        distinctions. Retelling reflections below remain separate from established mistakes.
       </Text>
+      {!skill && <RetellingNotebookSection />}
       {!skill ? (
         <>
           {summaries.map((s) => (
@@ -158,7 +160,7 @@ export function NotebookScreen({ skill }: { skill?: PilotSkill }) {
               <Text variant="title">{SKILLS[s.skill].title}</Text>
               <Text>
                 {s.practiced
-                  ? `${s.missedItems} distinct missed items · ${s.practiced} practiced`
+                  ? `${s.missedItems} distinct missed item${s.missedItems === 1 ? '' : 's'} · ${s.practiced} practiced`
                   : 'No mapped evidence yet. Start with an everyday example.'}
               </Text>
               <Text variant="caption">
@@ -176,8 +178,8 @@ export function NotebookScreen({ skill }: { skill?: PilotSkill }) {
         <>
           <Text variant="heading">{SKILLS[skill].title}</Text>
           <Text>
-            {summary?.missedItems ?? 0} distinct missed items · {summary?.freshUnaided ?? 0} fresh
-            unaided successes
+            {summary?.missedItems ?? 0} distinct missed item{summary?.missedItems === 1 ? '' : 's'}{' '}
+            · {summary?.freshUnaided ?? 0} fresh unaided successes
           </Text>
           <Text variant="caption">
             {summary?.assistedSuccess ?? 0} successes with help · {summary?.unknownSuccess ?? 0}{' '}

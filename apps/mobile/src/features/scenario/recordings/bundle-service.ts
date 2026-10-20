@@ -3,6 +3,9 @@ import * as Crypto from 'expo-crypto';
 import { File } from 'expo-file-system';
 
 import { repos } from '@/db';
+import { practiceStore } from '@/features/practice-retelling/runtime-store';
+import { validatePracticeBundle } from '@/features/practice-retelling/media-core';
+import { keptMedia, mediaBundleState } from '@/features/practice-retelling/model';
 import { isOnline } from '@/features/ai/connectivity';
 import { getBackupKey, getBackupPrefs, getKdfConfig } from '@/features/backup/config';
 import {
@@ -34,6 +37,7 @@ import {
   attemptStem,
   ensureRunDir,
   listRunFiles,
+  listRunDirs,
   runDir,
   type RecordingsRoot,
 } from './paths';
@@ -67,7 +71,7 @@ export type BundleState = 'pending' | 'uploaded' | 'failed';
  * attempt id LOWERCASED for the syncd `MediaFileRe`), how to read / write
  * its state and which files to pack.
  */
-export type BundleSourceKind = 'scenario' | 'exam';
+export type BundleSourceKind = 'scenario' | 'exam' | 'practice';
 
 interface BundleSource {
   kind: BundleSourceKind;
@@ -82,6 +86,8 @@ interface BundleSource {
   fileNames: () => Promise<string[]>;
   /** After a download: point the rows at the restored files. */
   restored: (files: readonly BundleInput[]) => Promise<void>;
+  validateFiles?: (files: readonly BundleInput[]) => Promise<void>;
+  validateUpload?: (files: readonly BundleInput[]) => Promise<void>;
 }
 
 function scenarioSource(runId: string): BundleSource {
@@ -150,6 +156,65 @@ function examSource(attemptId: string): BundleSource {
       );
     },
   };
+}
+
+/** T112: an explicit kept take is an immutable, independently restorable bundle. */
+function practiceSource(mediaId: string): BundleSource {
+  const record = async () =>
+    keptMedia(await practiceStore.list()).find((m) => m.mediaId === mediaId);
+  return {
+    kind: 'practice',
+    id: mediaId,
+    root: 'practice',
+    name: mediaFileName(mediaId),
+    ready: async () => {
+      if (!(await record())) return null;
+      const state = mediaBundleState(await practiceStore.list(), mediaId);
+      return {
+        state: state === 'restored' ? 'uploaded' : state,
+        mediaLocal: attemptFile(mediaId, 'original.wav', 'practice').exists,
+      };
+    },
+    setState: async (state) => {
+      if (!(await record())) return;
+      await practiceStore.append({
+        v: 1,
+        id: Crypto.randomUUID(),
+        kind: 'media-bundle',
+        at: Date.now(),
+        mediaId,
+        state,
+      });
+    },
+    fileNames: async () => ((await record()) ? ['original.wav'] : []),
+    validateUpload: async (files) => validatePracticeBundle(await record(), files, 0),
+    validateFiles: async (files) => {
+      const expected = await record();
+      const used = listRunDirs('practice').reduce((n, d) => n + d.bytes, 0);
+      validatePracticeBundle(expected, files, used);
+    },
+    restored: async () => {
+      if (!(await record())) {
+        const dir = runDir(mediaId, 'practice');
+        if (dir.exists) dir.delete();
+        return;
+      }
+      await practiceStore.append({
+        v: 1,
+        id: Crypto.randomUUID(),
+        kind: 'media-bundle',
+        at: Date.now(),
+        mediaId,
+        state: 'restored',
+      });
+    },
+  };
+}
+export function bundlePracticeRecording(mediaId: string) {
+  return bundleSource(practiceSource(mediaId));
+}
+export function downloadPracticeRecording(mediaId: string) {
+  return downloadSource(practiceSource(mediaId), mediaFileName(mediaId));
 }
 
 /** Bundles are only worth it while a target exists; without one, recordings stay local (§12). */
@@ -239,6 +304,7 @@ async function bundleSource(source: BundleSource): Promise<BundleState | null> {
     await transcodeQueue().whenIdle(source.id);
     const { files, wavCount } = await readSourceFiles(source);
     if (files.length === 0) return null;
+    await source.validateUpload?.(files);
     if (wavCount > 0 && !warnedWav) {
       warnedWav = true;
       console.warn('[media-bundle] bundling WAV recordings (no Opus encoder) — ~10× larger');
@@ -383,6 +449,8 @@ export function pumpBundles(): Promise<void> {
         if (examIds.size >= 25) break;
       }
       for (const id of examIds) await bundleExamAttempt(id);
+      for (const take of keptMedia(await practiceStore.list()))
+        await bundlePracticeRecording(take.mediaId);
     } catch (err) {
       logError('manual', err);
     }
@@ -465,6 +533,7 @@ async function downloadSource(source: BundleSource, name: string): Promise<Downl
     throw new BackupError('invalid-envelope', 'bundle belongs to a different run');
   }
 
+  await source.validateFiles?.(files);
   ensureRunDir(source.id, source.root);
   let bytes = 0;
   for (const f of files) {

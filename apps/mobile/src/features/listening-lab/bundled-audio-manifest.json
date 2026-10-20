@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "catalogVersion": 1,
+  "method": "opus-packet-copy",
+  "segments": [
+    {
+      "id": "lab-01",
+      "asset": "assets/listening-lab/lab-01.opus",
+      "durationMs": 3553.5,
+      "requestedEndMs": 3540,
+      "packetTailMs": 13.5,
+      "bytes": 14802,
+      "sha256": "9b0d62f860a09128babaf23fe5558614c04bf284b8fe607396c13315585f381b",
+      "sourceSha256": "36e77c4fea29c26ce8c47b81acce36189e52ed7aeb1b380a9914f8374579f171",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-02",
+      "asset": "assets/listening-lab/lab-02.opus",
+      "durationMs": 3913.5,
+      "requestedEndMs": 3907,
+      "packetTailMs": 6.5,
+      "bytes": 16185,
+      "sha256": "d207ad8093bc3e3bfbd1387e14dd88eb21de466df2a391710de6f2326ad9bfc5",
+      "sourceSha256": "c6e720f5a31c19bf998107464f2640cfd1c3ff46d2b8c042dd062fc588679b71",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-03",
+      "asset": "assets/listening-lab/lab-03.opus",
+      "durationMs": 2353.5,
+      "requestedEndMs": 2340,
+      "packetTailMs": 13.5,
+      "bytes": 9476,
+      "sha256": "64670a19f5a1c5df18084948308d9222e2fe5a43ba0bf2349b81d39a2905fde2",
+      "sourceSha256": "2ae7109eb4dda7e231307343e269059f55307d999b6d9a3916db93ca366a06a2",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-04",
+      "asset": "assets/listening-lab/lab-04.opus",
+      "durationMs": 3753.5,
+      "requestedEndMs": 3740,
+      "packetTailMs": 13.5,
+      "bytes": 15170,
+      "sha256": "ebc61e2dffdfa1f99bd8e3e4a00c3dcf3e9fb11356739085172ebb01f8aaf5c1",
+      "sourceSha256": "f8c81f19b3df4d0cef79aaed041c33f81a6c72e448ad8ba406a9505d2f7fff15",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-05",
+      "asset": "assets/listening-lab/lab-05.opus",
+      "durationMs": 5233.5,
+      "requestedEndMs": 5230,
+      "packetTailMs": 3.5,
+      "bytes": 21992,
+      "sha256": "dcaca43aedd19841b6864116c01bdba7e59e89e97a6689cc10f7570c0e32960a",
+      "sourceSha256": "8b82b7327b8c572fe7c60e0d4eabd33532ce5c21e4ca3b8f9f42f0b3904b3c26",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-06",
+      "asset": "assets/listening-lab/lab-06.opus",
+      "durationMs": 2673.5,
+      "requestedEndMs": 2670,
+      "packetTailMs": 3.5,
+      "bytes": 11179,
+      "sha256": "15572a0c6e8cdf62d6d81db37911098f9dc62ec070aa447d05ced0aa4cbd2c44",
+      "sourceSha256": "84afb3a66a68804435679a665de0fa309e1c895b81fd566b27fcdaf5ca971ff5",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-07",
+      "asset": "assets/listening-lab/lab-07.opus",
+      "durationMs": 3153.5,
+      "requestedEndMs": 3140,
+      "packetTailMs": 13.5,
+      "bytes": 12984,
+      "sha256": "61b039e9eb2e158ea360f3f42e61c8523c9c17284678810e7cc40f211d824ee0",
+      "sourceSha256": "ec2e17664f1d65899e3e6a0edb761e8cdc3df5a37204f29a80a5ca7abc71664a",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-08",
+      "asset": "assets/listening-lab/lab-08.opus",
+      "durationMs": 2673.5,
+      "requestedEndMs": 2667,
+      "packetTailMs": 6.5,
+      "bytes": 11172,
+      "sha256": "bfd09d4aa4d730b6a713560fde6c0c3915c9bc895ba4727edfd8f47768a47e30",
+      "sourceSha256": "1ccde402d2057bf883b96ab7ced8bf38047cc8011df4aa33f1528f7abf972592",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-09",
+      "asset": "assets/listening-lab/lab-09.opus",
+      "durationMs": 3313.5,
+      "requestedEndMs": 3300,
+      "packetTailMs": 13.5,
+      "bytes": 13705,
+      "sha256": "048c2c69d554b784a53fe812e7c284c1be846e565ede1d9888fadca5412fa094",
+      "sourceSha256": "7c57f0079be2b6d55daaa981ba62ba7abc34b911754e18e760b0fcd9b1cd16e2",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-10",
+      "asset": "assets/listening-lab/lab-10.opus",
+      "durationMs": 3473.5,
+      "requestedEndMs": 3460,
+      "packetTailMs": 13.5,
+      "bytes": 14270,
+      "sha256": "3ca13f7f0bc21eb7523375c60c8d7d095e5b8a58d628152d2509333d88bb7483",
+      "sourceSha256": "60bf588d9eccba54828a527430b7fe0267ce32c61ad167dfbb2840e6b78c4fbf",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-11",
+      "asset": "assets/listening-lab/lab-11.opus",
+      "durationMs": 3933.5,
+      "requestedEndMs": 3923,
+      "packetTailMs": 10.5,
+      "bytes": 16634,
+      "sha256": "4448dba909fc619ea67eb2d4adaa284c1e0ce5849db7fcf6934afa19e7db1047",
+      "sourceSha256": "2db070102a41372aaacedfa3f4ea961dd500c8224b115844684d3196a633d904",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-12",
+      "asset": "assets/listening-lab/lab-12.opus",
+      "durationMs": 2653.5,
+      "requestedEndMs": 2643,
+      "packetTailMs": 10.5,
+      "bytes": 11333,
+      "sha256": "3eeb68c39d54bd8ebb5395eeb5c2538da4f31377a2ebbfbf71ba1173d10f6c06",
+      "sourceSha256": "c3d23a6d2ab67cd5175b6d0c136cc5cdaa715b6cda32d86611a6cce79abd6c12",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-13",
+      "asset": "assets/listening-lab/lab-13.opus",
+      "durationMs": 3473.5,
+      "requestedEndMs": 3460,
+      "packetTailMs": 13.5,
+      "bytes": 14490,
+      "sha256": "b4ecf91837cc9332ee3b1f0f790f7be6dfe0042631023ad6dbee1a2bcefed86f",
+      "sourceSha256": "4a87c462a67e1d965f69b609f12dba37b2dc52a4dcecf3ae27dc9090dde127a3",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-14",
+      "asset": "assets/listening-lab/lab-14.opus",
+      "durationMs": 3373.5,
+      "requestedEndMs": 3363,
+      "packetTailMs": 10.5,
+      "bytes": 14271,
+      "sha256": "b6bbdb5b513d69760332930b824315d4d6162a555263f86cdf40c749d3c56e2e",
+      "sourceSha256": "405eb0ad59b932e8064aa5047e37e8730ee13d9a9a3f6d5371b53231c38c7e37",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-15",
+      "asset": "assets/listening-lab/lab-15.opus",
+      "durationMs": 3453.5,
+      "requestedEndMs": 3443,
+      "packetTailMs": 10.5,
+      "bytes": 14549,
+      "sha256": "7a340b9ad42255d29ecb5577fb39841ad5a5e7ac1b4f5a4c91625db521b4cfac",
+      "sourceSha256": "f0b31564e162bd0c0da7cafec42cffcf092360a314c3db25e994d0fe3d34108f",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-16",
+      "asset": "assets/listening-lab/lab-16.opus",
+      "durationMs": 2813.5,
+      "requestedEndMs": 2803,
+      "packetTailMs": 10.5,
+      "bytes": 11843,
+      "sha256": "8ea3c4a7ea3a8ce41b3f5edcbe60e630132dba590d54d2843c4d50dbd2da2ae2",
+      "sourceSha256": "bcd062befad9b96fc0d4ea6b036db22428e1e4f9d7eb46e98dfe3d8b995c8ac3",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-17",
+      "asset": "assets/listening-lab/lab-17.opus",
+      "durationMs": 3533.5,
+      "requestedEndMs": 3523,
+      "packetTailMs": 10.5,
+      "bytes": 14888,
+      "sha256": "3080993ccf2121e8608b001438badfd8a94018d2699ad16f95e380bdf2549957",
+      "sourceSha256": "8997e0244ed09cfed4e8bcfa8c23d227a29ec539db1e3035fc1fed51fc7a686c",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-18",
+      "asset": "assets/listening-lab/lab-18.opus",
+      "durationMs": 3653.5,
+      "requestedEndMs": 3643,
+      "packetTailMs": 10.5,
+      "bytes": 15292,
+      "sha256": "4c67f54a59b9c1adc50e761eb2c619ef58fe6c4f677c2ae12f08d7abcbdcc59d",
+      "sourceSha256": "f2ad3be62c9d4a76b84045e028339e105d47fcc16baf28da787ec5183c4fd607",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-19",
+      "asset": "assets/listening-lab/lab-19.opus",
+      "durationMs": 3453.5,
+      "requestedEndMs": 3443,
+      "packetTailMs": 10.5,
+      "bytes": 14064,
+      "sha256": "41031aa010af69735a34b3190cd07e667f9d022ca142c7369861feb2ebcabe59",
+      "sourceSha256": "34f78fda378ada86a8685771cb8431ca5fbdd4ae2c4d60388fa2ac92f2a53dbf",
+      "pcmEqualsSourcePrefix": true
+    },
+    {
+      "id": "lab-20",
+      "asset": "assets/listening-lab/lab-20.opus",
+      "durationMs": 2973.5,
+      "requestedEndMs": 2963,
+      "packetTailMs": 10.5,
+      "bytes": 12647,
+      "sha256": "286d57a84801b9e7574dcfcfeafa9fc04f368eea676398d162ff55e477838856",
+      "sourceSha256": "8b90f59d82609551ea48ea46024edcce0822286063d6ab13afbf30d34b8ac418",
+      "pcmEqualsSourcePrefix": true
+    }
+  ]
+}

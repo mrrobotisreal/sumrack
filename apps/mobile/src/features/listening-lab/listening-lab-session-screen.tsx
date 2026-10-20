@@ -24,6 +24,7 @@ import { draftStore, historyKey, useLabSession } from './lab-hooks';
 import { LabButton, LabHeader } from './lab-ui';
 import type { LoadedSegment } from './source';
 import { useLabAudio } from './use-lab-audio';
+import { KeepTakeButton, PracticeMediaShelf } from '@/features/practice-retelling/ui';
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: 'listen', label: 'Listen' },
@@ -274,7 +275,7 @@ function LabSession({
             Recording…
           </Text>
           <LabButton primary onPress={() => void finishRecording()}>
-            Stop and keep this take
+            Stop recording
           </LabButton>
           <LabButton onPress={() => void audio.stop()}>Cancel recording</LabButton>
         </>
@@ -289,10 +290,34 @@ function LabSession({
           onPress={() => void audio.playTake()}
         >{`Play my take · ${Math.ceil(audio.take.durationMs / 1000)} sec`}</LabButton>
       ) : null}
+      {audio.take && audio.phase !== 'recording' && (
+        <KeepTakeButton
+          key={audio.take.path}
+          take={audio.take}
+          context={{
+            kind: 'listening-lab',
+            contextId: segment.id,
+            attemptId: draft.id,
+            stage,
+            helped: attempt.assistance.help > 0 || attempt.assistance.transcriptSeen,
+            repeated: attempt.priorExposures > 0,
+          }}
+        />
+      )}
       <Text variant="caption">
-        Takes are temporary and deleted when you leave. They are not backed up or synced. Type your
-        retelling below to keep your words.
+        Unkept takes are temporary and deleted when you leave. Keep stores the original audio; typed
+        words remain part of your completed attempt.
       </Text>
+      <PracticeMediaShelf
+        context={{
+          kind: 'listening-lab',
+          contextId: segment.id,
+          attemptId: draft.id,
+          stage,
+          helped: attempt.assistance.help > 0 || attempt.assistance.transcriptSeen,
+          repeated: attempt.priorExposures > 0,
+        }}
+      />
     </View>
   );
   return (

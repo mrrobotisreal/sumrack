@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { onConnectivityRegained } from './connectivity';
 import { pumpImportAnnotateQueue } from './import-annotate';
 import { pumpFeedbackQueue } from './journal-feedback';
+import { pumpRetellingFeedback } from '@/features/practice-retelling/feedback-service';
 import { pumpGradingQueue } from '@/features/torfl/grading/queue';
 import { pumpWordFormsBatch } from '@/features/word-forms/batch-service';
 
@@ -19,6 +20,7 @@ export function useAiQueueWorker() {
   React.useEffect(() => {
     const pumpAll = () => {
       void pumpFeedbackQueue();
+      void pumpRetellingFeedback().catch(() => {});
       void pumpImportAnnotateQueue();
       void pumpWordFormsBatch();
       void pumpGradingQueue();

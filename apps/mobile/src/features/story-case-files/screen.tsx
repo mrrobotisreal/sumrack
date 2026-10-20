@@ -28,6 +28,7 @@ import {
 } from './model';
 import { createCaseDraftStore, saveCaseAttempt } from './persistence';
 import { RetellRecording } from './retell-recording';
+import { PracticeMediaShelf, RetellingFeedbackPanel } from '@/features/practice-retelling/ui';
 
 function Action({
   children,
@@ -333,7 +334,8 @@ function CaseWork({
         <View className="gap-3">
           <Text>
             Five questions and a short retelling. Your typed answer is saved offline. This is
-            authored practice and self-review, with no AI or pronunciation score.
+            authored practice and self-review. Optional text feedback is available after saving; it
+            does not assess pronunciation.
           </Text>
           <Action primary onPress={() => start('story')}>
             Start the case file
@@ -497,8 +499,31 @@ function CaseWork({
                 <Text className="flex-1">{item}</Text>
               </Pressable>
             ))}
-            {!review && <RetellRecording caseId={file.id} stage={current.stage} />}
+            {!review && (
+              <RetellRecording
+                key={current.id}
+                context={{
+                  kind: 'case-file',
+                  contextId: file.id,
+                  attemptId: current.id,
+                  stage: current.stage,
+                  helped: current.helped,
+                  repeated: attempts.some((a) => a.stage === current.stage),
+                }}
+              />
+            )}
           </View>
+          <PracticeMediaShelf
+            context={{
+              kind: 'case-file',
+              contextId: file.id,
+              attemptId: current.id,
+              stage: current.stage,
+              helped: current.helped,
+              repeated: review?.exposure === 'repeated',
+            }}
+          />
+          {review && <RetellingFeedbackPanel attempt={review} />}
           {review ? (
             <View className="gap-3">
               <Text variant="caption">
