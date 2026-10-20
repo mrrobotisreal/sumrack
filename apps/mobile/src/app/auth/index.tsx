@@ -50,6 +50,8 @@ export default function AuthScreen() {
   const [error, setError] = React.useState<ReturnType<typeof authErrorCopy> | null>(null);
   const [focused, setFocused] = React.useState(true);
 
+  const scrollRef = React.useRef<ScrollView>(null);
+  const formY = React.useRef(0);
   const passwordRef = React.useRef<TextInput>(null);
   const confirmRef = React.useRef<TextInput>(null);
 
@@ -59,6 +61,15 @@ export default function AuthScreen() {
       return () => setFocused(false);
     }, []),
   );
+
+  // Keep the field being typed in on screen: once the keyboard has shrunk
+  // the view, scroll so the form (fields + button) sits just under the top.
+  const revealForm = () => {
+    setTimeout(
+      () => scrollRef.current?.scrollTo({ y: Math.max(0, formY.current - 12), animated: true }),
+      120,
+    );
+  };
 
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
@@ -134,12 +145,17 @@ export default function AuthScreen() {
   return (
     <View className="flex-1 bg-bg">
       <FogBackdrop paused={!focused} />
+      {/* Edge-to-edge Android ignores adjustResize, so the view must shrink
+          itself ('height') — otherwise the keyboard hides what's being typed. */}
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{
             paddingTop: insets.top + 28,
             paddingBottom: insets.bottom + 28,
@@ -207,8 +223,9 @@ export default function AuthScreen() {
             ))}
           </View>
 
-          <View className="mt-5 gap-3">
+          <View className="mt-5 gap-3" onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
             <TextInput
+              onFocus={revealForm}
               value={email}
               onChangeText={setEmail}
               placeholder="Email"
@@ -226,6 +243,7 @@ export default function AuthScreen() {
             <View className="justify-center">
               <TextInput
                 ref={passwordRef}
+                onFocus={revealForm}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={mode === 'sign_up' ? 'Пароль (минимум 8 символов)' : 'Пароль'}
@@ -260,6 +278,7 @@ export default function AuthScreen() {
               <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(180)}>
                 <TextInput
                   ref={confirmRef}
+                  onFocus={revealForm}
                   value={confirm}
                   onChangeText={setConfirm}
                   placeholder="Повторите пароль"
