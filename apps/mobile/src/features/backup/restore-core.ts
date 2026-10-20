@@ -228,7 +228,7 @@ async function resetSyncAfterRestore(db: SumrakDB, deviceIdJson: string | null):
   await db.run(sql`DELETE FROM sync_dirty_cards`);
   // Backups can carry sync.* rows from the source phone; this phone's are its own.
   await db.run(sql`DELETE FROM settings WHERE key IN
-    ('sync.deviceId', 'sync.cursor', 'sync.lastSyncAt', 'sync.serverUrl', 'sync.linked', 'sync.registeredUid')`);
+    ('sync.deviceId', 'sync.cursor', 'sync.lastSyncAt', 'sync.serverUrl', 'sync.linked', 'sync.linkedUid', 'sync.registeredUid')`);
   const now = Date.now();
   if (deviceIdJson != null) {
     await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('sync.deviceId', ${deviceIdJson}, ${now})`);

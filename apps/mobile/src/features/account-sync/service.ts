@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm';
 import Constants from 'expo-constants';
+import { Directory, File, Paths } from 'expo-file-system';
 
 import { db, repos } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
@@ -12,6 +14,7 @@ import { track } from '@/services/analytics';
 
 import { HttpSyncClient, isValidBaseUrl, normalizeBaseUrl } from './client';
 import { readSetting, writeSetting } from './engine';
+import { linkDevice, linkModeFor, type LinkMode } from './first-link';
 import { createOrchestrator, type Trigger } from './orchestrator';
 import { useSyncStore } from './store';
 import type { WireMe } from './wire';
@@ -102,4 +105,34 @@ export async function saveServerUrl(candidate: string): Promise<void> {
 
 export async function isLinked(): Promise<boolean> {
   return (await readSetting<boolean>(db, SETTING_KEYS.syncLinked)) === true;
+}
+
+/**
+ * T105 «Связать этот телефон»: the safety copy, then link + the first run.
+ * The copy is a plain SQLite snapshot (`VACUUM INTO`) in the app's own
+ * documents dir — no passphrase needed, restorable by adb — taken BEFORE a
+ * single row leaves the phone. Then the outbox is seeded with every synced
+ * row (first-link.ts) and a normal run pushes it and merges the account's
+ * rows in. Returns the snapshot name and the seeded row count.
+ */
+export async function linkThisPhone(): Promise<{
+  snapshot: string;
+  seeded: number;
+  mode: LinkMode;
+}> {
+  const uid = useAccount.getState().user?.uid;
+  if (!uid) throw new Error('Сначала войдите · sign in first');
+  const me = await client().me();
+  const mode = linkModeFor(me);
+  const t0 = Date.now();
+  const snapshot = `sumrak-prelink-${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
+  const dir = new Directory(Paths.document, 'prelink');
+  if (!dir.exists) dir.create({ intermediates: true });
+  const target = new File(dir, snapshot).uri.replace(/^file:\/\//, '');
+  await db.run(sql`VACUUM INTO ${target}`);
+  const { seeded } = await linkDevice(db, uid);
+  useSyncStore.getState().set({ linked: true });
+  track('sync_first_link', { mode, rows: seeded, ms: Date.now() - t0 });
+  void syncNow('sign-in');
+  return { snapshot, seeded, mode };
 }

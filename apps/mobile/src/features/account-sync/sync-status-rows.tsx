@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { DEFAULT_SYNC_URL } from './config';
-import { checkServer, saveServerUrl, syncNow } from './service';
+import { checkServer, linkThisPhone, saveServerUrl, syncNow } from './service';
 import { statusLines } from './status-text';
 import { useSyncStore } from './store';
 
@@ -79,6 +79,7 @@ export function SyncStatusRows() {
           <Text variant="caption">{line.en}</Text>
         </View>
       </View>
+      {!s.linked ? <LinkRow /> : null}
       {s.linked ? (
         <Pressable
           onPress={() => void syncNow('manual')}
@@ -107,7 +108,11 @@ export function SyncStatusRows() {
               {s.serverUrl || DEFAULT_SYNC_URL}
             </Text>
           </View>
-          <Ionicons name={editing ? 'chevron-up' : 'chevron-down'} size={16} color={tokens.textMuted} />
+          <Ionicons
+            name={editing ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={tokens.textMuted}
+          />
         </Pressable>
         {editing ? (
           <View className="mt-3">
@@ -136,11 +141,86 @@ export function SyncStatusRows() {
           </View>
         ) : null}
         {check.msg ? (
-          <Text variant="caption" className="mt-2" style={{ color: check.ok ? tokens.accent : tokens.danger }}>
+          <Text
+            variant="caption"
+            className="mt-2"
+            style={{ color: check.ok ? tokens.accent : tokens.danger }}
+          >
             {check.msg}
           </Text>
         ) : null}
       </View>
     </>
+  );
+}
+
+/**
+ * T105: «Связать этот телефон» — the one-time link of a signed-in phone to
+ * the account. Confirms, takes a local safety copy of the whole DB, then
+ * uploads this phone's history and merges in the account's (never deletes
+ * anything on either side).
+ */
+function LinkRow() {
+  const { tokens } = useAppTheme();
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
+
+  const go = () =>
+    Alert.alert(
+      'Связать этот телефон?',
+      'Сначала на телефоне сохранится полная копия данных. Затем весь прогресс этого телефона загрузится в аккаунт и объединится с тем, что уже там есть — ничего не удаляется. · A full local copy is saved first; then this phone’s progress is uploaded and merged with the account. Nothing is deleted.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Связать',
+          onPress: () => {
+            setBusy(true);
+            setMsg(null);
+            linkThisPhone()
+              .then((r) =>
+                setMsg({
+                  ok: true,
+                  text: `Связано · ${r.seeded} записей отправляется (${r.mode === 'merge' ? 'объединение' : 'первый телефон'}). Копия: ${r.snapshot}`,
+                }),
+              )
+              .catch((e: unknown) =>
+                setMsg({ ok: false, text: e instanceof Error ? e.message : 'Ошибка' }),
+              )
+              .finally(() => setBusy(false));
+          },
+        },
+      ],
+    );
+
+  return (
+    <View className="border-t border-border px-4 py-3.5">
+      <Pressable
+        onPress={go}
+        disabled={busy}
+        accessibilityRole="button"
+        className="min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-accent px-4 active:opacity-80"
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="link-outline" size={18} color="#fff" />
+            <Text className="font-ui-bold text-white">Связать этот телефон</Text>
+          </>
+        )}
+      </Pressable>
+      <Text variant="caption" className="mt-2">
+        Link this phone to your account — upload its progress and merge with your other phone.
+      </Text>
+      {msg ? (
+        <Text
+          variant="caption"
+          className="mt-2"
+          style={{ color: msg.ok ? tokens.accent : tokens.danger }}
+        >
+          {msg.text}
+        </Text>
+      ) : null}
+    </View>
   );
 }

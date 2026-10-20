@@ -276,6 +276,7 @@ export type AnalyticsEvent =
   // data. sync_run_started {trigger}, sync_run_completed {pushed, pulled, merged,
   // rebuiltCards, parked, ms, pages}, sync_run_failed {stage: token|push|pull|apply,
   // code, attempt}, sync_conflict {tbl, kind} (first 20 per run).
+  | 'sync_first_link'
   | 'sync_run_started'
   | 'sync_run_completed'
   | 'sync_run_failed'
