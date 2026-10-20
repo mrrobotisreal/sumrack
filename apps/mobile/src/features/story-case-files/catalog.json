@@ -1,0 +1,947 @@
+[
+  {
+    "schemaVersion": 1,
+    "id": "noend-a1-part-1",
+    "revision": 1,
+    "title": "Part 1 · Питер",
+    "packId": "a1-no-end-house-001",
+    "packVersion": 3,
+    "storyId": "part-1",
+    "boundarySentenceId": "nea1p1-s37",
+    "source": [
+      {
+        "id": "nea1p1-s04",
+        "ru": "Мы дружили в колледже."
+      },
+      {
+        "id": "nea1p1-s05",
+        "ru": "Я окончил колледж, а Питер — нет."
+      },
+      {
+        "id": "nea1p1-s06",
+        "ru": "Он бросил колледж через два года."
+      },
+      {
+        "id": "nea1p1-s11",
+        "ru": "Потом Питер пропал."
+      },
+      {
+        "id": "nea1p1-s12",
+        "ru": "Пять недель его не было в чате."
+      },
+      {
+        "id": "nea1p1-s16",
+        "ru": "И вот однажды ночью он появился в чате."
+      },
+      {
+        "id": "nea1p1-s22",
+        "ru": "Всего комнат девять."
+      },
+      {
+        "id": "nea1p1-s27",
+        "ru": "Я подумал: наркотики сделали своё дело."
+      },
+      {
+        "id": "nea1p1-s28",
+        "ru": "Он испугался бумажного призрака или чего-то такого."
+      },
+      {
+        "id": "nea1p1-s32",
+        "ru": "Я не поверил ему."
+      },
+      {
+        "id": "nea1p1-s34",
+        "ru": "Питер долго уговаривал меня не ходить."
+      },
+      {
+        "id": "nea1p1-s37",
+        "ru": "На следующую ночь я поехал туда."
+      }
+    ],
+    "questions": [
+      {
+        "id": "p1-fact",
+        "kind": "fact",
+        "prompt": "Сколько недель Питера не было в чате?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Две недели."
+          },
+          {
+            "id": "2",
+            "text": "Пять недель."
+          },
+          {
+            "id": "3",
+            "text": "Девять недель."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "«Пять недель его не было в чате» gives the duration directly.",
+        "sourceIds": ["nea1p1-s11", "nea1p1-s12"]
+      },
+      {
+        "id": "p1-reference",
+        "kind": "reference",
+        "prompt": "Кто «он» в словах «Он бросил колледж через два года»?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Дэвид."
+          },
+          {
+            "id": "2",
+            "text": "Питер."
+          },
+          {
+            "id": "3",
+            "text": "Другой студент."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The previous sentence contrasts the narrator, who graduated, with Peter. «Он» continues the Peter reference.",
+        "sourceIds": ["nea1p1-s05", "nea1p1-s06"]
+      },
+      {
+        "id": "p1-sequence",
+        "kind": "sequence",
+        "prompt": "Что было сначала, а что потом?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Питер пропал → написал Дэвиду → Дэвид поехал к дому."
+          },
+          {
+            "id": "2",
+            "text": "Дэвид поехал к дому → Питер пропал → написал Дэвиду."
+          },
+          {
+            "id": "3",
+            "text": "Питер написал Дэвиду → Дэвид поехал к дому → Питер пропал."
+          }
+        ],
+        "accepted": ["1"],
+        "explanation": "Peter disappears, returns to the chat, and David goes the following night.",
+        "sourceIds": ["nea1p1-s11", "nea1p1-s16", "nea1p1-s37"]
+      },
+      {
+        "id": "p1-inference",
+        "kind": "inference",
+        "prompt": "Почему Дэвид думает, что Питер испугался?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Дэвид думает, что причина — наркотики."
+          },
+          {
+            "id": "2",
+            "text": "Дэвид сам видел призрака."
+          },
+          {
+            "id": "3",
+            "text": "Питер сказал, что получил деньги."
+          }
+        ],
+        "accepted": ["1"],
+        "explanation": "«Я подумал» marks David’s explanation. It is his belief, not proof that drugs caused Peter’s fear.",
+        "sourceIds": ["nea1p1-s27", "nea1p1-s28", "nea1p1-s32"]
+      },
+      {
+        "id": "p1-evidence",
+        "kind": "evidence",
+        "prompt": "Какие слова показывают: Питер не хотел, чтобы Дэвид шёл в дом?",
+        "options": [
+          {
+            "id": "1",
+            "text": "«Мы дружили в колледже»."
+          },
+          {
+            "id": "2",
+            "text": "«Питер долго уговаривал меня не ходить»."
+          },
+          {
+            "id": "3",
+            "text": "«Всего комнат девять»."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The verb «уговаривал» and «не ходить» directly support the claim. Friendship alone does not.",
+        "sourceIds": ["nea1p1-s04", "nea1p1-s22", "nea1p1-s34"]
+      }
+    ],
+    "retellPrompt": "Расскажите в 3–5 предложениях: кто такой Питер, что он рассказал Дэвиду и почему Дэвид поехал к дому.",
+    "checklist": [
+      "I named Peter and David clearly.",
+      "I included the disappearance, message and visit in order.",
+      "I distinguished Peter’s warning from David’s explanation."
+    ],
+    "transfer": {
+      "title": "Everyday transfer · A message from a friend",
+      "sentences": [
+        {
+          "id": "t1-s1",
+          "ru": "Илья и Антон учились вместе."
+        },
+        {
+          "id": "t1-s2",
+          "ru": "Илья окончил колледж, а Антон — нет."
+        },
+        {
+          "id": "t1-s3",
+          "ru": "Он начал работать в магазине."
+        },
+        {
+          "id": "t1-s4",
+          "ru": "Две недели Антон не писал Илье."
+        },
+        {
+          "id": "t1-s5",
+          "ru": "Илья думал: наверное, у Антона много работы."
+        },
+        {
+          "id": "t1-s6",
+          "ru": "В пятницу Антон написал: «Мой телефон не работал. Пойдём завтра в кафе!»."
+        }
+      ],
+      "questions": [
+        {
+          "id": "t1-1",
+          "kind": "fact",
+          "prompt": "Сколько времени Антон не писал?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Две недели."
+            },
+            {
+              "id": "2",
+              "text": "Пять недель."
+            },
+            {
+              "id": "3",
+              "text": "Один день."
+            }
+          ],
+          "accepted": ["1"],
+          "explanation": "The passage says «Две недели».",
+          "sourceIds": ["t1-s4"]
+        },
+        {
+          "id": "t1-2",
+          "kind": "reference",
+          "prompt": "Кто начал работать в магазине?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Илья."
+            },
+            {
+              "id": "2",
+              "text": "Антон."
+            },
+            {
+              "id": "3",
+              "text": "Они оба."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "«Он» continues the reference to Anton, who did not graduate.",
+          "sourceIds": ["t1-s2", "t1-s3"]
+        },
+        {
+          "id": "t1-3",
+          "kind": "inference",
+          "prompt": "Что Илья знал до сообщения Антона?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Что у Антона много работы."
+            },
+            {
+              "id": "2",
+              "text": "Только то, что Антон не писал; причина была догадкой."
+            },
+            {
+              "id": "3",
+              "text": "Что телефон Антона сломан."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "«Думал» and «наверное» mark a guess. Anton gives the phone explanation only later.",
+          "sourceIds": ["t1-s4", "t1-s5", "t1-s6"]
+        },
+        {
+          "id": "t1-4",
+          "kind": "evidence",
+          "prompt": "Какие слова объясняют молчание Антона?",
+          "options": [
+            {
+              "id": "1",
+              "text": "«Учились вместе»."
+            },
+            {
+              "id": "2",
+              "text": "«Мой телефон не работал»."
+            },
+            {
+              "id": "3",
+              "text": "«Пойдём завтра в кафе»."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "Anton’s own explanation is the broken phone.",
+          "sourceIds": ["t1-s6"]
+        }
+      ],
+      "retellPrompt": "Расскажите в 3–5 предложениях: кто такие Илья и Антон, что думал Илья и что потом написал Антон.",
+      "checklist": [
+        "I named both friends clearly.",
+        "I separated Ilya’s guess from Anton’s explanation.",
+        "I used a time expression and put the events in order."
+      ]
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "noend-a1-part-2",
+    "revision": 1,
+    "title": "Part 2 · Комнаты один и два",
+    "packId": "a1-no-end-house-001",
+    "packVersion": 3,
+    "storyId": "part-2",
+    "boundarySentenceId": "nea1p2-s36",
+    "source": [
+      {
+        "id": "nea1p2-s11",
+        "ru": "Внутри — обычный холл, как в гостинице, только с украшениями на Хеллоуин."
+      },
+      {
+        "id": "nea1p2-s12",
+        "ru": "За стойкой никого нет."
+      },
+      {
+        "id": "nea1p2-s13",
+        "ru": "Вместо человека — табличка: «Комната 1 — сюда. Потом ещё восемь. Дойди до конца — и ты выиграл!»"
+      },
+      {
+        "id": "nea1p2-s14",
+        "ru": "Я смеюсь и иду к первой двери."
+      },
+      {
+        "id": "nea1p2-s15",
+        "ru": "Первая комната — просто смешная."
+      },
+      {
+        "id": "nea1p2-s16",
+        "ru": "Всё как в дешёвом магазине перед Хеллоуином: привидения из простыней, пластиковые зомби."
+      },
+      {
+        "id": "nea1p2-s21",
+        "ru": "Я отодвигаю искусственную паутину и иду ко второй двери."
+      },
+      {
+        "id": "nea1p2-s22",
+        "ru": "Я открываю её — и на меня идёт туман."
+      },
+      {
+        "id": "nea1p2-s25",
+        "ru": "Где-то играет музыка для Хеллоуина — такая, какую продают в магазине, где всё стоит один доллар."
+      },
+      {
+        "id": "nea1p2-s26",
+        "ru": "Я не вижу колонок."
+      },
+      {
+        "id": "nea1p2-s27",
+        "ru": "Наверное, музыка идёт из динамиков в стенах."
+      },
+      {
+        "id": "nea1p2-s28",
+        "ru": "По полу катаются игрушечные крысы на колёсиках."
+      },
+      {
+        "id": "nea1p2-s29",
+        "ru": "Я переступаю через них и иду дальше, гордый и смелый."
+      },
+      {
+        "id": "nea1p2-s30",
+        "ru": "Я берусь за ручку двери — и сердце уходит в пятки."
+      },
+      {
+        "id": "nea1p2-s31",
+        "ru": "Я не хочу открывать эту дверь."
+      },
+      {
+        "id": "nea1p2-s32",
+        "ru": "Мне так страшно, что я почти не могу думать."
+      },
+      {
+        "id": "nea1p2-s36",
+        "ru": "И я вхожу в третью комнату."
+      }
+    ],
+    "questions": [
+      {
+        "id": "p2-fact",
+        "kind": "fact",
+        "prompt": "Кто стоит за стойкой в холле?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Питер."
+          },
+          {
+            "id": "2",
+            "text": "Никого нет."
+          },
+          {
+            "id": "3",
+            "text": "Человек в костюме."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The narrator explicitly says nobody is behind the desk.",
+        "sourceIds": ["nea1p2-s11", "nea1p2-s12", "nea1p2-s13"]
+      },
+      {
+        "id": "p2-reference",
+        "kind": "reference",
+        "prompt": "Что значит «них» в «Я переступаю через них»?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Игрушечные крысы."
+          },
+          {
+            "id": "2",
+            "text": "Двери."
+          },
+          {
+            "id": "3",
+            "text": "Динамики."
+          }
+        ],
+        "accepted": ["1"],
+        "explanation": "The toy rats are in the preceding sentence, and the narrator steps over them.",
+        "sourceIds": ["nea1p2-s28", "nea1p2-s29"]
+      },
+      {
+        "id": "p2-sequence",
+        "kind": "sequence",
+        "prompt": "Выберите порядок комнат и событий.",
+        "options": [
+          {
+            "id": "1",
+            "text": "Туман → привидения из простыней → третья комната."
+          },
+          {
+            "id": "2",
+            "text": "Привидения из простыней → туман → третья комната."
+          },
+          {
+            "id": "3",
+            "text": "Третья комната → туман → привидения из простыней."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The sheet ghosts are in room one; the fog appears after the second door; only then does he enter room three.",
+        "sourceIds": ["nea1p2-s15", "nea1p2-s16", "nea1p2-s21", "nea1p2-s22", "nea1p2-s36"]
+      },
+      {
+        "id": "p2-inference",
+        "kind": "inference",
+        "prompt": "Музыка точно идёт из динамиков в стенах?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Да, Дэвид их видит."
+          },
+          {
+            "id": "2",
+            "text": "Нет: это догадка Дэвида."
+          },
+          {
+            "id": "3",
+            "text": "Музыки вообще нет."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "«Я не вижу» plus «Наверное» separates what he hears from his guess about its source.",
+        "sourceIds": ["nea1p2-s25", "nea1p2-s26", "nea1p2-s27"]
+      },
+      {
+        "id": "p2-evidence",
+        "kind": "evidence",
+        "prompt": "Какая фраза подтверждает, что перед третьей комнатой Дэвиду очень страшно?",
+        "options": [
+          {
+            "id": "1",
+            "text": "«Мне так страшно, что я почти не могу думать»."
+          },
+          {
+            "id": "2",
+            "text": "«Я смеюсь и иду к первой двери»."
+          },
+          {
+            "id": "3",
+            "text": "«Я не хочу открывать эту дверь»."
+          }
+        ],
+        "accepted": ["1", "3"],
+        "explanation": "Both answers are defensible: the first states intense fear directly; the last shows his reluctance in that same frightened moment. Laughing belongs to an earlier moment.",
+        "sourceIds": ["nea1p2-s14", "nea1p2-s30", "nea1p2-s31", "nea1p2-s32"]
+      }
+    ],
+    "retellPrompt": "Расскажите в 3–5 предложениях, что Дэвид увидел в первых двух комнатах и как изменились его чувства.",
+    "checklist": [
+      "I described both rooms in order.",
+      "I included the change from confidence to fear.",
+      "I treated the speakers in the walls as a guess."
+    ],
+    "transfer": {
+      "title": "Everyday transfer · At the station",
+      "sentences": [
+        {
+          "id": "t2-s1",
+          "ru": "Я вхожу на вокзал и слышу музыку."
+        },
+        {
+          "id": "t2-s2",
+          "ru": "Я не вижу музыканта."
+        },
+        {
+          "id": "t2-s3",
+          "ru": "Наверное, он играет за углом."
+        },
+        {
+          "id": "t2-s4",
+          "ru": "На полу стоят две сумки."
+        },
+        {
+          "id": "t2-s5",
+          "ru": "Я прохожу мимо них и подхожу к кассе."
+        },
+        {
+          "id": "t2-s6",
+          "ru": "Потом я вижу маленькую колонку: музыка идёт из неё."
+        }
+      ],
+      "questions": [
+        {
+          "id": "t2-1",
+          "kind": "fact",
+          "prompt": "Что стоит на полу?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Две сумки."
+            },
+            {
+              "id": "2",
+              "text": "Два стула."
+            },
+            {
+              "id": "3",
+              "text": "Колонка."
+            }
+          ],
+          "accepted": ["1"],
+          "explanation": "The text puts two bags on the floor; it does not give the speaker’s position.",
+          "sourceIds": ["t2-s4", "t2-s6"]
+        },
+        {
+          "id": "t2-2",
+          "kind": "reference",
+          "prompt": "Что значит «них»?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Музыканты."
+            },
+            {
+              "id": "2",
+              "text": "Сумки."
+            },
+            {
+              "id": "3",
+              "text": "Кассы."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "The plural pronoun refers back to the two bags.",
+          "sourceIds": ["t2-s4", "t2-s5"]
+        },
+        {
+          "id": "t2-3",
+          "kind": "inference",
+          "prompt": "Музыкант за углом — это сначала…",
+          "options": [
+            {
+              "id": "1",
+              "text": "факт: рассказчик его видит."
+            },
+            {
+              "id": "2",
+              "text": "догадка: рассказчик его не видит."
+            },
+            {
+              "id": "3",
+              "text": "сообщение кассира."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "«Наверное» signals a guess that the later discovery corrects.",
+          "sourceIds": ["t2-s2", "t2-s3", "t2-s6"]
+        },
+        {
+          "id": "t2-4",
+          "kind": "sequence",
+          "prompt": "Что было сначала?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Рассказчик увидел колонку."
+            },
+            {
+              "id": "2",
+              "text": "Рассказчик услышал музыку."
+            },
+            {
+              "id": "3",
+              "text": "Рассказчик купил билет."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "Hearing the music starts the passage. Buying a ticket is never stated.",
+          "sourceIds": ["t2-s1", "t2-s6"]
+        }
+      ],
+      "retellPrompt": "Расскажите в 3–5 предложениях, что вы услышали, о чём подумали и что увидели потом.",
+      "checklist": [
+        "I separated hearing from seeing.",
+        "I marked the first explanation as a guess.",
+        "I used сначала / потом or another clear sequence."
+      ]
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "id": "noend-a1-part-3",
+    "revision": 1,
+    "title": "Part 3 · Комната три. Тени",
+    "packId": "a1-no-end-house-001",
+    "packVersion": 3,
+    "storyId": "part-3",
+    "boundarySentenceId": "nea1p3-s38",
+    "source": [
+      {
+        "id": "nea1p3-s03",
+        "ru": "В центре — стул."
+      },
+      {
+        "id": "nea1p3-s05",
+        "ru": "В углу стоит одна лампа."
+      },
+      {
+        "id": "nea1p3-s15",
+        "ru": "Я просто поворачиваюсь и хочу открыть дверь, через которую вошёл."
+      },
+      {
+        "id": "nea1p3-s16",
+        "ru": "Она закрыта с другой стороны."
+      },
+      {
+        "id": "nea1p3-s18",
+        "ru": "Кто-то закрывает двери за мной?"
+      },
+      {
+        "id": "nea1p3-s19",
+        "ru": "Не может быть."
+      },
+      {
+        "id": "nea1p3-s20",
+        "ru": "Я бы услышал."
+      },
+      {
+        "id": "nea1p3-s21",
+        "ru": "Может быть, замок закрывается сам, автоматически?"
+      },
+      {
+        "id": "nea1p3-s22",
+        "ru": "Может быть."
+      },
+      {
+        "id": "nea1p3-s27",
+        "ru": "Я медленно иду."
+      },
+      {
+        "id": "nea1p3-s28",
+        "ru": "В детстве у меня были галлюцинации."
+      },
+      {
+        "id": "nea1p3-s29",
+        "ru": "Галлюцинация — это когда ты видишь то, чего нет."
+      },
+      {
+        "id": "nea1p3-s30",
+        "ru": "Поэтому я говорю себе: тени — это просто моя фантазия."
+      },
+      {
+        "id": "nea1p3-s36",
+        "ru": "У меня нет тени."
+      },
+      {
+        "id": "nea1p3-s37",
+        "ru": "Я не успеваю даже закричать."
+      },
+      {
+        "id": "nea1p3-s38",
+        "ru": "Я бегу к другой двери как можно быстрее и падаю в следующую комнату."
+      }
+    ],
+    "questions": [
+      {
+        "id": "p3-fact",
+        "kind": "fact",
+        "prompt": "Что стоит в центре третьей комнаты?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Лампа."
+          },
+          {
+            "id": "2",
+            "text": "Стул."
+          },
+          {
+            "id": "3",
+            "text": "Стол."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The chair is in the centre; the lamp is in a corner.",
+        "sourceIds": ["nea1p3-s03", "nea1p3-s05"]
+      },
+      {
+        "id": "p3-reference",
+        "kind": "reference",
+        "prompt": "Что значит «Она» в «Она закрыта с другой стороны»?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Лампа."
+          },
+          {
+            "id": "2",
+            "text": "Дверь, через которую Дэвид вошёл."
+          },
+          {
+            "id": "3",
+            "text": "Следующая комната."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The immediately preceding sentence names the entrance door David tries to open.",
+        "sourceIds": ["nea1p3-s15", "nea1p3-s16"]
+      },
+      {
+        "id": "p3-sequence",
+        "kind": "sequence",
+        "prompt": "Что происходит раньше?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Дэвид бежит к другой двери → видит, что у него нет тени."
+          },
+          {
+            "id": "2",
+            "text": "Дэвид видит, что у него нет тени → бежит к другой двери."
+          },
+          {
+            "id": "3",
+            "text": "Дэвид выходит из дома → видит свою тень."
+          }
+        ],
+        "accepted": ["2"],
+        "explanation": "The missing shadow is discovered before his run to the next room. This part does not say that he leaves the house.",
+        "sourceIds": ["nea1p3-s36", "nea1p3-s37", "nea1p3-s38"]
+      },
+      {
+        "id": "p3-inference",
+        "kind": "inference",
+        "prompt": "Кто закрыл дверь за Дэвидом?",
+        "options": [
+          {
+            "id": "1",
+            "text": "Питер — это точно."
+          },
+          {
+            "id": "2",
+            "text": "Человек за дверью — это точно."
+          },
+          {
+            "id": "3",
+            "text": "В этой части нет точного ответа."
+          }
+        ],
+        "accepted": ["3"],
+        "explanation": "David wonders whether somebody closed it or the lock closes automatically. Both are hypotheses; the text settles neither.",
+        "sourceIds": ["nea1p3-s18", "nea1p3-s19", "nea1p3-s20", "nea1p3-s21", "nea1p3-s22"]
+      },
+      {
+        "id": "p3-evidence",
+        "kind": "evidence",
+        "prompt": "Какая фраза объясняет, почему Дэвид говорит себе: тени — фантазия?",
+        "options": [
+          {
+            "id": "1",
+            "text": "«В детстве у меня были галлюцинации»."
+          },
+          {
+            "id": "2",
+            "text": "«В центре — стул»."
+          },
+          {
+            "id": "3",
+            "text": "«Я медленно иду»."
+          }
+        ],
+        "accepted": ["1"],
+        "explanation": "«Поэтому» connects his childhood hallucinations to this attempted explanation. It is not proof that the shadows were imaginary.",
+        "sourceIds": ["nea1p3-s03", "nea1p3-s27", "nea1p3-s28", "nea1p3-s29", "nea1p3-s30"]
+      }
+    ],
+    "retellPrompt": "Расскажите в 3–5 предложениях: что Дэвид увидел, почему испугался и что сделал потом.",
+    "checklist": [
+      "I included the door, shadows and missing shadow.",
+      "I separated observations from explanations.",
+      "I ended with his run to the next room without adding later events."
+    ],
+    "transfer": {
+      "title": "Everyday transfer · A closed office",
+      "sentences": [
+        {
+          "id": "t3-s1",
+          "ru": "В понедельник Нина пришла в офис."
+        },
+        {
+          "id": "t3-s2",
+          "ru": "Она хотела открыть дверь, но дверь была закрыта."
+        },
+        {
+          "id": "t3-s3",
+          "ru": "Нина подумала: может быть, коллеги ещё не пришли."
+        },
+        {
+          "id": "t3-s4",
+          "ru": "Может быть, сегодня у них выходной."
+        },
+        {
+          "id": "t3-s5",
+          "ru": "Потом она посмотрела на часы: было семь утра."
+        },
+        {
+          "id": "t3-s6",
+          "ru": "Нина решила подождать в кафе."
+        }
+      ],
+      "questions": [
+        {
+          "id": "t3-1",
+          "kind": "fact",
+          "prompt": "Во сколько Нина была у офиса?",
+          "options": [
+            {
+              "id": "1",
+              "text": "В семь утра."
+            },
+            {
+              "id": "2",
+              "text": "В девять утра."
+            },
+            {
+              "id": "3",
+              "text": "В семь вечера."
+            }
+          ],
+          "accepted": ["1"],
+          "explanation": "The clock supplies the only stated time.",
+          "sourceIds": ["t3-s5"]
+        },
+        {
+          "id": "t3-2",
+          "kind": "reference",
+          "prompt": "Кто «она» в «Потом она посмотрела на часы»?",
+          "options": [
+            {
+              "id": "1",
+              "text": "Коллега."
+            },
+            {
+              "id": "2",
+              "text": "Нина."
+            },
+            {
+              "id": "3",
+              "text": "Женщина в кафе."
+            }
+          ],
+          "accepted": ["2"],
+          "explanation": "Nina remains the subject through this sequence.",
+          "sourceIds": ["t3-s1", "t3-s5"]
+        },
+        {
+          "id": "t3-3",
+          "kind": "inference",
+          "prompt": "Почему дверь закрыта?",
+          "options": [
+            {
+              "id": "1",
+              "text": "У всех выходной — это точно."
+            },
+            {
+              "id": "2",
+              "text": "Коллеги ещё не пришли — это точно."
+            },
+            {
+              "id": "3",
+              "text": "Текст не даёт точной причины."
+            }
+          ],
+          "accepted": ["3"],
+          "explanation": "Both explanations begin with «может быть». Seven in the morning makes an early arrival plausible but does not prove the reason.",
+          "sourceIds": ["t3-s2", "t3-s3", "t3-s4", "t3-s5"]
+        },
+        {
+          "id": "t3-4",
+          "kind": "evidence",
+          "prompt": "Какие слова показывают, что Нина решила делать дальше?",
+          "options": [
+            {
+              "id": "1",
+              "text": "«Нина решила подождать в кафе»."
+            },
+            {
+              "id": "2",
+              "text": "«Дверь была закрыта»."
+            },
+            {
+              "id": "3",
+              "text": "«Было семь утра»."
+            }
+          ],
+          "accepted": ["1"],
+          "explanation": "Her decision is explicitly reported in the last sentence.",
+          "sourceIds": ["t3-s6"]
+        }
+      ],
+      "retellPrompt": "Расскажите в 3–5 предложениях: куда пришла Нина, что она знала, что только предполагала и что решила делать.",
+      "checklist": [
+        "I described the closed door.",
+        "I kept the two explanations as possibilities.",
+        "I included Nina’s final decision."
+      ]
+    }
+  }
+]

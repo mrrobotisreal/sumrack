@@ -26,3 +26,8 @@ export function claim(name: AudioOwner, pause?: () => void): void {
     if (other !== name) pause();
   }
 }
+
+/** Quiet both long-form owners before an independent learning clip or microphone capture. */
+export function pauseAll(): void {
+  for (const pause of owners.values()) pause();
+}

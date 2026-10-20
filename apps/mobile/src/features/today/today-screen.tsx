@@ -5,6 +5,7 @@ import * as React from 'react';
 import { Pressable, Text as RNText, ScrollView, View } from 'react-native';
 
 import { repos } from '@/db';
+import { TodayPlanCard } from '@/features/daily-plan/today-plan-card';
 import { trackDueSnapshotOnce } from '@/features/review/due-snapshot';
 import { QueryError } from '@/components/query-error';
 import { Text } from '@/components/ui/text';
@@ -156,6 +157,8 @@ export function TodayScreen() {
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="gap-4 px-4 pb-16 pt-4">
       {/* the real goal ring + streak flame + freezes + XP (T19) */}
       <GoalRingCard />
+
+      <TodayPlanCard />
 
       {/* the day's rotating quest — the ring's third segment (T34) */}
       <QuestCard />

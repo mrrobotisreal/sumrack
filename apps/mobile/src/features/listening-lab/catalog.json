@@ -1,0 +1,1654 @@
+{
+  "version": 1,
+  "segments": [
+    {
+      "id": "lab-01",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-01",
+        "sentenceId": "tfa1ls01-s01",
+        "trackId": "ls01-mix",
+        "file": "audio/ls01-mix.opus",
+        "durationMs": 14806,
+        "startMs": 0,
+        "endMs": 3540,
+        "spoilerThroughSentenceId": "tfa1ls01-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 1,
+            "startMs": 320,
+            "endMs": 640
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 2,
+            "startMs": 720,
+            "endMs": 1040
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 4,
+            "startMs": 1600,
+            "endMs": 1640
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 5,
+            "startMs": 1680,
+            "endMs": 2080
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 6,
+            "startMs": 2240,
+            "endMs": 2480
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 7,
+            "startMs": 2560,
+            "endMs": 2880
+          },
+          {
+            "sentenceId": "tfa1ls01-s01",
+            "tokenIndex": 8,
+            "startMs": 2987,
+            "endMs": 3360
+          }
+        ]
+      },
+      "transcript": "— Добрый день. У меня очень болит голова.",
+      "translation": "Good afternoon. I have a really bad headache.",
+      "meaning": {
+        "question": "What is wrong?",
+        "options": ["A headache", "A sore foot", "A cough"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "голова",
+          "actual": "голову",
+          "note": "Head is the subject: голова."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-02",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-02",
+        "sentenceId": "tfa1ls02-s01",
+        "trackId": "ls02-mix",
+        "file": "audio/ls02-mix.opus",
+        "durationMs": 17846,
+        "startMs": 0,
+        "endMs": 3907,
+        "spoilerThroughSentenceId": "tfa1ls02-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 1,
+            "startMs": 120,
+            "endMs": 910
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 3,
+            "startMs": 1065,
+            "endMs": 1295
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 4,
+            "startMs": 1295,
+            "endMs": 1625
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 5,
+            "startMs": 1625,
+            "endMs": 2020
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 6,
+            "startMs": 2020,
+            "endMs": 2385
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 7,
+            "startMs": 2385,
+            "endMs": 2505
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 8,
+            "startMs": 2505,
+            "endMs": 2760
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 9,
+            "startMs": 2760,
+            "endMs": 3150
+          },
+          {
+            "sentenceId": "tfa1ls02-s01",
+            "tokenIndex": 10,
+            "startMs": 3150,
+            "endMs": 3730
+          }
+        ]
+      },
+      "transcript": "— Здравствуйте. Мне нужен один билет в Киев на завтра.",
+      "translation": "Hello. I need one ticket to Kyiv for tomorrow.",
+      "meaning": {
+        "question": "When is the ticket needed?",
+        "options": ["Tonight", "Tomorrow", "Next week"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "билет",
+          "actual": "билета",
+          "note": "One ticket: один билет."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-03",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-03",
+        "sentenceId": "tfa1ls03-s01",
+        "trackId": "ls03-mix",
+        "file": "audio/ls03-mix.opus",
+        "durationMs": 19046,
+        "startMs": 0,
+        "endMs": 2340,
+        "spoilerThroughSentenceId": "tfa1ls03-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls03-s01",
+            "tokenIndex": 1,
+            "startMs": 293,
+            "endMs": 560
+          },
+          {
+            "sentenceId": "tfa1ls03-s01",
+            "tokenIndex": 2,
+            "startMs": 680,
+            "endMs": 960
+          },
+          {
+            "sentenceId": "tfa1ls03-s01",
+            "tokenIndex": 4,
+            "startMs": 1360,
+            "endMs": 1560
+          },
+          {
+            "sentenceId": "tfa1ls03-s01",
+            "tokenIndex": 5,
+            "startMs": 1600,
+            "endMs": 1760
+          },
+          {
+            "sentenceId": "tfa1ls03-s01",
+            "tokenIndex": 6,
+            "startMs": 1960,
+            "endMs": 2160
+          }
+        ]
+      },
+      "transcript": "— Добрый вечер. Куда вам ехать?",
+      "translation": "Good evening. Where to?",
+      "meaning": {
+        "question": "What is the speaker asking?",
+        "options": ["What time it is", "How much it costs", "Where to go"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-04",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-04",
+        "sentenceId": "tfa1ls04-s01",
+        "trackId": "ls04-mix",
+        "file": "audio/ls04-mix.opus",
+        "durationMs": 16886,
+        "startMs": 0,
+        "endMs": 3740,
+        "spoilerThroughSentenceId": "tfa1ls04-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 1,
+            "startMs": 115,
+            "endMs": 510
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 2,
+            "startMs": 510,
+            "endMs": 765
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 4,
+            "startMs": 765,
+            "endMs": 1505
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 5,
+            "startMs": 1505,
+            "endMs": 1715
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 6,
+            "startMs": 1715,
+            "endMs": 2100
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 7,
+            "startMs": 2100,
+            "endMs": 2625
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 8,
+            "startMs": 2625,
+            "endMs": 2945
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 9,
+            "startMs": 2945,
+            "endMs": 3130
+          },
+          {
+            "sentenceId": "tfa1ls04-s01",
+            "tokenIndex": 10,
+            "startMs": 3130,
+            "endMs": 3560
+          }
+        ]
+      },
+      "transcript": "— Добрый вечер. У вас есть свободный номер на ночь?",
+      "translation": "Good evening. Do you have a free room for the night?",
+      "meaning": {
+        "question": "What does the guest need?",
+        "options": ["A room for the night", "A breakfast table", "A taxi"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-05",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-05",
+        "sentenceId": "tfa1ls05-s01",
+        "trackId": "ls05-mix",
+        "file": "audio/ls05-mix.opus",
+        "durationMs": 18326,
+        "startMs": 0,
+        "endMs": 5230,
+        "spoilerThroughSentenceId": "tfa1ls05-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 1,
+            "startMs": 25,
+            "endMs": 800
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 3,
+            "startMs": 910,
+            "endMs": 1280
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 4,
+            "startMs": 1280,
+            "endMs": 1685
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 5,
+            "startMs": 1685,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 6,
+            "startMs": 1995,
+            "endMs": 2225
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 7,
+            "startMs": 2225,
+            "endMs": 2860
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 9,
+            "startMs": 3125,
+            "endMs": 3470
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 10,
+            "startMs": 3470,
+            "endMs": 4045
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 11,
+            "startMs": 4045,
+            "endMs": 4335
+          },
+          {
+            "sentenceId": "tfa1ls05-s01",
+            "tokenIndex": 12,
+            "startMs": 4335,
+            "endMs": 5140
+          }
+        ]
+      },
+      "transcript": "— Смотри, наши места в пятом ряду! Отсюда видно всё поле.",
+      "translation": "Look, our seats are in row five! From here you can see the whole pitch.",
+      "meaning": {
+        "question": "Where are the seats?",
+        "options": ["In row three", "In row five", "In row ten"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "strict",
+      "endingPairs": [
+        {
+          "expected": "пятом",
+          "actual": "пятый",
+          "note": "Location after в: в пятом ряду."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-06",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-06",
+        "sentenceId": "tfa1ls06-s01",
+        "trackId": "ls06-mix",
+        "file": "audio/ls06-mix.opus",
+        "durationMs": 13606,
+        "startMs": 0,
+        "endMs": 2670,
+        "spoilerThroughSentenceId": "tfa1ls06-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 1,
+            "startMs": 0,
+            "endMs": 350
+          },
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 2,
+            "startMs": 350,
+            "endMs": 910
+          },
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 4,
+            "startMs": 1000,
+            "endMs": 1225
+          },
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 5,
+            "startMs": 1225,
+            "endMs": 1520
+          },
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 6,
+            "startMs": 1520,
+            "endMs": 1975
+          },
+          {
+            "sentenceId": "tfa1ls06-s01",
+            "tokenIndex": 7,
+            "startMs": 1975,
+            "endMs": 2595
+          }
+        ]
+      },
+      "transcript": "— Добрый день. Я хочу открыть счёт.",
+      "translation": "Good afternoon. I want to open an account.",
+      "meaning": {
+        "question": "What does the speaker want to open?",
+        "options": ["A window", "A shop", "An account"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "strict",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-07",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-07",
+        "sentenceId": "tfa1ls07-s01",
+        "trackId": "ls07-mix",
+        "file": "audio/ls07-mix.opus",
+        "durationMs": 12646,
+        "startMs": 0,
+        "endMs": 3140,
+        "spoilerThroughSentenceId": "tfa1ls07-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 1,
+            "startMs": 213,
+            "endMs": 480
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 2,
+            "startMs": 560,
+            "endMs": 800
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 4,
+            "startMs": 1360,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 5,
+            "startMs": 1480,
+            "endMs": 1720
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 6,
+            "startMs": 1760,
+            "endMs": 2000
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 7,
+            "startMs": 2080,
+            "endMs": 2240
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 8,
+            "startMs": 2280,
+            "endMs": 2560
+          },
+          {
+            "sentenceId": "tfa1ls07-s01",
+            "tokenIndex": 9,
+            "startMs": 2600,
+            "endMs": 2960
+          }
+        ]
+      },
+      "transcript": "— Добрый день. Я хочу взять эту книгу домой.",
+      "translation": "Good afternoon. I want to take this book home.",
+      "meaning": {
+        "question": "What does the speaker want to take home?",
+        "options": ["This book", "A meal", "A ticket"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "книгу",
+          "actual": "книга",
+          "note": "Direct object: взять книгу."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-08",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-08",
+        "sentenceId": "tfa1ls08-s01",
+        "trackId": "ls08-mix",
+        "file": "audio/ls08-mix.opus",
+        "durationMs": 12326,
+        "startMs": 0,
+        "endMs": 2667,
+        "spoilerThroughSentenceId": "tfa1ls08-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 1,
+            "startMs": 120,
+            "endMs": 490
+          },
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 2,
+            "startMs": 490,
+            "endMs": 930
+          },
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 4,
+            "startMs": 1210,
+            "endMs": 1415
+          },
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 5,
+            "startMs": 1415,
+            "endMs": 1550
+          },
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 6,
+            "startMs": 1550,
+            "endMs": 1850
+          },
+          {
+            "sentenceId": "tfa1ls08-s01",
+            "tokenIndex": 7,
+            "startMs": 1850,
+            "endMs": 2560
+          }
+        ]
+      },
+      "transcript": "— Добрый вечер. Что вы будете заказывать?",
+      "translation": "Good evening. What will you order?",
+      "meaning": {
+        "question": "What is the speaker asking about?",
+        "options": ["A departure", "An order", "A reservation"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-09",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-09",
+        "sentenceId": "tfa1ls09-s01",
+        "trackId": "ls09-mix",
+        "file": "audio/ls09-mix.opus",
+        "durationMs": 15606,
+        "startMs": 0,
+        "endMs": 3300,
+        "spoilerThroughSentenceId": "tfa1ls09-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 1,
+            "startMs": 213,
+            "endMs": 800
+          },
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 3,
+            "startMs": 1200,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 4,
+            "startMs": 1520,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 5,
+            "startMs": 2000,
+            "endMs": 2040
+          },
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 6,
+            "startMs": 2080,
+            "endMs": 2400
+          },
+          {
+            "sentenceId": "tfa1ls09-s01",
+            "tokenIndex": 8,
+            "startMs": 2560,
+            "endMs": 3120
+          }
+        ]
+      },
+      "transcript": "— Здравствуйте. Ваш паспорт и билет, пожалуйста.",
+      "translation": "Hello. Your passport and ticket, please.",
+      "meaning": {
+        "question": "Which documents are requested?",
+        "options": ["A licence and a receipt", "A passport and a visa", "A passport and a ticket"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-10",
+      "level": "A1",
+      "source": {
+        "packId": "a1-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-10",
+        "sentenceId": "tfa1ls10-s01",
+        "trackId": "ls10-mix",
+        "file": "audio/ls10-mix.opus",
+        "durationMs": 10966,
+        "startMs": 0,
+        "endMs": 3460,
+        "spoilerThroughSentenceId": "tfa1ls10-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 1,
+            "startMs": 100,
+            "endMs": 915
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 3,
+            "startMs": 1140,
+            "endMs": 1285
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 4,
+            "startMs": 1285,
+            "endMs": 1560
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 5,
+            "startMs": 1560,
+            "endMs": 2065
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 6,
+            "startMs": 2065,
+            "endMs": 2430
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 7,
+            "startMs": 2430,
+            "endMs": 2715
+          },
+          {
+            "sentenceId": "tfa1ls10-s01",
+            "tokenIndex": 8,
+            "startMs": 2780,
+            "endMs": 3360
+          }
+        ]
+      },
+      "transcript": "— Здравствуйте. Я хочу отправить письмо в Киев.",
+      "translation": "Hello. I want to send a letter to Kyiv.",
+      "meaning": {
+        "question": "What does the speaker want to send?",
+        "options": ["A letter to Kyiv", "A parcel to Moscow", "An email to a friend"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-11",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-01",
+        "sentenceId": "tfa2ls01-s01",
+        "trackId": "ls01-mix",
+        "file": "audio/ls01-mix.opus",
+        "durationMs": 4086,
+        "startMs": 0,
+        "endMs": 3923,
+        "spoilerThroughSentenceId": "tfa2ls01-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 1,
+            "startMs": 213,
+            "endMs": 640
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 2,
+            "startMs": 720,
+            "endMs": 800
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 3,
+            "startMs": 840,
+            "endMs": 1120
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 4,
+            "startMs": 1280,
+            "endMs": 1760
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 5,
+            "startMs": 2080,
+            "endMs": 2240
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 6,
+            "startMs": 2320,
+            "endMs": 2640
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 7,
+            "startMs": 2720,
+            "endMs": 3120
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 8,
+            "startMs": 3160,
+            "endMs": 3200
+          },
+          {
+            "sentenceId": "tfa2ls01-s01",
+            "tokenIndex": 9,
+            "startMs": 3400,
+            "endMs": 3760
+          }
+        ]
+      },
+      "transcript": "— Сегодня я встал поздно и поэтому опоздал на работу.",
+      "translation": "This morning I got up late and so I was late for work.",
+      "meaning": {
+        "question": "Why was the speaker late for work?",
+        "options": ["Traffic was slow", "They got up late", "The train broke down"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "работу",
+          "actual": "работе",
+          "note": "Destination: опоздал на работу."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-12",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-02",
+        "sentenceId": "tfa2ls02-s01",
+        "trackId": "ls02-mix",
+        "file": "audio/ls02-mix.opus",
+        "durationMs": 2806,
+        "startMs": 0,
+        "endMs": 2643,
+        "spoilerThroughSentenceId": "tfa2ls02-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 1,
+            "startMs": 80,
+            "endMs": 480
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 2,
+            "startMs": 560,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 3,
+            "startMs": 960,
+            "endMs": 1333
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 4,
+            "startMs": 1387,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 5,
+            "startMs": 1520,
+            "endMs": 1840
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 6,
+            "startMs": 1880,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa2ls02-s01",
+            "tokenIndex": 7,
+            "startMs": 2000,
+            "endMs": 2480
+          }
+        ]
+      },
+      "transcript": "— Алина купила билеты в театр на субботу.",
+      "translation": "Alina bought theatre tickets for Saturday.",
+      "meaning": {
+        "question": "When is the theatre visit?",
+        "options": ["Friday", "Sunday", "Saturday"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "субботу",
+          "actual": "суббота",
+          "note": "Scheduled day: на субботу."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-13",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-03",
+        "sentenceId": "tfa2ls03-s01",
+        "trackId": "ls03-mix",
+        "file": "audio/ls03-mix.opus",
+        "durationMs": 3686,
+        "startMs": 0,
+        "endMs": 3460,
+        "spoilerThroughSentenceId": "tfa2ls03-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 1,
+            "startMs": 160,
+            "endMs": 400
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 2,
+            "startMs": 520,
+            "endMs": 680
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 3,
+            "startMs": 720,
+            "endMs": 1200
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 4,
+            "startMs": 1240,
+            "endMs": 1280
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 5,
+            "startMs": 1360,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 6,
+            "startMs": 1480,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 8,
+            "startMs": 2160,
+            "endMs": 2240
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 9,
+            "startMs": 2320,
+            "endMs": 2360
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 10,
+            "startMs": 2400,
+            "endMs": 2760
+          },
+          {
+            "sentenceId": "tfa2ls03-s01",
+            "tokenIndex": 11,
+            "startMs": 2800,
+            "endMs": 3280
+          }
+        ]
+      },
+      "transcript": "— Ваш рейс сегодня не в девять, а в десять часов.",
+      "translation": "Your flight today is not at nine but at ten.",
+      "meaning": {
+        "question": "When is the flight now?",
+        "options": ["At ten", "At nine", "At eleven"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-14",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-04",
+        "sentenceId": "tfa2ls04-s01",
+        "trackId": "ls04-mix",
+        "file": "audio/ls04-mix.opus",
+        "durationMs": 3526,
+        "startMs": 0,
+        "endMs": 3363,
+        "spoilerThroughSentenceId": "tfa2ls04-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 1,
+            "startMs": 80,
+            "endMs": 320
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 2,
+            "startMs": 400,
+            "endMs": 480
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 3,
+            "startMs": 520,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 4,
+            "startMs": 960,
+            "endMs": 1000
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 5,
+            "startMs": 1040,
+            "endMs": 1520
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 7,
+            "startMs": 1920,
+            "endMs": 2240
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 8,
+            "startMs": 2320,
+            "endMs": 2640
+          },
+          {
+            "sentenceId": "tfa2ls04-s01",
+            "tokenIndex": 9,
+            "startMs": 2720,
+            "endMs": 3200
+          }
+        ]
+      },
+      "transcript": "— Когда вы входите в здание, нужно показать паспорт.",
+      "translation": "When you enter the building you must show your passport.",
+      "meaning": {
+        "question": "What must visitors show?",
+        "options": ["Their ticket", "Their passport", "Their phone"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-15",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-05",
+        "sentenceId": "tfa2ls05-s01",
+        "trackId": "ls05-mix",
+        "file": "audio/ls05-mix.opus",
+        "durationMs": 3606,
+        "startMs": 0,
+        "endMs": 3443,
+        "spoilerThroughSentenceId": "tfa2ls05-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 1,
+            "startMs": 160,
+            "endMs": 480
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 2,
+            "startMs": 560,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 3,
+            "startMs": 1040,
+            "endMs": 1280
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 4,
+            "startMs": 1360,
+            "endMs": 2000
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 5,
+            "startMs": 2080,
+            "endMs": 2480
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 7,
+            "startMs": 2560,
+            "endMs": 2720
+          },
+          {
+            "sentenceId": "tfa2ls05-s01",
+            "tokenIndex": 8,
+            "startMs": 2800,
+            "endMs": 3280
+          }
+        ]
+      },
+      "transcript": "— Этот фильм мне понравился больше, чем книга.",
+      "translation": "I liked this film more than the book.",
+      "meaning": {
+        "question": "Which did the speaker prefer?",
+        "options": ["The book", "Neither", "The film"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "понравился",
+          "actual": "понравилась",
+          "note": "Past tense agrees with masculine фильм."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-16",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-06",
+        "sentenceId": "tfa2ls06-s01",
+        "trackId": "ls06-mix",
+        "file": "audio/ls06-mix.opus",
+        "durationMs": 2966,
+        "startMs": 0,
+        "endMs": 2803,
+        "spoilerThroughSentenceId": "tfa2ls06-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 1,
+            "startMs": 213,
+            "endMs": 240
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 2,
+            "startMs": 320,
+            "endMs": 600
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 3,
+            "startMs": 720,
+            "endMs": 1040
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 4,
+            "startMs": 1120,
+            "endMs": 1360
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 5,
+            "startMs": 1440,
+            "endMs": 1680
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 6,
+            "startMs": 1760,
+            "endMs": 2160
+          },
+          {
+            "sentenceId": "tfa2ls06-s01",
+            "tokenIndex": 7,
+            "startMs": 2240,
+            "endMs": 2640
+          }
+        ]
+      },
+      "transcript": "— Я уже пять лет учу русский язык.",
+      "translation": "I have been learning Russian for five years already.",
+      "meaning": {
+        "question": "How long has the speaker studied Russian?",
+        "options": ["Five years", "Five months", "One year"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-17",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-07",
+        "sentenceId": "tfa2ls07-s01",
+        "trackId": "ls07-mix",
+        "file": "audio/ls07-mix.opus",
+        "durationMs": 3686,
+        "startMs": 0,
+        "endMs": 3523,
+        "spoilerThroughSentenceId": "tfa2ls07-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 1,
+            "startMs": 160,
+            "endMs": 480
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 2,
+            "startMs": 560,
+            "endMs": 600
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 3,
+            "startMs": 640,
+            "endMs": 1120
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 4,
+            "startMs": 1280,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 5,
+            "startMs": 1520,
+            "endMs": 1840
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 6,
+            "startMs": 1960,
+            "endMs": 2160
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 7,
+            "startMs": 2200,
+            "endMs": 2640
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 9,
+            "startMs": 2720,
+            "endMs": 2800
+          },
+          {
+            "sentenceId": "tfa2ls07-s01",
+            "tokenIndex": 10,
+            "startMs": 2880,
+            "endMs": 3360
+          }
+        ]
+      },
+      "transcript": "— Сегодня в магазине все вещи стоят дешевле, чем вчера.",
+      "translation": "Today everything in the shop costs less than yesterday.",
+      "meaning": {
+        "question": "How do today’s prices compare with yesterday’s?",
+        "options": ["More expensive", "Cheaper", "The same"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-18",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-08",
+        "sentenceId": "tfa2ls08-s01",
+        "trackId": "ls08-mix",
+        "file": "audio/ls08-mix.opus",
+        "durationMs": 3766,
+        "startMs": 0,
+        "endMs": 3643,
+        "spoilerThroughSentenceId": "tfa2ls08-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 1,
+            "startMs": 320,
+            "endMs": 400
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 2,
+            "startMs": 480,
+            "endMs": 560
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 3,
+            "startMs": 600,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 4,
+            "startMs": 960,
+            "endMs": 1440
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 6,
+            "startMs": 1880,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 7,
+            "startMs": 2000,
+            "endMs": 2320
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 8,
+            "startMs": 2400,
+            "endMs": 2640
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 9,
+            "startMs": 2720,
+            "endMs": 2960
+          },
+          {
+            "sentenceId": "tfa2ls08-s01",
+            "tokenIndex": 10,
+            "startMs": 3040,
+            "endMs": 3520
+          }
+        ]
+      },
+      "transcript": "— Я не могу прийти, у меня очень много работы.",
+      "translation": "I cannot come, I have a lot of work.",
+      "meaning": {
+        "question": "Why can’t the speaker come?",
+        "options": ["They are sick", "They forgot", "They have a lot of work"],
+        "correctIndex": 2
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "работы",
+          "actual": "работа",
+          "note": "Quantity with много takes genitive: много работы."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-19",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-09",
+        "sentenceId": "tfa2ls09-s01",
+        "trackId": "ls09-mix",
+        "file": "audio/ls09-mix.opus",
+        "durationMs": 3606,
+        "startMs": 0,
+        "endMs": 3443,
+        "spoilerThroughSentenceId": "tfa2ls09-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 1,
+            "startMs": 293,
+            "endMs": 640
+          },
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 2,
+            "startMs": 720,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 3,
+            "startMs": 960,
+            "endMs": 1600
+          },
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 5,
+            "startMs": 1920,
+            "endMs": 2240
+          },
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 6,
+            "startMs": 2320,
+            "endMs": 2720
+          },
+          {
+            "sentenceId": "tfa2ls09-s01",
+            "tokenIndex": 7,
+            "startMs": 2800,
+            "endMs": 3280
+          }
+        ]
+      },
+      "transcript": "— Завтра будет холодно, возьми тёплую куртку.",
+      "translation": "Tomorrow it will be cold, take a warm jacket.",
+      "meaning": {
+        "question": "What should the listener take?",
+        "options": ["A warm jacket", "An umbrella", "A thin shirt"],
+        "correctIndex": 0
+      },
+      "yoPolicy": "strict",
+      "endingPairs": [
+        {
+          "expected": "тёплую",
+          "actual": "тёплая",
+          "note": "Direct object agreement: тёплую куртку."
+        },
+        {
+          "expected": "куртку",
+          "actual": "куртка",
+          "note": "Direct object: возьми куртку."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    },
+    {
+      "id": "lab-20",
+      "level": "A2",
+      "source": {
+        "packId": "a2-torfl-listening-001",
+        "packVersion": 3,
+        "storyId": "ls-10",
+        "sentenceId": "tfa2ls10-s01",
+        "trackId": "ls10-mix",
+        "file": "audio/ls10-mix.opus",
+        "durationMs": 3046,
+        "startMs": 0,
+        "endMs": 2963,
+        "spoilerThroughSentenceId": "tfa2ls10-s01",
+        "stamps": [
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 1,
+            "startMs": 160,
+            "endMs": 280
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 2,
+            "startMs": 320,
+            "endMs": 400
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 3,
+            "startMs": 440,
+            "endMs": 880
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 4,
+            "startMs": 1040,
+            "endMs": 1200
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 5,
+            "startMs": 1280,
+            "endMs": 1360
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 6,
+            "startMs": 1400,
+            "endMs": 1920
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 7,
+            "startMs": 2000,
+            "endMs": 2160
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 8,
+            "startMs": 2240,
+            "endMs": 2280
+          },
+          {
+            "sentenceId": "tfa2ls10-s01",
+            "tokenIndex": 9,
+            "startMs": 2320,
+            "endMs": 2880
+          }
+        ]
+      },
+      "transcript": "— Мы с братом ходим в бассейн раз в неделю.",
+      "translation": "My brother and I go to the pool once a week.",
+      "meaning": {
+        "question": "How often do they go to the pool?",
+        "options": ["Every day", "Once a week", "Twice a month"],
+        "correctIndex": 1
+      },
+      "yoPolicy": "fold",
+      "endingPairs": [
+        {
+          "expected": "неделю",
+          "actual": "неделя",
+          "note": "Frequency: раз в неделю."
+        }
+      ],
+      "review": {
+        "source": "published-pack-text-and-stamps",
+        "checkedAt": "2026-10-20",
+        "authorCheck": "meaning-key-reviewed-against-source-text",
+        "earCheck": "pending-T111"
+      }
+    }
+  ]
+}

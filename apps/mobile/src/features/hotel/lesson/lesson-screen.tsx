@@ -10,6 +10,7 @@ import { repos } from '@/db';
 import { WordPopup, type WordPopupTarget } from '@/features/reader/word-popup';
 import { track } from '@/services/analytics';
 import { useAppTheme } from '@/theme/use-app-theme';
+import { PILOT_LESSON } from '@/features/grammar-connections/model';
 
 import { useCourseFloor, useLessonPositions, useLessonSentences } from '../hotel-hooks';
 import { CardPages } from './card-pages';
@@ -118,6 +119,16 @@ export function LessonScreen({ packId, unitId }: { packId: string; unitId: strin
             }
             onCheckFinished={() => go(current + 1)}
           />
+          {packId === PILOT_LESSON.packId && unitId === PILOT_LESSON.unitId ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/grammar-connections' as never)}
+              className="min-h-12 justify-center rounded-xl border border-border px-4 py-3 active:bg-surface-2"
+            >
+              <Text className="font-ui-medium text-accent">Встречалось в ваших книгах</Text>
+              <Text variant="caption">Familiar passages and a fresh meaning → form exercise</Text>
+            </Pressable>
+          ) : null}
           <View className="flex-row items-center justify-between gap-3 pt-4">
             <Pressable
               onPress={() => go(current - 1)}

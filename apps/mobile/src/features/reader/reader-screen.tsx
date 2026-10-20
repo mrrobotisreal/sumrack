@@ -47,6 +47,7 @@ import { useNarrationActivity, useStudyAmbience } from '@/features/ambient-audio
 import { resolveAmbientTheme } from '@/features/ambient-audio/theme';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
+import { CaseFileEntry } from '@/features/story-case-files/entry';
 
 const POSITION_SAVE_DEBOUNCE_MS = 800;
 /**
@@ -686,7 +687,12 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
             }
           />
         }
-        ListFooterComponent={<StoryEnd finished={finished} />}
+        ListFooterComponent={
+          <>
+            <StoryEnd finished={finished} />
+            <CaseFileEntry packId={packId} storyId={storyId} />
+          </>
+        }
         contentContainerStyle={{
           paddingBottom: insets.bottom + 48 + (narration.available ? AUDIO_BAR_HEIGHT : 0),
         }}

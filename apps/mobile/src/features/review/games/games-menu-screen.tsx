@@ -87,6 +87,24 @@ export function GamesMenuScreen() {
         route="/review/listening"
       />
       <GameRow
+        icon="headset-outline"
+        title="Listening lab"
+        subtitle="Listen without text, dictate, shadow and retell"
+        route={'/listening-lab' as Href}
+      />
+      <GameRow
+        icon="git-branch-outline"
+        title="Где или куда?"
+        subtitle="Connect familiar passages with meaning and case endings"
+        route={'/grammar-connections' as Href}
+      />
+      <GameRow
+        icon="document-text-outline"
+        title="Story case files"
+        subtitle="Support your answers with the text, then tell it in your own words"
+        route={'/case-files' as Href}
+      />
+      <GameRow
         icon="keypad-outline"
         title="Typing trainer"
         subtitle={

@@ -9,7 +9,10 @@ import { createDashboardRepo, type DashboardReader } from './dashboard';
 import { createDialoguesRepo } from './dialogues';
 import { createExamsRepo } from './exams';
 import { createImportsRepo } from './imports';
+import { createGrammarConnectionsRepo } from './grammar-connections';
 import { createJournalRepo } from './journal';
+import { createLearningSessionsRepo } from './learning-sessions';
+import { createLearningEvidenceRepo } from './learning-evidence';
 import { createListenRepo } from './listen';
 import { createPathRepo } from './path';
 import { createQuestsRepo } from './quests';
@@ -59,7 +62,10 @@ export function createRepositories(db: SumrakDB, opts: RepositoryOptions = {}) {
     dialogues: createDialoguesRepo(db),
     exams: createExamsRepo(db),
     imports: createImportsRepo(db),
+    grammarConnections: createGrammarConnectionsRepo(db),
     journal: createJournalRepo(db),
+    learningSessions: createLearningSessionsRepo(db),
+    learningEvidence: createLearningEvidenceRepo(db),
     listen: createListenRepo(db),
     path: createPathRepo(db),
     quests: createQuestsRepo(db),

@@ -91,7 +91,7 @@ export const CourseTableSchema = z
 export type CourseTable = z.infer<typeof CourseTableSchema>;
 
 /**
- * Reserved for T94 («Встречалось в ваших книгах», D17): an in-app query over
+ * Used by T109 («Встречалось в ваших книгах», D17): an in-app query over
  * annotated tokens. M25 authors it where obvious and never reads it.
  */
 export const GrammarQuerySchema = z.strictObject({

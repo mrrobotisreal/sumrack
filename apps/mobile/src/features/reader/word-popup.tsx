@@ -17,6 +17,7 @@ import { track } from '@/services/analytics';
 import { getSpeechService, speak } from '@/services/speech';
 import { useLookupPrefs } from '@/store/lookup-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
+import { GrammarWordLink } from '@/features/grammar-connections/entry';
 
 import type { WordSegmentPlayer } from './use-narration';
 
@@ -275,6 +276,13 @@ function WordPopupSheet({
             </View>
           )}
         </View>
+
+        <GrammarWordLink
+          token={token}
+          storyId={target.storyId}
+          sentenceId={target.sentenceId}
+          onClose={onClose}
+        />
 
         {/* footer: add / in-bank + «Формы» (T53) */}
         <View className="mt-4 flex-row gap-2">
