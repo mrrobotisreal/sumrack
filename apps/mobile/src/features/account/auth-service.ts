@@ -18,6 +18,9 @@ import Constants from 'expo-constants';
  * The one Firebase Auth seam (T102, ACCOUNTS_AND_SYNC §3). Screens and the
  * sync engine talk to this, never to the SDKs. Firebase persists the session
  * natively, so a signed-in phone stays signed in offline across launches.
+ * Binding (Mitch, 2026-10-20): sign in once, stay signed in for good — the
+ * ONLY sign-out path is «Выйти» in Settings (account-settings-section).
+ * Never call signOut() from sync, error handling, restore or anywhere else.
  */
 export type AuthUser = User;
 export type AuthProviderKind = 'password' | 'google';

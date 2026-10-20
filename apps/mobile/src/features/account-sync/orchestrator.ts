@@ -10,7 +10,9 @@ import { SyncHttpError, type SyncClient, type WireDeviceRequest } from './wire';
  * fake clock/network: single-flight, preconditions (signed in + linked +
  * online), POST /v1/devices once per sign-in, error classification, and
  * exponential backoff on 5xx/network. A 401 (after the client's one forced
- * refresh) stops with `lastError` until the next explicit trigger.
+ * refresh) stops with `lastError` until the next explicit trigger. It NEVER
+ * signs the person out: the Firebase session persists until «Выйти» in
+ * Settings (Mitch, 2026-10-20) — the next run fetches a fresh token.
  */
 export type Trigger =
   | 'launch'
@@ -58,7 +60,7 @@ export function classifyError(e: unknown): { stage: string; code: string; http: 
         ? ((cause as { status: number }).status)
         : -1;
   const message = cause instanceof Error ? cause.message : String(cause);
-  if (status === 401) return { stage, code: 'http_401', http: 401, fatal: true, message: 'Нужно войти заново · sign in again' };
+  if (status === 401) return { stage, code: 'http_401', http: 401, fatal: true, message: 'Сервер не принял вход — повторим позже · server rejected the token, will retry' };
   if (status === 0) return { stage, code: 'network', http: 0, fatal: false, message };
   if (status >= 500) return { stage, code: `http_${status}`, http: status, fatal: false, message };
   if (status >= 400) return { stage, code: `http_${status}`, http: status, fatal: true, message };
