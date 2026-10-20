@@ -10,20 +10,41 @@ export function statusLines(s: {
   now: number;
 }): { ru: string; en: string; tone: 'ok' | 'warn' | 'error' | 'muted' } {
   if (!s.linked) {
-    return { ru: 'Синхронизация не включена', en: 'Sync is not linked on this phone yet', tone: 'muted' };
+    return {
+      ru: 'Синхронизация не включена',
+      en: 'Sync is not linked on this phone yet',
+      tone: 'muted',
+    };
   }
   if (s.status === 'syncing') return { ru: 'Синхронизация…', en: 'Syncing', tone: 'muted' };
   if (s.status === 'error') {
-    return { ru: 'Не удалось синхронизировать', en: s.lastError?.message ?? 'Sync failed', tone: 'error' };
+    return {
+      ru: 'Не удалось синхронизировать',
+      en: s.lastError?.message ?? 'Sync failed',
+      tone: 'error',
+    };
   }
   if (s.status === 'offline') {
-    return { ru: 'Нет сети — сохранено на телефоне', en: 'Offline — saved on this phone', tone: 'warn' };
+    return {
+      ru: 'Нет сети — сохранено на телефоне',
+      en: 'Offline — saved on this phone',
+      tone: 'warn',
+    };
   }
   if (s.pending > 0) {
-    return { ru: `Ожидает: ${s.pending} ${changesWord(s.pending)}`, en: `${s.pending} change${s.pending === 1 ? '' : 's'} waiting to sync`, tone: 'warn' };
+    return {
+      ru: `Ожидает: ${s.pending} ${changesWord(s.pending)}`,
+      en: `${s.pending} change${s.pending === 1 ? '' : 's'} waiting to sync`,
+      tone: 'warn',
+    };
   }
-  if (s.lastSyncAt == null) return { ru: 'Ещё не синхронизировано', en: 'Not synced yet', tone: 'muted' };
-  return { ru: `Синхронизировано · ${agoRu(s.now - s.lastSyncAt)}`, en: 'Everything is up to date', tone: 'ok' };
+  if (s.lastSyncAt == null)
+    return { ru: 'Ещё не синхронизировано', en: 'Not synced yet', tone: 'muted' };
+  return {
+    ru: `Синхронизировано · ${agoRu(s.now - s.lastSyncAt)}`,
+    en: 'Everything is up to date',
+    tone: 'ok',
+  };
 }
 
 export function changesWord(n: number): string {

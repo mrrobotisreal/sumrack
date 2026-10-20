@@ -50,12 +50,21 @@ describe('0023_sync migration', () => {
 
   it('fresh DB: infra tables, one control row, one clock row, 3 triggers per synced table', async () => {
     const db = createTestDb();
-    const t = await db.all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type='table'`);
+    const t = await db.all<{ name: string }>(
+      sql`SELECT name FROM sqlite_master WHERE type='table'`,
+    );
     const names = t.map((r) => r.name);
     for (const n of [
-      'sync_outbox', 'sync_control', 'sync_clock', 'sync_id_map', 'sync_parked',
-      'sync_row_hlc', 'daily_activity_own', 'daily_activity_peers',
-    ]) expect(names).toContain(n);
+      'sync_outbox',
+      'sync_control',
+      'sync_clock',
+      'sync_id_map',
+      'sync_parked',
+      'sync_row_hlc',
+      'daily_activity_own',
+      'daily_activity_peers',
+    ])
+      expect(names).toContain(n);
     expect(await db.all(sql`SELECT * FROM sync_control`)).toEqual([{ id: 1, applying: 0 }]);
     expect(await db.all(sql`SELECT * FROM sync_clock`)).toEqual([{ id: 1, last: 0 }]);
     const trg = await db.all<{ name: string }>(
@@ -73,9 +82,9 @@ describe('0023_sync migration', () => {
     );
     sqlite.exec(`INSERT INTO settings (key, value, updated_at) VALUES ('goal.daily', '{}', 1)`);
     migrate(db as never, { migrationsFolder: drizzleDir });
-    expect(
-      await db.all(sql`SELECT * FROM daily_activity_own ORDER BY date`),
-    ).toEqual(await db.all(sql`SELECT * FROM daily_activity ORDER BY date`));
+    expect(await db.all(sql`SELECT * FROM daily_activity_own ORDER BY date`)).toEqual(
+      await db.all(sql`SELECT * FROM daily_activity ORDER BY date`),
+    );
     // Backfill ran before the triggers existed -> nothing queued from it.
     expect(await outbox(db)).toEqual([]);
     const cols = await db.all<{ name: string }>(sql`PRAGMA table_info(analytics_events)`);
@@ -84,7 +93,9 @@ describe('0023_sync migration', () => {
 
   it('insert / update / delete enqueue upserts and a delete with the pk as a JSON array', async () => {
     const db = createTestDb();
-    await db.run(sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n1','t','b',1,1)`);
+    await db.run(
+      sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n1','t','b',1,1)`,
+    );
     await db.run(sql`UPDATE notes SET title = 'x' WHERE id = 'n1'`);
     await db.run(sql`DELETE FROM notes WHERE id = 'n1'`);
     const o = await outbox(db);
@@ -99,25 +110,33 @@ describe('0023_sync migration', () => {
 
   it('composite pks encode in schema order', async () => {
     const db = createTestDb();
-    await db.run(sql`INSERT INTO story_progress (pack_id, story_id, current_sentence_idx, started_at, updated_at) VALUES ('p','s',1,1,1)`);
+    await db.run(
+      sql`INSERT INTO story_progress (pack_id, story_id, current_sentence_idx, started_at, updated_at) VALUES ('p','s',1,1,1)`,
+    );
     expect((await outbox(db))[0]!.pk).toBe('["p","s"]');
   });
 
   it('is silent while sync_control.applying = 1', async () => {
     const db = createTestDb();
     await db.run(sql`UPDATE sync_control SET applying = 1`);
-    await db.run(sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n1','t','b',1,1)`);
+    await db.run(
+      sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n1','t','b',1,1)`,
+    );
     await db.run(sql`DELETE FROM notes WHERE id = 'n1'`);
     expect(await outbox(db)).toEqual([]);
     await db.run(sql`UPDATE sync_control SET applying = 0`);
-    await db.run(sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n2','t','b',1,1)`);
+    await db.run(
+      sql`INSERT INTO notes (id, title, body, created_at, updated_at) VALUES ('n2','t','b',1,1)`,
+    );
     expect(await outbox(db)).toHaveLength(1);
   });
 
   it('settings: device-local keys never enqueue, synced keys do', async () => {
     const db = createTestDb();
     await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('sync.cursor','5',1)`);
-    await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('themeMode','"dark"',1)`);
+    await db.run(
+      sql`INSERT INTO settings (key, value, updated_at) VALUES ('themeMode','"dark"',1)`,
+    );
     await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('auth.future','1',1)`);
     expect(await outbox(db)).toEqual([]);
     await db.run(sql`INSERT INTO settings (key, value, updated_at) VALUES ('goal.daily','{}',1)`);
@@ -126,9 +145,15 @@ describe('0023_sync migration', () => {
 
   it('cascade deletes enqueue the child deletes', async () => {
     const db = createTestDb();
-    await db.run(sql`INSERT INTO bank_items (id, kind, lemma, lemma_norm, surface, normalized, translation, created_at) VALUES ('b1','word','x','x','x','x','y',1)`);
-    await db.run(sql`INSERT INTO cards (id, bank_item_id, direction, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, created_at) VALUES ('c1','b1','ru-en',1,0,0,0,0,0,0,0,0,1)`);
-    await db.run(sql`INSERT INTO review_log (id, card_id, rating, state, due_at, stability, difficulty, elapsed_days, last_elapsed_days, scheduled_days, learning_steps, reviewed_at) VALUES ('r1','c1',3,0,1,0,0,0,0,0,0,1)`);
+    await db.run(
+      sql`INSERT INTO bank_items (id, kind, lemma, lemma_norm, surface, normalized, translation, created_at) VALUES ('b1','word','x','x','x','x','y',1)`,
+    );
+    await db.run(
+      sql`INSERT INTO cards (id, bank_item_id, direction, due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, created_at) VALUES ('c1','b1','ru-en',1,0,0,0,0,0,0,0,0,1)`,
+    );
+    await db.run(
+      sql`INSERT INTO review_log (id, card_id, rating, state, due_at, stability, difficulty, elapsed_days, last_elapsed_days, scheduled_days, learning_steps, reviewed_at) VALUES ('r1','c1',3,0,1,0,0,0,0,0,0,1)`,
+    );
     await db.run(sql`DELETE FROM sync_outbox`);
     await db.run(sql`DELETE FROM bank_items WHERE id = 'b1'`);
     const dels = (await outbox(db)).filter((r) => r.op === 'delete').map((r) => `${r.tbl}${r.pk}`);
@@ -138,8 +163,12 @@ describe('0023_sync migration', () => {
   it('daily_activity (the merged table) and device-local tables never enqueue', async () => {
     const db = createTestDb();
     await db.run(sql`INSERT INTO daily_activity (date, updated_at) VALUES ('2026-10-01', 1)`);
-    await db.run(sql`INSERT INTO daily_activity_peers (date, device_id, updated_at) VALUES ('2026-10-01','d2',1)`);
-    await db.run(sql`INSERT INTO sync_state (pack_id, version, source, installed_at, updated_at) VALUES ('p',1,'x',1,1)`);
+    await db.run(
+      sql`INSERT INTO daily_activity_peers (date, device_id, updated_at) VALUES ('2026-10-01','d2',1)`,
+    );
+    await db.run(
+      sql`INSERT INTO sync_state (pack_id, version, source, installed_at, updated_at) VALUES ('p',1,'x',1,1)`,
+    );
     expect(await outbox(db)).toEqual([]);
     await db.run(sql`INSERT INTO daily_activity_own (date, updated_at) VALUES ('2026-10-01', 1)`);
     expect((await outbox(db)).map((r) => r.tbl)).toEqual(['daily_activity_own']);

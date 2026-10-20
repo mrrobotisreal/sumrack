@@ -44,7 +44,12 @@ export class HttpSyncClient implements SyncClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
-  private async call<T>(method: 'GET' | 'POST', path: string, body?: unknown, retry = true): Promise<T> {
+  private async call<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    retry = true,
+  ): Promise<T> {
     const token = await this.opts.token(false);
     if (!token) throw new SyncHttpError(401, 'not signed in');
     const ctl = new AbortController();
@@ -76,7 +81,12 @@ export class HttpSyncClient implements SyncClient {
     return this.parse<T>(res);
   }
 
-  private async callWith<T>(method: 'GET' | 'POST', path: string, body: unknown, token: string): Promise<T> {
+  private async callWith<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body: unknown,
+    token: string,
+  ): Promise<T> {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), this.timeout);
     try {

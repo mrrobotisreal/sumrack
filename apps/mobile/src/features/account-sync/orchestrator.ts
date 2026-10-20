@@ -14,13 +14,7 @@ import { SyncHttpError, type SyncClient, type WireDeviceRequest } from './wire';
  * signs the person out: the Firebase session persists until «Выйти» in
  * Settings (Mitch, 2026-10-20) — the next run fetches a fresh token.
  */
-export type Trigger =
-  | 'launch'
-  | 'foreground'
-  | 'connectivity'
-  | 'outbox'
-  | 'manual'
-  | 'sign-in';
+export type Trigger = 'launch' | 'foreground' | 'connectivity' | 'outbox' | 'manual' | 'sign-in';
 
 export interface OrchestratorDeps {
   db: SumrakDB;
@@ -50,17 +44,30 @@ export const BACKOFF_MAX_MS = 5 * 60_000;
 export const backoffMs = (attempt: number): number =>
   Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** Math.max(0, attempt - 1));
 
-export function classifyError(e: unknown): { stage: string; code: string; http: number; fatal: boolean; message: string } {
+export function classifyError(e: unknown): {
+  stage: string;
+  code: string;
+  http: number;
+  fatal: boolean;
+  message: string;
+} {
   const stage = e instanceof SyncRunError ? e.stage : 'token';
   const cause = e instanceof SyncRunError ? e.cause : e;
   const status =
     cause instanceof SyncHttpError
       ? cause.status
       : typeof (cause as { status?: unknown })?.status === 'number'
-        ? ((cause as { status: number }).status)
+        ? (cause as { status: number }).status
         : -1;
   const message = cause instanceof Error ? cause.message : String(cause);
-  if (status === 401) return { stage, code: 'http_401', http: 401, fatal: true, message: 'Сервер не принял вход — повторим позже · server rejected the token, will retry' };
+  if (status === 401)
+    return {
+      stage,
+      code: 'http_401',
+      http: 401,
+      fatal: true,
+      message: 'Сервер не принял вход — повторим позже · server rejected the token, will retry',
+    };
   if (status === 0) return { stage, code: 'network', http: 0, fatal: false, message };
   if (status >= 500) return { stage, code: `http_${status}`, http: status, fatal: false, message };
   if (status >= 400) return { stage, code: `http_${status}`, http: status, fatal: true, message };

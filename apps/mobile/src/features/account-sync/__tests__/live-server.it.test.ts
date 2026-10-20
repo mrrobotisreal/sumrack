@@ -27,16 +27,33 @@ describe.skipIf(!URL || !TOKEN)('live server round trip', () => {
     const A = await makePhone('A', 'it-dev-A', mk());
     const B = await makePhone('B', 'it-dev-B', mk());
     const c = mk();
-    const me0 = await c.registerDevice({ deviceId: 'it-dev-A', name: 'A', model: 'A', appVersion: 'it' });
+    const me0 = await c.registerDevice({
+      deviceId: 'it-dev-A',
+      name: 'A',
+      model: 'A',
+      appVersion: 'it',
+    });
     expect(me0.uid).toBeTruthy();
     await c.registerDevice({ deviceId: 'it-dev-B', name: 'B', model: 'B', appVersion: 'it' });
     expect((await c.me()).deviceCount).toBeGreaterThanOrEqual(2);
 
     // Same word on both, graded on both; progress; a note deleted; daily split.
-    const ia = await A.repos.bank.addWord({ lemma: 'огонь', surface: 'огонь', translation: 'fire' });
-    const ib = await B.repos.bank.addWord({ lemma: 'огонь', surface: 'огнём', translation: 'fire' });
-    const ca = (await A.repos.reviews.ensureCards(ia.item.id)).find((x) => x.direction === 'ru-en')!;
-    const cb = (await B.repos.reviews.ensureCards(ib.item.id)).find((x) => x.direction === 'ru-en')!;
+    const ia = await A.repos.bank.addWord({
+      lemma: 'огонь',
+      surface: 'огонь',
+      translation: 'fire',
+    });
+    const ib = await B.repos.bank.addWord({
+      lemma: 'огонь',
+      surface: 'огнём',
+      translation: 'fire',
+    });
+    const ca = (await A.repos.reviews.ensureCards(ia.item.id)).find(
+      (x) => x.direction === 'ru-en',
+    )!;
+    const cb = (await B.repos.reviews.ensureCards(ib.item.id)).find(
+      (x) => x.direction === 'ru-en',
+    )!;
     await A.repos.reviews.gradeCard(ca.id, 3, { now: 1_760_000_000_000 });
     await B.repos.reviews.gradeCard(cb.id, 4, { now: 1_760_000_100_000 });
     await A.repos.reading.savePosition('p', 's', 3);
@@ -55,12 +72,20 @@ describe.skipIf(!URL || !TOKEN)('live server round trip', () => {
 
     for (const P of [A, B]) {
       expect(await pendingCount(P.db)).toBe(0);
-      const sp = await P.db.all<{ current_sentence_idx: number }>(sql`SELECT current_sentence_idx FROM story_progress`);
+      const sp = await P.db.all<{ current_sentence_idx: number }>(
+        sql`SELECT current_sentence_idx FROM story_progress`,
+      );
       expect(sp[0]!.current_sentence_idx).toBe(8);
-      const da = await P.db.all<{ reviews_done: number }>(sql`SELECT reviews_done FROM daily_activity WHERE date = '2026-10-02'`);
+      const da = await P.db.all<{ reviews_done: number }>(
+        sql`SELECT reviews_done FROM daily_activity WHERE date = '2026-10-02'`,
+      );
       expect(da[0]!.reviews_done).toBe(7);
       expect(await P.db.all(sql`SELECT id FROM notes`)).toEqual([]);
-      expect((await P.db.all<{ reps: number }>(sql`SELECT reps FROM cards WHERE direction = 'ru-en'`))[0]!.reps).toBe(2);
+      expect(
+        (
+          await P.db.all<{ reps: number }>(sql`SELECT reps FROM cards WHERE direction = 'ru-en'`)
+        )[0]!.reps,
+      ).toBe(2);
       expect(await P.db.all(sql`SELECT * FROM sync_parked`)).toEqual([]);
     }
     expect(await readSetting(A.db, 'sync.cursor')).toBe(await readSetting(B.db, 'sync.cursor'));

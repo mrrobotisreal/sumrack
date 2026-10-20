@@ -4,12 +4,7 @@ import type { SumrakDB } from '@/db/types';
 import { getReviewScheduler } from '@/db/repositories/reviews';
 import { createEmptyCard, type Card as FsrsCard, type Grade, type State } from 'ts-fsrs';
 
-import {
-  MAX_DATA_BYTES,
-  MAX_PK_BYTES,
-  MAX_PUSH_BODY_BYTES,
-  MAX_PUSH_CHANGES,
-} from './config';
+import { MAX_DATA_BYTES, MAX_PK_BYTES, MAX_PUSH_BODY_BYTES, MAX_PUSH_CHANGES } from './config';
 import { mergeMonotonic } from './merge';
 import {
   isDeviceLocalSetting,
@@ -32,8 +27,7 @@ type Row = Record<string, unknown>;
 type DB = SumrakDB;
 
 const q = (id: string) => sql.identifier(id);
-const list = (items: SQL[] | ReturnType<typeof q>[]): SQL =>
-  sql.join(items as SQL[], sql`, `);
+const list = (items: SQL[] | ReturnType<typeof q>[]): SQL => sql.join(items as SQL[], sql`, `);
 
 async function all<T = Row>(db: DB, query: SQL): Promise<T[]> {
   return db.all<T>(query);
@@ -136,7 +130,12 @@ function mapValue(ctx: ApplyCtx, parent: string, value: unknown): unknown {
 }
 
 /** Remote pk -> local pk (FK pk columns through the parent's map, a lone id through its own). */
-function translatePk(ctx: ApplyCtx, spec: TableSpec, meta: TableMeta, remote: unknown[]): unknown[] {
+function translatePk(
+  ctx: ApplyCtx,
+  spec: TableSpec,
+  meta: TableMeta,
+  remote: unknown[],
+): unknown[] {
   if (spec.pk.length === 1) {
     const own = ctx.idMap.get(`${spec.name}|${JSON.stringify(remote)}`);
     if (own != null) return JSON.parse(own) as unknown[];
@@ -174,10 +173,7 @@ async function findByNaturalKey(ctx: ApplyCtx, spec: TableSpec, data: Row): Prom
       sql` AND `,
     );
     const extra = nk.sqlWhere ? sql` AND ${sql.raw(nk.sqlWhere)}` : sql``;
-    const hit = await one(
-      ctx.db,
-      sql`SELECT * FROM ${q(spec.name)} WHERE ${cond}${extra} LIMIT 1`,
-    );
+    const hit = await one(ctx.db, sql`SELECT * FROM ${q(spec.name)} WHERE ${cond}${extra} LIMIT 1`);
     if (hit) return hit;
   }
   return null;
@@ -234,7 +230,13 @@ async function remoteWins(
 
 // -------------------------------------------------------------------- writes
 
-async function insertRow(ctx: ApplyCtx, table: string, meta: TableMeta, data: Row, orIgnore = false) {
+async function insertRow(
+  ctx: ApplyCtx,
+  table: string,
+  meta: TableMeta,
+  data: Row,
+  orIgnore = false,
+) {
   const cols = Object.keys(data).filter((c) => meta.cols.includes(c));
   await ctx.db.run(
     sql`INSERT ${sql.raw(orIgnore ? 'OR IGNORE ' : '')}INTO ${q(table)} (${list(cols.map(q))}) VALUES (${list(
@@ -286,7 +288,8 @@ async function parentsPresent(ctx: ApplyCtx, spec: TableSpec, meta: TableMeta, d
 async function park(ctx: ApplyCtx, ch: WirePullChange, error: string): Promise<void> {
   ctx.counts.parked++;
   ctx.conflicts.push({ tbl: ch.tbl, kind: 'parked' });
-  await ctx.db.run(sql`INSERT INTO sync_parked (tbl, pk, op, data, hlc, device_id, error, attempts, parked_at)
+  await ctx.db
+    .run(sql`INSERT INTO sync_parked (tbl, pk, op, data, hlc, device_id, error, attempts, parked_at)
     VALUES (${ch.tbl}, ${ch.pk}, ${ch.op}, ${ch.data ? JSON.stringify(ch.data) : null}, ${ch.hlc}, ${ch.deviceId}, ${error}, 1, ${Date.now()})
     ON CONFLICT (tbl, pk) DO UPDATE SET op = excluded.op, data = excluded.data, hlc = excluded.hlc,
       device_id = excluded.device_id, error = excluded.error, attempts = sync_parked.attempts + 1
@@ -300,8 +303,13 @@ export async function countParked(db: DB): Promise<number> {
 async function retryParked(ctx: ApplyCtx): Promise<void> {
   for (let pass = 0; pass < 4; pass++) {
     const rows = await all<{
-      id: number; tbl: string; pk: string; op: 'upsert' | 'delete'; data: string | null;
-      hlc: number; device_id: string;
+      id: number;
+      tbl: string;
+      pk: string;
+      op: 'upsert' | 'delete';
+      data: string | null;
+      hlc: number;
+      device_id: string;
     }>(ctx.db, sql`SELECT id, tbl, pk, op, data, hlc, device_id FROM sync_parked ORDER BY id`);
     if (rows.length === 0) return;
     let progressed = false;
@@ -309,7 +317,12 @@ async function retryParked(ctx: ApplyCtx): Promise<void> {
       await ctx.db.run(sql`DELETE FROM sync_parked WHERE id = ${r.id}`);
       const before = ctx.counts.parked;
       await applyChange(ctx, {
-        tbl: r.tbl, pk: r.pk, op: r.op, hlc: r.hlc, deviceId: r.device_id, seq: 0,
+        tbl: r.tbl,
+        pk: r.pk,
+        op: r.op,
+        hlc: r.hlc,
+        deviceId: r.device_id,
+        seq: 0,
         data: r.data ? (JSON.parse(r.data) as Row) : undefined,
       });
       if (ctx.counts.parked === before) progressed = true;
@@ -354,7 +367,8 @@ async function applyChangeInner(ctx: ApplyCtx, ch: WirePullChange): Promise<Outc
 
   if (ch.deviceId === ctx.deviceId && !ctx.applyOwn) {
     // Our own echo: not applied, but it is the server's clock for the row.
-    if (isGated(spec)) await setGate(ctx.db, spec.name, JSON.stringify(localPk), ch.hlc, ch.deviceId);
+    if (isGated(spec))
+      await setGate(ctx.db, spec.name, JSON.stringify(localPk), ch.hlc, ch.deviceId);
     ctx.counts.own++;
     return 'own';
   }
@@ -484,7 +498,9 @@ async function applyDaily(ctx: ApplyCtx, ch: WirePullChange, pk: unknown[]): Pro
     return 'own';
   }
   if (ch.op === 'delete' || !ch.data) {
-    await ctx.db.run(sql`DELETE FROM daily_activity_peers WHERE date = ${date} AND device_id = ${dev}`);
+    await ctx.db.run(
+      sql`DELETE FROM daily_activity_peers WHERE date = ${date} AND device_id = ${dev}`,
+    );
   } else {
     const d = ch.data;
     await ctx.db.run(sql`INSERT INTO daily_activity_peers
@@ -621,8 +637,12 @@ export interface PushBatch {
 
 export async function pendingCount(db: DB): Promise<number> {
   return (
-    (await one<{ n: number }>(db, sql`SELECT COUNT(*) AS n FROM (SELECT 1 FROM sync_outbox GROUP BY tbl, pk)`))
-      ?.n ?? 0
+    (
+      await one<{ n: number }>(
+        db,
+        sql`SELECT COUNT(*) AS n FROM (SELECT 1 FROM sync_outbox GROUP BY tbl, pk)`,
+      )
+    )?.n ?? 0
   );
 }
 
@@ -646,7 +666,8 @@ export async function collectPush(db: DB, deviceId: string): Promise<PushBatch> 
     let change: WirePushChange;
     let wirePk = h.pk;
     if (spec.name === 'daily_activity_own') wirePk = JSON.stringify([localPk[0], deviceId]);
-    else if (spec.name === 'analytics_events') wirePk = JSON.stringify([`${deviceId}:${localPk[0]}`]);
+    else if (spec.name === 'analytics_events')
+      wirePk = JSON.stringify([`${deviceId}:${localPk[0]}`]);
 
     let row: Row | null = null;
     if (h.op !== 'delete') row = await selectRow(db, spec, localPk);
@@ -682,7 +703,9 @@ export async function ackPush(db: DB, acks: PushBatch['acks'], deviceId: string)
       const spec = SPEC_BY_LOCAL.get(a.tbl);
       // The server now holds our version: it is the clock a remote twin must beat.
       if (spec && isGated(spec)) await setGate(db, a.tbl, a.pk, a.hlc, deviceId);
-      await db.run(sql`DELETE FROM sync_outbox WHERE tbl = ${a.tbl} AND pk = ${a.pk} AND id <= ${a.maxId}`);
+      await db.run(
+        sql`DELETE FROM sync_outbox WHERE tbl = ${a.tbl} AND pk = ${a.pk} AND id <= ${a.maxId}`,
+      );
     }
     await db.run(sql`COMMIT`);
   } catch (e) {
@@ -694,8 +717,16 @@ export async function ackPush(db: DB, acks: PushBatch['acks'], deviceId: string)
 // ------------------------------------------------------------------ FSRS replay
 
 const SCHEDULE_COLS = [
-  'due_at', 'stability', 'difficulty', 'elapsed_days', 'scheduled_days',
-  'learning_steps', 'reps', 'lapses', 'state', 'last_review_at',
+  'due_at',
+  'stability',
+  'difficulty',
+  'elapsed_days',
+  'scheduled_days',
+  'learning_steps',
+  'reps',
+  'lapses',
+  'state',
+  'last_review_at',
 ] as const;
 
 /**

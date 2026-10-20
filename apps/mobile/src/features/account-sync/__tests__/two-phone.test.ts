@@ -23,16 +23,28 @@ async function canonical(db: SumrakDB) {
       c.scheduled_days, c.learning_steps, c.reps, c.lapses, c.state, c.last_review_at, c.suspended_at, c.buried_until, c.created_at AS created_at
       FROM cards c JOIN bank_items b ON b.id = c.bank_item_id ORDER BY lemma, direction`;
   return {
-    bank_items: await q(db, `SELECT kind, lemma, lemma_norm, surface, normalized, translation, grammar, pos, level, note, needs_enrichment, created_at FROM bank_items ORDER BY lemma_norm`),
+    bank_items: await q(
+      db,
+      `SELECT kind, lemma, lemma_norm, surface, normalized, translation, grammar, pos, level, note, needs_enrichment, created_at FROM bank_items ORDER BY lemma_norm`,
+    ),
     cards: await q(db, card),
-    review_log: await q(db, `SELECT b.lemma_norm AS lemma, c.direction, r.rating, r.state, r.due_at, r.stability, r.difficulty, r.reviewed_at, r.source
-      FROM review_log r JOIN cards c ON c.id = r.card_id JOIN bank_items b ON b.id = c.bank_item_id ORDER BY lemma, direction, reviewed_at`),
-    encounters: await q(db, `SELECT b.lemma_norm AS lemma, e.surface, e.created_at AS created_at FROM encounters e JOIN bank_items b ON b.id = e.bank_item_id ORDER BY lemma, e.created_at, e.surface`),
+    review_log: await q(
+      db,
+      `SELECT b.lemma_norm AS lemma, c.direction, r.rating, r.state, r.due_at, r.stability, r.difficulty, r.reviewed_at, r.source
+      FROM review_log r JOIN cards c ON c.id = r.card_id JOIN bank_items b ON b.id = c.bank_item_id ORDER BY lemma, direction, reviewed_at`,
+    ),
+    encounters: await q(
+      db,
+      `SELECT b.lemma_norm AS lemma, e.surface, e.created_at AS created_at FROM encounters e JOIN bank_items b ON b.id = e.bank_item_id ORDER BY lemma, e.created_at, e.surface`,
+    ),
     story_progress: await q(db, `SELECT * FROM story_progress ORDER BY pack_id, story_id`),
     notes: await q(db, `SELECT * FROM notes ORDER BY id`),
     achievements: await q(db, `SELECT * FROM achievements ORDER BY id`),
     daily_activity: await q(db, `SELECT * FROM daily_activity ORDER BY date`),
-    settings: await q(db, `SELECT key, value FROM settings WHERE key IN (${[...SYNCED_SETTING_KEYS].map((k) => `'${k}'`).join(',')}) ORDER BY key`),
+    settings: await q(
+      db,
+      `SELECT key, value FROM settings WHERE key IN (${[...SYNCED_SETTING_KEYS].map((k) => `'${k}'`).join(',')}) ORDER BY key`,
+    ),
     game_sessions: await q(db, `SELECT * FROM game_sessions ORDER BY id`),
   };
 }
@@ -55,11 +67,25 @@ describe('two phones converge through the T103 contract', () => {
     const DAY = '2026-10-01';
 
     // 1. SAME lemma banked independently (natural-key collision), cards graded on both.
-    const addA = await A.repos.bank.addWord({ lemma: 'тень', surface: 'тени', translation: 'shadow', sentenceId: 's1' });
-    const addB = await B.repos.bank.addWord({ lemma: 'тень', surface: 'тенью', translation: 'shadow (B)', sentenceId: 's2' });
+    const addA = await A.repos.bank.addWord({
+      lemma: 'тень',
+      surface: 'тени',
+      translation: 'shadow',
+      sentenceId: 's1',
+    });
+    const addB = await B.repos.bank.addWord({
+      lemma: 'тень',
+      surface: 'тенью',
+      translation: 'shadow (B)',
+      sentenceId: 's2',
+    });
     expect(addA.item.id).not.toBe(addB.item.id);
-    const cardA = (await A.repos.reviews.ensureCards(addA.item.id)).find((c) => c.direction === 'ru-en')!;
-    const cardB = (await B.repos.reviews.ensureCards(addB.item.id)).find((c) => c.direction === 'ru-en')!;
+    const cardA = (await A.repos.reviews.ensureCards(addA.item.id)).find(
+      (c) => c.direction === 'ru-en',
+    )!;
+    const cardB = (await B.repos.reviews.ensureCards(addB.item.id)).find(
+      (c) => c.direction === 'ru-en',
+    )!;
     await A.repos.reviews.gradeCard(cardA.id, 3, { now: T0 + 1_000, source: 'flashcard' });
     await A.repos.reviews.gradeCard(cardA.id, 3, { now: T0 + 5 * 86_400_000, source: 'flashcard' });
     await B.repos.reviews.gradeCard(cardB.id, 1, { now: T0 + 2_000, source: 'mc' });
@@ -94,9 +120,15 @@ describe('two phones converge through the T103 contract', () => {
     await B.repos.stats.bumpDailyActivity({ reviewsDone: 7, xp: 30, storiesFinished: 1 }, DAY);
 
     // 6. Achievement unlocked on both at different times (min wins).
-    await A.db.run(sql`INSERT INTO achievements (id, unlocked_at) VALUES ('first-word', ${T0 + 500})`);
-    await B.db.run(sql`INSERT INTO achievements (id, unlocked_at) VALUES ('first-word', ${T0 + 100})`);
-    await A.db.run(sql`INSERT INTO achievements (id, unlocked_at) VALUES ('streak-3', ${T0 + 900})`);
+    await A.db.run(
+      sql`INSERT INTO achievements (id, unlocked_at) VALUES ('first-word', ${T0 + 500})`,
+    );
+    await B.db.run(
+      sql`INSERT INTO achievements (id, unlocked_at) VALUES ('first-word', ${T0 + 100})`,
+    );
+    await A.db.run(
+      sql`INSERT INTO achievements (id, unlocked_at) VALUES ('streak-3', ${T0 + 900})`,
+    );
 
     // 7. Settings: a synced key on A, a DEVICE-LOCAL key different on each.
     await A.repos.settings.set('goal.daily', { reviews: 30, readingMin: 15 });
@@ -119,10 +151,23 @@ describe('two phones converge through the T103 contract', () => {
 
     // Both reviews' logs merged on both; card schedule == replay of the merged log.
     expect(ca.review_log).toHaveLength(5);
-    const tenA = (await q(A.db, `SELECT c.created_at, c.id FROM cards c JOIN bank_items b ON b.id=c.bank_item_id WHERE b.lemma_norm='тень' AND c.direction='ru-en'`))[0]!;
-    const merged = await q(A.db, `SELECT rating, reviewed_at FROM review_log WHERE card_id='${tenA.id}' ORDER BY reviewed_at`);
+    const tenA = (
+      await q(
+        A.db,
+        `SELECT c.created_at, c.id FROM cards c JOIN bank_items b ON b.id=c.bank_item_id WHERE b.lemma_norm='тень' AND c.direction='ru-en'`,
+      )
+    )[0]!;
+    const merged = await q(
+      A.db,
+      `SELECT rating, reviewed_at FROM review_log WHERE card_id='${tenA.id}' ORDER BY reviewed_at`,
+    );
     const want = replayCard(tenA.created_at as number, merged as never)!;
-    const got = (await q(A.db, `SELECT due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review_at FROM cards WHERE id='${tenA.id}'`))[0]!;
+    const got = (
+      await q(
+        A.db,
+        `SELECT due_at, stability, difficulty, elapsed_days, scheduled_days, learning_steps, reps, lapses, state, last_review_at FROM cards WHERE id='${tenA.id}'`,
+      )
+    )[0]!;
     expect(got).toEqual(want);
     expect(got.reps).toBe(5);
     expect(ca.encounters.filter((e) => e.lemma === 'тень')).toHaveLength(2);
@@ -145,7 +190,13 @@ describe('two phones converge through the T103 contract', () => {
     expect(ca.notes.map((n) => n.id)).toEqual([keep.id]);
     // Daily activity = own + peers on BOTH phones; goal-met from A.
     expect(ca.daily_activity).toEqual([
-      expect.objectContaining({ date: DAY, reviews_done: 27, xp: 130, reading_ms: 60_000, stories_finished: 1 }),
+      expect.objectContaining({
+        date: DAY,
+        reviews_done: 27,
+        xp: 130,
+        reading_ms: 60_000,
+        stories_finished: 1,
+      }),
     ]);
     expect(ca.daily_activity[0]!.goal_met_at).toBeTypeOf('number');
     const peersB = await q(B.db, `SELECT device_id, reviews_done FROM daily_activity_peers`);
@@ -155,14 +206,20 @@ describe('two phones converge through the T103 contract', () => {
     expect(await readSetting(A.db, 'themeMode')).toBe('dark');
     expect(await readSetting(B.db, 'themeMode')).toBe('light');
     expect(await readSetting(B.db, 'sync.serverUrl')).toBeNull();
-    expect([...server.records.values()].some((r) => r.pk.includes('themeMode') || r.pk.includes('sync.'))).toBe(false);
+    expect(
+      [...server.records.values()].some(
+        (r) => r.pk.includes('themeMode') || r.pk.includes('sync.'),
+      ),
+    ).toBe(false);
     // Nothing parked, nothing pending, no cursor leak into the synced set.
     expect(await q(A.db, 'SELECT * FROM sync_parked')).toEqual([]);
     expect(await q(B.db, 'SELECT * FROM sync_parked')).toEqual([]);
     expect(await q(B.db, 'SELECT * FROM sync_outbox')).toEqual([]);
     expect(await readSetting(A.db, 'sync.cursor')).toBe(server.seq);
     // The two ids for the same word stayed distinct but mapped.
-    expect((await q(B.db, `SELECT COUNT(*) AS n FROM sync_id_map WHERE tbl='bank_items'`))[0]!.n).toBeGreaterThan(0);
+    expect(
+      (await q(B.db, `SELECT COUNT(*) AS n FROM sync_id_map WHERE tbl='bank_items'`))[0]!.n,
+    ).toBeGreaterThan(0);
   });
 
   it('a second round of edits keeps converging (mapped ids keep working)', async () => {

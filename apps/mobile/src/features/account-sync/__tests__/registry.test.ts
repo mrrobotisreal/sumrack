@@ -25,16 +25,36 @@ import {
  * both together (tables_test.go pins the Go side).
  */
 const SERVER_TABLES_PINNED = [
-  'review_log', 'encounters', 'game_sessions', 'analytics_events',
-  'scenario_attempts', 'exam_responses', 'course_attempts',
-  'checkpoint_results', 'assessments',
-  'cards', 'exam_item_cards',
-  'story_progress', 'unit_progress', 'course_progress', 'achievements',
-  'frozen_days', 'dialogue_endings_seen', 'leech_dismissals',
-  'bank_items', 'journal_entries', 'notes', 'bookmarks', 'dialogue_runs',
-  'scenario_runs', 'exam_attempts', 'word_profiles', 'grammar_lessons',
+  'review_log',
+  'encounters',
+  'game_sessions',
+  'analytics_events',
+  'scenario_attempts',
+  'exam_responses',
+  'course_attempts',
+  'checkpoint_results',
+  'assessments',
+  'cards',
+  'exam_item_cards',
+  'story_progress',
+  'unit_progress',
+  'course_progress',
+  'achievements',
+  'frozen_days',
+  'dialogue_endings_seen',
+  'leech_dismissals',
+  'bank_items',
+  'journal_entries',
+  'notes',
+  'bookmarks',
+  'dialogue_runs',
+  'scenario_runs',
+  'exam_attempts',
+  'word_profiles',
+  'grammar_lessons',
   'daily_quests',
-  'daily_activity', 'settings',
+  'daily_activity',
+  'settings',
 ].sort();
 
 function tablesOf(mod: Record<string, unknown>): string[] {
@@ -104,7 +124,10 @@ describe('sync registry drift guard', () => {
       const info = await db.all<{ name: string; pk: number }>(
         sql.raw(`PRAGMA table_info(${t.name})`),
       );
-      const nonPk = info.filter((c) => c.pk === 0).map((c) => c.name).sort();
+      const nonPk = info
+        .filter((c) => c.pk === 0)
+        .map((c) => c.name)
+        .sort();
       expect({ t: t.name, f: Object.keys(t.fields ?? {}).sort() }).toEqual({
         t: t.name,
         f: nonPk,

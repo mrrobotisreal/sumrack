@@ -42,7 +42,13 @@ export interface WireMe {
   deviceCount: number;
   recordCount: number;
   maxSeq: number;
-  devices?: { deviceId: string; name: string; model: string; appVersion: string; lastSeenAt: string }[];
+  devices?: {
+    deviceId: string;
+    name: string;
+    model: string;
+    appVersion: string;
+    lastSeenAt: string;
+  }[];
 }
 
 /** What the runner needs from a server: the fake in tests, `HttpSyncClient` on device. */

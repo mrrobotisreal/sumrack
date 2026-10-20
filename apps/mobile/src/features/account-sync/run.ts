@@ -69,7 +69,14 @@ export async function runSync(
 ): Promise<RunStats> {
   const t0 = (opts.now ?? Date.now)();
   const stats: RunStats = {
-    pushed: 0, pulled: 0, merged: 0, rebuiltCards: 0, parked: 0, pages: 0, ms: 0, conflicts: [],
+    pushed: 0,
+    pulled: 0,
+    merged: 0,
+    rebuiltCards: 0,
+    parked: 0,
+    pages: 0,
+    ms: 0,
+    conflicts: [],
   };
   stats.pushed += await pushAll(db, client, deviceId);
 

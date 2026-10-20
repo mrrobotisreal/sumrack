@@ -35,8 +35,7 @@ export function mergeMonotonic(spec: TableSpec, local: Row, remote: Row): Row {
     // `passed_via` follows whichever side owns the earliest passed_at.
     const lp = local.passed_at;
     const rp = remote.passed_at;
-    const remoteOwns =
-      typeof rp === 'number' && (typeof lp !== 'number' || rp < lp);
+    const remoteOwns = typeof rp === 'number' && (typeof lp !== 'number' || rp < lp);
     out.passed_via = remoteOwns ? remote.passed_via : (local.passed_via ?? remote.passed_via);
   }
   return out;

@@ -2,7 +2,12 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { readSetting, writeSetting } from '../engine';
-import { backoffMs, classifyError, createOrchestrator, type OrchestratorDeps } from '../orchestrator';
+import {
+  backoffMs,
+  classifyError,
+  createOrchestrator,
+  type OrchestratorDeps,
+} from '../orchestrator';
 import { SyncRunError } from '../run';
 import { statusLines } from '../status-text';
 import { SyncHttpError } from '../wire';
@@ -33,7 +38,16 @@ async function setup(opts: { linked?: boolean; online?: boolean; uid?: string | 
     onRunFailed: (i) => events.push(`fail:${i.stage}:${i.code}:${i.attempt}`),
     afterApply: () => events.push('apply'),
   };
-  return { server, phone, deps, registered, timers, events, status, orch: createOrchestrator(deps) };
+  return {
+    server,
+    phone,
+    deps,
+    registered,
+    timers,
+    events,
+    status,
+    orch: createOrchestrator(deps),
+  };
 }
 
 describe('orchestrator', () => {
@@ -90,12 +104,22 @@ describe('orchestrator', () => {
 
   it('backoff curve and error classification', () => {
     expect([1, 2, 3, 4, 10].map(backoffMs)).toEqual([5000, 10000, 20000, 40000, 300000]);
-    expect(classifyError(new SyncRunError('pull', new SyncHttpError(0, 'x')))).toMatchObject({ code: 'network', fatal: false });
+    expect(classifyError(new SyncRunError('pull', new SyncHttpError(0, 'x')))).toMatchObject({
+      code: 'network',
+      fatal: false,
+    });
     expect(classifyError(new SyncHttpError(400, 'bad'))).toMatchObject({ fatal: true });
   });
 
   it('status copy', () => {
-    const base = { status: 'idle' as const, pending: 0, lastSyncAt: 1000, lastError: null, linked: true, now: 1000 + 120_000 };
+    const base = {
+      status: 'idle' as const,
+      pending: 0,
+      lastSyncAt: 1000,
+      lastError: null,
+      linked: true,
+      now: 1000 + 120_000,
+    };
     expect(statusLines(base).ru).toBe('Синхронизировано · 2 мин назад');
     expect(statusLines({ ...base, pending: 14 }).ru).toBe('Ожидает: 14 изменений');
     expect(statusLines({ ...base, pending: 2 }).ru).toBe('Ожидает: 2 изменения');
