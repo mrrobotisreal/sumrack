@@ -51,7 +51,7 @@ export function FogBackdrop({ paused }: { paused: boolean }) {
   const bankB = useAnimatedStyle(() => ({
     transform: [{ translateX: width * 0.2 - drift.value * width * 0.55 }],
   }));
-  const bloom = useAnimatedStyle(() => ({ opacity: 0.16 + breathe.value * 0.1 }));
+  const bloom = useAnimatedStyle(() => ({ opacity: 0.05 + breathe.value * 0.04 }));
 
   const bank = (top: number, size: number, opacity: number) => ({
     position: 'absolute' as const,
@@ -69,10 +69,10 @@ export function FogBackdrop({ paused }: { paused: boolean }) {
         style={[
           {
             position: 'absolute',
-            top: height * 0.02,
+            top: height * 0.04,
             alignSelf: 'center',
-            width: width * 0.9,
-            height: width * 0.9,
+            width: width * 0.62,
+            height: width * 0.62,
             borderRadius: width,
             backgroundColor: GLOW,
           },
