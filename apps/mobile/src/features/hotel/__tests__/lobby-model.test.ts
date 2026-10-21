@@ -22,10 +22,10 @@ const floor = (n: number, units = 1): FloorInput => ({
 });
 
 describe('externMenu', () => {
-  it('lists every locked floor with an exam, in panel order', () => {
+  it('lists every locked floor with an exam, in panel order (T114: floor 1 opens with the lobby)', () => {
     const installed = [floor(0), floor(1), floor(2), floor(3)];
     const states = floorState(installed, [], 0);
-    expect(externMenu(states).map((s) => s.floor)).toEqual([1, 2, 3]);
+    expect(externMenu(states).map((s) => s.floor)).toEqual([2, 3]);
   });
 
   it('never offers floor 0 and is empty when nothing is locked', () => {

@@ -80,13 +80,17 @@ const floorKey = (packId: string) => `${packId}:floor`;
 /**
  * THE LOCK RULE (design §3, D12) — pure.
  *
- * - Floor n is unlocked iff n is floor 0, or the previous panel floor is
- *   passed, or any floor ≥ n is passed via экстерн (the cascade).
+ * - Floor n is unlocked iff it is the first panel floor, or the previous panel
+ *   floor is SATISFIED, or any floor ≥ n is passed via экстерн (the cascade).
+ * - A floor is satisfied when it is passed OR when it has no exam (T114,
+ *   Mitch 2026-10-21, BINDING): Вестибюль is orientation (D11) — it never
+ *   gates floor 1. Its quizzes stay available for practice, and it still
+ *   reads «passed» once both units pass, but nothing waits on it.
  * - A floor passed via экстерн passes every lower panel floor that is not yet
  *   passed (`passedVia: 'extern'`); its units stay unpassed but are unlocked.
  * - Units inside an unlocked floor unlock in order; the floor exam unlocks
- *   when every unit has passed. Floor 0 has no exam: it is passed when its
- *   last unit passes.
+ *   when every unit has passed. Inside an exam-less floor every unit is
+ *   open at once (there is nothing to earn by ordering them).
  */
 export function floorState(
   installed: readonly FloorInput[],
@@ -116,9 +120,11 @@ export function floorState(
     if (o.passedOwn) return o.via;
     return i <= externReach ? 'extern' : null;
   });
+  // T114: an exam-less floor (Вестибюль) satisfies the lock rule as-is.
+  const satisfied = panel.map((f, i) => passed[i] === true || !f.hasExam);
 
   return panel.map((f, i) => {
-    const floorUnlocked = f.floor === 0 || i === 0 || passed[i - 1] === true || i <= externReach;
+    const floorUnlocked = i === 0 || satisfied[i - 1] === true || i <= externReach;
     const row = rows.get(floorKey(f.packId));
     const extern = passedVia[i] === 'extern';
 
@@ -126,7 +132,7 @@ export function floorState(
     const units: UnitState[] = f.unitIds.map((unitId, k) => {
       const r = rows.get(unitKey(f.packId, unitId));
       const passedUnit = r?.passedAt != null;
-      const unlocked = floorUnlocked && (extern || k === 0 || prevPassed);
+      const unlocked = floorUnlocked && (extern || !f.hasExam || k === 0 || prevPassed);
       prevPassed = passedUnit;
       return { unitId, unlocked, passed: passedUnit, best: r?.bestPercent ?? 0 };
     });

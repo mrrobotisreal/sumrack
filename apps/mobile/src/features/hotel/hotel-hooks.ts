@@ -201,6 +201,7 @@ export function useHotelState() {
         floor: s.floor,
         unlocked: s.unlocked,
         passed: s.passed,
+        hasExam: s.hasExam,
         examUnlocked: s.examUnlocked,
         examCooldownMinutes: cooldown?.minutesLeft ?? null,
         units: (f?.course.units ?? []).map((u) => {

@@ -123,9 +123,9 @@ describe('floorState: the lock rule (design §3, D12)', () => {
     expect(f0.passed).toBe(false);
   });
 
-  it('a fresh install unlocks only floor 0; floor 1 stays locked', () => {
+  it('a fresh install unlocks floor 0 and floor 1 (T114: Вестибюль never gates); floor 2 stays locked', () => {
     const states = floorState(allFloors(), [], 0);
-    expect(states.filter((s) => s.unlocked).map((s) => s.floor)).toEqual([0]);
+    expect(states.filter((s) => s.unlocked).map((s) => s.floor)).toEqual([0, 1]);
   });
 
   it('floor n unlocks when the previous PANEL floor is passed', () => {
@@ -283,8 +283,8 @@ describe('highestUnlocked', () => {
     expect(highestUnlocked(floorState(allFloors(), progress, 0))).toBe(3);
   });
 
-  it('is 0 on a fresh install', () => {
-    expect(highestUnlocked(floorState(allFloors(), [], 0))).toBe(0);
+  it('is 1 on a fresh install (T114: floor 1 opens with the lobby)', () => {
+    expect(highestUnlocked(floorState(allFloors(), [], 0))).toBe(1);
   });
 });
 
@@ -574,5 +574,34 @@ describe('reveal13 is independent of the panel order', () => {
   it('uses floor 15 specifically, not the highest panel floor', () => {
     const progress = [passedFloor(pid(14))];
     expect(reveal13(allFloors(), progress, { mockInstalled: true })).toBe(false);
+  });
+});
+
+describe('T114: Вестибюль never gates floor 1 (Mitch, 2026-10-21)', () => {
+  it('a fresh install unlocks floor 0 AND floor 1; floor 2 stays locked', () => {
+    const states = floorState(allFloors(), [], 0);
+    expect(states.filter((s) => s.unlocked).map((s) => s.floor)).toEqual([0, 1]);
+  });
+
+  it('floor 0 still reads passed only when both units pass, but nothing waits on it', () => {
+    const states = floorState(allFloors(), [passedUnit(pid(0), 'u1')], 0);
+    expect(states.find((s) => s.floor === 0)!.passed).toBe(false);
+    expect(states.find((s) => s.floor === 1)!.unlocked).toBe(true);
+  });
+
+  it('both orientation units are open at once (no order inside an exam-less floor)', () => {
+    const f0 = floorState(allFloors(), [], 0).find((s) => s.floor === 0)!;
+    expect(f0.units.map((u) => u.unlocked)).toEqual([true, true]);
+  });
+
+  it('floors with an exam still gate the next one', () => {
+    const states = floorState(allFloors(), [passedUnit(pid(1), 'u1'), passedUnit(pid(1), 'u2')], 0);
+    expect(states.find((s) => s.floor === 2)!.unlocked).toBe(false);
+    const after = floorState(allFloors(), [passedFloor(pid(1))], 0);
+    expect(after.find((s) => s.floor === 2)!.unlocked).toBe(true);
+  });
+
+  it('highestUnlocked on a fresh install is 1, so the lift ▲ is lit from the lobby', () => {
+    expect(highestUnlocked(floorState(allFloors(), [], 0))).toBe(1);
   });
 });

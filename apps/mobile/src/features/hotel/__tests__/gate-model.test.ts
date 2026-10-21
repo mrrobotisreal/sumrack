@@ -320,3 +320,43 @@ describe('passedFloorsOf (T92d): the one passed set the room and the lift share'
     expect([...passedFloorsOf(rows)]).toEqual([7]);
   });
 });
+
+describe('T114: the Today card skips Вестибюль while real floors remain', () => {
+  const unit = (id: string, passed: boolean, lessonOpened: boolean) => ({
+    unitId: id,
+    title: id,
+    passed,
+    lessonOpened,
+  });
+  const none = { gatePassed: false, reveal13: false };
+  const lobby = {
+    packId: 'a1-hotel-f00',
+    floor: 0,
+    unlocked: true,
+    passed: false,
+    hasExam: false,
+    units: [unit('u1', false, false), unit('u2', false, false)],
+    examCooldownMinutes: null,
+    examUnlocked: false,
+  };
+  const f1 = {
+    packId: 'a1-hotel-f01',
+    floor: 1,
+    unlocked: true,
+    passed: false,
+    hasExam: true,
+    units: [unit('u1', false, false)],
+    examCooldownMinutes: null,
+    examUnlocked: false,
+  };
+
+  it('points at floor 1 even though floor 0 is unpassed', () => {
+    const a = nextHotelAction([lobby, f1], none);
+    expect(a).toMatchObject({ kind: 'lesson', floor: 1, unitId: 'u1' });
+  });
+
+  it('falls back to the lobby only when every real floor is passed', () => {
+    const a = nextHotelAction([lobby, { ...f1, passed: true }], none);
+    expect(a).toMatchObject({ kind: 'lesson', floor: 0 });
+  });
+});

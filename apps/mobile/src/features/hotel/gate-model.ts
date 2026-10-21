@@ -197,6 +197,12 @@ export interface NextFloorView {
   units: NextUnitView[];
   examCooldownMinutes: number | null;
   examUnlocked: boolean;
+  /**
+   * T114: false for Вестибюль (no floor exam). An exam-less floor is
+   * orientation, never the next step — the card points at the first real
+   * floor instead. Absent (older callers / tests) = has an exam.
+   */
+  hasExam?: boolean;
 }
 
 /**
@@ -211,6 +217,8 @@ export function nextHotelAction(
 ): HotelNextAction | null {
   for (const f of floors) {
     if (!f.unlocked || f.passed) continue;
+    // T114: orientation (no exam) is never «what's next» while real floors remain.
+    if (f.hasExam === false && floors.some((g) => g.hasExam !== false && !g.passed)) continue;
     const unit = f.units.find((u) => !u.passed);
     if (unit) {
       const base = {
