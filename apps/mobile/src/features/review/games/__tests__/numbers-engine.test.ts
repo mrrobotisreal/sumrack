@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  advanceAfterAnswer,
   answerKey,
   bandForNumber,
+  canRecordAttempt,
   generateRound,
   isCorrectAnswer,
   mergeBandTallies,
   numberDistractors,
   NUMBERS_TIERS,
+  numpadAppend,
   ROUND_SIZE,
+  SEPARATOR_KEYS,
   suggestTier,
   tallyBands,
   xpForNumbersRound,
@@ -156,5 +160,74 @@ describe('suggestTier + XP', () => {
     expect(xpForNumbersRound(10, 10)).toBe(15);
     expect(xpForNumbersRound(0, 10)).toBe(5);
     expect(xpForNumbersRound(0, 0)).toBe(0);
+  });
+});
+
+describe('numpad (T113)', () => {
+  it('offers both separators on every typed item and the checker accepts either', () => {
+    expect(numpadAppend('3', '.')).toBe('3.');
+    expect(numpadAppend('14', ':')).toBe('14:');
+    expect(isCorrectAnswer({ kind: 'price', answer: '3.69' }, '3.69')).toBe(true);
+    expect(isCorrectAnswer({ kind: 'price', answer: '3.69' }, '3:69')).toBe(true);
+    expect(isCorrectAnswer({ kind: 'time', answer: '14:30' }, '14.30')).toBe(true);
+    expect(isCorrectAnswer({ kind: 'date', answer: '5.3' }, '5:3')).toBe(true);
+    // The bug Mitch hit: with no separator key, «369» was all he could type for «3.69».
+    expect(isCorrectAnswer({ kind: 'price', answer: '3.69' }, '369')).toBe(false);
+  });
+
+  it('a separator never leads, never doubles, and the pad caps the length', () => {
+    expect(numpadAppend('', '.')).toBe('');
+    expect(numpadAppend('3.', '.')).toBe('3.');
+    expect(numpadAppend('3.', ':')).toBe('3:');
+    expect(numpadAppend('123456789', '0')).toBe('123456789');
+    expect(numpadAppend('12', '5')).toBe('125');
+    expect(SEPARATOR_KEYS).toEqual(['.', ':']);
+  });
+
+  it('time items hint with the colon the pad offers', () => {
+    const times = Array.from({ length: 10 }, (_, s) => generateRound(4, seeded(s + 1)))
+      .flat()
+      .filter((i) => i.kind === 'time');
+    expect(times.length).toBeGreaterThan(0);
+    expect(times.every((i) => i.hint === 'hours:minutes')).toBe(true);
+  });
+});
+
+describe('round cursor (T113: one attempt per item, one advance per attempt)', () => {
+  it('records exactly one attempt per item', () => {
+    expect(canRecordAttempt(0, 0)).toBe(true);
+    expect(canRecordAttempt(0, 1)).toBe(false); // second Check on the same item
+    expect(canRecordAttempt(3, 3)).toBe(true);
+    expect(canRecordAttempt(3, 2)).toBe(false); // an item was skipped — never tally ahead
+  });
+
+  it('a duplicated Next press cannot skip an item', () => {
+    // Item 0 answered (1 attempt): Next → item 1; the same press again → nothing.
+    expect(advanceAfterAnswer(0, 1, ROUND_SIZE)).toBe(1);
+    expect(advanceAfterAnswer(1, 1, ROUND_SIZE)).toBeNull();
+    // Not answered yet: nothing.
+    expect(advanceAfterAnswer(4, 4, ROUND_SIZE)).toBeNull();
+    // The last item: finish, once.
+    expect(advanceAfterAnswer(ROUND_SIZE - 1, ROUND_SIZE, ROUND_SIZE)).toBe('finish');
+    expect(advanceAfterAnswer(ROUND_SIZE - 1, ROUND_SIZE - 1, ROUND_SIZE)).toBeNull();
+  });
+
+  it('a full round driven through the gates always yields ROUND_SIZE attempts', () => {
+    let index = 0;
+    let answered = 0;
+    let finished = 0;
+    for (let step = 0; step < ROUND_SIZE * 3; step++) {
+      // Every step: one Check, then TWO Next presses (the duplicated press).
+      if (canRecordAttempt(index, answered)) answered += 1;
+      for (let k = 0; k < 2; k++) {
+        const to = advanceAfterAnswer(index, answered, ROUND_SIZE);
+        // The screen's `finishedRef` makes finish() itself idempotent.
+        if (to === 'finish') finished = 1;
+        else if (to != null) index = to;
+      }
+      if (finished) break;
+    }
+    expect(answered).toBe(ROUND_SIZE);
+    expect(finished).toBe(1);
   });
 });

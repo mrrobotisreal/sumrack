@@ -111,6 +111,44 @@ export function bandForNumber(n: number): NumbersBand {
   return '1001+';
 }
 
+/**
+ * Round cursor rules (recorded 2026-10-21, T113): ONE attempt per item and
+ * ONE advance per attempt, decided from the attempt count — never from a
+ * press event. A duplicated Next press (Fabric can deliver a stale press
+ * while the JS thread is busy with TTS + SQLite) advanced the cursor twice,
+ * so a 10-item round closed with 7 attempts, `completed: false`, no XP and
+ * no quest progress. `answered` = attempts recorded so far.
+ */
+export function canRecordAttempt(index: number, answered: number): boolean {
+  return answered === index;
+}
+
+/** Where Next goes: null = not answered yet / already advanced (ignore the press). */
+export function advanceAfterAnswer(
+  index: number,
+  answered: number,
+  total: number,
+): number | 'finish' | null {
+  if (answered !== index + 1) return null;
+  return index + 1 >= total ? 'finish' : index + 1;
+}
+
+/** Longest typed answer the pad accepts («1000000» is 7; «1250.99» is 7). */
+export const MAX_TYPED = 9;
+/** The two separators the checker understands (`isCorrectAnswer` splits on any non-digit). */
+export const SEPARATOR_KEYS: readonly string[] = ['.', ':'];
+
+/** Append `key` to a typed answer: digits always; a separator never first, never doubled. */
+export function numpadAppend(value: string, key: string): string {
+  if (value.length >= MAX_TYPED) return value;
+  if (SEPARATOR_KEYS.includes(key)) {
+    if (value === '') return value;
+    const last = value[value.length - 1]!;
+    if (SEPARATOR_KEYS.includes(last)) return value.slice(0, -1) + key;
+  }
+  return value + key;
+}
+
 /** Digits only — the comparison key for typed and picked answers. */
 export function answerKey(text: string): string {
   return text.replace(/\D+/g, '').replace(/^0+(?=\d)/, '');
@@ -220,7 +258,7 @@ function timeItem(id: string, rng: Rng): NumbersItem {
     spoken: formatClock(h, m),
     answer: `${h}:${String(m).padStart(2, '0')}`,
     mode: 'typed',
-    hint: 'hours.minutes',
+    hint: 'hours:minutes',
   };
 }
 

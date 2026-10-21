@@ -15,10 +15,14 @@ import { getSpeechService } from '@/services/speech';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import {
+  advanceAfterAnswer,
   BAND_LABEL,
+  canRecordAttempt,
   generateRound,
   isCorrectAnswer,
   NUMBERS_BANDS,
+  numpadAppend,
+  SEPARATOR_KEYS,
   NUMBERS_TIERS,
   TIER_INFO,
   type BandTally,
@@ -42,9 +46,16 @@ import {
  * and unlimited; there is no slow replay (ticket).
  *
  * Decisions recorded here:
- * - The numpad is in-app (not the system keyboard): digits plus «.» and «:»
- *   separators, ⌫, and Check — no keyboard switching, works identically on
- *   every device.
+ * - The numpad is in-app (not the system keyboard): digits plus BOTH «.» and
+ *   «:» separators on every typed item, ⌫, and Check — no keyboard switching,
+ *   works identically on every device. (T113, Mitch 2026-10-21: the pad used
+ *   to offer «.» only on price/date items and «:» only on times, and a
+ *   kopeck price whose pad showed no separator was unanswerable — «369» for
+ *   «3.69». The checker already accepts any separator, so the pad always
+ *   offers both and the hint names the expected shape.)
+ * - One attempt per item, one advance per attempt (T113): `answer` and
+ *   `next` are gated on the recorded attempt count, so a duplicated press
+ *   can never skip an item (a 7-attempt «10-item» round earned nothing).
  * - Feedback holds until «Next» (a wrong answer shows the right digits AND
  *   the words, so the miss teaches). The item auto-plays on appear.
  * - Quitting with ≥ 1 answer keeps the band tallies (partial round, no XP);
@@ -207,6 +218,9 @@ export function NumbersScreen() {
   const answer = React.useCallback(
     (given: string) => {
       if (!current || feedback) return;
+      // T113: exactly one attempt per item — a second Check for the same
+      // index (stale press) is dropped before it can tally.
+      if (!canRecordAttempt(index, attemptsRef.current.length)) return;
       const correct = isCorrectAnswer(current, given);
       attemptsRef.current = [
         ...attemptsRef.current,
@@ -223,15 +237,21 @@ export function NumbersScreen() {
       });
       setFeedback({ correct, given });
     },
-    [current, feedback, tier],
+    [current, feedback, index, tier],
   );
 
   const next = React.useCallback(() => {
-    if (index + 1 >= items.length) {
+    // T113: advance only when THIS item's attempt is the latest one recorded.
+    // A duplicated Next press (or one that lands before the re-render) finds
+    // the cursor already moved and does nothing — so the round can never
+    // close with fewer attempts than items.
+    const to = advanceAfterAnswer(index, attemptsRef.current.length, items.length);
+    if (to == null) return;
+    if (to === 'finish') {
       finish(true);
       return;
     }
-    setIndex((i) => i + 1);
+    setIndex(to);
     setTyped('');
     setFeedback(null);
   }, [index, items.length, finish]);
@@ -339,13 +359,6 @@ export function NumbersScreen() {
               value={typed}
               onChange={setTyped}
               onSubmit={() => typed.trim() !== '' && answer(typed)}
-              separators={
-                current.kind === 'time'
-                  ? [':']
-                  : current.kind === 'number' || current.kind === 'year' || current.kind === 'age'
-                    ? []
-                    : ['.']
-              }
             />
           )}
         </View>
@@ -445,54 +458,64 @@ function ChoiceGrid({ options, onPick }: { options: string[]; onPick: (o: string
   );
 }
 
-const MAX_TYPED = 9;
-
 function Numpad({
   value,
   onChange,
   onSubmit,
-  separators,
 }: {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
-  separators: string[];
 }) {
   const { tokens } = useAppTheme();
-  const press = (key: string) => {
-    if (value.length >= MAX_TYPED) return;
-    onChange(value + key);
-  };
-  const sep = separators[0] ?? null;
-  const rows: (string | null)[][] = [
+  // T113: both separators on every typed item (the checker accepts either;
+  // the hint under the answer says which shape the item expects).
+  const rows: string[][] = [
     ['1', '2', '3'],
     ['4', '5', '6'],
     ['7', '8', '9'],
-    [sep, '0', '⌫'],
+    ['.', '0', ':'],
+    ['⌫'],
   ];
   return (
     <View className="gap-2.5">
       {rows.map((row, ri) => (
         <View key={ri} className="flex-row gap-2.5">
-          {row.map((key, ki) =>
-            key == null ? (
-              <View key={ki} className="h-14 flex-1" />
-            ) : (
+          {row.map((key) => {
+            const isSep = SEPARATOR_KEYS.includes(key);
+            return (
               <Pressable
-                key={ki}
-                onPress={() => (key === '⌫' ? onChange(value.slice(0, -1)) : press(key))}
+                key={key}
+                onPress={() =>
+                  onChange(key === '⌫' ? value.slice(0, -1) : numpadAppend(value, key))
+                }
                 accessibilityRole="button"
-                accessibilityLabel={key === '⌫' ? 'Delete' : `Key ${key}`}
-                className="h-14 flex-1 items-center justify-center rounded-xl bg-surface active:bg-surface-2"
+                accessibilityLabel={
+                  key === '⌫'
+                    ? 'Delete'
+                    : key === '.'
+                      ? 'Key point'
+                      : key === ':'
+                        ? 'Key colon'
+                        : `Key ${key}`
+                }
+                className={`h-14 flex-1 items-center justify-center rounded-xl active:bg-surface-2 ${
+                  isSep ? 'border border-border bg-surface-2' : 'bg-surface'
+                }`}
               >
                 {key === '⌫' ? (
                   <Ionicons name="backspace-outline" size={24} color={tokens.textMuted} />
                 ) : (
-                  <Text className="font-ui-medium text-2xl">{key}</Text>
+                  <Text
+                    className="font-ui-medium text-2xl"
+                    style={isSep ? { color: tokens.gold } : undefined}
+                  >
+                    {key}
+                  </Text>
                 )}
               </Pressable>
-            ),
-          )}
+            );
+          })}
         </View>
       ))}
       <PrimaryButton label="Check" onPress={onSubmit} disabled={value.trim() === ''} />
