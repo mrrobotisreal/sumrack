@@ -105,6 +105,10 @@ export type AnalyticsEvent =
   | 'narration_rate_changed'
   | 'narration_track_switched'
   | 'narration_finished'
+  // ISS-005: a PLAYING narration torn down by the reader unmount (Back, tab,
+  // deep link). Props: packId, storyId, trackId, reason: 'unmount', positionMs
+  // + category/genre. A paused narration's unmount fires nothing.
+  | 'narration_stopped'
   | 'karaoke_fallback_sentence_mode'
   // T85 reader speakers (ids and counts only, never text). The word popup and the
   // phrase sheet speak through Piper; `voiceId` is the picked id or 'system'.
