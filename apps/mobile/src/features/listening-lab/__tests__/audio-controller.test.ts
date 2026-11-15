@@ -27,6 +27,7 @@ function setup() {
     play: vi.fn(),
     pause: vi.fn(),
     remove: vi.fn(),
+    release: vi.fn(),
     setPlaybackRate: vi.fn(),
     addListener: vi.fn((_event, next) => {
       listener = next;
@@ -133,6 +134,8 @@ describe('lab audio lifecycle', () => {
     player.currentTime = 1.2;
     vi.advanceTimersByTime(30);
     expect(player.remove).toHaveBeenCalledOnce();
+    // ISS-005: the native player is freed, not left for GC.
+    expect(player.release).toHaveBeenCalledOnce();
     expect(deps.focus.release).toHaveBeenCalled();
     expect(deps.changed).toHaveBeenLastCalledWith('idle', null);
     await audio.dispose();

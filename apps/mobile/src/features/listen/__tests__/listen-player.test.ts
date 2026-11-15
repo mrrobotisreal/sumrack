@@ -21,6 +21,7 @@ function fakePlayer() {
   const p = {
     log,
     removed: false,
+    released: false,
     get currentTime() {
       return t / 1000;
     },
@@ -47,6 +48,10 @@ function fakePlayer() {
     remove() {
       p.removed = true;
       log.push('remove');
+    },
+    release() {
+      p.released = true;
+      log.push('release');
     },
     setPlaybackRate(r: number) {
       log.push(`rate:${r}`);
@@ -180,6 +185,11 @@ describe('listen player', () => {
     const p = players[0]!;
     expect(p.clearLockScreenControls).toHaveBeenCalled();
     expect(p.removed).toBe(true);
+    // ISS-005: released (not just removed), after the pause, exactly once.
+    expect(p.released).toBe(true);
+    expect(p.log.slice(-3)).toEqual(['clearLock', 'remove', 'release']);
+    expect(p.log.filter((l) => l === 'release')).toHaveLength(1);
+    expect(p.log.lastIndexOf('pause')).toBeLessThan(p.log.indexOf('clearLock'));
     expect(lp.store.getState().session).toBeNull();
   });
 

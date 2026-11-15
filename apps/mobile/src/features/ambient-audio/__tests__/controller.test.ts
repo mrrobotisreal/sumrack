@@ -66,6 +66,7 @@ function fakePlayer(source: AmbientSource, opts: { replaceThrows?: boolean } = {
       player.playing = false;
     }),
     remove: vi.fn(),
+    release: vi.fn(),
     replace: vi.fn((next: AmbientSource) => {
       if (opts.replaceThrows) throw new Error('replace failed');
       player.source = next;
@@ -179,6 +180,9 @@ describe('ambient playback lifecycle', () => {
     expect(f.onEvent).toHaveBeenCalledOnce();
     f.controller.dispose();
     expect(f.player.remove).toHaveBeenCalledOnce();
+    // ISS-005: remove() alone leaves the native player alive until GC.
+    expect(f.player.release).toHaveBeenCalledOnce();
+    expect(f.player.listeners).toHaveLength(0);
   });
 
   it.each(['pause', 'dispose'])(

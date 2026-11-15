@@ -4,6 +4,7 @@ import * as React from 'react';
 import { track } from '@/services/analytics';
 import { createSliceFocus } from '@/services/learning-focus';
 
+import { disposePlayer } from './dispose-player';
 import { createSliceController, type SlicePlayerLike } from './slice-controller';
 import { sliceWindow, type SliceStamp, type SliceWindow } from './slice-window';
 
@@ -32,6 +33,7 @@ class SlicePlayerHost {
   private player: AudioPlayer | null = null;
   private uri: string | null = null;
   private count = 0;
+  private disposed = false;
   readonly focus;
   readonly controller;
 
@@ -50,6 +52,7 @@ class SlicePlayerHost {
 
   play = async (target: SliceTarget, rate = 1) => {
     // updateInterval huge: the controller polls currentTime itself, only while a slice plays.
+    if (this.disposed) return null;
     if (!this.player) {
       this.player = createAudioPlayer({ uri: target.uri }, { updateInterval: 60_000 });
     } else if (this.uri !== target.uri) {
@@ -75,10 +78,13 @@ class SlicePlayerHost {
   };
 
   dispose = (): void => {
+    this.disposed = true;
     this.controller.stop();
     this.focus.release();
-    this.player?.remove();
+    // ISS-005: release, not just remove (remove leaves the native player to GC).
+    const player = this.player;
     this.player = null;
+    disposePlayer(player);
   };
 }
 
