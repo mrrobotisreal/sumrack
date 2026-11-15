@@ -9,6 +9,7 @@ import {
   packs,
   sentences,
   stories,
+  storyScores,
   tokens,
   wordStamps,
 } from '../schema';
@@ -20,6 +21,7 @@ export type SentenceRow = typeof sentences.$inferSelect;
 export type TokenRow = typeof tokens.$inferSelect;
 export type AudioTrackRow = typeof audioTracks.$inferSelect;
 export type WordStampRow = typeof wordStamps.$inferSelect;
+export type StoryScoreRow = typeof storyScores.$inferSelect;
 
 export interface StoryListItem extends StoryRow {
   packTitleEn: string;
@@ -36,6 +38,8 @@ export interface StoryDetail {
   story: StoryRow;
   sentences: SentenceWithTokens[];
   audio: AudioTrackRow[];
+  /** T115: the part's composed score row (localUri null until staged), or null when unscored. */
+  score: StoryScoreRow | null;
 }
 
 /** A resolved user-data content reference (bank item → its source sentence). */
@@ -146,6 +150,11 @@ export function createContentRepo(db: SumrakDB) {
         .select()
         .from(audioTracks)
         .where(and(eq(audioTracks.packId, packId), eq(audioTracks.storyId, storyId)));
+      const scoreRows = await db
+        .select()
+        .from(storyScores)
+        .where(and(eq(storyScores.packId, packId), eq(storyScores.storyId, storyId)))
+        .limit(1);
 
       const bySentence = new Map<string, TokenRow[]>();
       for (const tok of tokenRows) {
@@ -158,6 +167,7 @@ export function createContentRepo(db: SumrakDB) {
         story,
         sentences: sentenceRows.map((s) => ({ ...s, tokens: bySentence.get(s.id) ?? [] })),
         audio,
+        score: scoreRows[0] ?? null,
       };
     },
 
@@ -177,6 +187,28 @@ export function createContentRepo(db: SumrakDB) {
     /** All audio tracks of a pack — sync (T07) uses this to find not-yet-downloaded audio. */
     async listAudioTracksForPack(packId: string): Promise<AudioTrackRow[]> {
       return db.select().from(audioTracks).where(eq(audioTracks.packId, packId));
+    },
+
+    /** T115: every story score of a pack — the listen player and the sync backfill read these. */
+    async listScoresForPack(packId: string): Promise<StoryScoreRow[]> {
+      return db.select().from(storyScores).where(eq(storyScores.packId, packId));
+    },
+
+    /** T115: record where a score file landed in app storage (sync backfill). */
+    async setScoreLocalUri(packId: string, file: string, localUri: string): Promise<void> {
+      await db
+        .update(storyScores)
+        .set({ localUri })
+        .where(and(eq(storyScores.packId, packId), eq(storyScores.file, file)));
+    },
+
+    /** T115 dev readout: score rows with / without a staged file. */
+    async countScores(): Promise<{ withUri: number; withoutUri: number }> {
+      const rows = await db.select({ localUri: storyScores.localUri }).from(storyScores);
+      return {
+        withUri: rows.filter((r) => r.localUri).length,
+        withoutUri: rows.filter((r) => !r.localUri).length,
+      };
     },
 
     /**

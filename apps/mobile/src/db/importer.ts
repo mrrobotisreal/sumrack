@@ -39,6 +39,7 @@ import {
   scenarios,
   sentences,
   stories,
+  storyScores,
   tokens,
   wordStamps,
 } from './schema';
@@ -313,6 +314,20 @@ async function insertPackRows(db: SumrakDB, pack: Pack, opts: ImportOptions): Pr
 
     for (const [sentenceIdx, sentence] of story.sentences.entries()) {
       await insertSentenceRows(db, pack.id, story.id, sentence, sentenceIdx);
+    }
+
+    // T115 (M38): the part's composed score; its staged uri rides audioFiles
+    // like every `audio/` file (sync stages it through the same reuse path).
+    if (story.score) {
+      await db.insert(storyScores).values({
+        packId: pack.id,
+        storyId: story.id,
+        id: story.score.id,
+        trackId: story.score.trackId,
+        file: story.score.file,
+        localUri: opts.audioFiles?.[story.score.file] ?? null,
+        durationMs: story.score.durationMs,
+      });
     }
 
     for (const track of story.audio) {

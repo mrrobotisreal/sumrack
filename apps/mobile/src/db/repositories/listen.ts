@@ -1,6 +1,6 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 
-import { audioTracks, packFullAudio, packs, stories } from '../schema';
+import { audioTracks, packFullAudio, packs, stories, storyScores } from '../schema';
 import type { SumrakDB } from '../types';
 
 /**
@@ -15,6 +15,8 @@ export interface ListenSegment {
   orderIdx: number;
   startMs: number;
   endMs: number;
+  /** T115: this part's composed score (localUri null until staged); absent = unscored. */
+  score?: { trackId: string; localUri: string | null; durationMs: number };
 }
 
 export interface ListenSource {
@@ -65,6 +67,22 @@ export function createListenRepo(db: SumrakDB) {
     return new Set(withTrack.map((r) => r.packId));
   }
 
+  /** T115: the pack's score rows by story id. */
+  async function scoresByStory(
+    packId: string,
+  ): Promise<Map<string, { trackId: string; localUri: string | null; durationMs: number }>> {
+    const rows = await db
+      .select({
+        storyId: storyScores.storyId,
+        trackId: storyScores.trackId,
+        localUri: storyScores.localUri,
+        durationMs: storyScores.durationMs,
+      })
+      .from(storyScores)
+      .where(eq(storyScores.packId, packId));
+    return new Map(rows.map(({ storyId, ...rest }) => [storyId, rest]));
+  }
+
   return {
     async getListenSource(packId: string): Promise<ListenSource | null> {
       const pack = (await db.select().from(packs).where(eq(packs.id, packId)).limit(1))[0];
@@ -86,9 +104,11 @@ export function createListenRepo(db: SumrakDB) {
           .from(stories)
           .where(eq(stories.packId, packId));
         const byId = new Map(storyRows.map((s) => [s.id, s]));
+        const scores = await scoresByStory(packId);
         const segments: ListenSegment[] = full.segments
           .map((seg) => {
             const st = byId.get(seg.storyId);
+            const score = scores.get(seg.storyId);
             return {
               storyId: seg.storyId,
               trackId: seg.trackId,
@@ -96,6 +116,7 @@ export function createListenRepo(db: SumrakDB) {
               orderIdx: st?.orderIdx ?? 0,
               startMs: seg.startMs,
               endMs: seg.endMs,
+              ...(score ? { score } : {}),
             };
           })
           .sort((a, b) => a.orderIdx - b.orderIdx);
@@ -125,6 +146,7 @@ export function createListenRepo(db: SumrakDB) {
           .limit(1)
       )[0];
       if (!track) return null;
+      const score = (await scoresByStory(packId)).get(story.id);
       return {
         kind: 'single',
         ...base,
@@ -139,6 +161,7 @@ export function createListenRepo(db: SumrakDB) {
             orderIdx: story.orderIdx,
             startMs: 0,
             endMs: track.durationMs,
+            ...(score ? { score } : {}),
           },
         ],
       };

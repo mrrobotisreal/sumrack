@@ -2,12 +2,15 @@ export interface AmbientPrefs {
   enabled: boolean;
   volume: number;
   playDuringNarration: boolean;
+  /** T115 «Музыка к рассказам»: a scored part plays its own score instead of the bed. */
+  storyScores: boolean;
 }
 
 export const DEFAULT_AMBIENT_PREFS: AmbientPrefs = {
   enabled: true,
   volume: 0.2,
   playDuringNarration: true,
+  storyScores: true,
 };
 
 export function parseAmbientPrefs(raw: unknown): AmbientPrefs {
@@ -26,5 +29,9 @@ export function parseAmbientPrefs(raw: unknown): AmbientPrefs {
       typeof value.playDuringNarration === 'boolean'
         ? value.playDuringNarration
         : DEFAULT_AMBIENT_PREFS.playDuringNarration,
+    storyScores:
+      typeof value.storyScores === 'boolean'
+        ? value.storyScores
+        : DEFAULT_AMBIENT_PREFS.storyScores,
   };
 }

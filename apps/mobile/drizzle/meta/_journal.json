@@ -169,6 +169,13 @@
       "when": 1792452368929,
       "tag": "0023_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1794704616797,
+      "tag": "0024_story-scores",
+      "breakpoints": true
     }
   ]
 }

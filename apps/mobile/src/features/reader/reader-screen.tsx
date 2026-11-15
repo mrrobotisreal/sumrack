@@ -44,6 +44,7 @@ import { TypeSettingsSheet } from './type-settings-sheet';
 import { readingTextStyle, translationTextStyle } from './typography';
 import { resolveRestoreTarget, type RestoreTarget } from './restore';
 import { useNarrationActivity, useStudyAmbience } from '@/features/ambient-audio/activity';
+import { readerScoreSource, useScoreSource } from '@/features/ambient-audio/score-source';
 import { resolveAmbientTheme } from '@/features/ambient-audio/theme';
 import { useNarration } from './use-narration';
 import { WordPopup, type WordPopupTarget } from './word-popup';
@@ -189,6 +190,34 @@ export function ReaderScreen({ packId, storyId, from, initialSentenceIdx }: Read
   // The shared host applies the user's narration preference independently of
   // reader readiness, overlays, screen focus and foreground state.
   useNarrationActivity(narration.playing);
+  // T115: a scored part plays its own score through the ambient player,
+  // synced to this narration (falls back to the bed when unscored).
+  const scoreRow = detail.data?.score ?? null;
+  const { currentTrack: narrTrack, rate: narrRate, seekRevision, readPositionMs } = narration;
+  const scoreSource = React.useMemo(
+    () =>
+      readerScoreSource({
+        packId,
+        storyId,
+        score: scoreRow,
+        currentTrackId: narrTrack?.id ?? null,
+        playing: narration.playing,
+        rate: narrRate,
+        seekRevision,
+        positionMs: readPositionMs,
+      }),
+    [
+      packId,
+      storyId,
+      scoreRow,
+      narrTrack,
+      narration.playing,
+      narrRate,
+      seekRevision,
+      readPositionMs,
+    ],
+  );
+  useScoreSource(scoreSource);
   useStudyAmbience(
     !!detail.data &&
       !progress.isPending &&

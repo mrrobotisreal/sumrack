@@ -738,6 +738,33 @@ export const packFullAudio = sqliteTable('pack_full_audio', {
 });
 
 /**
+ * A story part's composed score (T115, M38, AMBIENT_SOUNDTRACKS §11): the
+ * separate stereo music layer the ambient host plays in place of the theme bed
+ * while this part's narration (`track_id`) plays. At most one per story;
+ * cascades with the pack like every content table. `local_uri` stays null
+ * until sync staged the file (Wi-Fi-gated like every `audio/` file).
+ */
+export const storyScores = sqliteTable(
+  'story_scores',
+  {
+    packId: text('pack_id')
+      .notNull()
+      .references(() => packs.id, { onDelete: 'cascade' }),
+    storyId: text('story_id').notNull(),
+    /** `<trackId>-score`. */
+    id: text('id').notNull(),
+    /** The narration track the score is synced to. */
+    trackId: text('track_id').notNull(),
+    /** Pack-relative path as authored, e.g. "audio/<trackId>-score.opus". */
+    file: text('file').notNull(),
+    /** Absolute local URI once the file landed in app storage (null until then). */
+    localUri: text('local_uri'),
+    durationMs: integer('duration_ms').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.packId, t.storyId] })],
+);
+
+/**
  * Stats aggregates (T100, M28) — content-side joins the dashboard used to
  * redo on every open, computed once per pack at import (and backfilled by
  * migration 0022). Both cascade with the pack like every content table;

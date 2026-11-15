@@ -1,0 +1,170 @@
+{
+  "id": "a1-score-fixture",
+  "version": 1,
+  "type": "stories",
+  "title": {
+    "ru": "Тест музыки",
+    "en": "Score fixture"
+  },
+  "level": "A1",
+  "tags": [
+    "fixture",
+    "score"
+  ],
+  "stories": [
+    {
+      "id": "part-1",
+      "title": {
+        "ru": "Часть 1. Музыка",
+        "en": "Part 1. Music"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "sf1-s01",
+          "ru": "Тест.",
+          "en": "Test.",
+          "tokens": [
+            {
+              "text": "Тест",
+              "lemma": "тест",
+              "translation": "test",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "sf-p1",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/sf-p1.opus",
+          "durationMs": 12006,
+          "timestamps": []
+        }
+      ],
+      "score": {
+        "id": "sf-p1-score",
+        "file": "audio/sf-p1-score.opus",
+        "durationMs": 12012,
+        "trackId": "sf-p1"
+      }
+    },
+    {
+      "id": "part-2",
+      "title": {
+        "ru": "Часть 2. Тишина",
+        "en": "Part 2. Silence"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "sf2-s01",
+          "ru": "Тест.",
+          "en": "Test.",
+          "tokens": [
+            {
+              "text": "Тест",
+              "lemma": "тест",
+              "translation": "test",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "sf-p2",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/sf-p2.opus",
+          "durationMs": 8006,
+          "timestamps": []
+        }
+      ]
+    },
+    {
+      "id": "part-3",
+      "title": {
+        "ru": "Часть 3. Финал",
+        "en": "Part 3. Finale"
+      },
+      "level": "A1",
+      "sentences": [
+        {
+          "id": "sf3-s01",
+          "ru": "Тест.",
+          "en": "Test.",
+          "tokens": [
+            {
+              "text": "Тест",
+              "lemma": "тест",
+              "translation": "test",
+              "pos": "noun",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": [
+        {
+          "id": "sf-p3",
+          "voice": "elevenlabs:Fixture",
+          "style": "neutral",
+          "file": "audio/sf-p3.opus",
+          "durationMs": 12006,
+          "timestamps": []
+        }
+      ],
+      "score": {
+        "id": "sf-p3-score",
+        "file": "audio/sf-p3-score.opus",
+        "durationMs": 12012,
+        "trackId": "sf-p3"
+      }
+    }
+  ],
+  "fullStory": {
+    "id": "a1-score-fixture-full",
+    "voice": "elevenlabs:Fixture",
+    "style": "full",
+    "file": "audio/a1-score-fixture-full.opus",
+    "durationMs": 34406,
+    "gapMs": 1200,
+    "segments": [
+      {
+        "storyId": "part-1",
+        "trackId": "sf-p1",
+        "startMs": 0,
+        "endMs": 12000
+      },
+      {
+        "storyId": "part-2",
+        "trackId": "sf-p2",
+        "startMs": 13200,
+        "endMs": 21200
+      },
+      {
+        "storyId": "part-3",
+        "trackId": "sf-p3",
+        "startMs": 22400,
+        "endMs": 34400
+      }
+    ]
+  }
+}

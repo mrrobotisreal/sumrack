@@ -96,6 +96,8 @@ export interface ListenState {
   muted: boolean;
   partIndex: number;
   finished: boolean;
+  /** T115: bumped after every landed seek (open/resume, scrub, skip, part) — the ambient score re-seeks. */
+  seekRevision: number;
   error?: string;
 }
 
@@ -109,6 +111,7 @@ const INITIAL: ListenState = {
   muted: LISTEN_PREFS_DEFAULTS.muted,
   partIndex: 0,
   finished: false,
+  seekRevision: 0,
 };
 
 export interface ListenPlayer {
@@ -129,6 +132,8 @@ export interface ListenPlayer {
   track(event: string, props: Record<string, string | number | boolean>): void;
   /** Persist the position now (pause/background/unmount). */
   saveNow(): void;
+  /** T115: the live player position (ms) — the ambient score's clock. */
+  readPositionMs(): number;
   onBackground(): void;
   stop(reason?: StopReason): void;
 }
@@ -226,7 +231,13 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       player.pause();
       void player.seekTo(0);
       stopTimer();
-      set({ playing: false, finished: true, positionMs: 0, partIndex: 0 });
+      set({
+        playing: false,
+        finished: true,
+        positionMs: 0,
+        partIndex: 0,
+        seekRevision: s.seekRevision + 1,
+      });
       writeProgress(
         markFinished(progress ?? EMPTY_PROGRESS, s.session.source.packId, dur, deps.now()),
       );
@@ -360,6 +371,7 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
         positionMs: resumeMs,
         partIndex: partAt(source.segments, resumeMs),
         finished: wasFinished,
+        seekRevision: get().seekRevision + 1,
         error: undefined,
       });
       deps.track('listen_opened', {
@@ -423,7 +435,12 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       lastPosMs = to;
       await player.seekTo(to / 1000);
       const idx = partAt(s.session.source.segments, to);
-      set({ positionMs: to, partIndex: idx, finished: false });
+      set({
+        positionMs: to,
+        partIndex: idx,
+        finished: false,
+        seekRevision: get().seekRevision + 1,
+      });
       if (idx !== s.partIndex && lockScreenActive) {
         player.updateLockScreenMetadata(lockMeta(s.session.source, idx));
       }
@@ -477,6 +494,10 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
 
     saveNow() {
       persistPosition();
+    },
+
+    readPositionMs() {
+      return readPositionMs();
     },
 
     onBackground() {

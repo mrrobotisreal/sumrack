@@ -1169,6 +1169,8 @@ describe('user-table drift guard', () => {
       'course_items',
       // T95 full-story track (rebuilt from packs, never backed up).
       'pack_full_audio',
+      // T115 per-part story scores (rebuilt from packs, never backed up).
+      'story_scores',
       // T100 stats aggregates (filled at import + by migration 0022).
       'topic_sentences',
       'topic_lemmas',

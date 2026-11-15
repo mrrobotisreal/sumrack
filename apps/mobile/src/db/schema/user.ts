@@ -813,6 +813,8 @@ export const analyticsEvents = sqliteTable(
   },
   (t) => [
     index('analytics_events_event_idx').on(t.event, t.createdAt),
-    uniqueIndex('analytics_events_sync_key_uq').on(t.syncKey).where(sql`sync_key IS NOT NULL`),
+    uniqueIndex('analytics_events_sync_key_uq')
+      .on(t.syncKey)
+      .where(sql`sync_key IS NOT NULL`),
   ],
 );

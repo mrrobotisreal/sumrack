@@ -96,6 +96,10 @@ export interface Narration {
   lastUserSeekAtRef: Readonly<React.MutableRefObject<number>>;
   seekToMs(ms: number, method: SeekMethod): void;
   seekToSentence(sentenceId: string): void;
+  /** T115: the live player position (ms) — the ambient score's clock. */
+  readPositionMs(): number;
+  /** T115: bumped after every landed seek (user, auto, track-switch, replay-from-top). */
+  seekRevision: number;
   cycleRate(): void;
   switchTrack(trackId: string): void;
   segments: WordSegmentPlayer;
@@ -137,6 +141,8 @@ export function useNarration({
   const [positionMs, setPositionMs] = React.useState(0);
   const [rate, setRate] = React.useState(1);
   const [error, setError] = React.useState<string | null>(null);
+  const [seekRevision, setSeekRevision] = React.useState(0);
+  const bumpSeek = React.useCallback(() => setSeekRevision((n) => n + 1), []);
   const [activeWord, setActiveWord] = React.useState<ActiveWord | null>(null);
   const [activeSentence, setActiveSentence] = React.useState<{
     id: string;
@@ -324,9 +330,10 @@ export function useNarration({
     if (!player) return;
     void player.seekTo(targetMs / 1000).then(() => {
       setPositionMs(targetMs);
+      bumpSeek();
       if (pending.wasPlaying) player.play();
     });
-  }, [index, currentTrack]);
+  }, [index, currentTrack, bumpSeek]);
 
   // ---- the karaoke clock --------------------------------------------------
   const lastShownPositionRef = React.useRef(0);
@@ -384,6 +391,7 @@ export function useNarration({
       if (atEnd) {
         void player.seekTo(0).then(() => {
           syncFromPosition(0, true);
+          bumpSeek();
           player.play();
         });
       } else {
@@ -396,14 +404,17 @@ export function useNarration({
         ...eventPropsRef.current,
       });
     }
-  }, [currentTrack, applyLockScreen, packId, storyId, syncFromPosition]);
+  }, [currentTrack, applyLockScreen, packId, storyId, syncFromPosition, bumpSeek]);
 
   const seekToMs = React.useCallback(
     (ms: number, method: SeekMethod) => {
       const player = playerRef.current;
       if (!player || !currentTrack) return;
       const clamped = Math.min(Math.max(0, ms), currentTrack.durationMs);
-      void player.seekTo(clamped / 1000).then(() => syncFromPosition(clamped, true));
+      void player.seekTo(clamped / 1000).then(() => {
+        syncFromPosition(clamped, true);
+        bumpSeek();
+      });
       if (method !== 'auto') {
         lastUserSeekAtRef.current = Date.now();
         trackEvent('narration_seek', {
@@ -415,8 +426,13 @@ export function useNarration({
         });
       }
     },
-    [currentTrack, syncFromPosition, packId, storyId],
+    [currentTrack, syncFromPosition, packId, storyId, bumpSeek],
   );
+
+  const readPositionMs = React.useCallback(() => {
+    const player = playerRef.current;
+    return player ? Math.round(player.currentTime * 1000) : 0;
+  }, []);
 
   const seekToSentence = React.useCallback(
     (sentenceId: string) => {
@@ -529,6 +545,8 @@ export function useNarration({
     lastUserSeekAtRef,
     seekToMs,
     seekToSentence,
+    readPositionMs,
+    seekRevision,
     cycleRate,
     switchTrack,
     segments,

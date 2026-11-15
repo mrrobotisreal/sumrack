@@ -6,8 +6,11 @@ import {
   CURSOR_SAVE_INTERVAL_MS,
   FADE_MS,
   FADE_STEPS,
+  SCORE_DRIFT_CHECK_MS,
   type AmbientPlayer,
+  type AmbientSource,
   type AmbientStatus,
+  type ScoreTarget,
 } from '../controller';
 import type { AmbientCursor, AmbientCursors } from '../cursors';
 import { parseAmbientPrefs } from '../preferences';
@@ -28,7 +31,8 @@ const GA1_MS = AMBIENT_THEMES.news.beds[0]!.durationMs; // 67 207
 const GA2_MS = AMBIENT_THEMES.news.beds[1]!.durationMs; // 124 327
 
 interface FakePlayer extends AmbientPlayer {
-  source: number;
+  source: AmbientSource;
+  rate: number;
   listeners: ((status: AmbientStatus) => void)[];
   /** Simulate a status tick. */
   emit(status: Partial<AmbientStatus>): void;
@@ -36,9 +40,13 @@ interface FakePlayer extends AmbientPlayer {
   volumeLog: number[];
 }
 
-function fakePlayer(source: number, opts: { replaceThrows?: boolean } = {}): FakePlayer {
+function fakePlayer(source: AmbientSource, opts: { replaceThrows?: boolean } = {}): FakePlayer {
   const player: FakePlayer = {
     source,
+    rate: 1,
+    setPlaybackRate: vi.fn((r: number) => {
+      player.rate = r;
+    }),
     listeners: [],
     playing: false,
     volumeLog: [],
@@ -58,7 +66,7 @@ function fakePlayer(source: number, opts: { replaceThrows?: boolean } = {}): Fak
       player.playing = false;
     }),
     remove: vi.fn(),
-    replace: vi.fn((next: number) => {
+    replace: vi.fn((next: AmbientSource) => {
       if (opts.replaceThrows) throw new Error('replace failed');
       player.source = next;
       player.currentTime = 0;
@@ -96,7 +104,7 @@ function fixture(
 ) {
   const cursors: AmbientCursors = { ...options.cursors };
   let player: FakePlayer | null = null;
-  const createPlayer = vi.fn((source: number) => {
+  const createPlayer = vi.fn((source: AmbientSource) => {
     player = fakePlayer(source, { replaceThrows: options.replaceThrows });
     return player;
   });
@@ -498,19 +506,194 @@ describe('saved ambience preferences', () => {
       enabled: true,
       volume: 0.2,
       playDuringNarration: true,
+      storyScores: true,
     });
     expect(parseAmbientPrefs({ enabled: false, volume: 0.04 })).toEqual({
       enabled: false,
       volume: 0.04,
       playDuringNarration: true,
+      storyScores: true,
     });
     expect(parseAmbientPrefs({ enabled: 'false', volume: NaN })).toEqual({
       enabled: true,
       volume: 0.2,
       playDuringNarration: true,
+      storyScores: true,
     });
     expect(parseAmbientPrefs({ volume: Infinity }).volume).toBe(0.2);
     expect(parseAmbientPrefs({ volume: 10 }).volume).toBe(1);
     expect(parseAmbientPrefs({ volume: -1 }).volume).toBe(0);
+  });
+});
+
+describe('score mode (T115, AMBIENT_SOUNDTRACKS §11)', () => {
+  function score(over: Partial<ScoreTarget> & { pos?: { ms: number } } = {}): ScoreTarget {
+    const pos = over.pos ?? { ms: 0 };
+    return {
+      key: 'p/part-1/t1',
+      uri: 'file:///p/audio/t1-score.opus',
+      durationMs: 60_000,
+      positionMs: () => pos.ms,
+      rate: 1,
+      seekRevision: 0,
+      props: { packId: 'p', storyId: 'part-1', mode: 'reader' },
+      ...over,
+    };
+  }
+
+  it('enters score mode from a playing bed: saves the bed cursor, fades out, swaps to the score at the narration position', async () => {
+    const f = fixture();
+    const start = f.controller.update(true, 0.2, 'horror');
+    await settle();
+    await start;
+    f.player.currentTime = 42;
+    const pos = { ms: 12_345 };
+    const p = f.controller.update(true, 0.2, 'horror', score({ pos }));
+    await settle();
+    await p;
+    expect(f.cursors.horror).toEqual({ bed: 'creepy-bg-music', positionMs: 42_000 });
+    expect(f.player.replace).toHaveBeenLastCalledWith({ uri: 'file:///p/audio/t1-score.opus' });
+    expect(f.player.loop).toBe(false);
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(12.345);
+    expect(f.player.volume).toBe(0.2);
+    expect(f.player.playing).toBe(true);
+    expect(f.onEvent).toHaveBeenCalledWith('score_started', {
+      packId: 'p',
+      storyId: 'part-1',
+      mode: 'reader',
+      positionMs: 12_345,
+    });
+    f.controller.dispose();
+  });
+
+  it('follows the narration rate (pitch-corrected) and resets to 1× when the bed returns', async () => {
+    const f = fixture();
+    await f.controller.update(true, 0.2, 'horror', score({ rate: 1.25 }));
+    expect(f.createPlayer).toHaveBeenCalledExactlyOnceWith({
+      uri: 'file:///p/audio/t1-score.opus',
+    });
+    expect(f.player.setPlaybackRate).toHaveBeenLastCalledWith(1.25, 'high');
+    await f.controller.update(true, 0.2, 'horror', score({ rate: 0.85 }));
+    expect(f.player.setPlaybackRate).toHaveBeenLastCalledWith(0.85, 'high');
+    const back = f.controller.update(true, 0.2, 'horror');
+    await vi.advanceTimersByTimeAsync(2 * FADE_MS + 100);
+    await back;
+    expect(f.player.setPlaybackRate).toHaveBeenLastCalledWith(1, 'high');
+    expect(f.player.source).toBe(1); // the horror bed again
+    f.controller.dispose();
+  });
+
+  it('a paused narration pauses the score at its position (no bed); resume re-seeks onto the narration', async () => {
+    const f = fixture();
+    const pos = { ms: 5_000 };
+    await f.controller.update(true, 0.2, 'horror', score({ pos }));
+    f.player.currentTime = 9;
+    await f.controller.update(false, 0.2, 'horror', score({ pos }));
+    expect(f.player.playing).toBe(false);
+    expect(f.player.source).toEqual({ uri: 'file:///p/audio/t1-score.opus' });
+    expect(f.onEvent).toHaveBeenCalledWith('score_paused', {
+      packId: 'p',
+      storyId: 'part-1',
+      mode: 'reader',
+      positionMs: 9_000,
+    });
+    pos.ms = 9_100;
+    await f.controller.update(true, 0.2, 'horror', score({ pos }));
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(9.1);
+    expect(f.player.playing).toBe(true);
+    f.controller.dispose();
+  });
+
+  it('a user seek (seekRevision bump) re-seeks immediately; a plain volume change does not', async () => {
+    const f = fixture();
+    const pos = { ms: 1_000 };
+    await f.controller.update(true, 0.2, 'horror', score({ pos }));
+    const seeks = () => (f.player.seekTo as ReturnType<typeof vi.fn>).mock.calls.length;
+    const before = seeks();
+    f.player.currentTime = 1.05;
+    pos.ms = 1_000;
+    await f.controller.update(true, 0.3, 'horror', score({ pos }));
+    expect(seeks()).toBe(before);
+    expect(f.player.volume).toBe(0.3);
+    pos.ms = 30_000;
+    await f.controller.update(true, 0.3, 'horror', score({ pos, seekRevision: 1 }));
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(30);
+    f.controller.dispose();
+  });
+
+  it('the ~2 s drift check re-seeks past 150 ms and reports score_resynced', async () => {
+    const f = fixture();
+    const pos = { ms: 0 };
+    await f.controller.update(true, 0.2, 'horror', score({ pos }));
+    // In sync (100 ms off): no correction.
+    pos.ms = 2_000;
+    f.player.currentTime = 2.1;
+    await vi.advanceTimersByTimeAsync(SCORE_DRIFT_CHECK_MS);
+    expect(f.onEvent).not.toHaveBeenCalledWith('score_resynced', expect.anything());
+    // 400 ms behind: re-seek.
+    pos.ms = 4_000;
+    f.player.currentTime = 3.6;
+    await vi.advanceTimersByTimeAsync(SCORE_DRIFT_CHECK_MS);
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(4);
+    expect(f.onEvent).toHaveBeenCalledWith('score_resynced', {
+      packId: 'p',
+      storyId: 'part-1',
+      mode: 'reader',
+      driftMs: -400,
+    });
+    f.controller.dispose();
+  });
+
+  it('a new part key swaps the file and starts at 0; past the score end it parks (the listen gap is silent)', async () => {
+    const f = fixture();
+    const pos = { ms: 59_990 };
+    await f.controller.update(true, 0.2, 'horror', score({ pos }));
+    // 59 990 ≥ 60 000 − 50: parked, nothing audible.
+    expect(f.player.playing).toBe(false);
+    const next = { ms: 0 };
+    await f.controller.update(
+      true,
+      0.2,
+      'horror',
+      score({
+        key: 'p/part-2/t2',
+        uri: 'file:///p/audio/t2-score.opus',
+        pos: next,
+        props: { packId: 'p', storyId: 'part-2', mode: 'listen' },
+      }),
+    );
+    expect(f.player.source).toEqual({ uri: 'file:///p/audio/t2-score.opus' });
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(0);
+    expect(f.player.playing).toBe(true);
+    expect(f.onEvent).toHaveBeenCalledWith('score_started', {
+      packId: 'p',
+      storyId: 'part-2',
+      mode: 'listen',
+      positionMs: 0,
+    });
+    f.controller.dispose();
+  });
+
+  it('a score that finishes never advances a bed rotation or loops', async () => {
+    const f = fixture();
+    await f.controller.update(true, 0.2, 'news', score());
+    f.player.emit({ didJustFinish: true });
+    expect(f.player.replace).not.toHaveBeenCalled();
+    expect(f.player.playing).toBe(false);
+    expect(f.onEvent).not.toHaveBeenCalledWith('ambient_bed_advanced', expect.anything());
+    f.controller.dispose();
+  });
+
+  it('leaving score mode resumes the bed at its saved cursor', async () => {
+    const f = fixture({
+      cursors: { news: { bed: 'global-affairs-briefing-2', positionMs: 30_000 } },
+    });
+    await f.controller.update(true, 0.2, 'news', score());
+    const back = f.controller.update(true, 0.2, 'news');
+    await vi.advanceTimersByTimeAsync(2 * FADE_MS + 100);
+    await back;
+    expect(f.player.source).toBe(3);
+    expect(f.player.seekTo).toHaveBeenLastCalledWith(30);
+    f.controller.dispose();
   });
 });

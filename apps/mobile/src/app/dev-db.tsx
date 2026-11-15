@@ -78,6 +78,9 @@ const FIXTURE_PACKS = [
   // T95 (M26): the three-part «listen to the whole story» fixture — real Opus part files plus the
   // stitched full file, bundled and staged on import. Dev import only (device data hygiene).
   { id: 'a1-listen-fixture', note: 'stories · 3 parts + stitched full track (5.9 s)' },
+  // T115 (M38): per-part story scores — parts 1 + 3 scored (12 s each, synthetic tones), part 2
+  // unscored (the bed-fallback cell), plus the stitched full track. Dev import only (hygiene).
+  { id: 'a1-score-fixture', note: 'stories · 3 parts · scores on 1 + 3 · full track (34.4 s)' },
 ] as const;
 type FixtureId = (typeof FIXTURE_PACKS)[number]['id'];
 
@@ -99,6 +102,7 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
     require('@sumrak/schema/fixtures/packs/core-lemmas-fixture/pack.json'),
   'a1-hotel-fixture': () => require('@sumrak/schema/fixtures/packs/a1-hotel-fixture/pack.json'),
   'a1-listen-fixture': () => require('@sumrak/schema/fixtures/packs/a1-listen-fixture/pack.json'),
+  'a1-score-fixture': () => require('@sumrak/schema/fixtures/packs/a1-score-fixture/pack.json'),
 };
 
 /** T95: bundled audio for fixtures that ship real files (pack-relative path → asset module). Lazy: `require` runs on call. */
@@ -109,6 +113,16 @@ const FIXTURE_AUDIO: Partial<Record<FixtureId, () => Record<string, number>>> = 
     'audio/lf-p2.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p2.opus'),
     'audio/lf-p3.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/lf-p3.opus'),
     'audio/a1-listen-fixture-full.opus': require('@sumrak/schema/fixtures/packs/a1-listen-fixture/audio/a1-listen-fixture-full.opus'),
+    /* eslint-enable @typescript-eslint/no-require-imports */
+  }),
+  'a1-score-fixture': () => ({
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    'audio/sf-p1.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/sf-p1.opus'),
+    'audio/sf-p2.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/sf-p2.opus'),
+    'audio/sf-p3.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/sf-p3.opus'),
+    'audio/sf-p1-score.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/sf-p1-score.opus'),
+    'audio/sf-p3-score.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/sf-p3-score.opus'),
+    'audio/a1-score-fixture-full.opus': require('@sumrak/schema/fixtures/packs/a1-score-fixture/audio/a1-score-fixture-full.opus'),
     /* eslint-enable @typescript-eslint/no-require-imports */
   }),
 };

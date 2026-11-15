@@ -3,13 +3,14 @@ import * as React from 'react';
 import { Switch, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { track } from '@/services/analytics';
 import { useAmbientPrefs } from '@/store/ambient-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
 import { SoundtracksList } from './soundtracks-list';
 
 export function AmbientSettingsSection() {
-  const { enabled, volume, playDuringNarration, setPrefs } = useAmbientPrefs();
+  const { enabled, volume, playDuringNarration, storyScores, setPrefs } = useAmbientPrefs();
   const { tokens } = useAppTheme();
   const [draftPercent, setDraftPercent] = React.useState<number | null>(null);
   const sliding = React.useRef(false);
@@ -93,6 +94,25 @@ export function AmbientSettingsSection() {
                 trackColor={{ false: tokens.surface2, true: tokens.accent }}
                 thumbColor={tokens.text}
                 accessibilityLabel="Play background music during narration"
+              />
+            </View>
+            <View className="flex-row items-center justify-between border-t border-border px-4 py-3.5">
+              <View className="flex-1 gap-0.5 pr-3">
+                <Text className="font-ui-medium">Музыка к рассказам</Text>
+                <Text variant="caption">
+                  Story scores: a part with its own composed score plays it in place of the
+                  soundtrack, in time with the narration. Off = the soundtrack as usual.
+                </Text>
+              </View>
+              <Switch
+                value={storyScores}
+                onValueChange={(value) => {
+                  setPrefs({ storyScores: value });
+                  track('ambient_story_scores_toggled', { on: value });
+                }}
+                trackColor={{ false: tokens.surface2, true: tokens.accent }}
+                thumbColor={tokens.text}
+                accessibilityLabel="Музыка к рассказам — play story scores"
               />
             </View>
             <SoundtracksList />

@@ -26,6 +26,17 @@ describe('sample pack fixtures', () => {
     expect(statSync(join(packDir(pack.id), full.file)).size).toBeGreaterThan(0);
   });
 
+  it('T115 a1-score-fixture validates: parts 1 + 3 scored with real files, part 2 unscored', () => {
+    const pack = loadPack('a1-score-fixture');
+    expect(pack.stories.map((s) => s.score?.trackId ?? null)).toEqual(['sf-p1', null, 'sf-p3']);
+    for (const s of pack.stories) {
+      if (!s.score) continue;
+      expect(Math.abs(s.score.durationMs - s.audio[0]!.durationMs)).toBeLessThanOrEqual(50);
+      expect(statSync(join(packDir(pack.id), s.score.file)).size).toBeGreaterThan(0);
+    }
+    expect(pack.fullStory!.segments).toHaveLength(3);
+  });
+
   it('a1-creepypasta-002 («Фотография») validates', () => {
     const pack = loadPack('a1-creepypasta-002');
     expect(pack.stories[0]!.sentences.length).toBeGreaterThanOrEqual(8);

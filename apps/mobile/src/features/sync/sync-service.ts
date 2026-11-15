@@ -387,12 +387,13 @@ function stagedDeps(client: GithubContentClient, packId: string): FetchOrReuseDe
  * way (`scenario_assets`).
  */
 async function backfillMissingAudio(client: GithubContentClient, entry: ManifestEntry) {
-  const [tracks, dialogueAudio, scenarioAudio] = await Promise.all([
+  const [tracks, dialogueAudio, scenarioAudio, scores] = await Promise.all([
     repos.content.listAudioTracksForPack(entry.id),
     repos.dialogues.listAudioForPack(entry.id),
     repos.scenarios.listAudioForPack(entry.id),
+    repos.content.listScoresForPack(entry.id),
   ]);
-  const missing = [...tracks, ...dialogueAudio, ...scenarioAudio].filter(
+  const missing = [...tracks, ...dialogueAudio, ...scenarioAudio, ...scores].filter(
     (t) => !t.localUri || !new File(t.localUri).exists,
   );
 
@@ -401,13 +402,17 @@ async function backfillMissingAudio(client: GithubContentClient, entry: Manifest
   );
   const isDialogueFile = new Set(dialogueAudio.map((a) => a.file));
   const isScenarioFile = new Set(scenarioAudio.map((a) => a.file));
+  const isScoreFile = new Set(scores.map((a) => a.file));
   for (const audioRow of missing) {
     const file = manifestByPath.get(audioRow.file);
     if (!file) continue; // manifest no longer ships this file
     const bytes = await client.fetchRawFile(`packs/${entry.id}/${file.path}`);
     await verifyFileSha256(bytes, file.sha256, file.path, deviceHasher);
     const uri = stageAudioFile(entry.id, file.path, bytes);
-    if (isScenarioFile.has(audioRow.file)) {
+    if (isScoreFile.has(audioRow.file)) {
+      // T115: a part score deferred on cellular.
+      await repos.content.setScoreLocalUri(entry.id, audioRow.file, uri);
+    } else if (isScenarioFile.has(audioRow.file)) {
       await repos.scenarios.setAudioLocalUri(entry.id, audioRow.file, uri);
     } else if (isDialogueFile.has(audioRow.file)) {
       await repos.dialogues.setAudioLocalUri(entry.id, audioRow.file, uri);

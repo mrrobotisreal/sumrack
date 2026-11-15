@@ -6,6 +6,7 @@ import { BackHandler, Pressable, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
+import { listenScoreSource, useScoreSource } from '@/features/ambient-audio/score-source';
 import { safeBack } from '@/lib/safe-back';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -33,6 +34,7 @@ export function ListenScreen() {
   const muted = useListenStore((s) => s.muted);
   const partIndex = useListenStore((s) => s.partIndex);
   const finished = useListenStore((s) => s.finished);
+  const seekRevision = useListenStore((s) => s.seekRevision);
 
   const [scrubMs, setScrubMs] = React.useState<number | null>(null);
   const [speedOpen, setSpeedOpen] = React.useState(false);
@@ -65,6 +67,25 @@ export function ListenScreen() {
   const segment = source?.segments[partIndex];
   const total = source?.segments.length ?? 0;
   const shownMs = scrubMs ?? positionMs;
+
+  // T115: the current part's score plays through the ambient player while this
+  // screen is focused, at position − segment.startMs (the 1.2 s gaps are silent).
+  const scoreSource = React.useMemo(
+    () =>
+      status === 'ready' && source
+        ? listenScoreSource({
+            packId: source.packId,
+            segment,
+            score: segment?.score,
+            playing,
+            rate,
+            seekRevision,
+            positionMs: () => listenPlayer.readPositionMs(),
+          })
+        : null,
+    [status, source, segment, playing, rate, seekRevision],
+  );
+  useScoreSource(scoreSource);
   const coverSize = Math.round(width * 0.72);
 
   const openInReader = () => {

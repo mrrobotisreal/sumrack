@@ -452,6 +452,18 @@ export type AnalyticsEvent =
   // ambient_preview_played {theme} — ▶ on a row; ambient_rotation_reset {theme} — «Reset».
   | 'ambient_preview_played'
   | 'ambient_rotation_reset'
+  // T115 (M38) per-part story scores through the ambient player. Props are ids/numbers only.
+  // score_started {packId, storyId, mode: 'reader'|'listen', positionMs} — a score becomes audible;
+  // score_paused {packId, storyId, mode, positionMs} — its narration paused/stopped (or a policy pause);
+  // score_resynced {packId, storyId, mode, driftMs} — the ~2 s drift check re-seeked (> 150 ms off);
+  // score_unavailable {packId, storyId, reason: 'not_downloaded'|'pref_off'|'disabled'} — a scored
+  //   part fell back to the bed rules (once per part + reason);
+  // ambient_story_scores_toggled {on} — Settings «Музыка к рассказам».
+  | 'score_started'
+  | 'score_paused'
+  | 'score_resynced'
+  | 'score_unavailable'
+  | 'ambient_story_scores_toggled'
   // M16 T50 Словарь sorting. bank_sort_changed {key, familiarity} — the sheet applied a sort.
   // No new per-grade event: review_graded / *_item_graded carry `gradeSource` (= review_log.source;
   // never `source`, which pron/listening items already use for other meanings).
