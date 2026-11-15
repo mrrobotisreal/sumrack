@@ -326,3 +326,43 @@ describe('gate mock hiding (T92 D16)', () => {
     expect(buildExamListItems([summary(mock)], [])).toHaveLength(1);
   });
 });
+
+describe('gate mock hiding by the real torfl:gate tag (T116 H5)', () => {
+  const tags = new Map<string, readonly string[]>([
+    ['a2-torfl-mock-004', ['torfl', 'torfl:mock', 'torfl:gate']],
+    ['a2-torfl-mock-003', ['torfl', 'torfl:mock']],
+    ['a1-torfl-mock-004', ['torfl', 'torfl:mock', 'torfl:gate']],
+    ['a2-something-gated', ['torfl:gate']],
+  ]);
+  const attemptOf = (packId: string) => ({
+    packId,
+    examId: mock.id,
+    status: 'abandoned',
+    results: null,
+    verdict: null,
+  });
+
+  it('hides an a2-torfl-mock-004-shaped gate pack in the А2 hub until its room is attempted', () => {
+    const gate = summary(mock, 'a2-torfl-mock-004');
+    expect(buildExamListItems([gate], [], tags)).toEqual([]);
+    expect(buildExamListItems([gate], [attemptOf('a2-torfl-mock-004')], tags)).toHaveLength(1);
+    // An attempt of the A1 gate never reveals the A2 one.
+    expect(buildExamListItems([gate], [attemptOf('a1-torfl-mock-004')], tags)).toEqual([]);
+  });
+
+  it('hides any gate-tagged pack, never an untagged one', () => {
+    expect(buildExamListItems([summary(mock, 'a2-something-gated')], [], tags)).toEqual([]);
+    expect(buildExamListItems([summary(mock, 'a2-torfl-mock-003')], [], tags)).toHaveLength(1);
+  });
+
+  it('A1 behaviour is unchanged', () => {
+    const gate = summary(mock, 'a1-torfl-mock-004');
+    expect(buildExamListItems([gate], [], tags)).toEqual([]);
+    expect(buildExamListItems([gate], [attemptOf('a1-torfl-mock-004')], tags)).toHaveLength(1);
+    expect(buildExamListItems([summary(mock)], [], tags)).toHaveLength(1);
+  });
+
+  it('while the pack tags are still loading, every building’s Номер 13 stays hidden', () => {
+    expect(buildExamListItems([summary(mock, 'a2-torfl-mock-004')], [])).toEqual([]);
+  });
+});
