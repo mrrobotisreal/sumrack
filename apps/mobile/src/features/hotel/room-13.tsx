@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import type { ExamSubtestKind } from '@sumrak/schema';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
@@ -7,26 +7,44 @@ import { Text } from '@/components/ui/text';
 import { QueryError } from '@/components/query-error';
 import { SUBTEST_LABELS } from '@/features/torfl/topics';
 import { recordHotelGatePassed } from '@/features/motivation/service';
-import { track } from '@/services/analytics';
+import { hotelProfileFor, isHotelLevel, type HotelLevel } from '@/features/torfl/hotel-profile';
+import { levelFromParam, profileFor } from '@/features/torfl/level-profile';
 import { useAppTheme } from '@/theme/use-app-theme';
 
-import { useCourseProgress, useLastGateDetail } from './hotel-hooks';
-import { gatePasses, GATE_PACK_ID, markedFloors, passedFloorsOf, roomStatus } from './gate-model';
-
-/** The gate mock's exam id inside `a1-torfl-mock-004` (the mock intro route). */
-const GATE_EXAM_ID = 'a1-mock-04';
+import { trackHotel } from './hotel-analytics';
+import {
+  useCourseProgress,
+  useHotelBuilding,
+  useHotelFloors,
+  useLastGateDetail,
+} from './hotel-hooks';
+import { gatePasses, markedFloors, passedFloorsOf, roomStatus } from './gate-model';
 
 /**
- * Номер 13 (T92c D6): the dark room behind the brass «13» plate. The exam text
- * and «Войти» → the mock intro. The last verdict with per-subtest bars; after a
- * fail, the 6 h cooldown and the debrief, whose floors get glowing markers on
- * the lift until their floor exam is retaken. A pass shows «A1 пройден».
+ * Номер 13 (T92c D6): the dark room behind the brass «13» plate — one per
+ * building (T116 H5). `?level=` names the building (the lift passes it); absent
+ * = the persisted `hotel.building`. The exam text and «Войти» → the building's
+ * gate mock intro. The last verdict with per-subtest bars; after a fail, the
+ * 6 h cooldown and the debrief, whose floors (of THIS building) get glowing
+ * markers on the lift until their floor exam is retaken. A pass shows «A1
+ * пройден» / «A2 пройден».
  */
 export default function Room13Screen() {
+  const params = useLocalSearchParams<{ level?: string }>();
+  const building = useHotelBuilding();
+  const fromParam = params.level !== undefined ? levelFromParam(params.level) : null;
+  const level: HotelLevel = fromParam && isHotelLevel(fromParam) ? fromParam : building.level;
+  return <Room13 level={level} />;
+}
+
+function Room13({ level }: { level: HotelLevel }) {
   const { tokens } = useAppTheme();
   const router = useRouter();
-  const { last, attempts, detail: gate } = useLastGateDetail();
+  const profile = hotelProfileFor(level);
+  const rule = profileFor(level);
+  const { last, attempts, detail: gate } = useLastGateDetail(level);
   const progress = useCourseProgress();
+  const floors = useHotelFloors(level);
   const [now] = React.useState(() => Date.now());
 
   const status = roomStatus({
@@ -36,13 +54,16 @@ export default function Room13Screen() {
   });
 
   const results = React.useMemo(() => gate.data?.results ?? [], [gate.data]);
-  const passed = results.length > 0 && gatePasses(results);
+  const passed = results.length > 0 && gatePasses(results, level);
   const debrief = React.useMemo(() => {
     if (!gate.data || passed) return [];
     return gate.data.debrief;
   }, [gate.data, passed]);
 
-  const passedFloors = React.useMemo(() => passedFloorsOf(progress.data ?? []), [progress.data]);
+  const passedFloors = React.useMemo(
+    () => passedFloorsOf(progress.data ?? [], floors.data ?? []),
+    [progress.data, floors.data],
+  );
   const markers = markedFloors(debrief, passedFloors);
 
   // One analytics event per finished gate attempt, once it has been read (T92d: the engine's overall %).
@@ -50,12 +71,13 @@ export default function Room13Screen() {
   React.useEffect(() => {
     if (!last || !gate.data || reported.current === last.id) return;
     reported.current = last.id;
-    track('hotel_gate_attempt', {
+    trackHotel('hotel_gate_attempt', {
       percent: gate.data.overall ?? 0,
       verdict: passed ? 'pass' : 'fail',
-    } as never);
-    if (passed) void recordHotelGatePassed();
-  }, [last, gate.data, passed]);
+      level,
+    });
+    if (passed) void recordHotelGatePassed(level);
+  }, [last, gate.data, passed, level]);
 
   if (attempts.isPending) {
     return (
@@ -74,7 +96,7 @@ export default function Room13Screen() {
     );
   }
 
-  const open = () => router.push(`/exam/${GATE_PACK_ID}/${GATE_EXAM_ID}` as never);
+  const open = () => router.push(`/exam/${profile.gatePackId}/${profile.gateExamId}` as never);
   const canEnter = status.kind !== 'cooling';
 
   return (
@@ -102,9 +124,11 @@ export default function Room13Screen() {
       </View>
 
       <View className="gap-2 rounded-2xl border border-border px-4 py-4">
-        <Text className="font-ui-medium text-base">Вариант 4 · полный экзамен ТРКИ-А1</Text>
-        <Text variant="caption">~2,5 часа</Text>
-        <Text variant="caption">Правило СПбГУ: каждый субтест ≥ 66 %, один может быть ≥ 60 %.</Text>
+        <Text className="font-ui-medium text-base">{profile.roomTitle}</Text>
+        <Text variant="caption">{profile.roomDuration}</Text>
+        <Text variant="caption">
+          {`Правило СПбГУ: каждый субтест ≥ ${rule.passPct} %, один может быть ≥ ${rule.borderlinePct} %.`}
+        </Text>
       </View>
 
       {results.length > 0 ? (
@@ -121,7 +145,8 @@ export default function Room13Screen() {
                   className="h-2 rounded-full"
                   style={{
                     width: `${Math.min(100, Math.max(0, r.percent))}%`,
-                    backgroundColor: r.percent >= 66 ? tokens.accent : tokens.hotelGlowDim,
+                    backgroundColor:
+                      r.percent >= rule.passPct ? tokens.accent : tokens.hotelGlowDim,
                   }}
                 />
               </View>
@@ -133,7 +158,7 @@ export default function Room13Screen() {
       {status.kind === 'passed' ? (
         <View className="items-center gap-1" testID="room-13-passed">
           <Text className="font-ui-bold text-lg" style={{ color: tokens.hotelGlow }}>
-            A1 пройден
+            {profile.passedLabel}
           </Text>
         </View>
       ) : null}

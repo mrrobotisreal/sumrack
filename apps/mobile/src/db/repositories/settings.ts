@@ -144,9 +144,16 @@ export const SETTING_KEYS = {
    */
   hotelRetiredCheckpoint: 'hotel.retiredCheckpoint',
   /**
-   * number (T89): the last floor Mitch was on in the hotel (the lift's resume point).
+   * The last floor Mitch was on in the hotel (the lift's resume point). T89: a
+   * number; T116: `{ A1?: number, A2?: number }` per building — a legacy number
+   * reads as A1's (features/hotel/hotel-model.ts `parseLastFloors`, no migration).
    */
   hotelLastFloor: 'hotel.lastFloor',
+  /**
+   * 'A1' | 'A2' (T116, HOTEL_PATH_A2 H2, default 'A1'): the hotel building the
+   * Путь tab, Today and the daily plan show. Parsed by `parseHotelBuilding`.
+   */
+  hotelBuilding: 'hotel.building',
   /**
    * `{ [packId:unitId]: cardIndex }` (T90): where the learner stopped in each
    * unit's lesson. Parsed defensively by features/hotel/lesson/lesson-model.ts.

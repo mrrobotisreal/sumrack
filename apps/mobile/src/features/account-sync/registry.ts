@@ -283,6 +283,7 @@ export const SYNCED_SETTING_KEYS: ReadonlySet<string> = new Set([
   'library.expanded',
   'hotel.sfx',
   'hotel.lastFloor',
+  'hotel.building',
   'hotel.lessonPos',
   'bank.sort',
   'dailySession.prefs',

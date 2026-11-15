@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 
 import { repos } from '@/db';
-import { GATE_PACK_ID, ladderLevel } from '@/features/hotel/gate-model';
+import { gatePassedOf, ladderLevel } from '@/features/hotel/gate-model';
+import { HOTEL_LEVELS, HOTEL_PROFILES, type HotelLevel } from '@/features/torfl/hotel-profile';
 import { track } from '@/services/analytics';
 
 import {
@@ -30,12 +31,21 @@ async function loadPrompts(): Promise<PromptRow[]> {
 }
 
 /**
- * D18: the journal reads the hotel ladder, not the old path position. The gate
- * (a passed Номер 13 attempt) decides A1 vs A2; the stored `pathPosition` is ignored.
+ * D18 / H7: the journal reads the hotel ladder, not the old path position. The
+ * level is the rung above the highest building whose Номер 13 verdict passed
+ * (T116 bug 6b: the verdict in `exam_attempts`, never a `course_progress` row);
+ * the stored `pathPosition` is ignored.
  */
 async function loadUserLevel(): Promise<Cefr> {
-  const gate = await repos.course.getProgress([GATE_PACK_ID]).catch(() => []);
-  return ladderLevel(gate.some((g) => g.packId === GATE_PACK_ID && g.passedAt !== null)) as Cefr;
+  const passed: HotelLevel[] = [];
+  for (const level of HOTEL_LEVELS) {
+    const profile = HOTEL_PROFILES[level];
+    const attempts = await repos.exams
+      .listAttempts({ packId: profile.gatePackId, limit: 20 })
+      .catch(() => []);
+    if (gatePassedOf(attempts, profile)) passed.push(level);
+  }
+  return ladderLevel(passed);
 }
 
 /** The rotating, skippable prompt of the day. `skip` is ephemeral by design. */

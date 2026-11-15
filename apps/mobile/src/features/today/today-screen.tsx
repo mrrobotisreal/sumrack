@@ -28,6 +28,7 @@ import { NotificationPromptCard } from '@/features/motivation/notification-promp
 import { QuestCard } from '@/features/motivation/quest-card';
 import { hotelCardLine, type HotelNextAction } from '@/features/hotel/gate-model';
 import { useHotelState } from '@/features/hotel/hotel-hooks';
+import type { HotelLevel } from '@/features/torfl/hotel-profile';
 import { isResumable, pickTodayScenario } from '@/features/scenario/hub-selection';
 import { drillHref } from '@/features/torfl/drill/drill-model';
 import { useExamDates, useTorflLevelsToday } from '@/features/torfl/hooks';
@@ -390,7 +391,7 @@ export function TodayScreen() {
       )}
 
       {/* continue on the path (T17) — current node's next uncompleted step */}
-      {hotel.action && <HotelContinueCard action={hotel.action} />}
+      {hotel.action && <HotelContinueCard action={hotel.action} level={hotel.level} />}
 
       {/* where I left off */}
       {continueTarget && (
@@ -428,10 +429,11 @@ export function TodayScreen() {
   );
 }
 
-function HotelContinueCard({ action }: { action: HotelNextAction }) {
+/** H7: one card, following the active building (`hotel.building`); the line names a non-default building. */
+function HotelContinueCard({ action, level }: { action: HotelNextAction; level: HotelLevel }) {
   const router = useRouter();
   const { tokens } = useAppTheme();
-  const line = hotelCardLine(action);
+  const line = hotelCardLine(action, level);
   return (
     <Pressable
       onPress={() => {
@@ -440,6 +442,7 @@ function HotelContinueCard({ action }: { action: HotelNextAction }) {
           unitId: '',
           cardId: 'today',
           kind: action.kind,
+          level,
         });
         router.push(
           action.kind === 'done-all' ? ('/(tabs)/path' as never) : (action.route as never),

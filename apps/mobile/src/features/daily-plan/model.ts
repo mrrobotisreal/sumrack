@@ -57,6 +57,8 @@ export interface PlannerInput {
   listeningHref: string | null;
   speakingHref: string | null;
   hotelHref?: string | null;
+  /** H7: the hotel step's line («А2 · Этаж 6 · …», the active building's `hotelCardLine`). */
+  hotelLine?: string | null;
   examDate?: string | null;
   completions?: readonly Completion[];
   evidence?: readonly SkillSummary[];
@@ -171,7 +173,9 @@ export function buildPlan(input: PlannerInput): PlanTask[] {
       minutes: 8,
       skill: 'lexgram',
       href: input.hotelHref,
-      reason: 'Continue the currently unlocked step.',
+      reason: input.hotelLine
+        ? `Continue the currently unlocked step: ${input.hotelLine}.`
+        : 'Continue the currently unlocked step.',
     });
   const preferred: ExamSkill =
     options.goal === 'reading' ? 'reading' : options.goal === 'exam' ? 'lexgram' : 'listening';

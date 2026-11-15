@@ -11,6 +11,8 @@ import { repos } from '@/db';
 import type { AttemptRecord } from '@/db/repositories/course';
 import { canAttempt, drawItems } from '../hotel-model';
 import { formatCooldownRu } from '../gate-model';
+import { trackHotel } from '../hotel-analytics';
+import { hotelLevelOf } from '@/features/torfl/hotel-profile';
 import { recordHotelRun } from '@/features/motivation/service';
 import { ChoiceItemView } from '@/features/torfl/items/choice-item-view';
 import { TypedItemView } from '@/features/torfl/items/typed-item-view';
@@ -118,7 +120,11 @@ export function RunnerScreen({
   React.useEffect(() => {
     if (!course || progress.isLoading || state !== null || finished !== null) return;
     if (blockedMinutes !== null) {
-      track('hotel_cooldown_blocked', { kind: mode, minutesLeft: blockedMinutes });
+      trackHotel('hotel_cooldown_blocked', {
+        kind: mode,
+        minutesLeft: blockedMinutes,
+        level: hotelLevelOf(course.level),
+      });
       return;
     }
     let cancelled = false;

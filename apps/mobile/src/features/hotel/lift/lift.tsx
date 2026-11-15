@@ -8,10 +8,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Text } from '@/components/ui/text';
-import { track } from '@/services/analytics';
+import { DEFAULT_HOTEL_LEVEL, type HotelLevel } from '@/features/torfl/hotel-profile';
 import { useReduceMotion } from '@/store/motion-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
+import { trackHotel } from '../hotel-analytics';
 import { CallPanel } from './call-buttons';
 import { Doors } from './doors';
 import {
@@ -97,6 +98,15 @@ export interface LiftProps {
   onRide13: () => void;
   /** Debrief markers (T92d): floors the last Номер 13 debrief sent the learner back to. */
   markers?: readonly number[];
+  /** The building the car serves (T116): the analytics `level` of every ride / blocked / drop. */
+  level?: HotelLevel;
+  /**
+   * T116 H2: while set, the indicator shows this text («А2») instead of the
+   * floor — the hotel closes the doors to switch building, shows the level,
+   * and clears it to open on the new building's floor. Reduce-motion: the
+   * indicator cross-fades.
+   */
+  switching?: string | null;
 }
 
 export function Lift({
@@ -110,6 +120,8 @@ export function Lift({
   reveal13,
   onRide13,
   markers = [],
+  level = DEFAULT_HOTEL_LEVEL,
+  switching = null,
 }: LiftProps) {
   const { tokens: t } = useAppTheme();
   const reduced = useReduceMotion();
@@ -177,6 +189,31 @@ export function Lift({
     if (!busy.current) setShownFloor(floor);
   }, [floor]);
 
+  // T116 H2, the building switch: doors close (reduce-motion: a fade) while
+  // `switching` is set, and open again (the ding) once the hotel clears it.
+  const switchingNow = switching !== null;
+  const wasSwitching = React.useRef(false);
+  React.useEffect(() => {
+    if (switchingNow === wasSwitching.current) return;
+    wasSwitching.current = switchingNow;
+    if (switchingNow) {
+      busy.current = true;
+      sfxRef.current?.play('close');
+      if (reduced) fadeOut(motion)();
+      else closeDoors(motion)();
+      return;
+    }
+    sfxRef.current?.play('ding');
+    sfxRef.current?.play('open');
+    if (reduced) {
+      snapOpen(motion)();
+      fadeIn(motion)();
+    } else openDoors(motion)();
+    after(reduced ? DROP_REDUCED_FADE_MS : DOORS_OPEN_MS, () => {
+      busy.current = false;
+    });
+  }, [switchingNow, reduced, motion, after]);
+
   const flashToast = React.useCallback(
     (text: string) => {
       setToast(text);
@@ -207,7 +244,7 @@ export function Lift({
       if (busy.current || to === shownFloor) return;
       busy.current = true;
       const plan = planRide(panel, shownFloor, to);
-      track('hotel_lift_ride', { from: shownFloor, to, passed13: plan.passes13 });
+      trackHotel('hotel_lift_ride', { from: shownFloor, to, passed13: plan.passes13, level });
 
       sfxRef.current?.play('close');
       closeDoors(motion)();
@@ -256,7 +293,7 @@ export function Lift({
         step();
       });
     },
-    [shownFloor, panel, after, flicker, motion],
+    [shownFloor, panel, after, flicker, motion, level],
   );
 
   const onUpPress = React.useCallback(() => {
@@ -267,12 +304,12 @@ export function Lift({
       return;
     }
     // Dark ▲: the clunk, a light haptic, the toast, and the caller's hook (decision 4).
-    track('hotel_up_blocked', { floor: shownFloor });
+    trackHotel('hotel_up_blocked', { floor: shownFloor, level });
     sfxRef.current?.play('blocked');
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     flashToast('Сначала сдайте экзамен этажа');
     onBlockedRef.current();
-  }, [panel, shownFloor, highestUnlocked, ride, flashToast]);
+  }, [panel, shownFloor, highestUnlocked, ride, flashToast, level]);
 
   const onDownPress = React.useCallback(() => {
     if (busy.current) return;
@@ -284,7 +321,7 @@ export function Lift({
     if (busy.current) return;
     busy.current = true;
     sfxRef.current?.play('drop');
-    track('hotel_drop_played', { reduced });
+    trackHotel('hotel_drop_played', { reduced, level });
     const landing = panel.includes(MISSING_FLOOR) ? MISSING_FLOOR : shownFloor;
 
     if (reduced) {
@@ -338,7 +375,7 @@ export function Lift({
       busy.current = false;
       onRide13Ref.current();
     });
-  }, [reduced, panel, shownFloor, after, motion]);
+  }, [reduced, panel, shownFloor, after, motion, level]);
 
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [
@@ -361,7 +398,7 @@ export function Lift({
   return (
     <Animated.View style={[shakeStyle, fadeStyle, { alignItems: 'center', gap: 16 }]}>
       <Indicator
-        display={displayText ?? String(shownFloor)}
+        display={switching ?? displayText ?? String(shownFloor)}
         titles={titleFor(shownFloor)}
         reduced={reduced}
         dimmed={dimmed}
@@ -373,14 +410,14 @@ export function Lift({
       </Doors>
 
       <CallPanel
-        upLit={upOn && !riding}
-        downLit={downOn && !riding}
+        upLit={upOn && !riding && !switchingNow}
+        downLit={downOn && !riding && !switchingNow}
         onUp={onUpPress}
         onDown={onDownPress}
         reduced={reduced}
         show13={reveal13}
         onRide13={runDrop}
-        disabled={riding}
+        disabled={riding || switchingNow}
         markUp={marks.up}
         markDown={marks.down}
       />

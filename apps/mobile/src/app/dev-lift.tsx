@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { Lift } from '@/features/hotel/lift/lift';
+import { HOTEL_PROFILES } from '@/features/torfl/hotel-profile';
 import { useMotionPrefs, useReduceMotion } from '@/store/motion-prefs';
 
 /**
@@ -18,8 +19,9 @@ import { useMotionPrefs, useReduceMotion } from '@/store/motion-prefs';
  *   reveal13 – unlocked 15, floor 15 passed, the «13» button shown.
  */
 
-const BASE_PANEL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15] as const;
-const REVEAL_PANEL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const;
+/** The building panel (T116: from the hotel profile table, no local copy). */
+const BASE_PANEL = HOTEL_PROFILES.A1.panel;
+const REVEAL_PANEL = [...BASE_PANEL, 13].sort((a, b) => a - b);
 
 type PresetName = 'start' | 'mid' | 'skip13' | 'reveal13';
 

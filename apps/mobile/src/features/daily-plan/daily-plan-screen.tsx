@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/text';
 import { QueryError } from '@/components/query-error';
 import { repos } from '@/db';
 import type { CompletedLearningSession } from '@/db/repositories/learning-sessions';
+import { hotelCardLine } from '@/features/hotel/gate-model';
 import { useHotelState } from '@/features/hotel/hotel-hooks';
 import { useLearningEvidence, evidenceKey } from '@/features/learning-evidence/hooks';
 import { localDay, summarizeEvidence } from '@/features/learning-evidence/model';
@@ -73,6 +74,7 @@ export function DailyPlanScreen() {
           listeningHref: data.data?.listeningHref ?? null,
           speakingHref: data.data?.speakingHref ?? null,
           hotelHref,
+          hotelLine: hotel.action ? hotelCardLine(hotel.action, hotel.level) : null,
           examDate: data.data?.examDate,
           completions: data.data?.history,
           evidence: summaries,

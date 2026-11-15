@@ -1,5 +1,6 @@
 import type { CourseItem, TypedItem } from '@sumrak/schema';
 
+import { HOTEL_LEVELS, hotelProfileFor, type HotelLevel } from '@/features/torfl/hotel-profile';
 import { scoreTyped } from '@/features/torfl/scoring';
 
 /**
@@ -13,9 +14,6 @@ export const MINUTE_MS = 60_000;
 export const EXTERN_PASS_PERCENT = 90;
 const HOUR_MS = 60 * MINUTE_MS;
 
-/** D5: the A1 panel reads 0 (Вестибюль), 1–12, 14, 15 — there is no 13. */
-export const PANEL_A1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15] as const;
-
 /** A course floor as the model sees it: what is installed, nothing about progress. */
 export interface FloorInput {
   packId: string;
@@ -25,6 +23,12 @@ export interface FloorInput {
   hasExam: boolean;
   /** The pack's `packs.version` (T116 bug 6c: breaks a duplicate floor deterministically). Absent = 0. */
   version?: number;
+  /**
+   * The building (`course.level`, T116). When present, only that building's
+   * panel shows the floor; absent = whichever building is asked (callers that
+   * already list one building's floors).
+   */
+  level?: string;
 }
 
 /** One `course_progress` row, as the model reads it (a structural subset). */
@@ -65,16 +69,25 @@ export interface FloorState {
   examUnlocked: boolean;
 }
 
-/** The installed floors that sit on the panel, in panel order. Floor 13 is never on the panel. */
-export function panelFor(installed: readonly FloorInput[]): FloorInput[] {
+/**
+ * The installed floors that sit on a building's panel (D5 / H1: 0, 1–12, 14,
+ * 15 — the profile's `panel`), in panel order. Floor 13 is never on the panel.
+ * A floor of another building (`level` set and different) never shows here.
+ */
+export function panelFor(
+  installed: readonly FloorInput[],
+  level: HotelLevel | undefined = undefined,
+): FloorInput[] {
+  const profile = hotelProfileFor(level);
   // T116 bug 6c: a duplicate floor is picked deterministically (never the silent last-wins Map).
   const byFloor = new Map<number, FloorInput>();
   for (const f of installed) {
+    if (f.level !== undefined && f.level !== profile.level) continue;
     const seen = byFloor.get(f.floor);
     byFloor.set(f.floor, seen ? preferFloor(seen, f) : f);
   }
   const out: FloorInput[] = [];
-  for (const n of PANEL_A1) {
+  for (const n of profile.panel) {
     const f = byFloor.get(n);
     if (f) out.push(f);
   }
@@ -103,9 +116,11 @@ export function floorState(
   installed: readonly FloorInput[],
   progress: readonly ProgressRow[],
   now: number,
+  level: HotelLevel | undefined = undefined,
 ): FloorState[] {
   const rows = new Map(progress.map((p) => [p.key, p]));
-  const panel = panelFor(installed);
+  // One building at a time (H3): its panel, its own экстерн cascade; nothing of another building gates it.
+  const panel = panelFor(installed, level);
 
   // Each floor's OWN pass (its row, or — with no exam — its units).
   const own = panel.map((f) => {
@@ -170,15 +185,15 @@ export function highestUnlocked(states: readonly FloorState[]): number | null {
 }
 
 /**
- * Номер 13 appears iff floor 15 is passed AND the gate mock `a1-torfl-mock-004`
- * is installed (D5/D6, design §3).
+ * Номер 13 appears iff the building's floor 15 is passed AND that building's
+ * gate mock (`hotelProfileFor(level).gatePackId`) is installed (D5/D6, H5).
  */
 export function reveal13(
   installed: readonly FloorInput[],
   progress: readonly ProgressRow[],
-  opts: { mockInstalled: boolean },
+  opts: { mockInstalled: boolean; level?: HotelLevel },
 ): boolean {
-  const f15 = floorState(installed, progress, 0).find((s) => s.floor === 15);
+  const f15 = floorState(installed, progress, 0, opts.level).find((s) => s.floor === 15);
   return f15 !== undefined && f15.passed && opts.mockInstalled;
 }
 
@@ -388,6 +403,26 @@ export const EXTERN_CONFIRM = {
 /** The last floor Mitch was on (`hotel.lastFloor`): an integer 0–99, anything else is null. */
 export function parseLastFloor(raw: unknown): number | null {
   return typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 && raw <= 99 ? raw : null;
+}
+
+/** `hotel.lastFloor` per building (T116): `{ A1?: n, A2?: n }`. */
+export type LastFloors = Partial<Record<HotelLevel, number>>;
+
+/**
+ * `hotel.lastFloor` as stored. Since T116 an object of floors per building; the
+ * legacy single number (pre-T116) is A1's — healed on read, no migration.
+ * Anything malformed drops to «no saved floor» for that building.
+ */
+export function parseLastFloors(raw: unknown): LastFloors {
+  const legacy = parseLastFloor(raw);
+  if (legacy !== null) return { A1: legacy };
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  const out: LastFloors = {};
+  for (const level of HOTEL_LEVELS) {
+    const n = parseLastFloor((raw as Record<string, unknown>)[level]);
+    if (n !== null) out[level] = n;
+  }
+  return out;
 }
 
 /**

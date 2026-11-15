@@ -8,18 +8,27 @@ import type { SentenceWithTokens } from '@/db/repositories/content';
 import { fileExists } from '@/features/torfl/drill/drill-item';
 import { loadRefAudio, type ExamAudio } from '@/features/torfl/items/exam-audio';
 import { SETTING_KEYS } from '@/db/repositories/settings';
+import {
+  HOTEL_LEVELS,
+  hotelProfileFor,
+  parseHotelBuilding,
+  type HotelLevel,
+} from '@/features/torfl/hotel-profile';
 
 import {
   drillBeforeAfter,
+  duplicateFloors,
   firstUnitStart,
   floorState,
-  parseLastFloor,
+  parseLastFloors,
   reveal13,
+  type FloorInput,
+  type LastFloors,
 } from './hotel-model';
 import {
   cooldownLeft,
   debriefForSubtests,
-  GATE_PACK_ID,
+  gatePassedOf,
   missedByKind,
   nextHotelAction,
   type GradedResponse,
@@ -155,21 +164,94 @@ export function useLessonPositions() {
 
 export type { CourseFloorRow, ProgressRecord, CourseItem };
 
-/** Every installed A1 hotel floor, as the lock rule reads it (course packs on the TORFL ladder). */
-export function useHotelFloors() {
+/** A listed floor row as the pure model reads it. */
+export function floorInputOf(f: CourseFloorRow): FloorInput {
+  return {
+    packId: f.packId,
+    floor: f.floor,
+    unitIds: f.course.units.map((u) => u.id),
+    hasExam: f.course.floorExam !== undefined,
+    version: f.version,
+  };
+}
+
+/**
+ * Every installed hotel floor of ONE building (T116), as the lock rule reads it
+ * (course packs on the TORFL ladder at that level). A floor two packs claim is
+ * logged once per read (bug 6c); `panelFor` picks one deterministically.
+ */
+export function useHotelFloors(level: HotelLevel) {
   return useQuery({
-    queryKey: ['hotel', 'floors', 'A1'],
-    queryFn: async () => repos.course.listFloors({ ladder: 'torfl', level: 'A1' }),
+    queryKey: ['hotel', 'floors', level],
+    queryFn: async () => {
+      const floors = await repos.course.listFloors({ ladder: 'torfl', level });
+      for (const d of duplicateFloors(floors.map(floorInputOf))) {
+        console.warn(
+          `[hotel] ${level} floor ${d.floor} is claimed by ${d.packIds.join(', ')} — showing ${d.picked}`,
+        );
+      }
+      return floors;
+    },
+  });
+}
+
+/** The buildings with ≥ 1 installed floor (H2: lit + selectable on the ladder row). */
+export function useInstalledBuildings() {
+  return useQuery({
+    queryKey: ['hotel', 'buildings'],
+    queryFn: async () => {
+      const out: HotelLevel[] = [];
+      for (const level of HOTEL_LEVELS) {
+        if ((await repos.course.listFloors({ ladder: 'torfl', level })).length > 0) out.push(level);
+      }
+      return out;
+    },
+  });
+}
+
+/** `hotel.building` (T116, H2): the building the hotel shows; default the first building. */
+export function useHotelBuilding() {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ['hotel', 'building'],
+    queryFn: async () =>
+      parseHotelBuilding(await repos.settings.get<unknown>(SETTING_KEYS.hotelBuilding)),
+  });
+  const save = React.useCallback(
+    async (level: HotelLevel) => {
+      qc.setQueryData(['hotel', 'building'], level);
+      try {
+        await repos.settings.set(SETTING_KEYS.hotelBuilding, level);
+      } catch {
+        // A failed write only loses the choice; the hotel still shows the building this visit.
+      }
+    },
+    [qc],
+  );
+  return { level: query.data ?? HOTEL_LEVELS[0], loaded: query.isSuccess, save };
+}
+
+/** Recent attempts of one building's Номер 13 mock (shared by the state, the room and the lift). */
+function useGateAttempts(level: HotelLevel) {
+  const { gatePackId } = hotelProfileFor(level);
+  return useQuery({
+    queryKey: ['hotel', 'gate-attempts', level],
+    queryFn: () => repos.exams.listAttempts({ packId: gatePackId, limit: 20 }),
   });
 }
 
 /**
  * The hotel's live state (Today card, Путь tab, journal): the panel with the
- * lock rule applied, the gate, and the next action. Re-evaluates every 30 s so
- * cooldown countdowns tick from the rows (carried T90 decision 4).
+ * lock rule applied, the gate, and the next action — of ONE building (T116):
+ * `level`, else the persisted `hotel.building` (H7: Today follows it).
+ * Re-evaluates every 30 s so cooldown countdowns tick from the rows (carried
+ * T90 decision 4).
  */
-export function useHotelState() {
-  const floors = useHotelFloors();
+export function useHotelState(levelArg?: HotelLevel) {
+  const building = useHotelBuilding();
+  const level = levelArg ?? building.level;
+  const profile = hotelProfileFor(level);
+  const floors = useHotelFloors(level);
   const progress = useCourseProgress();
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -178,20 +260,19 @@ export function useHotelState() {
   }, []);
 
   const gateInstalled = useQuery({
-    queryKey: ['hotel', 'gate-installed'],
-    queryFn: async () => (await repos.content.listPacks()).some((p) => p.id === GATE_PACK_ID),
+    queryKey: ['hotel', 'gate-installed', level],
+    queryFn: async () => (await repos.content.listPacks()).some((p) => p.id === profile.gatePackId),
   });
-  const installed = (floors.data ?? []).map((f) => ({
-    packId: f.packId,
-    floor: f.floor,
-    unitIds: f.course.units.map((u) => u.id),
-    hasExam: f.course.floorExam !== undefined,
-  }));
+  const gateAttempts = useGateAttempts(level);
+  const installed = (floors.data ?? []).map(floorInputOf);
   const rows = progress.data ?? [];
-  const states = floorState(installed, rows, now);
-  const gateRow = rows.find((r) => r.packId === GATE_PACK_ID && r.unitId === null);
-  const gatePassed = gateRow?.passedAt != null;
-  const reveal13Now = reveal13(installed, rows, { mockInstalled: gateInstalled.data === true });
+  const states = floorState(installed, rows, now, level);
+  // Bug 6b: the gate's latest finished verdict in exam_attempts, not a course_progress row.
+  const gatePassed = gatePassedOf(gateAttempts.data ?? [], profile);
+  const reveal13Now = reveal13(installed, rows, {
+    mockInstalled: gateInstalled.data === true,
+    level,
+  });
   const lastFloor = states.find((s) => !s.passed) ?? states[states.length - 1];
   const action = nextHotelAction(
     states.map((s) => {
@@ -218,40 +299,48 @@ export function useHotelState() {
         }),
       };
     }),
-    { gatePassed, reveal13: reveal13Now },
+    { gatePassed, reveal13: reveal13Now, level },
   );
 
   return {
+    level,
     states,
     action,
     gatePassed,
     reveal13: reveal13Now,
     lastFloor,
     now,
-    loaded: floors.isSuccess && progress.isSuccess,
+    loaded: building.loaded && floors.isSuccess && progress.isSuccess,
   };
 }
 
-/** `hotel.lastFloor` (T92 decision 4): the floor the lift was on, or null. Reads defensively. */
-export function useLastFloor() {
+/**
+ * `hotel.lastFloor` (T92 decision 4), per building since T116: the floor the
+ * lift was on in `level`, or null. The legacy single number is A1's (healed on
+ * read, no migration); a save writes the per-building object.
+ */
+export function useLastFloor(level: HotelLevel) {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: ['hotel', 'lastFloor'],
     queryFn: async () =>
-      parseLastFloor(await repos.settings.get<unknown>(SETTING_KEYS.hotelLastFloor)),
+      parseLastFloors(await repos.settings.get<unknown>(SETTING_KEYS.hotelLastFloor)),
   });
   const save = React.useCallback(
-    async (floor: number) => {
-      qc.setQueryData(['hotel', 'lastFloor'], floor);
+    async (floor: number, at: HotelLevel = level) => {
+      const current = qc.getQueryData<LastFloors>(['hotel', 'lastFloor']) ?? {};
+      const next: LastFloors = { ...current, [at]: floor };
+      qc.setQueryData(['hotel', 'lastFloor'], next);
       try {
-        await repos.settings.set(SETTING_KEYS.hotelLastFloor, floor);
+        await repos.settings.set(SETTING_KEYS.hotelLastFloor, next);
       } catch {
         // A failed write only loses the resume floor; the lift still works.
       }
     },
-    [qc],
+    [qc, level],
   );
-  return { lastFloor: query.data ?? null, loaded: query.isSuccess, save };
+  const floors = query.data ?? {};
+  return { lastFloor: floors[level] ?? null, floors, loaded: query.isSuccess, save };
 }
 
 /**
@@ -318,18 +407,16 @@ export function usePracticeRows(
  * and the debrief (the floors to revisit, per subtest under 66 %). Shared by the
  * room and the lift's debrief markers, so both read one source.
  */
-export function useLastGateDetail() {
-  const attempts = useQuery({
-    queryKey: ['hotel', 'gate-attempts'],
-    queryFn: () => repos.exams.listAttempts({ packId: GATE_PACK_ID, limit: 20 }),
-  });
+export function useLastGateDetail(level: HotelLevel) {
+  const { gatePackId } = hotelProfileFor(level);
+  const attempts = useGateAttempts(level);
   const last = (attempts.data ?? []).find((a) => a.status === 'finished') ?? null;
   const detail = useQuery({
-    queryKey: ['hotel', 'gate-detail', last?.id ?? ''],
+    queryKey: ['hotel', 'gate-detail', level, last?.id ?? ''],
     enabled: last !== null,
     queryFn: async () => {
       if (!last) return null;
-      const exam = await repos.exams.getExam(GATE_PACK_ID, last.examId);
+      const exam = await repos.exams.getExam(gatePackId, last.examId);
       const full = await repos.exams.getAttempt(last.id);
       if (!exam || !full) return null;
       const results: SubtestResult[] = exam.subtests.flatMap((s) => {
@@ -353,7 +440,7 @@ export function useLastGateDetail() {
         results,
         overall: overallPct(last.results ?? null),
         responses,
-        debrief: debriefForSubtests(results, missedByKind(responses)),
+        debrief: debriefForSubtests(results, missedByKind(responses), level),
       };
     },
   });

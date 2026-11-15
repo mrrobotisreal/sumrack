@@ -28,6 +28,9 @@ import {
   EFFORT_LABELS,
 } from '@/features/ai/run-profile';
 import { classifyPack } from '@/features/library/categories';
+import { floorInputOf } from '@/features/hotel/hotel-hooks';
+import { duplicateFloors, type DuplicateFloor } from '@/features/hotel/hotel-model';
+import { HOTEL_LEVELS, type HotelLevel } from '@/features/torfl/hotel-profile';
 import { initialAttemptState, subtestItemCount } from '@/features/torfl/model';
 import { itemPoints } from '@sumrak/schema';
 import { generateProfile } from '@/features/word-forms/profile-service';
@@ -75,6 +78,9 @@ const FIXTURE_PACKS = [
   // T89 (M25): the hotel course fixture — one floor (floor 3, two units + floor exam).
   // Dev import only; it must never survive on a phone that holds Mitch's data.
   { id: 'a1-hotel-fixture', note: 'course · floor 3 · 2 units · 34 items' },
+  // T116 (M39): the A2 building fixtures — one course pack = one floor. Dev import only (hygiene).
+  { id: 'a2-hotel-fixture-f00', note: 'course · A2 · floor 0 · 1 unit · no exam' },
+  { id: 'a2-hotel-fixture-f01', note: 'course · A2 · floor 1 · 1 unit · floor exam' },
   // T95 (M26): the three-part «listen to the whole story» fixture — real Opus part files plus the
   // stitched full file, bundled and staged on import. Dev import only (device data hygiene).
   { id: 'a1-listen-fixture', note: 'stories · 3 parts + stitched full track (5.9 s)' },
@@ -101,6 +107,10 @@ const FIXTURE_JSON: Record<FixtureId, () => unknown> = {
   'core-lemmas-fixture': () =>
     require('@sumrak/schema/fixtures/packs/core-lemmas-fixture/pack.json'),
   'a1-hotel-fixture': () => require('@sumrak/schema/fixtures/packs/a1-hotel-fixture/pack.json'),
+  'a2-hotel-fixture-f00': () =>
+    require('@sumrak/schema/fixtures/packs/a2-hotel-fixture-f00/pack.json'),
+  'a2-hotel-fixture-f01': () =>
+    require('@sumrak/schema/fixtures/packs/a2-hotel-fixture-f01/pack.json'),
   'a1-listen-fixture': () => require('@sumrak/schema/fixtures/packs/a1-listen-fixture/pack.json'),
   'a1-score-fixture': () => require('@sumrak/schema/fixtures/packs/a1-score-fixture/pack.json'),
 };
@@ -156,7 +166,10 @@ const A2_PROMPTS_FIXTURE_ID = 'a2-torfl-prompts-fixture';
 
 /** T89 dev readout: installed course floors, item count, progress rows and the last attempts. */
 interface HotelReadout {
-  floors: Awaited<ReturnType<typeof repos.course.listFloors>>;
+  /** Every building's floors (T116), building-tagged. */
+  floors: (Awaited<ReturnType<typeof repos.course.listFloors>>[number] & { level: HotelLevel })[];
+  /** T116 bug 6c: floors more than one installed pack claims, per building. */
+  duplicates: (DuplicateFloor & { level: HotelLevel })[];
   items: number;
   progress: Awaited<ReturnType<typeof repos.course.getProgress>>;
   attempts: Awaited<ReturnType<typeof repos.course.listAttempts>>;
@@ -385,11 +398,17 @@ export default function DevDbScreen() {
   // --- T89 «Hotel» readout (read-only) ----------------------------------------
   const [hotelReadout, setHotelReadout] = React.useState<HotelReadout | null>(null);
   const refreshHotel = React.useCallback(async () => {
-    const floors = await repos.course.listFloors({ ladder: 'torfl', level: 'A1' });
+    const floors: HotelReadout['floors'] = [];
+    const duplicates: HotelReadout['duplicates'] = [];
+    for (const level of HOTEL_LEVELS) {
+      const rows = await repos.course.listFloors({ ladder: 'torfl', level });
+      floors.push(...rows.map((f) => ({ ...f, level })));
+      duplicates.push(...duplicateFloors(rows.map(floorInputOf)).map((d) => ({ ...d, level })));
+    }
     const progress = await repos.course.getProgress();
     const attempts = await repos.course.listAttempts({ limit: 5 });
     const items = await repos.course.countItems();
-    setHotelReadout({ floors, items, progress, attempts });
+    setHotelReadout({ floors, duplicates, items, progress, attempts });
   }, []);
   React.useEffect(() => {
     void refreshHotel();
@@ -1033,16 +1052,22 @@ export default function DevDbScreen() {
           {hotelReadout?.floors.map((f) => (
             <View key={f.packId} className="rounded-xl border border-border bg-surface p-3">
               <Text className="font-ui-medium">
-                Этаж {f.floor} · {f.title.ru}
+                {f.level} · Этаж {f.floor} · {f.title.ru}
               </Text>
               <Text variant="caption" selectable>
-                {f.packId} · {f.unitCount} units · {f.course.floorExam?.size ?? 0} exam items
+                {f.packId} v{f.version} · {f.unitCount} units · {f.course.floorExam?.size ?? 0} exam
+                items
               </Text>
             </View>
           ))}
+          {hotelReadout?.duplicates.map((d) => (
+            <Text key={`${d.level}-${d.floor}`} variant="caption" selectable>
+              {`DUPLICATE ${d.level} floor ${d.floor}: ${d.packIds.join(', ')} → showing ${d.picked}`}
+            </Text>
+          ))}
           {hotelReadout && hotelReadout.floors.length === 0 && (
             <Text variant="caption">
-              No course floors installed — import a1-hotel-fixture above.
+              No course floors installed — import a1-hotel-fixture / a2-hotel-fixture-f00 above.
             </Text>
           )}
         </View>

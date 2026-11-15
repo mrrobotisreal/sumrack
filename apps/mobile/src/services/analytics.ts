@@ -430,6 +430,12 @@ export type AnalyticsEvent =
   | 'hotel_library_quote_played'
   // hotel_gate_attempt {percent, verdict} — Номер 13 finished (T92c). verdict = pass | fail; percent = mean of subtests.
   | 'hotel_gate_attempt'
+  // T116 (HOTEL_PATH_A2 H8): hotel_floor_entered, hotel_lift_ride, hotel_up_blocked, hotel_drop_played,
+  // hotel_gate_attempt and hotel_cooldown_blocked also carry `level` ('A1' | 'A2' — the building), via
+  // features/hotel/hotel-analytics.ts `trackHotel`.
+  // hotel_building_switched {from, to, via: 'ladder' | 'deeplink', level} — the hotel changed building
+  // (level = to).
+  | 'hotel_building_switched'
   // M14 library categories (T45/T46). Props are category/genre slugs, pack/story ids and counts only.
   // story_source_link_opened {packId, storyId, category} fires from the reader header's source line.
   | 'library_category_switched'

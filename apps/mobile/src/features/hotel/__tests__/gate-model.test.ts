@@ -8,7 +8,6 @@ import {
   formatCooldownRu,
   gateCooldownUntil,
   gatePasses,
-  GATE_PACK_ID,
   passedFloorsOf,
   hotelCardLine,
   nextHotelAction,
@@ -18,6 +17,9 @@ import {
   roomStatus,
   visiblePacks,
 } from '../gate-model';
+import { HOTEL_PROFILES } from '@/features/torfl/hotel-profile';
+
+const GATE_PACK_ID = HOTEL_PROFILES.A1.gatePackId;
 
 const HOUR = 60 * 60_000;
 const MIN = 60_000;
@@ -135,11 +137,13 @@ describe('gate cooldown (D13, decision 6)', () => {
   });
 });
 
-describe('ladderLevel (D18)', () => {
-  it('is A1 until the gate passes, then A2', async () => {
+describe('ladderLevel (D18, T116 H7)', () => {
+  it('is A1 until the gate passes, then A2; the A2 gate lifts it to B1', async () => {
     const { ladderLevel } = await import('../gate-model');
-    expect(ladderLevel(false)).toBe('A1');
-    expect(ladderLevel(true)).toBe('A2');
+    expect(ladderLevel([])).toBe('A1');
+    expect(ladderLevel(['A1'])).toBe('A2');
+    expect(ladderLevel(['A2'])).toBe('B1');
+    expect(ladderLevel(['A2', 'A1'])).toBe('B1');
   });
 });
 
@@ -317,7 +321,8 @@ describe('passedFloorsOf (T92d): the one passed set the room and the lift share'
       { packId: 'a1-hotel-f09', unitId: 'u1', passedAt: 1 },
       { packId: 'a1-torfl-mock-004', unitId: null, passedAt: 1 },
     ];
-    expect([...passedFloorsOf(rows)]).toEqual([7]);
+    const building = [7, 8, 9].map((n) => ({ packId: `a1-hotel-f0${n}`, floor: n }));
+    expect([...passedFloorsOf(rows, building)]).toEqual([7]);
   });
 });
 

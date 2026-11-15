@@ -1,16 +1,25 @@
+import {
+  HOTEL_LADDER,
+  HOTEL_LEVELS,
+  hotelProfileFor,
+  type HotelLevel,
+  type LadderRung,
+} from '@/features/torfl/hotel-profile';
+
+import { profileFor } from '@/features/torfl/level-profile';
+
 import { cooldownFor, MINUTE_MS } from './hotel-model';
 
 /**
- * T92 pure gate rules: the Номер 13 mock (`a1-torfl-mock-004`) hub hiding, the
- * topic → floor debrief map, the gate cooldown countdown, and the copy the
- * countdown reads. No React, no DB: the screens and the repo read these.
+ * T92 pure gate rules: the Номер 13 mock hub hiding (by the pack's real
+ * `torfl:gate` tag), the topic → floor debrief map, the gate cooldown
+ * countdown, and the copy the countdown reads. No React, no DB: the screens
+ * and the repo read these. Every per-building fact (gate pack / exam id,
+ * topic map, labels) comes from `features/torfl/hotel-profile.ts` (T116).
  */
 
 /** The tag that marks Номер 13 (the unseen gate mock) in pack.json. */
 export const GATE_TAG = 'torfl:gate';
-
-/** The gate mock's pack id (D10, D16). */
-export const GATE_PACK_ID = 'a1-torfl-mock-004';
 
 /** A pack as the hub sees it: only what the hiding rule reads. */
 export interface PackTagView {
@@ -36,35 +45,18 @@ export function visiblePacks<T extends PackTagView>(
 }
 
 /**
- * Topic → floor, for the Номер 13 debrief (D6). An item's `topic` picks the
- * floor(s) to revisit. Lexgram topics map to their floor; writing, reading,
- * listening and speaking map to 12, 14 and 15.
+ * Topic → floor, for the Номер 13 debrief (D6, H5): the building's own map
+ * (`hotelProfileFor(level).topicFloor`, then its prefix fallbacks — `lex-*` →
+ * 11 in both buildings). Null when the topic is unknown (never guessed).
  */
-export const TOPIC_FLOOR: Readonly<Record<string, number>> = {
-  'case-prep': 3,
-  'case-acc': 4,
-  'verb-aspect': 5,
-  'case-gen': 6,
-  'case-dat': 7,
-  'case-instr': 8,
-  'verb-motion': 9,
-  conj: 10,
-  'lex-verbs': 11,
-  'lex-family': 11,
-  'lex-negation': 11,
-  agr: 1,
-  pron: 1,
-  'verb-forms': 2,
-  writing: 12,
-  reading: 14,
-  listening: 14,
-  speaking: 15,
-};
-
-/** The floor a topic belongs to, or null when the topic is unknown. `lex-*` falls back to floor 11. */
-export function floorForTopic(topic: string): number | null {
-  if (topic in TOPIC_FLOOR) return TOPIC_FLOOR[topic] ?? null;
-  if (topic.startsWith('lex-')) return 11;
+export function floorForTopic(topic: string, level?: HotelLevel): number | null {
+  const profile = hotelProfileFor(level);
+  if (Object.prototype.hasOwnProperty.call(profile.topicFloor, topic)) {
+    return profile.topicFloor[topic] ?? null;
+  }
+  for (const [prefix, floor] of profile.topicPrefixFloor) {
+    if (topic.startsWith(prefix)) return floor;
+  }
   return null;
 }
 
@@ -78,10 +70,10 @@ export interface MissedItem {
  * for a missed item, most misses first, then by floor number. Unknown topics
  * are ignored, never guessed.
  */
-export function debriefFloors(missed: readonly MissedItem[]): number[] {
+export function debriefFloors(missed: readonly MissedItem[], level?: HotelLevel): number[] {
   const counts = new Map<number, number>();
   for (const m of missed) {
-    const floor = floorForTopic(m.topic);
+    const floor = floorForTopic(m.topic, level);
     if (floor !== null) counts.set(floor, (counts.get(floor) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([floor]) => floor);
@@ -93,26 +85,32 @@ export interface SubtestResult {
   percent: number;
 }
 
-/** SPbU rule (D6/D13): every subtest ≥ 66 %, one may be ≥ 60 %. Pure. */
-export function gatePasses(results: readonly SubtestResult[]): boolean {
+/**
+ * SPbU rule (D6/D13, H4): every subtest ≥ 66 %, one may be ≥ 60 % — the
+ * building's `profileFor(level)` thresholds (the same at A1 and A2). Pure.
+ */
+export function gatePasses(results: readonly SubtestResult[], level?: HotelLevel): boolean {
   if (results.length === 0) return false;
-  const below60 = results.filter((r) => r.percent < 60).length;
-  const below66 = results.filter((r) => r.percent < 66).length;
-  // Exactly one subtest may fall in [60, 66); none may fall under 60.
-  return below60 === 0 && below66 <= 1;
+  const { passPct, borderlinePct } = profileFor(level);
+  const belowBorder = results.filter((r) => r.percent < borderlinePct).length;
+  const belowPass = results.filter((r) => r.percent < passPct).length;
+  // Exactly one subtest may fall in [borderline, pass); none may fall under borderline.
+  return belowBorder === 0 && belowPass <= 1;
 }
 
-/** The floors to revisit for every subtest under 66 % (D6): lexgram → topic map, the rest → fixed floors. */
+/** The floors to revisit for every subtest under the pass line (66 %, D6): lexgram → topic map, the rest → fixed floors. */
 export function debriefForSubtests(
   results: readonly SubtestResult[],
   missedByKind: Readonly<Record<string, MissedItem[]>>,
+  level?: HotelLevel,
 ): { kind: string; percent: number; floors: number[] }[] {
+  const { passPct } = profileFor(level);
   return results
-    .filter((r) => r.percent < 66)
+    .filter((r) => r.percent < passPct)
     .map((r) => ({
       kind: r.kind,
       percent: r.percent,
-      floors: debriefFloors(missedByKind[r.kind] ?? []),
+      floors: debriefFloors(missedByKind[r.kind] ?? [], level),
     }));
 }
 
@@ -146,18 +144,22 @@ export function formatCooldownRu(minutes: number): string {
 }
 
 /**
- * The learner's ladder level for the journal's daily prompt (D18): A1 until
- * Номер 13 is passed, then A2. Pure: the caller reads the gate's passed state.
+ * The learner's ladder level for the journal's daily prompt (D18, H7): the
+ * rung above the highest building whose Номер 13 verdict passed (A1 → A2 →
+ * B1); A1 while none has. Pure: the caller reads each gate's passed state.
  */
-export function ladderLevel(gatePassed: boolean): 'A1' | 'A2' {
-  return gatePassed ? 'A2' : 'A1';
+export function ladderLevel(passedBuildings: Iterable<HotelLevel>): LadderRung {
+  let top = -1;
+  for (const level of passedBuildings) top = Math.max(top, HOTEL_LADDER.indexOf(level));
+  return HOTEL_LADDER[Math.min(top + 1, HOTEL_LADDER.length - 1)] ?? HOTEL_LADDER[0];
 }
 
 /** What Today shows on the hotel card (decision 10), as plain data. */
 export type HotelNextAction =
   | {
       kind: 'done-all';
-      label: 'A1 пройден ✓' | 'Номер 13 ждёт' | 'Новые этажи скоро';
+      /** «A1 пройден ✓» / «A2 пройден ✓» (the building's `passedLabel`), «Номер 13 ждёт», «Новые этажи скоро». */
+      label: string;
       route: string;
     }
   | {
@@ -213,7 +215,7 @@ export interface NextFloorView {
  */
 export function nextHotelAction(
   floors: readonly NextFloorView[],
-  opts: { gatePassed: boolean; reveal13: boolean },
+  opts: { gatePassed: boolean; reveal13: boolean; level?: HotelLevel },
 ): HotelNextAction | null {
   for (const f of floors) {
     if (!f.unlocked || f.passed) continue;
@@ -244,7 +246,10 @@ export function nextHotelAction(
       };
     }
   }
-  if (opts.gatePassed) return { kind: 'done-all', label: 'A1 пройден ✓', route: '/(tabs)/path' };
+  if (opts.gatePassed) {
+    const label = `${hotelProfileFor(opts.level).passedLabel} ✓`;
+    return { kind: 'done-all', label, route: '/(tabs)/path' };
+  }
   if (opts.reveal13) return { kind: 'done-all', label: 'Номер 13 ждёт', route: '/(tabs)/path' };
   // Every installed floor is passed but more are still to come (content arrives floor by floor):
   // the Today card stays visible instead of vanishing (T93c chunk D).
@@ -254,16 +259,22 @@ export function nextHotelAction(
   return null;
 }
 
-/** The card line «Этаж N · <unit> · урок k из m» (decision 10). */
-export function hotelCardLine(action: HotelNextAction): string {
+/**
+ * The card line «Этаж N · <unit> · урок k из m» (decision 10). Outside the
+ * default building the line names it first: «А2 · Этаж 6 · …» (H7). The
+ * «пройден ✓» line already names its building.
+ */
+export function hotelCardLine(action: HotelNextAction, level?: HotelLevel): string {
   if (action.kind === 'done-all') return action.label;
+  const profile = hotelProfileFor(level);
+  const prefix = profile.level === HOTEL_LEVELS[0] ? '' : `${profile.shortLabel} · `;
   if (action.kind === 'exam') {
     return action.cooldownMinutes !== null
-      ? `Экзамен этажа ${action.floor} · через ${formatCooldownRu(action.cooldownMinutes)}`
-      : `Экзамен этажа ${action.floor}`;
+      ? `${prefix}Экзамен этажа ${action.floor} · через ${formatCooldownRu(action.cooldownMinutes)}`
+      : `${prefix}Экзамен этажа ${action.floor}`;
   }
   const verb = action.kind === 'lesson' ? 'урок' : 'упражнения';
-  return `Этаж ${action.floor} · ${action.unitTitle} · ${verb} ${action.index} из ${action.total}`;
+  return `${prefix}Этаж ${action.floor} · ${action.unitTitle} · ${verb} ${action.index} из ${action.total}`;
 }
 
 /**
@@ -354,20 +365,23 @@ export function missedByKind(responses: readonly GradedResponse[]): Record<strin
   return out;
 }
 
-/** Floor number of a floor pack: the course pack id ends in its floor (`a1-hotel-f07` → 7). */
-export function floorOfPack(packId: string): number | null {
-  const m = /-f(\d+)$/.exec(packId);
-  return m ? Number(m[1]) : null;
-}
-
-/** The floors whose own course row is passed (T92d: the one passed set the room and the lift share). */
+/**
+ * The floors of ONE building whose own course row is passed (T92d: the one
+ * passed set the room and the lift share). T116 H6c: building-qualified — the
+ * floor number comes from the building's installed floor rows (`pack id →
+ * floor`), never parsed from a pack id, so an A1 pass never clears an A2
+ * marker and a non-floor pack never counts.
+ */
 export function passedFloorsOf(
   rows: readonly { packId: string; unitId: string | null; passedAt: number | null }[],
+  buildingFloors: readonly { packId: string; floor: number }[],
 ): Set<number> {
-  return new Set(
-    rows
-      .filter((r) => r.unitId === null && r.passedAt != null)
-      .map((r) => floorOfPack(r.packId))
-      .filter((n): n is number => n !== null),
-  );
+  const floorOf = new Map(buildingFloors.map((f) => [f.packId, f.floor]));
+  const out = new Set<number>();
+  for (const r of rows) {
+    if (r.unitId !== null || r.passedAt == null) continue;
+    const floor = floorOf.get(r.packId);
+    if (floor !== undefined) out.add(floor);
+  }
+  return out;
 }

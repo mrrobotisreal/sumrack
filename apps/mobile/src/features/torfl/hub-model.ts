@@ -7,7 +7,9 @@ import {
 } from '@sumrak/schema';
 
 import { diffDayKeys, isDayKey } from '@/lib/dates';
-import { GATE_PACK_ID, GATE_TAG, isHiddenGatePack } from '@/features/hotel/gate-model';
+import { GATE_TAG, isHiddenGatePack } from '@/features/hotel/gate-model';
+
+import { HOTEL_LEVELS, HOTEL_PROFILES } from './hotel-profile';
 
 import { ruleLine, torflLevelOf, type TorflLevel } from './level-profile';
 import type { ExamMode, ExamResults, ExamVerdict } from './model';
@@ -138,23 +140,36 @@ export function overallPct(results: ExamResults | null): number | null {
 const VERDICT_RANK: Record<ExamVerdict, number> = { fail: 0, 'pass-borderline': 1, pass: 2 };
 
 /**
+ * The tags the gate-hiding rule reads, per installed pack (`packs.tags`).
+ * Before the pack list has loaded, every building's Номер 13 pack id counts as
+ * gate-tagged, so an unseen gate mock never flashes into a listing.
+ */
+function packTagsOf(
+  packId: string,
+  packTags: ReadonlyMap<string, readonly string[]> | undefined,
+): readonly string[] {
+  if (packTags) return packTags.get(packId) ?? [];
+  return HOTEL_LEVELS.some((l) => HOTEL_PROFILES[l].gatePackId === packId) ? [GATE_TAG] : [];
+}
+
+/**
  * Library / hub rows, one per exam with readable JSON (an unreadable row
  * already logged its `app_error` in the repo and is skipped). `best` =
  * the finished attempt with the best verdict, then the best overall %.
+ * `packTags` (pack id → `packs.tags`) drives the D16 / H5 gate hiding.
  */
 export function buildExamListItems(
   summaries: readonly ExamSummaryLike[],
   attempts: readonly AttemptLike[],
+  packTags?: ReadonlyMap<string, readonly string[]>,
 ): ExamListItem[] {
   const out: ExamListItem[] = [];
   for (const s of summaries) {
     if (!s.exam) continue;
-    // D16: the unseen gate mock stays off every listing until it has been attempted.
+    // D16 / H5: a pack carrying the real `torfl:gate` tag (any building's Номер 13)
+    // stays off every listing until it has been attempted once.
     const attempted = attempts.some((a) => a.packId === s.packId);
-    if (
-      s.packId === GATE_PACK_ID &&
-      isHiddenGatePack({ packId: s.packId, tags: [GATE_TAG] }, attempted)
-    )
+    if (isHiddenGatePack({ packId: s.packId, tags: packTagsOf(s.packId, packTags) }, attempted))
       continue;
     let best: ExamListItem['best'] = null;
     for (const a of attempts) {

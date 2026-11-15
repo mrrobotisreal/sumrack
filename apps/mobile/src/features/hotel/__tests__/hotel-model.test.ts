@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { HOTEL_PROFILES } from '@/features/torfl/hotel-profile';
+
 import {
-  PANEL_A1,
   canAttempt,
   cooldownFor,
   drawItems,
@@ -16,6 +17,7 @@ import {
   type ProgressRow,
 } from '../hotel-model';
 
+const PANEL_A1 = HOTEL_PROFILES.A1.panel;
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 

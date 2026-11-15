@@ -2,6 +2,7 @@ import { repos } from '@/db';
 import type { Grade } from '@/db/repositories/reviews';
 import { SETTING_KEYS } from '@/db/repositories/settings';
 import { localDateKey } from '@/db/repositories/stats';
+import { hotelProfileFor, type HotelLevel } from '@/features/torfl/hotel-profile';
 import { TORFL_PROFILES, type TorflLevel } from '@/features/torfl/level-profile';
 import {
   examAchievements,
@@ -403,11 +404,12 @@ export async function initMotivation(): Promise<void> {
  * it on the attempt; this bumps the daily XP and re-evaluates achievements.
  */
 /**
- * Номер 13 passed (T92c D6): unlock `hotel-a1-complete`. Idempotent — the
+ * Номер 13 of a building passed (T92c D6, T116 H8): unlock that building's
+ * achievement (`hotel-a1-complete` / `hotel-a2-complete`). Idempotent — the
  * unlock path re-checks, so a repeat pass never re-toasts.
  */
-export async function recordHotelGatePassed(): Promise<void> {
-  await unlock('hotel-a1-complete');
+export async function recordHotelGatePassed(level: HotelLevel): Promise<void> {
+  await unlock(hotelProfileFor(level).achievementId);
 }
 
 export async function recordHotelRun(xp: number): Promise<number> {

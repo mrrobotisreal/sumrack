@@ -56,9 +56,15 @@ export function useExamListItems(
 } {
   const exams = useExams({ mode, level });
   const attempts = useExamAttempts({ limit: 500, level });
+  const packs = usePacks();
+  // T116 H5: the gate hiding reads each pack's real tags (undefined while loading = hide every Номер 13).
+  const packTags = React.useMemo(
+    () => (packs.data ? new Map(packs.data.map((p) => [p.id, p.tags] as const)) : undefined),
+    [packs.data],
+  );
   const items = React.useMemo(
-    () => buildExamListItems(exams.data ?? [], attempts.data ?? []),
-    [exams.data, attempts.data],
+    () => buildExamListItems(exams.data ?? [], attempts.data ?? [], packTags),
+    [exams.data, attempts.data, packTags],
   );
   return { items, isPending: exams.isPending };
 }
