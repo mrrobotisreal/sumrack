@@ -124,13 +124,15 @@ describe('speaking profile wiring', () => {
       answerSec: 30,
     });
   });
-  it('fluency bands come from the profile (a 60 wpm answer is good at A2, full at A1? no: full needs 70)', () => {
+  it('fluency bands come from the profile (A2 = CT041 calibration 100 / 65 / 40 wpm)', () => {
     const est = { wpm: 60, longestPauseMs: 1000, words: 100 };
-    expect(fluencyShare(est)).toBeCloseTo(0.6 * (2 / 3) + 0.4, 5); // A1 default
-    expect(fluencyShare(est, TORFL_PROFILES.A2.fluencyBands)).toBeCloseTo(0.6 * (2 / 3) + 0.4, 5);
+    expect(fluencyShare(est)).toBeCloseTo(0.6 * (2 / 3) + 0.4, 5); // A1 default: good (≥ 45)
+    expect(fluencyShare(est, TORFL_PROFILES.A2.fluencyBands)).toBeCloseTo(0.6 * (1 / 3) + 0.4, 5); // A2: weak (≥ 40)
     const est2 = { wpm: 75, longestPauseMs: 1000, words: 100 };
     expect(fluencyShare(est2, WPM_BANDS)).toBeCloseTo(1, 5);
-    expect(fluencyShare(est2, TORFL_PROFILES.A2.fluencyBands)).toBeCloseTo(0.6 * (2 / 3) + 0.4, 5);
+    expect(fluencyShare(est2, TORFL_PROFILES.A2.fluencyBands)).toBeCloseTo(0.6 * (2 / 3) + 0.4, 5); // A2: good (≥ 65)
+    const est3 = { wpm: 100, longestPauseMs: 1000, words: 100 };
+    expect(fluencyShare(est3, TORFL_PROFILES.A2.fluencyBands)).toBeCloseTo(1, 5); // A2: full (≥ 100)
   });
   it('the offline monologue scorer reads the level bands + the item minSentences', () => {
     const item = A2.subtests.find((s) => s.kind === 'speaking')!.parts[2]!.items[0] as never;

@@ -59,7 +59,7 @@ export interface TorflLevelProfile {
   monologueDefaults: { prepSec: number; answerSec: number };
   /** Monologue length the task asks for (T76 wires). */
   monologueSentences: { min: number; max: number };
-  /** Offline fluency bands, words per minute (T76 wires; A2 provisional until CT041 calibrates). */
+  /** Offline fluency bands, words per minute (T76 wires; A2 = CT041's calibration, applied in T116). */
   fluencyBands: { full: number; good: number; weak: number };
   /** The «HONEST …» standard line of both AI grading prompts (T76 wires). */
   aiStandard: string;
@@ -108,7 +108,7 @@ export const TORFL_PROFILES: Readonly<Record<TorflLevel, TorflLevelProfile>> = {
     speakingCapMs: { 1: 45_000, 2: 60_000 },
     monologueDefaults: { prepSec: 600, answerSec: 300 },
     monologueSentences: { min: 12, max: 15 },
-    fluencyBands: { full: 80, good: 55, weak: 30 },
+    fluencyBands: { full: 100, good: 65, weak: 40 },
     aiStandard: 'HONEST A2 (ТБУ, базовый уровень)',
     examDateKey: 'torfl.examDateA2',
     category: 'torfl-a2',

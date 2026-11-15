@@ -84,7 +84,7 @@ describe('A2 profile = TORFL_A2 §5.1', () => {
     expect(a2.speakingCapMs).toEqual({ 1: 45_000, 2: 60_000 });
     expect(a2.monologueDefaults).toEqual({ prepSec: 600, answerSec: 300 });
     expect(a2.monologueSentences).toEqual({ min: 12, max: 15 });
-    expect(a2.fluencyBands).toEqual({ full: 80, good: 55, weak: 30 });
+    expect(a2.fluencyBands).toEqual({ full: 100, good: 65, weak: 40 });
   });
 
   it('achievement ids', () => {
