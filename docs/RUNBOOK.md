@@ -56,6 +56,12 @@ i.e. the `sumrak-content` directory at the workspace root).
    publish refuses same-version content drift. `publish` runs `stamp-audit`
    and refuses a failing pack; `--allow-stamp-risk` overrides and logs the
    audit to `<pack-dir>/BUILD_NOTES.md` (use only with a reason in the CT).
+   **Story scores (T115):** `pnpm pipeline score <pack-dir> --sheet <sheet.json>
+   [--dry-run]` builds each part's separate score layer (never mixed into the
+   narration); bump the version yourself, then republish with
+   `publish --audio-unchanged` (narration must be byte-identical; skips the
+   audit). Gate S: no scored pack is published before both phones run 1.21.0
+   (29). See AUTHORING «Story scores».
 5. **Sync on the phone.** Settings → Content sync must have the repo
    (`mrrobotisreal/sumrak-content`) and a fine-grained PAT (Contents:
    read-write) saved. Then Library → pull-to-refresh (or Packs → Check for

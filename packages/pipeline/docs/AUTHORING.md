@@ -1333,3 +1333,46 @@ For a pack whose audio did not change: the pack minus `{fullStory, cover, versio
 ### Gate L
 
 Older apps reject packs with `fullStory`/`cover` (strict schema). No such pack enters `manifest.json` until both phones run the T98 release (FULL_STORY_LISTEN §12).
+
+## Story scores (`pipeline score` — M38, T115)
+
+A part may carry its own composed score: a **separate** stereo music layer that the app plays through the ambient player, synced to that part's narration. It is never mixed into the narration and never enters the full-story track. Like `fullStory`, it is **built, never authored**: do not write `score` into a draft.
+
+```
+pnpm pipeline score <pack-dir> --sheet <score-sheet.json> [--stories part-1,part-2] [--dry-run]
+```
+
+The sheet (JSON):
+
+```json
+{
+  "packId": "a1-gunslinger-001",
+  "cueDir": "../../Stories/TheDarkTower/TheGunslinger/music/A1/ch1/suno",
+  "stories": [
+    { "storyId": "part-1", "cues": [
+      { "file": "DT1-ch1-p01-A.mp3", "startMs": 0,      "endMs": 207100 },
+      { "file": "DT1-ch1-p01-B.mp3", "startMs": 207100, "endMs": 348000 } ] },
+    { "storyId": "part-2", "cues": [] }
+  ]
+}
+```
+
+- **Fields.** Cue times are in the part's narration-track ms, which are the cue-table seconds × 1000 from `music/A1/ch<C>/part-<NN>.md`. `trackId` defaults to the story's first track. `cueDir` is resolved relative to the sheet, defaulting to the sheet's own folder. `packId`, when present, must match the pack.
+- **Assembly.** Each cue is trimmed to its slot, or slowed by up to 4 % when short (more fails, naming the cue). Chained cues get a 2 s equal-power crossfade, and gaps are silent. The part gets a 1.0 s fade-in and a 2.5 s fade-out, is cut to the exact narration length, and goes through one loudnorm to −26 LUFS / −2 dBTP. Output: Opus stereo 64 k → `audio/<trackId>-score.opus` + `story.score`.
+- **Unscored parts.** A part with no cues, or missing from the sheet, gets no score, and a previous one is removed. `--stories` rebuilds only those parts and leaves the rest untouched.
+- **Version.** The command **does not bump the version**: edit `version` (or `stitch --bump`) before publishing. Re-stitching is not needed, because scores are not in the full track.
+- **Dry run.** `--dry-run` builds everything in a temp dir and prints the table (cues, stretch %, LUFS in → out, bytes, kB/min), writing nothing.
+- **Validate.** `pipeline validate` prints «Scores: N/M parts scored» and fails if a score file is missing or its length is off.
+- **Size.** Expect ≈ 0.5 MB per narration minute.
+
+### Republishing scores only
+
+```
+pnpm pipeline publish <pack-dir> --content <sumrak-content> --audio-unchanged
+```
+
+Every narration `.opus` must hash as the published manifest lists it, and the pack may differ only in `{fullStory, cover, version, stories[].score}`. New and changed score files are allowed, and the stamp-audit is skipped. `--stitch-only` (T94) and `--scores-only` are aliases for the same guard.
+
+### Gate S
+
+Older apps reject packs with `story.score` (strict schema). No scored pack enters `manifest.json` until both phones run 1.21.0 (29) (`_locks/T115-released`).
