@@ -111,6 +111,10 @@ Both values live in `apps/mobile/app.json` and flow into the build via prebuild:
   the device** (dev or release), never reuse or decrease (Android refuses
   downgrades; equal codes install fine with `adb install -r`).
 
+Recent: **1.21.0 (29)** story scores (T115) · **1.22.0 (30)** the hotel's
+корпус А2 — building switch in the lift (T116) — plus the ISS-005 playback fix
+(leaving the reader stops its narration) — Gate H2, see RUNBOOK §1.
+
 Signature boundary: debug-signed installs (dev client) and release-signed
 installs can't update over each other — switching kinds means uninstall +
 reinstall + Settings → Restore from backup.

@@ -62,6 +62,14 @@ i.e. the `sumrak-content` directory at the workspace root).
    `publish --audio-unchanged` (narration must be byte-identical; skips the
    audit). Gate S: no scored pack is published before both phones run 1.21.0
    (29). See AUTHORING «Story scores».
+   **Hotel корпус А2 (T116/T117, 1.22.0 (30)):** the lift's ladder row
+   switches buildings (A1 / A2); A2 course packs (`a2-hotel-f*`) are invisible
+   to older builds and may publish when ready. Gate H2: the A2 gate mock
+   `a2-torfl-mock-004` (Номер 13 of корпус А2) enters `manifest.json` only
+   after both phones run 1.22.0 (30) (`_locks/T117-released`) — an older
+   build would show it in the TORFL hub. 1.22.0 (30) also carries the
+   ISS-005 playback fix: leaving the reader (Back, tab bar, deep link)
+   stops its narration and releases the media session.
 5. **Sync on the phone.** Settings → Content sync must have the repo
    (`mrrobotisreal/sumrak-content`) and a fine-grained PAT (Contents:
    read-write) saved. Then Library → pull-to-refresh (or Packs → Check for
