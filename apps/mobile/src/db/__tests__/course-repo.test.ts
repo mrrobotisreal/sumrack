@@ -43,6 +43,9 @@ describe('reads', () => {
     expect(floors[0]!.packId).toBe(PACK_ID);
     expect(floors[0]!.unitCount).toBe(PACK.course!.units.length);
     expect(floors[0]!.title.ru).toBe(PACK.course!.title.ru);
+    // T116 bug 6c: the pack version rides along for the duplicate-floor pick.
+    expect(floors[0]!.version).toBe(PACK.version);
+    expect((await repos.course.getFloor(PACK_ID))!.version).toBe(PACK.version);
   });
 
   it('listFloors filters by level', async () => {

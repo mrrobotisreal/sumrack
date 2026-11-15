@@ -8,6 +8,7 @@ import {
   foldRu,
   highlightIndices,
   lessonKey,
+  lessonOpenedSet,
   lessonSentenceRefs,
   parseLessonPositions,
   resumeIndex,
@@ -137,5 +138,24 @@ describe('lessonSentenceRefs', () => {
       { storyId: 's', sentenceId: 'e1' },
       { storyId: 's', sentenceId: 'r1' },
     ]);
+  });
+});
+
+describe('lessonOpenedSet (T116 bug 6a): keyed on packId:unitId', () => {
+  it('opening u1 on one floor does not mark u1 opened on another floor', () => {
+    const opened = lessonOpenedSet({ [lessonKey('a1-hotel-f03', 'u1')]: 2 });
+    expect(opened.has(lessonKey('a1-hotel-f03', 'u1'))).toBe(true);
+    expect(opened.has(lessonKey('a1-hotel-f04', 'u1'))).toBe(false);
+    expect(opened.has(lessonKey('a2-hotel-f03', 'u1'))).toBe(false);
+  });
+
+  it('keeps the two buildings apart and ignores malformed keys', () => {
+    const opened = lessonOpenedSet({
+      [lessonKey('a1-hotel-f01', 'u2')]: 0,
+      [lessonKey('a2-hotel-f01', 'u1')]: 4,
+      'no-colon': 1,
+      ':u9': 1,
+    });
+    expect([...opened].sort()).toEqual(['a1-hotel-f01:u2', 'a2-hotel-f01:u1']);
   });
 });

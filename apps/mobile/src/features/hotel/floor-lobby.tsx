@@ -7,6 +7,7 @@ import { track } from '@/services/analytics';
 
 import type { FloorState } from './hotel-model';
 import { formatCooldownRu } from './gate-model';
+import { lessonKey } from './lesson/lesson-model';
 import { PracticeRows, type PracticeRow } from './practice-rows';
 
 /**
@@ -18,7 +19,7 @@ import { PracticeRows, type PracticeRow } from './practice-rows';
 export interface FloorLobbyProps {
   state: FloorState;
   floorTitle: { ru: string; en: string };
-  /** Units whose lesson has been opened at least once (`hotel-hooks` reads it from the progress rows). */
+  /** `packId:unitId` keys of the units whose lesson has been opened at least once (`useLessonOpened`). */
   lessonOpened: ReadonlySet<string>;
   /** «Практика» rows for this floor (only when the drill pack is installed). */
   practice: readonly PracticeRow[];
@@ -54,7 +55,7 @@ export function FloorLobby({
       </View>
 
       {state.units.map((u, i) => {
-        const opened = lessonOpened.has(u.unitId);
+        const opened = lessonOpened.has(lessonKey(state.packId, u.unitId));
         return (
           <View
             key={u.unitId}

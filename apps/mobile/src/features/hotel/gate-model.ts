@@ -303,6 +303,35 @@ export function roomStatus(input: {
   return { kind: 'cooling', until, left };
 }
 
+/** An `exam_attempts` row as the gate signal reads it (a structural subset). */
+export interface GateAttemptLike {
+  packId: string;
+  examId: string;
+  status: string;
+  verdict: 'pass' | 'pass-borderline' | 'fail' | null;
+  finishedAt: number | null;
+}
+
+/**
+ * Has a building's Номер 13 been passed? (Today «A1 пройден ✓», the journal's
+ * ladder level.) T116 bug 6b: the signal is the gate exam's LATEST finished
+ * attempt in `exam_attempts` with a passing verdict — the same rule the room
+ * itself shows (`roomStatus`). It used to read a `course_progress` row that
+ * nothing ever writes, so it could never fire.
+ */
+export function gatePassedOf(
+  attempts: readonly GateAttemptLike[],
+  gate: { gatePackId: string; gateExamId: string },
+): boolean {
+  let last: GateAttemptLike | null = null;
+  for (const a of attempts) {
+    if (a.packId !== gate.gatePackId || a.examId !== gate.gateExamId) continue;
+    if (a.status !== 'finished' || a.finishedAt === null) continue;
+    if (last === null || a.finishedAt > (last.finishedAt ?? 0)) last = a;
+  }
+  return last !== null && (last.verdict === 'pass' || last.verdict === 'pass-borderline');
+}
+
 /** One scored response of a finished attempt, as the debrief reads it. */
 export interface GradedResponse {
   itemId: string;

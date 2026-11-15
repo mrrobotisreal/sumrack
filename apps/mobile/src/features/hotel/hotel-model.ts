@@ -23,6 +23,8 @@ export interface FloorInput {
   unitIds: string[];
   /** False only on floor 0 (Вестибюль has no exam). */
   hasExam: boolean;
+  /** The pack's `packs.version` (T116 bug 6c: breaks a duplicate floor deterministically). Absent = 0. */
+  version?: number;
 }
 
 /** One `course_progress` row, as the model reads it (a structural subset). */
@@ -65,7 +67,12 @@ export interface FloorState {
 
 /** The installed floors that sit on the panel, in panel order. Floor 13 is never on the panel. */
 export function panelFor(installed: readonly FloorInput[]): FloorInput[] {
-  const byFloor = new Map(installed.map((f) => [f.floor, f]));
+  // T116 bug 6c: a duplicate floor is picked deterministically (never the silent last-wins Map).
+  const byFloor = new Map<number, FloorInput>();
+  for (const f of installed) {
+    const seen = byFloor.get(f.floor);
+    byFloor.set(f.floor, seen ? preferFloor(seen, f) : f);
+  }
   const out: FloorInput[] = [];
   for (const n of PANEL_A1) {
     const f = byFloor.get(n);
@@ -440,4 +447,35 @@ export function firstUnitStart(
     if (first === null || a.startedAt < first) first = a.startedAt;
   }
   return first;
+}
+
+/** T116 bug 6c: a floor more than one installed pack claims (the hook warns, dev-db lists it). */
+export interface DuplicateFloor {
+  floor: number;
+  packIds: string[];
+  picked: string;
+}
+
+/** The one pack a floor shows when several claim it: highest version, then the pack id that sorts first. */
+function preferFloor(a: FloorInput, b: FloorInput): FloorInput {
+  const va = a.version ?? 0;
+  const vb = b.version ?? 0;
+  if (va !== vb) return va > vb ? a : b;
+  return a.packId <= b.packId ? a : b;
+}
+
+/** Every floor more than one installed pack claims, with the pack `panelFor` picks. Sorted by floor. */
+export function duplicateFloors(installed: readonly FloorInput[]): DuplicateFloor[] {
+  const byFloor = new Map<number, FloorInput[]>();
+  for (const f of installed) byFloor.set(f.floor, [...(byFloor.get(f.floor) ?? []), f]);
+  const out: DuplicateFloor[] = [];
+  for (const [floor, packs] of byFloor) {
+    if (packs.length < 2) continue;
+    out.push({
+      floor,
+      packIds: packs.map((p) => p.packId).sort(),
+      picked: packs.reduce(preferFloor).packId,
+    });
+  }
+  return out.sort((a, b) => a.floor - b.floor);
 }

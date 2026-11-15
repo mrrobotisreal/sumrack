@@ -28,6 +28,7 @@ import {
 import { findExamItem } from '@/features/torfl/model';
 import { overallPct } from '@/features/torfl/hub-model';
 import {
+  lessonOpenedSet,
   lessonSentenceRefs,
   parseLessonPositions,
   type LessonPositions,
@@ -255,19 +256,12 @@ export function useLastFloor() {
 
 /**
  * The lesson-opened set (carried T92 decision 2): a unit whose lesson has a
- * saved card position was opened at least once. Keys are `packId:unitId`.
+ * saved card position was opened at least once. Keys are `packId:unitId`
+ * (`lessonKey`) — never a bare unit id (T116 bug 6a).
  */
 export function useLessonOpened() {
   const positions = useLessonPositions();
-  const opened = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const key of Object.keys(positions.positions)) {
-      const at = key.indexOf(':');
-      if (at > 0) set.add(key.slice(at + 1));
-    }
-    return set;
-  }, [positions.positions]);
-  return opened;
+  return React.useMemo(() => lessonOpenedSet(positions.positions), [positions.positions]);
 }
 
 /**

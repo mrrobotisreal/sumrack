@@ -81,6 +81,21 @@ export function lessonKey(packId: string, unitId: string): string {
   return `${packId}:${unitId}`;
 }
 
+/**
+ * The lesson-opened set (carried T92 decision 2): a unit whose lesson has a
+ * saved card position was opened at least once. The set holds the FULL
+ * `packId:unitId` keys (T116 bug 6a: stripping the pack id marked `u1`
+ * opened on every floor of every building); look up with `lessonKey`.
+ */
+export function lessonOpenedSet(positions: LessonPositions): Set<string> {
+  const set = new Set<string>();
+  for (const key of Object.keys(positions)) {
+    const at = key.indexOf(':');
+    if (at > 0 && at < key.length - 1) set.add(key);
+  }
+  return set;
+}
+
 /** The card index to resume at, clamped into the unit (a pack update may shorten it). */
 export function resumeIndex(
   positions: LessonPositions,

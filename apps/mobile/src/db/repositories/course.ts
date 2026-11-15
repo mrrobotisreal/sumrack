@@ -9,7 +9,7 @@ import { examItemKey } from '@/features/torfl/model';
 import { track } from '@/services/analytics';
 
 import { newId } from '../ids';
-import { courseAttempts, courseFloors, courseItems, courseProgress } from '../schema';
+import { courseAttempts, courseFloors, courseItems, courseProgress, packs } from '../schema';
 import type { SumrakDB } from '../types';
 import { createExamsRepo } from './exams';
 
@@ -33,6 +33,8 @@ export interface CourseFloorRow {
   subtitle: { ru: string; en: string } | null;
   unitCount: number;
   course: z.infer<typeof CourseSchema>;
+  /** `packs.version` (T116 bug 6c: a duplicate floor picks the highest version). 0 when the pack row is gone. */
+  version: number;
 }
 
 export interface ProgressRecord {
@@ -296,12 +298,13 @@ export function createCourseRepo(db: SumrakDB) {
     /** Every installed course floor of a ladder/level, ordered by floor. Unreadable floors are skipped. */
     async listFloors(opts: { ladder: string; level: CefrLevel }): Promise<CourseFloorRow[]> {
       const rows = await db
-        .select()
+        .select({ floor: courseFloors, version: packs.version })
         .from(courseFloors)
+        .leftJoin(packs, eq(packs.id, courseFloors.packId))
         .where(and(eq(courseFloors.ladder, opts.ladder), eq(courseFloors.level, opts.level)))
-        .orderBy(asc(courseFloors.floor));
+        .orderBy(asc(courseFloors.floor), asc(courseFloors.packId));
       const out: CourseFloorRow[] = [];
-      for (const row of rows) {
+      for (const { floor: row, version } of rows) {
         const course = parseCourse(row);
         if (!course) continue;
         out.push({
@@ -311,6 +314,7 @@ export function createCourseRepo(db: SumrakDB) {
           subtitle: course.subtitle ?? null,
           unitCount: course.units.length,
           course,
+          version: version ?? 0,
         });
       }
       return out;
@@ -322,6 +326,11 @@ export function createCourseRepo(db: SumrakDB) {
       if (!row) return null;
       const course = parseCourse(row);
       if (!course) return null;
+      const pack = await db
+        .select({ version: packs.version })
+        .from(packs)
+        .where(eq(packs.id, packId))
+        .limit(1);
       return {
         packId: row.packId,
         floor: row.floor,
@@ -329,6 +338,7 @@ export function createCourseRepo(db: SumrakDB) {
         subtitle: course.subtitle ?? null,
         unitCount: course.units.length,
         course,
+        version: pack[0]?.version ?? 0,
       };
     },
 
