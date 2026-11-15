@@ -1,6 +1,7 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as React from 'react';
 
+import { disposePlayer } from '@/features/audio/dispose-player';
 import { buildKaraokeIndex, activeWordAt, type ActiveWord } from '@/features/reader/karaoke';
 import { createSliceFocus } from '@/services/learning-focus';
 import { getSpeechService } from '@/services/speech';
@@ -142,10 +143,11 @@ export function useExamAudio(
       playSeqRef.current += 1;
       focusRef.current.release();
       clearTimers();
-      playerRef.current?.pause();
       void getSpeechService().stop();
-      playerRef.current?.remove();
+      // ISS-005: pause → remove → release (remove alone leaves it to GC).
+      const player = playerRef.current;
       playerRef.current = null;
+      disposePlayer(player);
     },
     [clearTimers],
   );

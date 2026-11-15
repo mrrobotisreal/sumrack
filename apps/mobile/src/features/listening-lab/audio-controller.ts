@@ -1,3 +1,5 @@
+import { disposePlayer } from '@/features/audio/dispose-player';
+
 import type { SegmentAudio } from './source';
 
 export interface LabPlaybackStatus {
@@ -15,6 +17,8 @@ export interface LabPlayer {
   play(): void;
   pause(): void;
   remove(): void;
+  /** SharedObject.release(): frees the native player now (ISS-005). */
+  release(): void;
   setPlaybackRate(rate: number): void;
   addListener(
     event: 'playbackStatusUpdate',
@@ -52,22 +56,14 @@ export function createLabAudio(deps: AudioDependencies) {
     if (!disposed) deps.changed(phase, error);
   };
   const playbackCleanup = () => {
-    statusSubscription?.remove();
-    statusSubscription = null;
     if (timer) clearInterval(timer);
     if (cap) clearTimeout(cap);
     timer = null;
     cap = null;
-    try {
-      player?.pause();
-    } catch {
-      /* A failed player may already be unloaded. */
-    }
-    try {
-      player?.remove();
-    } catch {
-      /* Removal is best effort after an engine error. */
-    }
+    // ISS-005: pause → unsubscribe → remove → release; each step is best effort
+    // (a failed player may already be unloaded).
+    disposePlayer(player, { subscriptions: [statusSubscription] });
+    statusSubscription = null;
     player = null;
     deps.focus.release();
   };

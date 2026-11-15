@@ -2,7 +2,12 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 
 import { repos } from '@/db';
 import { SETTING_KEYS } from '@/db/repositories/settings';
+import { disposePlayer } from '@/features/audio/dispose-player';
 import { logError } from '@/services/error-log';
+
+import { LIFT_SFX_SOURCES } from './lift-sfx-sources';
+
+export { LIFT_SFX_SOURCES } from './lift-sfx-sources';
 
 /**
  * T91 lift sound effects. Seven short bundled clips (assets/audio/hotel/,
@@ -15,16 +20,6 @@ import { logError } from '@/services/error-log';
  * Haptics and visuals are unaffected. The setting is read once per mount,
  * and the Lift passes it in, so the playback here stays a plain function.
  */
-
-export const LIFT_SFX_SOURCES = {
-  close: require('../../../../assets/audio/hotel/lift-close.opus') as number,
-  ride: require('../../../../assets/audio/hotel/lift-ride.opus') as number,
-  ding: require('../../../../assets/audio/hotel/lift-ding.opus') as number,
-  open: require('../../../../assets/audio/hotel/lift-open.opus') as number,
-  flicker: require('../../../../assets/audio/hotel/flicker.opus') as number,
-  drop: require('../../../../assets/audio/hotel/drop.opus') as number,
-  blocked: require('../../../../assets/audio/hotel/lift-blocked.opus') as number,
-} as const;
 
 export type LiftSfxName = keyof typeof LIFT_SFX_SOURCES;
 
@@ -127,12 +122,10 @@ export function createLiftSfx(enabled: boolean): LiftSfx {
     dispose() {
       if (rideTimer) clearTimeout(rideTimer);
       rideTimer = null;
+      // ISS-005: pause first — remove() alone left a looping ride hum playing
+      // after the Lift unmounted — then release the native players.
       for (const player of players.values()) {
-        try {
-          player.remove();
-        } catch (err) {
-          logError('manual', err);
-        }
+        disposePlayer(player, { onError: (_step, err) => logError('manual', err) });
       }
       players.clear();
     },

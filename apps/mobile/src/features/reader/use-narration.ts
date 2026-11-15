@@ -11,6 +11,7 @@ import { getSpeechService } from '@/services/speech';
 import { claim as claimAudio } from '@/features/audio/arbiter';
 import { runSpan } from '@/features/audio/slice-window';
 import { useSlicePlayer } from '@/features/audio/use-slice-player';
+import { logError } from '@/services/error-log';
 
 import {
   activeSentenceAt,
@@ -22,6 +23,7 @@ import {
   type KaraokeIndex,
   type KaraokeSentenceInput,
 } from './karaoke';
+import { teardownNarration } from './narration-teardown';
 import { trackLabel } from './track-label';
 
 /**
@@ -206,8 +208,31 @@ export function useNarration({
 
   // ---- player lifecycle ---------------------------------------------------
   const playerRef = React.useRef<AudioPlayer | null>(null);
+  /** ISS-005: the status-listener handle, dropped at teardown. */
+  const statusSubRef = React.useRef<{ remove(): void } | null>(null);
   const rateRef = React.useRef(1);
   const lockScreenActiveRef = React.useRef(false);
+  /** Ids for the unmount's narration_stopped (the effect cleanup cannot read props). */
+  const idsRef = React.useRef({ packId, storyId });
+  React.useEffect(() => {
+    idsRef.current = { packId, storyId };
+  }, [packId, storyId]);
+
+  /**
+   * ISS-005: run `then` after a seek only while `player` is still this hook's
+   * player — a continuation landing after the unmount released it would throw
+   * (UsingReleasedSharedObjectException) or restart audio.
+   */
+  const seekThen = React.useCallback((player: AudioPlayer, seconds: number, then?: () => void) => {
+    void player.seekTo(seconds).then(
+      () => {
+        if (playerRef.current === player) then?.();
+      },
+      (error: unknown) => {
+        if (playerRef.current === player) logError('manual', error);
+      },
+    );
+  }, []);
 
   // Background playback + exclusive focus (must be set before first play;
   // Android keeps a media notification alive via setActiveForLockScreen).
@@ -247,33 +272,37 @@ export function useNarration({
   );
 
   /** Create the player on first use; swap sources afterward. */
-  const ensurePlayer = React.useCallback((uri: string): AudioPlayer => {
-    if (playerRef.current) {
-      playerRef.current.replace({ uri });
-      return playerRef.current;
-    }
-    const player = createAudioPlayer({ uri }, { updateInterval: 500 });
-    player.addListener('playbackStatusUpdate', (status) => {
-      setPlaying(status.playing);
-      setError(status.error);
-      if (status.didJustFinish) {
-        setPlaying(false);
-        setActiveWord(null);
-        setActiveSentence(null);
-        setPositionMs(Math.round(status.duration * 1000));
-        trackEvent('narration_finished', { ...eventPropsRef.current });
-        // Park the player back at 0 immediately: ExoPlayer's ENDED state is
-        // race-prone (play() at the end can re-emit didJustFinish before a
-        // rewind lands — hit on the S24 Ultra). Pause first — a seek from
-        // ENDED auto-resumes while playWhenReady is still set (seen on the
-        // emulator). UI keeps showing the full duration.
-        player.pause();
-        void player.seekTo(0);
+  const ensurePlayer = React.useCallback(
+    (uri: string): AudioPlayer => {
+      if (playerRef.current) {
+        playerRef.current.replace({ uri });
+        return playerRef.current;
       }
-    });
-    playerRef.current = player;
-    return player;
-  }, []);
+      const player = createAudioPlayer({ uri }, { updateInterval: 500 });
+      statusSubRef.current = player.addListener('playbackStatusUpdate', (status) => {
+        if (playerRef.current !== player) return; // torn down (ISS-005)
+        setPlaying(status.playing);
+        setError(status.error);
+        if (status.didJustFinish) {
+          setPlaying(false);
+          setActiveWord(null);
+          setActiveSentence(null);
+          setPositionMs(Math.round(status.duration * 1000));
+          trackEvent('narration_finished', { ...eventPropsRef.current });
+          // Park the player back at 0 immediately: ExoPlayer's ENDED state is
+          // race-prone (play() at the end can re-emit didJustFinish before a
+          // rewind lands — hit on the S24 Ultra). Pause first — a seek from
+          // ENDED auto-resumes while playWhenReady is still set (seen on the
+          // emulator). UI keeps showing the full duration.
+          player.pause();
+          seekThen(player, 0);
+        }
+      });
+      playerRef.current = player;
+      return player;
+    },
+    [seekThen],
+  );
 
   // Load the source whenever the effective track changes. Track *switches*
   // (not first load) carry the reading position over via the karaoke maps.
@@ -328,12 +357,12 @@ export function useNarration({
     const targetMs = mapPositionAcrossTracks(from, index, pending.fromMs);
     const player = playerRef.current;
     if (!player) return;
-    void player.seekTo(targetMs / 1000).then(() => {
+    seekThen(player, targetMs / 1000, () => {
       setPositionMs(targetMs);
       bumpSeek();
       if (pending.wasPlaying) player.play();
     });
-  }, [index, currentTrack, bumpSeek]);
+  }, [index, currentTrack, bumpSeek, seekThen]);
 
   // ---- the karaoke clock --------------------------------------------------
   const lastShownPositionRef = React.useRef(0);
@@ -389,7 +418,7 @@ export function useNarration({
       // Play after the track ended = listen again from the top.
       const atEnd = Math.round(player.currentTime * 1000) >= currentTrack.durationMs - 250;
       if (atEnd) {
-        void player.seekTo(0).then(() => {
+        seekThen(player, 0, () => {
           syncFromPosition(0, true);
           bumpSeek();
           player.play();
@@ -404,14 +433,14 @@ export function useNarration({
         ...eventPropsRef.current,
       });
     }
-  }, [currentTrack, applyLockScreen, packId, storyId, syncFromPosition, bumpSeek]);
+  }, [currentTrack, applyLockScreen, packId, storyId, syncFromPosition, bumpSeek, seekThen]);
 
   const seekToMs = React.useCallback(
     (ms: number, method: SeekMethod) => {
       const player = playerRef.current;
       if (!player || !currentTrack) return;
       const clamped = Math.min(Math.max(0, ms), currentTrack.durationMs);
-      void player.seekTo(clamped / 1000).then(() => {
+      seekThen(player, clamped / 1000, () => {
         syncFromPosition(clamped, true);
         bumpSeek();
       });
@@ -426,7 +455,7 @@ export function useNarration({
         });
       }
     },
-    [currentTrack, syncFromPosition, packId, storyId, bumpSeek],
+    [currentTrack, syncFromPosition, packId, storyId, bumpSeek, seekThen],
   );
 
   const readPositionMs = React.useCallback(() => {
@@ -516,15 +545,35 @@ export function useNarration({
   );
 
   // ---- teardown -----------------------------------------------------------
+  // ISS-005: pause → unsubscribe → clear lock screen → remove → release. Before,
+  // only remove() ran, which on Android leaves the ExoPlayer playing after Back.
   React.useEffect(() => {
     return () => {
       stopSegment();
       const player = playerRef.current;
-      if (player) {
-        if (lockScreenActiveRef.current) player.clearLockScreenControls();
-        player.remove();
-        playerRef.current = null;
-      }
+      const subscription = statusSubRef.current;
+      const trackId = prevTrackRef.current?.track.id ?? '';
+      // Cleared first: any in-flight seek continuation / status event sees a
+      // torn-down player and stops there.
+      playerRef.current = null;
+      statusSubRef.current = null;
+      // A re-run of the effects on the same instance must load a fresh player.
+      prevTrackRef.current = null;
+      pendingSwitchRef.current = null;
+      teardownNarration(player, {
+        subscription,
+        lockScreenActive: lockScreenActiveRef.current,
+        onStopped: (positionMs) =>
+          trackEvent('narration_stopped', {
+            ...idsRef.current,
+            trackId,
+            reason: 'unmount',
+            positionMs,
+            ...eventPropsRef.current,
+          }),
+        onError: (_step, error) => logError('manual', error),
+      });
+      lockScreenActiveRef.current = false;
     };
   }, [stopSegment]);
 

@@ -1,3 +1,5 @@
+import { disposePlayer } from '@/features/audio/dispose-player';
+
 import { bedAfter, type AmbientBed, type AmbientTheme, type AmbientThemeId } from './beds';
 import { nextStart, type AmbientCursor } from './cursors';
 
@@ -12,6 +14,8 @@ export interface AmbientPlayer {
   play(): void;
   pause(): void;
   remove(): void;
+  /** SharedObject.release(): frees the native player now (ISS-005). */
+  release(): void;
   /** Swap the source on the same native player (keeps the audio session). Beds = asset ids, scores = file uris (T115). */
   replace(source: AmbientSource): void;
   seekTo(seconds: number): Promise<void>;
@@ -416,16 +420,16 @@ export function createAmbientController(
       disposed = true;
       revision++;
       try {
+        // Saves the cursor and reports score_paused while the player is alive.
         pause();
-        stopDriftTimer();
-        subscription?.remove();
-        player?.remove();
       } catch (error) {
         onError(error);
-      } finally {
-        subscription = null;
-        player = null;
       }
+      stopDriftTimer();
+      // ISS-005: pause → unsubscribe → remove → release (remove alone leaks it).
+      disposePlayer(player, { subscriptions: [subscription], onError: (_s, e) => onError(e) });
+      subscription = null;
+      player = null;
     },
   };
 }

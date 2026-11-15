@@ -2,6 +2,7 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 
 import type { ListenSource } from '@/db/repositories/listen';
 import { claim as claimAudio, registerOwner } from '@/features/audio/arbiter';
+import { disposePlayer } from '@/features/audio/dispose-player';
 
 import { partAt } from './part-at';
 import { LISTEN_PREFS_DEFAULTS, toListenRate, type ListenPrefs, type ListenRate } from './prefs';
@@ -40,6 +41,8 @@ export interface ListenPlayerLike {
   seekTo(seconds: number): Promise<void>;
   replace(source: { uri: string }): void;
   remove(): void;
+  /** SharedObject.release(): frees the native player now (ISS-005). */
+  release(): void;
   setPlaybackRate(rate: number, quality?: 'low' | 'medium' | 'high'): void;
   setActiveForLockScreen(
     active: boolean,
@@ -276,12 +279,9 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
 
   function teardownPlayer() {
     stopTimer();
-    if (player) {
-      listenerSub?.remove();
-      listenerSub = undefined;
-      if (lockScreenActive) player.clearLockScreenControls();
-      player.remove();
-    }
+    // ISS-005: pause → unsubscribe → clear lock screen → remove → release.
+    disposePlayer(player, { subscriptions: [listenerSub], lockScreenActive });
+    listenerSub = undefined;
     player = null;
     lockScreenActive = false;
   }
@@ -433,7 +433,10 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
       const from = readPositionMs();
       deps.track('listen_seek', { ...props(), method, fromMs: from, toMs: to });
       lastPosMs = to;
-      await player.seekTo(to / 1000);
+      const seeking = player;
+      await seeking.seekTo(to / 1000);
+      // Stopped (and released) mid-seek: nothing here may touch it (ISS-005).
+      if (player !== seeking) return;
       const idx = partAt(s.session.source.segments, to);
       set({
         positionMs: to,
@@ -515,8 +518,7 @@ export function createListenPlayer(deps: ListenDeps): ListenPlayer {
         persistPosition();
         deps.track('listen_stopped', { ...props(), positionMs: readPositionMs(), reason });
       }
-      player?.pause();
-      teardownPlayer();
+      teardownPlayer(); // pauses first
       set({ ...INITIAL, rate: s.rate, volume: s.volume, muted: s.muted });
     },
   };

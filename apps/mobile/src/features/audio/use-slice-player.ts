@@ -4,6 +4,7 @@ import * as React from 'react';
 import { track } from '@/services/analytics';
 import { createSliceFocus } from '@/services/learning-focus';
 
+import { disposePlayer } from './dispose-player';
 import { createSliceController, type SlicePlayerLike } from './slice-controller';
 import { sliceWindow, type SliceStamp, type SliceWindow } from './slice-window';
 
@@ -77,8 +78,10 @@ class SlicePlayerHost {
   dispose = (): void => {
     this.controller.stop();
     this.focus.release();
-    this.player?.remove();
+    // ISS-005: release, not just remove (remove leaves the native player to GC).
+    const player = this.player;
     this.player = null;
+    disposePlayer(player);
   };
 }
 
