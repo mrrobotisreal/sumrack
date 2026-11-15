@@ -413,3 +413,62 @@ describe('PackSchema fullStory + cover (T94)', () => {
     expectIssue(pack, 'cover', 'cover/');
   });
 });
+
+describe('StorySchema score (T115)', () => {
+  function makeScoredPack(): any {
+    const pack = makeValidPack() as any;
+    pack.stories[0].audio = [
+      {
+        id: 'p1-a',
+        voice: 'elevenlabs:Test',
+        style: 'neutral',
+        file: 'audio/p1-a.opus',
+        durationMs: 10_000,
+        timestamps: [],
+      },
+    ];
+    pack.stories[0].score = {
+      id: 'p1-a-score',
+      file: 'audio/p1-a-score.opus',
+      durationMs: 10_020,
+      trackId: 'p1-a',
+    };
+    return pack;
+  }
+
+  it('accepts a score cut against one of the story tracks', () => {
+    expect(PackSchema.safeParse(makeScoredPack()).success).toBe(true);
+  });
+
+  it('an unscored story stays valid (score is optional)', () => {
+    const pack = makeScoredPack();
+    delete pack.stories[0].score;
+    expect(PackSchema.safeParse(pack).success).toBe(true);
+  });
+
+  it('rejects a trackId that is not a track of the story', () => {
+    const pack = makeScoredPack();
+    pack.stories[0].score.trackId = 'ghost';
+    expectIssue(pack, 'stories[0].score.trackId', 'not an audio track');
+  });
+
+  it('accepts |Δ| = 50 ms and rejects 51 ms', () => {
+    const pack = makeScoredPack();
+    pack.stories[0].score.durationMs = 9_950;
+    expect(PackSchema.safeParse(pack).success).toBe(true);
+    pack.stories[0].score.durationMs = 10_051;
+    expectIssue(pack, 'stories[0].score.durationMs', '|Δ| 51 > 50');
+  });
+
+  it('score.file must be audio/*.opus', () => {
+    const pack = makeScoredPack();
+    pack.stories[0].score.file = 'music/p1.mp3';
+    expectIssue(pack, 'stories[0].score.file', 'audio/');
+  });
+
+  it('is strict: unknown score keys are rejected', () => {
+    const pack = makeScoredPack();
+    pack.stories[0].score.gainDb = -3;
+    expect(PackSchema.safeParse(pack).success).toBe(false);
+  });
+});

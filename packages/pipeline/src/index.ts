@@ -92,7 +92,33 @@ export {
   visemesFromLevels,
   type MouthTrackInput,
 } from './mouth-track.ts';
-export { encodeOpus, probeDurationMs, OPUS_BITRATE } from './opus.ts';
+export {
+  encodeOpus,
+  encodeScoreOpus,
+  measureEbur128,
+  measureLoudnorm,
+  probeDurationMs,
+  OPUS_BITRATE,
+  SCORE_BITRATE,
+  SCORE_TARGET_LUFS,
+  SCORE_TARGET_TP,
+} from './opus.ts';
+export {
+  CROSSFADE_MS,
+  FADE_IN_MS,
+  FADE_OUT_MS,
+  MAX_STRETCH,
+  ScoreSheetSchema,
+  formatScoreTable,
+  loadScoreSheet,
+  planScore,
+  runScore,
+  scoreFileIssues,
+  scoreLine,
+  type ScorePlan,
+  type ScoreResult,
+  type ScoreSheet,
+} from './score.ts';
 export {
   SCENE_DIR,
   packFileList,

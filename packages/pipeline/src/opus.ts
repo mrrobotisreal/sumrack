@@ -193,3 +193,138 @@ export function exciseWav(
     outPath,
   ]);
 }
+
+/**
+ * T115 score encode spec (AMBIENT_SOUNDTRACKS §11): the beds' loudness targets
+ * (§4: I −26 LUFS, TP −2 dBTP, LRA 11) so the one ambient slider means the same
+ * level for a bed and a score; 64 k stereo instead of the beds' 96 k because a
+ * score ships per part over sync, not once in the APK.
+ */
+export const SCORE_BITRATE = '64k';
+export const SCORE_TARGET_LUFS = -26;
+export const SCORE_TARGET_TP = -2;
+export const SCORE_TARGET_LRA = 11;
+
+export interface LoudnormMeasure {
+  inputI: number;
+  inputTp: number;
+  inputLra: number;
+  inputThresh: number;
+  offset: number;
+}
+
+/** Last `{...}` block in ffmpeg stderr — loudnorm prints its JSON after the progress lines. */
+function lastJsonBlock(stderr: string): Record<string, string> {
+  const start = stderr.lastIndexOf('{');
+  const end = stderr.lastIndexOf('}');
+  if (start < 0 || end < start) {
+    throw new Error(`no loudnorm JSON in ffmpeg output:\n${stderr.slice(-800)}`);
+  }
+  return JSON.parse(stderr.slice(start, end + 1)) as Record<string, string>;
+}
+
+function ffmpegStderr(args: string[]): string {
+  const res = spawnSync('ffmpeg', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (res.error) throw res.error;
+  if (res.status !== 0) {
+    throw new Error(`ffmpeg ${args.join(' ')} failed (${res.status}):\n${res.stderr.slice(-800)}`);
+  }
+  return res.stderr;
+}
+
+/** loudnorm pass 1 against the score targets. */
+export function measureLoudnorm(path: string): LoudnormMeasure {
+  const stderr = ffmpegStderr([
+    '-hide_banner',
+    '-nostats',
+    '-i',
+    path,
+    '-af',
+    `loudnorm=I=${SCORE_TARGET_LUFS}:TP=${SCORE_TARGET_TP}:LRA=${SCORE_TARGET_LRA}:print_format=json`,
+    '-f',
+    'null',
+    '-',
+  ]);
+  const m = lastJsonBlock(stderr);
+  const num = (key: string): number => {
+    const value = Number.parseFloat(m[key] ?? '');
+    if (!Number.isFinite(value)) throw new Error(`loudnorm reported no ${key} for ${path}`);
+    return value;
+  };
+  return {
+    inputI: num('input_i'),
+    inputTp: num('input_tp'),
+    inputLra: num('input_lra'),
+    inputThresh: num('input_thresh'),
+    offset: num('target_offset'),
+  };
+}
+
+/** Integrated loudness (LUFS) + true peak (dBTP) of a finished file via ebur128. */
+export function measureEbur128(path: string): { lufs: number; truePeakDb: number } {
+  const stderr = ffmpegStderr([
+    '-hide_banner',
+    '-nostats',
+    '-i',
+    path,
+    '-af',
+    'ebur128=peak=true',
+    '-f',
+    'null',
+    '-',
+  ]);
+  const summary = stderr.slice(stderr.lastIndexOf('Summary:'));
+  const grab = (label: string): number => {
+    const m = new RegExp(`${label}:\\s*(-?[\\d.]+|-inf)\\s*(?:LUFS|dBFS)`).exec(summary);
+    if (!m) throw new Error(`ebur128 reported no ${label} for ${path}`);
+    return m[1] === '-inf' ? Number.NEGATIVE_INFINITY : Number.parseFloat(m[1]!);
+  };
+  return { lufs: grab('I'), truePeakDb: grab('Peak') };
+}
+
+/**
+ * Encode a part-length score to Ogg Opus stereo 48 kHz 64 k VBR
+ * (`-application audio`, 20 ms frames) with a two-pass linear `loudnorm` to
+ * −26 LUFS / −2 dBTP. Overwrites `outPath`. Returns the pass-1 measurement.
+ */
+export function encodeScoreOpus(inPath: string, outPath: string): LoudnormMeasure {
+  const m = measureLoudnorm(inPath);
+  const loudnorm = [
+    `I=${SCORE_TARGET_LUFS}`,
+    `TP=${SCORE_TARGET_TP}`,
+    `LRA=${SCORE_TARGET_LRA}`,
+    `measured_I=${m.inputI}`,
+    `measured_TP=${m.inputTp}`,
+    `measured_LRA=${m.inputLra}`,
+    `measured_thresh=${m.inputThresh}`,
+    `offset=${m.offset}`,
+    'linear=true',
+  ].join(':');
+  run('ffmpeg', [
+    '-y',
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    inPath,
+    // loudnorm upsamples to 192 kHz internally; resample back before libopus.
+    '-af',
+    `loudnorm=${loudnorm},aresample=48000`,
+    '-c:a',
+    'libopus',
+    '-b:a',
+    SCORE_BITRATE,
+    '-vbr',
+    'on',
+    '-application',
+    'audio',
+    '-frame_duration',
+    '20',
+    '-ac',
+    '2',
+    '-ar',
+    '48000',
+    outPath,
+  ]);
+  return m;
+}

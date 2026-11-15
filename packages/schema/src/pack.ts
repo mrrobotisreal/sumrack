@@ -94,6 +94,27 @@ export const FullStorySchema = z.strictObject({
 export type FullStory = z.infer<typeof FullStorySchema>;
 
 /**
+ * A story part's composed score (M38, T115, AMBIENT_SOUNDTRACKS §11): a
+ * separate stereo music layer cut against one narration track, played by the
+ * app's ambient system in place of the theme bed. Never mixed into narration.
+ * Older apps reject packs carrying it (strict story object) — Gate S.
+ */
+export const StoryScoreSchema = z.strictObject({
+  /** `<trackId>-score`. */
+  id: StableIdSchema,
+  /** "audio/<trackId>-score.opus". */
+  file: RelativePathSchema,
+  /** Probed length of the score file; within ±SCORE_DURATION_SLACK_MS of the track's. */
+  durationMs: z.number().int().positive(),
+  /** The narration track (one of this story's `audio[]`) the score was cut against. */
+  trackId: StableIdSchema,
+});
+export type StoryScore = z.infer<typeof StoryScoreSchema>;
+
+/** How far a score's duration may sit from its narration track's (encoder padding). */
+export const SCORE_DURATION_SLACK_MS = 50;
+
+/**
  * A single readable text (story, article, or dialogue) inside a pack
  * (design §4.2 `Story`), composed of sentences.
  */
@@ -112,6 +133,8 @@ export const StorySchema = z.strictObject({
   sentences: z.array(SentenceSchema).min(1),
   /** 0..n narration renditions (different voices/styles). Empty = no narration yet. */
   audio: z.array(AudioTrackSchema),
+  /** M38 (T115): this part's composed score, synced to `score.trackId`. Absent = unscored. */
+  score: StoryScoreSchema.optional(),
 });
 export type Story = z.infer<typeof StorySchema>;
 
@@ -343,6 +366,45 @@ function checkFullStoryInvariants(
   }
 }
 
+/** T115 score invariants: the track resolves, the length matches, the file is audio/*.opus. */
+function checkStoryScoreInvariants(
+  stories: ReadonlyArray<{
+    id: string;
+    audio: ReadonlyArray<{ id: string; durationMs: number }>;
+    score?: StoryScore | undefined;
+  }>,
+  ctx: z.RefinementCtx,
+): void {
+  stories.forEach((story, si) => {
+    const score = story.score;
+    if (!score) return;
+    if (!score.file.startsWith('audio/') || !score.file.endsWith('.opus')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['stories', si, 'score', 'file'],
+        message: 'score.file must start with "audio/" and end in ".opus"',
+      });
+    }
+    const track = story.audio.find((t) => t.id === score.trackId);
+    if (!track) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['stories', si, 'score', 'trackId'],
+        message: `score.trackId "${score.trackId}" is not an audio track of story "${story.id}"`,
+      });
+      return;
+    }
+    const delta = Math.abs(score.durationMs - track.durationMs);
+    if (delta > SCORE_DURATION_SLACK_MS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['stories', si, 'score', 'durationMs'],
+        message: `score is ${score.durationMs}ms but track "${track.id}" is ${track.durationMs}ms (|Δ| ${delta} > ${SCORE_DURATION_SLACK_MS})`,
+      });
+    }
+  });
+}
+
 /**
  * The content pack (design §4.2 `Pack`) — the unit of authoring, sync, and
  * versioning. Everything the app knows about Russian arrives in a pack.
@@ -439,6 +501,7 @@ export const PackSchema = z
   })
   .superRefine((pack, ctx) => {
     checkFullStoryInvariants(pack, ctx);
+    checkStoryScoreInvariants(pack.stories, ctx);
     // type → required sections
     if (pack.type === 'stories' && pack.stories.length === 0) {
       ctx.addIssue({

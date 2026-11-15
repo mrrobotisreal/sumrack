@@ -196,7 +196,9 @@ export {
   FullStorySegmentSchema,
   PackSchema,
   PackThemeSchema,
+  SCORE_DURATION_SLACK_MS,
   StorySchema,
+  StoryScoreSchema,
   StorySourceSchema,
   type AudioTrack,
   type ExerciseSpec,
@@ -207,6 +209,7 @@ export {
   type Pack,
   type PackTheme,
   type Story,
+  type StoryScore,
   type StorySource,
 } from './pack';
 export {

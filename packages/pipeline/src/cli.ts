@@ -20,6 +20,7 @@ import { resolveEnvVar } from './env.ts';
 import { runModelsMirror } from './models.ts';
 import { runPublish } from './publish.ts';
 import { DEFAULT_GAP_MS, formatStitchTable, runStitch } from './stitch.ts';
+import { formatScoreTable, runScore, scoreFileIssues, scoreLine } from './score.ts';
 import {
   auditPack,
   formatAuditTable,
@@ -106,15 +107,17 @@ Usage:
       run, so tracks/nodes/lines can be finalized in batches).
 
   pipeline publish <pack-dir> --content <sumrak-content-dir> [--push] [-m msg]
-                   [--allow-stamp-risk] [--skip-stamp-audit] [--stitch-only]
+                   [--allow-stamp-risk] [--skip-stamp-audit] [--audio-unchanged]
       Copy the pack into the content repo, recompute hashes, update
       manifest.json, and commit. Pushes only with --push. Runs stamp-audit
       first and refuses on failure (--allow-stamp-risk logs the override to
       <pack-dir>/BUILD_NOTES.md; --skip-stamp-audit is for packs with no
       word-sliced audio and needs the aligner venv otherwise).
-      --stitch-only (T94) republishes a pack whose audio is unchanged: the
-      pack minus {fullStory, cover, version} must deep-equal the published
-      one and every story track must hash as the manifest lists it; then the
+      --audio-unchanged (T115; --stitch-only is the T94 alias, same check)
+      republishes a pack whose narration is unchanged: the pack minus
+      {fullStory, cover, version, stories[].score} must deep-equal the
+      published one and every story narration track must hash as the
+      manifest lists it; new or changed score files are allowed. Then the
       stamp-audit is skipped. Conflicts with --allow-stamp-risk and
       --skip-stamp-audit.
 
@@ -127,6 +130,22 @@ Usage:
       1024x1024 cover/cover.jpg (<= 400 KB) and sets pack.cover. --bump
       increments the pack version. --dry-run prints the segment table and
       writes nothing. Idempotent. Offline; needs ffmpeg.
+
+  pipeline score <pack-dir> --sheet <score-sheet.json> [--stories <id,id>] [--dry-run]
+      T115: assemble each part's composed score from its cues and write it as
+      a SEPARATE stereo layer audio/<trackId>-score.opus + story.score (never
+      mixed into narration, never part of the stitched full track). The sheet
+      (JSON): { "packId"?, "cueDir"?, "stories": [ { "storyId", "trackId"?,
+      "cues": [ { "file", "startMs", "endMs" } ] } ] } — cue times in that
+      story's narration-track ms; cue files relative to cueDir (default: the
+      sheet's folder). Per part: cues trimmed to their slot (or slowed with
+      atempo, at most 4 %, else it fails), 2 s equal-power crossfades between
+      chained cues, 1.0 s fade-in, 2.5 s fade-out, cut/padded to the exact
+      narration length, one loudnorm (-26 LUFS / -2 dBTP), Opus stereo 64 k.
+      Stories with no cues get no score (an old one is removed). Does NOT bump
+      the version. --stories rebuilds only those parts. --dry-run builds in a
+      temp dir and prints the table (cues, stretch, LUFS, bytes), writing
+      nothing. Offline; needs ffmpeg.
 
   pipeline stamp-audit <pack-dir|pack.json>... [--track id] [--json out.json]
       T80: offline word-stamp accuracy audit over the real audio (forced
@@ -287,6 +306,16 @@ function validateCommand(args: string[]): void {
       printExamReports(result.pack);
       printReferenceReports(result.pack);
       if (result.pack.type === 'stories') console.log(fullTrackLine(result.pack));
+      if (result.pack.stories.some((st) => st.score)) {
+        // T115: every score file exists and probes to its recorded length.
+        console.log(scoreLine(result.pack));
+        const scoreIssues = scoreFileIssues(result.pack, dirname(file));
+        if (scoreIssues.length > 0) {
+          failed = true;
+          console.error(`✗ ${file}: score files do not match the pack`);
+          for (const issue of scoreIssues) console.error(`    ${issue}`);
+        }
+      }
       if (result.pack.course) {
         console.log(`\n${renderCourseReport(result.pack)}`);
         const live = courseManifestIssues(
@@ -538,6 +567,7 @@ function publishCommand(args: string[]): void {
   let allowStampRisk = false;
   let skipStampAudit = false;
   let stitchOnly = false;
+  let audioUnchanged = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     const next = (): string => {
@@ -548,6 +578,7 @@ function publishCommand(args: string[]): void {
     if (arg === '--allow-stamp-risk') allowStampRisk = true;
     else if (arg === '--skip-stamp-audit') skipStampAudit = true;
     else if (arg === '--stitch-only') stitchOnly = true;
+    else if (arg === '--audio-unchanged' || arg === '--scores-only') audioUnchanged = true;
     else if (arg === '--content') content = next();
     else if (arg === '--push') push = true;
     else if (arg === '-m' || arg === '--message') message = next();
@@ -557,9 +588,9 @@ function publishCommand(args: string[]): void {
   }
   if (packDir === undefined) fail(`publish needs a <pack-dir>\n\n${USAGE}`, 2);
   if (content === undefined) fail(`publish needs --content <sumrak-content-dir>\n\n${USAGE}`, 2);
-  if (stitchOnly && (allowStampRisk || skipStampAudit)) {
+  if ((stitchOnly || audioUnchanged) && (allowStampRisk || skipStampAudit)) {
     fail(
-      `--stitch-only cannot be combined with --allow-stamp-risk or --skip-stamp-audit (it already skips the audit, only for byte-identical tracks)\n\n${USAGE}`,
+      `--audio-unchanged/--stitch-only cannot be combined with --allow-stamp-risk or --skip-stamp-audit (it already skips the audit, only for byte-identical tracks)\n\n${USAGE}`,
       2,
     );
   }
@@ -570,7 +601,8 @@ function publishCommand(args: string[]): void {
       message,
       allowStampRisk,
       stitchOnly,
-      ...(skipStampAudit || stitchOnly ? {} : { stampAudit: pythonAligner() }),
+      audioUnchanged,
+      ...(skipStampAudit || stitchOnly || audioUnchanged ? {} : { stampAudit: pythonAligner() }),
     });
     if (summary.outcome === 'unchanged') {
       console.log(`= ${summary.packId} v${summary.version} already published, nothing to do`);
@@ -587,11 +619,44 @@ function publishCommand(args: string[]): void {
       summary.fullStoryBytes > 0
         ? `, full-story track ${(summary.fullStoryBytes / (1024 * 1024)).toFixed(2)} MB`
         : '';
+    const scores =
+      summary.scoreBytes > 0
+        ? `, story scores ${(summary.scoreBytes / (1024 * 1024)).toFixed(2)} MB`
+        : '';
     if (summary.stitchOnlyNote) console.log(summary.stitchOnlyNote);
     console.log(
-      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB${scene}${full}) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
+      `✓ published ${summary.packId} v${summary.version} (${summary.files.length} files, ${mb} MB${scene}${full}${scores}) — commit ${summary.committed}${summary.pushed ? ', pushed' : ' (not pushed; use --push)'}`,
     );
     for (const f of summary.files) console.log(`  ${f.path} (${f.bytes} bytes) ${f.sha256}`);
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e), 1);
+  }
+}
+
+function scoreCommand(args: string[]): void {
+  let packDir: string | undefined;
+  let sheet: string | undefined;
+  let stories: string[] | undefined;
+  let dryRun = false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    const next = (): string => {
+      const v = args[++i];
+      if (v === undefined) fail(`missing value for ${arg}\n\n${USAGE}`, 2);
+      return v;
+    };
+    if (arg === '--sheet') sheet = next();
+    else if (arg === '--stories') stories = next().split(',').filter(Boolean);
+    else if (arg === '--dry-run') dryRun = true;
+    else if (arg.startsWith('-')) fail(`unknown option "${arg}"\n\n${USAGE}`, 2);
+    else if (packDir === undefined) packDir = arg;
+    else fail(`score takes exactly one <pack-dir>\n\n${USAGE}`, 2);
+  }
+  if (packDir === undefined) fail(`score needs a <pack-dir>\n\n${USAGE}`, 2);
+  if (sheet === undefined) fail(`score needs --sheet <score-sheet.json>\n\n${USAGE}`, 2);
+  try {
+    const result = runScore(packDir, sheet, { dryRun, ...(stories ? { stories } : {}) });
+    console.log(formatScoreTable(result));
   } catch (e) {
     fail(e instanceof Error ? e.message : String(e), 1);
   }
@@ -751,6 +816,9 @@ async function main(): Promise<void> {
       break;
     case 'stitch':
       stitchCommand(rest);
+      break;
+    case 'score':
+      scoreCommand(rest);
       break;
     case 'stamp-audit':
       stampAuditCommand(rest);
