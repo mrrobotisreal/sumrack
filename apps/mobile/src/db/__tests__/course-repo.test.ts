@@ -446,3 +446,21 @@ describe('the deck level rule for course cards (decision 9)', () => {
     expect(a2.map((c) => c.itemKey)).not.toContain(`${PACK_ID}:course:u1-c01`);
   });
 });
+
+describe('the A2 building fixtures (T116): one pack = one floor, its own building', () => {
+  it('imports both A2 floors next to A1; listFloors keeps the buildings apart', async () => {
+    const f00 = (await import('@sumrak/schema/fixtures/packs/a2-hotel-fixture-f00/pack.json'))
+      .default as unknown as Pack;
+    const f01 = (await import('@sumrak/schema/fixtures/packs/a2-hotel-fixture-f01/pack.json'))
+      .default as unknown as Pack;
+    await importPack(db, f00);
+    await importPack(db, f01);
+    const a2 = await repos.course.listFloors({ ladder: 'torfl', level: 'A2' });
+    expect(a2.map((f) => [f.packId, f.floor, f.course.floorExam !== undefined])).toEqual([
+      ['a2-hotel-fixture-f00', 0, false],
+      ['a2-hotel-fixture-f01', 1, true],
+    ]);
+    const a1 = await repos.course.listFloors({ ladder: 'torfl', level: 'A1' });
+    expect(a1.map((f) => f.packId)).toEqual([PACK_ID]);
+  });
+});

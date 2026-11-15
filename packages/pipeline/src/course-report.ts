@@ -54,6 +54,7 @@ export function renderCourseReport(pack: Pack): string {
 
   out.push(
     `Course report — ${pack.id} (${course.ladder} ${course.level}, floor ${course.floor} «${course.title.ru}»)`,
+    `  building ${course.level} · floor ${course.floor} · Номер 13 = the ${course.level} gate mock`,
     `  ${plural(course.units.length, 'unit', 'units')} · ${plural(items.length, 'item', 'items')} · gate ${course.gate.passPercent}% / extern ${course.gate.extern.passPercent}%`,
   );
 

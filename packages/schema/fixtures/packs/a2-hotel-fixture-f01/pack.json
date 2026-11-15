@@ -1,0 +1,754 @@
+{
+  "id": "a2-hotel-fixture-f01",
+  "version": 1,
+  "type": "course",
+  "title": {
+    "ru": "Отель «Сумрак»: корпус А2, тестовый этаж 1",
+    "en": "Hotel Sumrak: A2 building, fixture floor 1"
+  },
+  "level": "A2",
+  "tags": [
+    "torfl",
+    "torfl:fixture",
+    "hotel"
+  ],
+  "stories": [
+    {
+      "id": "floor-exam",
+      "title": {
+        "ru": "Экзамен этажа",
+        "en": "Floor exam"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "h2f01fx-s001",
+          "ru": "В городе много старых домов.",
+          "en": "There are many old houses in the town.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "городе",
+              "lemma": "город",
+              "translation": "town",
+              "pos": "noun",
+              "grammar": "m.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "много",
+              "lemma": "много",
+              "translation": "many",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "старых",
+              "lemma": "старый",
+              "translation": "old",
+              "pos": "adj",
+              "grammar": "pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "домов",
+              "lemma": "дом",
+              "translation": "house",
+              "pos": "noun",
+              "grammar": "m.pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "h2f01fx-s002",
+          "ru": "У моих сестёр нет детей.",
+          "en": "My sisters have no children.",
+          "tokens": [
+            {
+              "text": "У",
+              "lemma": "у",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "моих",
+              "lemma": "мой",
+              "translation": "my",
+              "pos": "pron",
+              "grammar": "pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "сестёр",
+              "lemma": "сестра",
+              "translation": "sister",
+              "pos": "noun",
+              "grammar": "f.pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "нет",
+              "lemma": "нет",
+              "translation": "no",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "детей",
+              "lemma": "дети",
+              "translation": "children",
+              "pos": "noun",
+              "grammar": "pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    },
+    {
+      "id": "u1-ex",
+      "title": {
+        "ru": "Родительный множественного",
+        "en": "Genitive plural"
+      },
+      "level": "A2",
+      "sentences": [
+        {
+          "id": "h2f01u1-s001",
+          "ru": "В группе пять студентов.",
+          "en": "There are five students in the group.",
+          "tokens": [
+            {
+              "text": "В",
+              "lemma": "в",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "группе",
+              "lemma": "группа",
+              "translation": "group",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "пять",
+              "lemma": "пять",
+              "translation": "five",
+              "pos": "num",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "студентов",
+              "lemma": "студент",
+              "translation": "student",
+              "pos": "noun",
+              "grammar": "m.pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "h2f01u1-s002",
+          "ru": "У меня нет денег.",
+          "en": "I have no money.",
+          "tokens": [
+            {
+              "text": "У",
+              "lemma": "у",
+              "translation": "at",
+              "pos": "prep",
+              "grammar": "+ gen.",
+              "level": "A1"
+            },
+            {
+              "text": "меня",
+              "lemma": "я",
+              "translation": "me",
+              "pos": "pron",
+              "grammar": "gen.",
+              "level": "A1"
+            },
+            {
+              "text": "нет",
+              "lemma": "нет",
+              "translation": "no",
+              "pos": "part",
+              "level": "A1"
+            },
+            {
+              "text": "денег",
+              "lemma": "деньги",
+              "translation": "money",
+              "pos": "noun",
+              "grammar": "pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "h2f01u1-s003",
+          "ru": "На улице много людей.",
+          "en": "There are a lot of people in the street.",
+          "tokens": [
+            {
+              "text": "На",
+              "lemma": "на",
+              "translation": "in",
+              "pos": "prep",
+              "grammar": "+ prep.",
+              "level": "A1"
+            },
+            {
+              "text": "улице",
+              "lemma": "улица",
+              "translation": "street",
+              "pos": "noun",
+              "grammar": "f.sg. prep.",
+              "level": "A1"
+            },
+            {
+              "text": "много",
+              "lemma": "много",
+              "translation": "a lot",
+              "pos": "adv",
+              "level": "A1"
+            },
+            {
+              "text": "людей",
+              "lemma": "люди",
+              "translation": "people",
+              "pos": "noun",
+              "grammar": "pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        },
+        {
+          "id": "h2f01u1-s004",
+          "ru": "Я написал три письма и пять писем.",
+          "en": "I wrote three letters and five letters.",
+          "tokens": [
+            {
+              "text": "Я",
+              "lemma": "я",
+              "translation": "I",
+              "pos": "pron",
+              "grammar": "nom.",
+              "level": "A1"
+            },
+            {
+              "text": "написал",
+              "lemma": "написать",
+              "translation": "wrote",
+              "pos": "verb",
+              "grammar": "m.sg. past pf.",
+              "level": "A1"
+            },
+            {
+              "text": "три",
+              "lemma": "три",
+              "translation": "three",
+              "pos": "num",
+              "grammar": "acc.",
+              "level": "A1"
+            },
+            {
+              "text": "письма",
+              "lemma": "письмо",
+              "translation": "letter",
+              "pos": "noun",
+              "grammar": "n.sg. gen.",
+              "level": "A1"
+            },
+            {
+              "text": "и",
+              "lemma": "и",
+              "translation": "and",
+              "pos": "conj",
+              "level": "A1"
+            },
+            {
+              "text": "пять",
+              "lemma": "пять",
+              "translation": "five",
+              "pos": "num",
+              "grammar": "acc.",
+              "level": "A1"
+            },
+            {
+              "text": "писем",
+              "lemma": "письмо",
+              "translation": "letter",
+              "pos": "noun",
+              "grammar": "n.pl. gen.",
+              "level": "A1"
+            },
+            {
+              "text": ".",
+              "isPunct": true
+            }
+          ]
+        }
+      ],
+      "audio": []
+    }
+  ],
+  "course": {
+    "ladder": "torfl",
+    "level": "A2",
+    "floor": 1,
+    "title": {
+      "ru": "Много и многие",
+      "en": "Many and much"
+    },
+    "subtitle": {
+      "ru": "Множественное число во всех падежах",
+      "en": "The plural in every case"
+    },
+    "gate": {
+      "passPercent": 80,
+      "extern": {
+        "passPercent": 90
+      }
+    },
+    "practice": [
+      {
+        "packId": "a2-torfl-lexgram-001",
+        "examId": "lg-case-plural"
+      }
+    ],
+    "units": [
+      {
+        "id": "u1",
+        "title": {
+          "ru": "Родительный множественного",
+          "en": "Genitive plural"
+        },
+        "summary": {
+          "en": "After five, много, нет and сколько: -ов, -ей or a zero ending."
+        },
+        "cards": [
+          {
+            "id": "h2f01-u1-c01",
+            "kind": "explain",
+            "title": {
+              "ru": "Три окончания",
+              "en": "Three endings"
+            },
+            "body": "Корпус А1, этаж 6 taught the genitive singular after нет. At A2 the same triggers take the PLURAL: пять, много, нет, сколько.\nMasculine nouns take -ов (студентов, домов); nouns in a soft sign or a hushing consonant take -ей (людей, детей).\nFeminine and neuter nouns usually drop their ending (писем, сестёр), often with a fleeting vowel.\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s001"
+                },
+                "highlight": [
+                  "студентов"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s002"
+                },
+                "highlight": [
+                  "денег"
+                ]
+              },
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s003"
+                },
+                "highlight": [
+                  "людей"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "h2f01-u1-c02",
+            "kind": "check",
+            "items": [
+              "u1-k01"
+            ]
+          },
+          {
+            "id": "h2f01-u1-c03",
+            "kind": "traps",
+            "title": {
+              "ru": "Ловушки",
+              "en": "Traps"
+            },
+            "pairs": [
+              {
+                "wrong": "В группе пять студенты.",
+                "right": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s001"
+                },
+                "reason": "after пять the noun is genitive plural: студентов"
+              },
+              {
+                "wrong": "На улице много люди.",
+                "right": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s003"
+                },
+                "reason": "after много the noun is genitive plural: людей"
+              }
+            ]
+          },
+          {
+            "id": "h2f01-u1-c04",
+            "kind": "edge",
+            "title": {
+              "ru": "Тонкости",
+              "en": "Edge cases"
+            },
+            "body": "Two, three and four take the genitive SINGULAR (три письма), five and up the genitive plural (пять писем).\nThe fleeting vowel appears in the zero ending: письмо → писем, сестра → сестёр, деньги → денег.\n",
+            "examples": [
+              {
+                "sentenceRef": {
+                  "storyId": "u1-ex",
+                  "sentenceId": "h2f01u1-s004"
+                },
+                "highlight": [
+                  "письма",
+                  "писем"
+                ]
+              }
+            ]
+          }
+        ],
+        "exercises": {
+          "size": 2,
+          "pool": [
+            "u1-c01",
+            "u1-c02",
+            "u1-c03",
+            "u1-c04",
+            "u1-t01",
+            "u1-t02",
+            "u1-g01",
+            "u1-r01"
+          ]
+        }
+      }
+    ],
+    "floorExam": {
+      "size": 3,
+      "pool": [
+        "fe-c01",
+        "fe-c02",
+        "fe-c03",
+        "fe-t01",
+        "fe-g01",
+        "fe-r01"
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "u1-c01",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "В группе пять …",
+      "stemEn": "There are five … in the group.",
+      "options": [
+        "студентов",
+        "студенты",
+        "студента",
+        "студентам"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s001"
+      }
+    },
+    {
+      "id": "u1-c02",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "У меня нет …",
+      "stemEn": "I have no …",
+      "options": [
+        "денег",
+        "деньги",
+        "деньгов",
+        "деньгах"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s002"
+      }
+    },
+    {
+      "id": "u1-c03",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "На улице много …",
+      "stemEn": "There are a lot of … in the street.",
+      "options": [
+        "людей",
+        "люди",
+        "людях",
+        "человеков"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s003"
+      }
+    },
+    {
+      "id": "u1-c04",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "Я написал пять …",
+      "stemEn": "I wrote five …",
+      "options": [
+        "писем",
+        "письма",
+        "письмов",
+        "письмах"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s004"
+      }
+    },
+    {
+      "id": "u1-t01",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "typed",
+      "prompt": "В группе пять (студент).",
+      "accept": [
+        "студентов"
+      ],
+      "half": [
+        "студента"
+      ],
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s001"
+      }
+    },
+    {
+      "id": "u1-t02",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "typed",
+      "prompt": "На улице много (люди).",
+      "accept": [
+        "людей"
+      ],
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s003"
+      }
+    },
+    {
+      "id": "u1-g01",
+      "topic": "case-plural",
+      "kind": "trigger",
+      "sentence": "У меня нет денег.",
+      "tokens": [
+        "У",
+        "меня",
+        "нет",
+        "денег"
+      ],
+      "answer": 2,
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s002"
+      }
+    },
+    {
+      "id": "u1-r01",
+      "topic": "case-plural",
+      "kind": "transform",
+      "prompt": "Это письма. → Я написал пять …",
+      "accept": [
+        "писем"
+      ],
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s004"
+      }
+    },
+    {
+      "id": "u1-k01",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "Сколько у тебя …?",
+      "stemEn": "How much … do you have?",
+      "options": [
+        "денег",
+        "деньги",
+        "деньгами",
+        "деньгам"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "u1-ex",
+        "sentenceId": "h2f01u1-s002"
+      }
+    },
+    {
+      "id": "fe-c01",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "В городе много старых …",
+      "stemEn": "There are many old … in the town.",
+      "options": [
+        "домов",
+        "дома",
+        "домах",
+        "домами"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s001"
+      }
+    },
+    {
+      "id": "fe-c02",
+      "topic": "case-plural",
+      "explain": "Trigger: много + a genitive plural noun. Rule: an adjective agrees with its noun, so after много it takes the genitive plural -ых/-их. Why each wrong option is wrong: старые is nominative, старым dative and старыми instrumental, none of which agrees with домов.",
+      "kind": "choice",
+      "stem": "В городе много … домов.",
+      "stemEn": "There are many … houses in the town.",
+      "options": [
+        "старых",
+        "старые",
+        "старым",
+        "старыми"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s001"
+      }
+    },
+    {
+      "id": "fe-c03",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "choice",
+      "stem": "У моих сестёр нет …",
+      "stemEn": "My sisters have no …",
+      "options": [
+        "детей",
+        "дети",
+        "детях",
+        "детьми"
+      ],
+      "answer": 0,
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s002"
+      }
+    },
+    {
+      "id": "fe-t01",
+      "topic": "case-plural",
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "kind": "typed",
+      "prompt": "У моих (сестра) нет детей.",
+      "accept": [
+        "сестёр"
+      ],
+      "half": [
+        "сестры"
+      ],
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s002"
+      }
+    },
+    {
+      "id": "fe-g01",
+      "topic": "case-plural",
+      "kind": "trigger",
+      "sentence": "В городе много старых домов.",
+      "tokens": [
+        "В",
+        "городе",
+        "много",
+        "старых",
+        "домов"
+      ],
+      "answer": 2,
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s001"
+      }
+    },
+    {
+      "id": "fe-r01",
+      "topic": "case-plural",
+      "kind": "transform",
+      "prompt": "Это дети. → У моих сестёр нет …",
+      "accept": [
+        "детей"
+      ],
+      "explain": "Trigger: a number from five up, много, нет or сколько. Rule: these words take the genitive plural, and the genitive plural ending depends on the noun: -ов/-ев, -ей, or a zero ending. Why each wrong option is wrong: the other forms are the nominative plural or the genitive singular, which do not follow this trigger.",
+      "voiced": {
+        "storyId": "floor-exam",
+        "sentenceId": "h2f01fx-s002"
+      }
+    }
+  ]
+}

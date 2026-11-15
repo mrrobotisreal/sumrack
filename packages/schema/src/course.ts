@@ -261,7 +261,7 @@ export const CourseSchema = z.strictObject({
   /** The course family. `torfl` today; plain stable id, so A2+ needs no schema change (D20). */
   ladder: StableIdSchema,
   level: CefrLevelSchema,
-  /** 0 = Вестибюль; 13 is never a course floor (Номер 13 is the mock `a1-torfl-mock-004`). */
+  /** 0 = Вестибюль; 13 is never a course floor (Номер 13 is the building's gate mock, e.g. `a1-torfl-mock-004`). */
   floor: z.number().int().min(0).max(99),
   title: LocalizedTextSchema,
   subtitle: LocalizedTextSchema.optional(),
@@ -281,6 +281,8 @@ type IssueFn = (path: (string | number)[], message: string) => void;
 
 /** The story/sentence view the course invariants need — structural, so pack.ts can pass its own Pack. */
 export interface CourseInvariantPack {
+  /** `pack.level` — must equal `course.level` (T116, HOTEL_PATH_A2 H9). */
+  level: Course['level'];
   course: Course;
   items: readonly CourseItem[];
   stories: readonly { id: string; sentences: readonly { id: string }[] }[];
@@ -311,7 +313,14 @@ export function checkCourseInvariants(pack: CourseInvariantPack, issue: IssueFn)
   if (course.floor === 13) {
     issue(
       ['course', 'floor'],
-      'floor 13 is never a course floor — Номер 13 is the mock a1-torfl-mock-004',
+      "floor 13 is never a course floor — Номер 13 is the building's gate mock (a1-torfl-mock-004, a2-torfl-mock-004, …)",
+    );
+  }
+  // H9 (T116): a course pack sits in exactly one building — its pack level IS the course level.
+  if (pack.level !== course.level) {
+    issue(
+      ['course', 'level'],
+      `course.level ${course.level} must equal pack.level ${pack.level} (one building per course pack)`,
     );
   }
 

@@ -771,7 +771,7 @@ export const PackSchema = z
     // its items are present, so one missing section reports once, not cascading.
     if (pack.type === 'course' && pack.course && pack.items) {
       checkCourseInvariants(
-        { course: pack.course, items: pack.items, stories: pack.stories },
+        { level: pack.level, course: pack.course, items: pack.items, stories: pack.stories },
         (path, message) => ctx.addIssue({ code: 'custom', path, message }),
       );
     }

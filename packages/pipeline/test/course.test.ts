@@ -139,6 +139,7 @@ describe('course validate report', () => {
   it('prints per-unit cards, voiced examples, pools, the floor exam and the census', () => {
     const report = renderCourseReport(fixturePack());
     expect(report).toContain('Course report — a1-hotel-fixture (torfl A1, floor 3');
+    expect(report).toContain('building A1 · floor 3 · Номер 13 = the A1 gate mock');
     expect(report).toContain('u1 «в + где?»');
     expect(report).toContain('cards explain 2 · check 2 · traps 1 · edge 1 · library 1');
     expect(report).toContain('pool 10 (choice 4 / typed 2 / trigger 2 / transform 2)');
@@ -266,5 +267,79 @@ describe('course manifest checks (decision 5)', () => {
     );
     expect(report.broken).toBeGreaterThan(0);
     expect(report.lines.join('\n')).toContain('text is not byte-identical');
+  });
+
+  it('warns (never fails) on a duplicate (ladder, level, floor) among published course packs (T116 H9)', () => {
+    const fx = fixturePack();
+    const twin = { ...structuredClone(fx), id: 'a1-hotel-f03' } as Pack;
+    const otherLevel = {
+      ...structuredClone(fx),
+      id: 'a2-hotel-f03',
+      level: 'A2',
+      course: { ...structuredClone(fx.course!), level: 'A2' },
+    } as Pack;
+    dir = mkdtempSync(join(tmpdir(), 'hotel-manifest-'));
+    const manifestPath = join(dir, 'manifest.json');
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        packs: [
+          { id: 'a1-hotel-f03', type: 'course', level: 'A1' },
+          { id: 'a2-hotel-f03', type: 'course', level: 'A2' },
+        ],
+      }),
+    );
+    const report = courseManifestIssues(fx, manifestPath, (id) =>
+      id === 'a1-hotel-f03' ? twin : id === 'a2-hotel-f03' ? otherLevel : undefined,
+    );
+    const text = report.lines.join('\n');
+    expect(text).toContain('⚠ duplicate floor: a1-hotel-f03 is also torfl A1 floor 3');
+    expect(text).not.toContain('a2-hotel-f03 is also');
+  });
+});
+
+describe('A2 building fixtures (T116): one course pack = one floor', () => {
+  const a2 = (id: string) => {
+    const dirOf = join(pkgDir, 'fixtures', id);
+    const files = readdirSync(dirOf)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((f) => read(join(dirOf, f)));
+    const committed = JSON.parse(
+      readFileSync(join(pkgDir, '..', 'schema', 'fixtures', 'packs', id, 'pack.json'), 'utf8'),
+    );
+    return { files, committed };
+  };
+
+  it('a2-hotel-fixture-f00 (floor 0, no exam) round-trips to the committed pack.json', () => {
+    const { files, committed } = a2('a2-hotel-fixture-f00');
+    const pack = annotateDrafts(files);
+    expect(pack).toEqual(committed);
+    expect(pack.level).toBe('A2');
+    expect(pack.course).toMatchObject({ ladder: 'torfl', level: 'A2', floor: 0 });
+    expect(pack.course!.floorExam).toBeUndefined();
+  });
+
+  it('a2-hotel-fixture-f01 (floor 1, with a floor exam) round-trips to the committed pack.json', () => {
+    const { files, committed } = a2('a2-hotel-fixture-f01');
+    const pack = annotateDrafts(files);
+    expect(pack).toEqual(committed);
+    expect(pack.course).toMatchObject({ ladder: 'torfl', level: 'A2', floor: 1 });
+    expect(pack.course!.floorExam!.pool.length).toBeGreaterThanOrEqual(
+      2 * pack.course!.floorExam!.size,
+    );
+    expect(renderCourseReport(parsePack(pack))).toContain(
+      'building A2 · floor 1 · Номер 13 = the A2 gate mock',
+    );
+  });
+
+  it('every A2 fixture sentence id carries the h2fNN prefix, never the A1 htfNN one', () => {
+    for (const id of ['a2-hotel-fixture-f00', 'a2-hotel-fixture-f01']) {
+      const { committed } = a2(id);
+      for (const story of committed.stories) {
+        for (const s of story.sentences) expect(s.id).toMatch(/^h2f\d{2}(u\d+|fx)-s\d{3}$/);
+      }
+    }
   });
 });

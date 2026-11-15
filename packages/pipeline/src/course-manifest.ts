@@ -16,6 +16,8 @@ import type { Pack } from '@sumrak/schema';
 
 interface ManifestPack {
   id: string;
+  type?: string;
+  level?: string;
 }
 
 /** Where `validate` looks for the live manifest when no `--manifest` is given. */
@@ -96,6 +98,18 @@ export function courseManifestIssues(
           bad(`${where} — text is not byte-identical to the published sentence`);
         }
       }
+    }
+  }
+
+  // H9 (T116): two published course packs on one (ladder, level, floor) — the app shows one
+  // (highest version, then pack id) and warns; the validator warns here, never fails.
+  for (const other of manifest.packs) {
+    if (other.id === pack.id || other.type !== 'course' || other.level !== course.level) continue;
+    const src = packJsonOf(other.id);
+    if (src?.course?.ladder === course.ladder && src.course.floor === course.floor) {
+      lines.push(
+        `  ⚠ duplicate floor: ${other.id} is also ${course.ladder} ${course.level} floor ${course.floor}`,
+      );
     }
   }
 

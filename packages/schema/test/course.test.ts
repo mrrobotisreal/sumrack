@@ -399,6 +399,24 @@ describe('course pack — invariant f (gate values fixed)', () => {
     const pack = clone(baseCoursePack());
     pack.course.floor = 13;
     expectIssue(pack, 'course.floor', 'floor 13 is never a course floor');
+    // T116: the message is level-neutral (every building has its own Номер 13).
+    expectIssue(pack, 'course.floor', "the building's gate mock");
+  });
+});
+
+describe('course pack — one building per pack (T116, HOTEL_PATH_A2 H9)', () => {
+  it('pack.level !== course.level is rejected', () => {
+    const pack = clone(baseCoursePack());
+    pack.course.level = 'A2';
+    expectIssue(pack, 'course.level', 'must equal pack.level A1');
+  });
+
+  it('an A2 pack with an A2 course is valid', () => {
+    const pack = clone(baseCoursePack());
+    pack.id = 'a2-hotel-f03';
+    pack.level = 'A2';
+    pack.course.level = 'A2';
+    expect(safeParsePack(pack).success).toBe(true);
   });
 });
 

@@ -1281,15 +1281,16 @@ Items are top-level, each with a unique `id` and a `topic` (a §3.4 slug, as for
 - **c.** `exercises.pool.length ≥ size + 6`; `floorExam.pool.length ≥ 2 × size`; `floorExam` is absent **only** on floor 0.
 - **d.** No item in both a unit pool and the floor-exam pool; a `check` item may not appear in **any** scored pool.
 - **e.** Every non-floor-0 unit has a `traps` card and an `edge` card.
-- **f.** `gate.passPercent` is 80, `gate.extern.passPercent` is 90, and floor 13 is refused.
+- **f.** `gate.passPercent` is 80, `gate.extern.passPercent` is 90, and floor 13 is refused (Номер 13 is the building's gate mock).
+- **g.** `course.level` equals `pack.level` (T116 — a course pack sits in exactly one building).
 
 Plus the shape rules: `explain` ≥ 120 characters on every scored item; a table row as long as its header; `answer` in range (`choice` options, `trigger` tokens); `quotes` 1–8 per library card; `check` 1–4 items.
 
-Live-manifest checks are **not** schema: `validate --manifest <manifest.json>` (default `../sumrak-content/manifest.json` when present; otherwise a warning line) checks every `practice` ref exists in the manifest with that exam id, and every library quote's `packId/storyId/sentenceId` exists with a **byte-identical** `text`. A broken live ref is printed as `✗` but never changes the exit code.
+Live-manifest checks are **not** schema: `validate --manifest <manifest.json>` (default `../sumrak-content/manifest.json` when present; otherwise a warning line) checks every `practice` ref exists in the manifest with that exam id, and every library quote's `packId/storyId/sentenceId` exists with a **byte-identical** `text`. A broken live ref is printed as `✗` but never changes the exit code. A published course pack on the same `(ladder, level, floor)` prints `⚠ duplicate floor: …` (the app shows the highest version, then the pack id that sorts first, and warns).
 
 ### The course report
 
-`validate` prints, after the other reports, per unit:
+`validate` prints, after the other reports, the header line and `building <level> · floor N · Номер 13 = the <level> gate mock`, then per unit:
 
 - `cards explain N · check N · traps N · edge N · library N`
 - `voiced examples N` — the explain and edge examples
@@ -1307,6 +1308,16 @@ Then the floor exam (`pool N / size N`), the **binary-option** line (warning whe
 6. **`explain` is long on purpose.** Under 120 characters is refused, because the learner needs the trigger, the rule and the reason each wrong option fails, not just the answer.
 7. **Quote YAML strings** with `:`, `#`, `«»` or a leading `-`/`[`/`{` — single quotes are safest, and an inner single quote is doubled.
 8. **The body is ignored** — anything below the closing `---` never reaches the pack.
+
+### A2 building (M39, T116 — `docs/design/HOTEL_PATH_A2.md` §1 H9)
+
+The A2 building is the same schema, the same panel (0, 1–12, 14, 15) and the same rules; only the ids and the level change:
+
+- **Pack ids** `a2-hotel-f00 … a2-hotel-f12, a2-hotel-f14, a2-hotel-f15`; `pack.level: A2` **and** `course.level: A2` (invariant g refuses a mismatch). One pack is one floor.
+- **Sentence ids** carry the **`h2fNN`** prefix — `h2fNNuK-sNNN` in a unit story, `h2fNNfx-sNNN` in the `floor-exam` story — and card ids `h2fNN-uK-cNN`. Never the A1 `htfNN` prefix.
+- **Practice refs** point at the A2 drills: `lg-*` → `a2-torfl-lexgram-001`, `rd-*` → `a2-torfl-reading-001`, `ls-*` → `a2-torfl-listening-001`, `sp-*` → `a2-torfl-speaking-001`.
+- **Номер 13** is `a2-torfl-mock-004` (exam `a2-mock-04`, tag `torfl:gate`); the app hides it from the ТРКИ-А2 hub until its room is attempted. Its debrief maps item topics to A2 floors (design §4.2).
+- **Fixtures:** `a2-hotel-fixture-f00` (floor 0, no exam) and `a2-hotel-fixture-f01` (floor 1, with a floor exam), drafts in `packages/pipeline/fixtures/<id>/`, round-tripped by `test/course.test.ts`. Dev import only, like `a1-hotel-fixture`.
 
 ## Full-story track (`pipeline stitch` — M26, T94)
 
