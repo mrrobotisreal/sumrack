@@ -557,6 +557,9 @@ export function useNarration({
       // torn-down player and stops there.
       playerRef.current = null;
       statusSubRef.current = null;
+      // A re-run of the effects on the same instance must load a fresh player.
+      prevTrackRef.current = null;
+      pendingSwitchRef.current = null;
       teardownNarration(player, {
         subscription,
         lockScreenActive: lockScreenActiveRef.current,
