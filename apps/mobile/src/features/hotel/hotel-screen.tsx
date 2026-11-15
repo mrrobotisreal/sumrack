@@ -43,6 +43,8 @@ import type { PracticeRow } from './practice-rows';
 
 /** How long the indicator shows the building («А2») with the doors shut (H2). */
 const SWITCH_HOLD_MS = 900;
+/** How long the new building's indicator shows the level before its doors open. */
+const ARRIVE_HOLD_MS = 350;
 
 /**
  * T92: the Путь tab IS the hotel (decision 1). The ladder header and the lift;
@@ -63,7 +65,9 @@ export function HotelScreen() {
   const installedBuildings = useInstalledBuildings();
   const { tokens } = useAppTheme();
   const reduced = useReduceMotion();
-  const [switching, setSwitching] = React.useState<string | null>(null);
+  // The building being switched to (H2): doors shut, the indicator shows its level, until it has arrived.
+  const [switchTo, setSwitchTo] = React.useState<HotelLevel | null>(null);
+  const switching = switchTo !== null ? hotelProfileFor(switchTo).shortLabel : null;
   const [buildingToast, setBuildingToast] = React.useState(false);
   // A manual switch ends the deep link's say over the floor.
   const [deepDone, setDeepDone] = React.useState(false);
@@ -92,19 +96,18 @@ export function HotelScreen() {
   }, [deepLevel, building]);
 
   const pickBuilding = (to: HotelLevel) => {
-    if (to === building.level || switching !== null) return;
+    if (to === building.level || switchTo !== null) return;
     trackHotel('hotel_building_switched', { from: building.level, to, via: 'ladder', level: to });
     setDeepDone(true);
-    // Doors close → the indicator shows the level → the doors open on the new building.
-    setSwitching(hotelProfileFor(to).shortLabel);
+    // Doors close → the indicator shows the level → the new building mounts with its doors
+    // shut and opens them once it is ready (`onArrived`).
+    setSwitchTo(to);
     switchTimer.current = setTimeout(
-      () => {
-        void building.save(to);
-        setSwitching(null);
-      },
+      () => void building.save(to),
       reduced ? SWITCH_HOLD_MS / 2 : SWITCH_HOLD_MS,
     );
   };
+  const onArrived = React.useCallback(() => setSwitchTo(null), []);
 
   if (!building.loaded) {
     return (
@@ -128,6 +131,8 @@ export function HotelScreen() {
       level={building.level}
       deepFloor={deepFloorHere}
       switching={switching}
+      arriving={switchTo !== null && switchTo === building.level}
+      onArrived={onArrived}
       header={
         <BuildingHeader
           level={building.level}
@@ -219,11 +224,16 @@ function BuildingView({
   level,
   deepFloor,
   switching,
+  arriving,
+  onArrived,
   header,
 }: {
   level: HotelLevel;
   deepFloor: number | null;
   switching: string | null;
+  /** This building is the switch target and has mounted with its doors shut. */
+  arriving: boolean;
+  onArrived: () => void;
   header: React.ReactNode;
 }) {
   const { tokens } = useAppTheme();
@@ -288,7 +298,15 @@ function BuildingView({
   const examCooldown = state?.cooldownUntil ? cooldownLeft(state.cooldownUntil, hotel.now) : null;
   const examCooldownMinutes = examCooldown?.minutesLeft ?? null;
 
-  if (floors.isPending || progress.isPending || !lastFloor.loaded || floor === null) {
+  const ready = !(floors.isPending || progress.isPending || !lastFloor.loaded || floor === null);
+  // H2: once the switched-to building is on screen, hold the level a beat, then open the doors.
+  React.useEffect(() => {
+    if (!arriving || !ready) return;
+    const id = setTimeout(onArrived, ARRIVE_HOLD_MS);
+    return () => clearTimeout(id);
+  }, [arriving, ready, onArrived]);
+
+  if (!ready) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />

@@ -133,7 +133,7 @@ export function Lift({
   const [toast, setToast] = React.useState<string | null>(null);
 
   // Taps are ignored mid-ride and mid-drop.
-  const busy = React.useRef(false);
+  const busy = React.useRef(switching !== null);
   const timers = React.useRef(new Set<ReturnType<typeof setTimeout>>());
   const sfxRef = React.useRef<LiftSfx | null>(null);
   const onArriveRef = React.useRef(onArrive);
@@ -146,12 +146,13 @@ export function Lift({
   });
 
   // Motion lives on the UI thread (motion.ts worklets). The bag is built once.
-  const open = useSharedValue(1);
+  // A lift mounted mid building-switch (H2) starts shut (reduce-motion: faded out).
+  const open = useSharedValue(switching !== null && !reduced ? 0 : 1);
   const shakeX = useSharedValue(0);
   const shakeY = useSharedValue(0);
   const jolt = useSharedValue(0);
   const drift = useSharedValue(0);
-  const fade = useSharedValue(1);
+  const fade = useSharedValue(switching !== null && reduced ? 0 : 1);
   const [motion] = React.useState<LiftMotion>(() => ({ open, shakeX, shakeY, jolt, drift, fade }));
 
   /** Schedules a timer that is cleared on unmount. */
@@ -192,7 +193,7 @@ export function Lift({
   // T116 H2, the building switch: doors close (reduce-motion: a fade) while
   // `switching` is set, and open again (the ding) once the hotel clears it.
   const switchingNow = switching !== null;
-  const wasSwitching = React.useRef(false);
+  const wasSwitching = React.useRef(switchingNow);
   React.useEffect(() => {
     if (switchingNow === wasSwitching.current) return;
     wasSwitching.current = switchingNow;
