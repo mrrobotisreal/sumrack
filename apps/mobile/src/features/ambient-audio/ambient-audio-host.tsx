@@ -19,8 +19,17 @@ export function AmbientAudioHost({ ready }: { ready: boolean }) {
     let foreground = AppState.currentState === 'active';
     let previousTarget = '';
     const controller = createAmbientController(
-      // Background narration owns its own policy. Do not change that global flag.
-      () => setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'doNotMix' }),
+      // ISS-006 F3: expo-audio's mode is ONE global, last writer wins, and an
+      // omitted `shouldPlayInBackground` is written as false — which makes the
+      // native module pause EVERY player (the narration too) on Home. Pass the
+      // same `true` the reader and the listen player set; this player still goes
+      // quiet in the background through the policy's `foreground` gate (AppState below).
+      () =>
+        setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: 'doNotMix',
+          shouldPlayInBackground: true,
+        }),
       // T48: the ONE ambient player; the controller swaps its source per theme.
       (source) =>
         createAudioPlayer(source, {
