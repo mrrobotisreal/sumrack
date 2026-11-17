@@ -43,6 +43,7 @@ import {
   type LessonPositions,
   type SentenceRefKey,
 } from './lesson/lesson-model';
+import { writeSettingThrough } from './settings-write';
 
 /** A floor by its pack id (the lesson's and the runner's source of truth). */
 export function useCourseFloor(packId: string) {
@@ -217,15 +218,15 @@ export function useHotelBuilding() {
     queryFn: async () =>
       parseHotelBuilding(await repos.settings.get<unknown>(SETTING_KEYS.hotelBuilding)),
   });
+  // ISS-006: race-safe — a read already in flight cannot flip the building back.
   const save = React.useCallback(
-    async (level: HotelLevel) => {
-      qc.setQueryData(['hotel', 'building'], level);
-      try {
-        await repos.settings.set(SETTING_KEYS.hotelBuilding, level);
-      } catch {
-        // A failed write only loses the choice; the hotel still shows the building this visit.
-      }
-    },
+    (level: HotelLevel) =>
+      writeSettingThrough<HotelLevel>(
+        qc,
+        ['hotel', 'building'],
+        () => level,
+        (value) => repos.settings.set(SETTING_KEYS.hotelBuilding, value),
+      ),
     [qc],
   );
   return { level: query.data ?? HOTEL_LEVELS[0], loaded: query.isSuccess, save };
@@ -326,17 +327,15 @@ export function useLastFloor(level: HotelLevel) {
     queryFn: async () =>
       parseLastFloors(await repos.settings.get<unknown>(SETTING_KEYS.hotelLastFloor)),
   });
+  // ISS-006: race-safe (a stale re-read cannot undo the floor); a failed write only loses the resume floor.
   const save = React.useCallback(
-    async (floor: number, at: HotelLevel = level) => {
-      const current = qc.getQueryData<LastFloors>(['hotel', 'lastFloor']) ?? {};
-      const next: LastFloors = { ...current, [at]: floor };
-      qc.setQueryData(['hotel', 'lastFloor'], next);
-      try {
-        await repos.settings.set(SETTING_KEYS.hotelLastFloor, next);
-      } catch {
-        // A failed write only loses the resume floor; the lift still works.
-      }
-    },
+    (floor: number, at: HotelLevel = level) =>
+      writeSettingThrough<LastFloors>(
+        qc,
+        ['hotel', 'lastFloor'],
+        (current) => ({ ...(current ?? {}), [at]: floor }),
+        (value) => repos.settings.set(SETTING_KEYS.hotelLastFloor, value),
+      ),
     [qc, level],
   );
   const floors = query.data ?? {};

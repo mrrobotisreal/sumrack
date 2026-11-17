@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -10,7 +10,6 @@ import {
   isHotelLevel,
   type HotelLevel,
 } from '@/features/torfl/hotel-profile';
-import { levelFromParam } from '@/features/torfl/level-profile';
 import { useReduceMotion } from '@/store/motion-prefs';
 import { useAppTheme } from '@/theme/use-app-theme';
 
@@ -19,12 +18,18 @@ import {
   externMenu,
   highestUnlocked,
   panelFor,
-  parseLastFloor,
   startFloor,
   type FloorState,
 } from './hotel-model';
 import { cooldownLeft, gatePasses, markedFloors, passedFloorsOf } from './gate-model';
 import { trackHotel } from './hotel-analytics';
+import {
+  applyDeepLink,
+  arrivalOf,
+  deepLinkEventOf,
+  hotelDeepLinks,
+  liftFloorOf,
+} from './deep-link';
 import {
   floorInputOf,
   useHotelBuilding,
@@ -58,10 +63,16 @@ const ARRIVE_HOLD_MS = 350;
  * last floor. The choice persists (`hotel.building`); `hotel.lastFloor` is per
  * building. `?level=A2&floor=N` (a deep link) opens a building / floor and is
  * saved.
+ *
+ * ISS-006: that link is an EVENT (`deep-link.ts`): `app/hotel/index.tsx`
+ * stamps it with a one-time token, it is applied once (building + floor are
+ * written to `hotel.building` / `hotel.lastFloor`, only when they change), and
+ * from then on those two settings alone say what the lift shows.
  */
 export function HotelScreen() {
-  const params = useLocalSearchParams<{ floor?: string; level?: string }>();
+  const params = useLocalSearchParams<{ floor?: string; level?: string; nav?: string }>();
   const building = useHotelBuilding();
+  const lastFloors = useLastFloor(building.level);
   const installedBuildings = useInstalledBuildings();
   const { tokens } = useAppTheme();
   const reduced = useReduceMotion();
@@ -69,8 +80,6 @@ export function HotelScreen() {
   const [switchTo, setSwitchTo] = React.useState<HotelLevel | null>(null);
   const switching = switchTo !== null ? hotelProfileFor(switchTo).shortLabel : null;
   const [buildingToast, setBuildingToast] = React.useState(false);
-  // A manual switch ends the deep link's say over the floor.
-  const [deepDone, setDeepDone] = React.useState(false);
   const switchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(
     () => () => {
@@ -79,26 +88,36 @@ export function HotelScreen() {
     [],
   );
 
-  // The deep link's building is applied (and saved) once.
-  const deepLevel = params.level !== undefined ? levelFromParam(params.level) : null;
-  const appliedDeep = React.useRef(false);
+  // One navigation's link, applied once per token (a remount or a re-render never re-applies it).
+  const deepEvent = deepLinkEventOf(params);
+  const settingsLoaded = building.loaded && lastFloors.loaded;
+  const { level: currentLevel, save: saveBuilding } = building;
+  const { floors: savedFloors, save: saveFloor } = lastFloors;
+  const deepToken = deepEvent?.token ?? null;
+  // The token whose link has been applied (the lift waits for it, so a cold link never shows A1 first).
+  const [appliedToken, setAppliedToken] = React.useState<string | null>(null);
   React.useEffect(() => {
-    if (appliedDeep.current || !building.loaded || deepLevel === null) return;
-    appliedDeep.current = true;
-    if (!isHotelLevel(deepLevel) || deepLevel === building.level) return;
-    trackHotel('hotel_building_switched', {
-      from: building.level,
-      to: deepLevel,
-      via: 'deeplink',
-      level: deepLevel,
+    if (!settingsLoaded || deepToken === null) return;
+    let live = true;
+    const writes: Promise<void>[] = [];
+    applyDeepLink(hotelDeepLinks, deepEvent, currentLevel, {
+      savedFloor: (level) => savedFloors[level] ?? null,
+      saveFloor: (floor, level) => void writes.push(saveFloor(floor, level)),
+      saveBuilding: (level) => void writes.push(saveBuilding(level)),
     });
-    void building.save(deepLevel);
-  }, [deepLevel, building]);
+    void Promise.all(writes).then(() => {
+      if (live) setAppliedToken(deepToken);
+    });
+    return () => {
+      live = false;
+    };
+    // Keyed on the token alone: the event is the navigation, not the values it writes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoaded, deepToken]);
 
   const pickBuilding = (to: HotelLevel) => {
     if (to === building.level || switchTo !== null) return;
     trackHotel('hotel_building_switched', { from: building.level, to, via: 'ladder', level: to });
-    setDeepDone(true);
     // Doors close → the indicator shows the level → the new building mounts with its doors
     // shut and opens them once it is ready (`onArrived`).
     setSwitchTo(to);
@@ -109,7 +128,7 @@ export function HotelScreen() {
   };
   const onArrived = React.useCallback(() => setSwitchTo(null), []);
 
-  if (!building.loaded) {
+  if (!settingsLoaded || (deepToken !== null && appliedToken !== deepToken)) {
     return (
       <View className="flex-1 items-center justify-center bg-bg">
         <ActivityIndicator color={tokens.accent} />
@@ -118,18 +137,10 @@ export function HotelScreen() {
   }
   const lit = new Set<string>(installedBuildings.data ?? []);
   lit.add(building.level);
-  // `?floor=` belongs to the deep link's building (`?level=`, else the saved one), once.
-  const deepFloorHere =
-    !deepDone &&
-    params.floor !== undefined &&
-    (deepLevel === null || !isHotelLevel(deepLevel) || deepLevel === building.level)
-      ? parseLastFloor(Number(params.floor))
-      : null;
   return (
     <BuildingView
       key={building.level}
       level={building.level}
-      deepFloor={deepFloorHere}
       switching={switching}
       arriving={switchTo !== null && switchTo === building.level}
       onArrived={onArrived}
@@ -222,14 +233,12 @@ function BuildingHeader({
 /** One building's lift and lobby (remounted per building, so every local state starts fresh). */
 function BuildingView({
   level,
-  deepFloor,
   switching,
   arriving,
   onArrived,
   header,
 }: {
   level: HotelLevel;
-  deepFloor: number | null;
   switching: string | null;
   /** This building is the switch target and has mounted with its doors shut. */
   arriving: boolean;
@@ -244,8 +253,7 @@ function BuildingView({
   const lastFloor = useLastFloor(level);
   const lessonOpened = useLessonOpened();
   const gate = useLastGateDetail(level);
-  // The lift's floor: null until the saved/deep-linked start is known, then user-driven.
-  const [picked, setFloor] = React.useState<number | null>(null);
+  const focused = useIsFocused();
   const [toast, setToast] = React.useState(false);
   const [externMenuOpen, setExternMenuOpen] = React.useState(false);
   const [externTarget, setExternTarget] = React.useState<FloorState | null>(null);
@@ -259,24 +267,20 @@ function BuildingView({
     : basePanel;
   const top = highestUnlocked(states) ?? 0;
 
-  // The start floor is derived, not stored: the deep link wins, else the saved floor.
-  const start = startFloor(panel, deepFloor ?? (lastFloor.loaded ? lastFloor.lastFloor : null));
-  const floor = picked ?? (lastFloor.loaded ? start : null);
+  // ISS-006: the lift's floor is derived from `hotel.lastFloor` (a ride and a deep link both write
+  // it), and only once this building's floors have loaded — a pending floors query is the empty
+  // panel `[0]`, which used to show (and log) «floor 0» before the real panel arrived.
+  const start = startFloor(panel, lastFloor.lastFloor);
+  const floor = liftFloorOf({ settled: !floors.isPending && lastFloor.loaded, start });
 
-  // A deep link is saved once it is the floor shown; the tab then keeps it.
-  const savedDeep = React.useRef(false);
-  React.useEffect(() => {
-    if (deepFloor === null || savedDeep.current || !lastFloor.loaded) return;
-    savedDeep.current = true;
-    void lastFloor.save(start);
-  }, [deepFloor, lastFloor, start]);
-
+  // One `hotel_floor_entered` per arrival on a floor of this lift, from the focused hotel only.
   const enteredFor = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (floor === null || enteredFor.current === floor) return;
-    enteredFor.current = floor;
-    trackHotel('hotel_floor_entered', { floor, via: 'lift', level });
-  }, [floor, level]);
+    const arrived = arrivalOf(enteredFor.current, floor, focused);
+    if (arrived === null) return;
+    enteredFor.current = arrived;
+    trackHotel('hotel_floor_entered', { floor: arrived, via: 'lift', level });
+  }, [floor, level, focused]);
 
   // Debrief markers (T92d): the last Номер 13 debrief's floors, minus the ones already passed.
   const gateResults = gate.detail.data?.results ?? [];
@@ -346,10 +350,7 @@ function BuildingView({
         highestUnlocked={top}
         titleFor={titleFor}
         reveal13={hotel.reveal13}
-        onArrive={(n) => {
-          setFloor(n);
-          void lastFloor.save(n);
-        }}
+        onArrive={(n) => void lastFloor.save(n)}
         onBlockedUp={() => setToast(true)}
         onRide13={() => router.push(`/hotel/room-13?level=${level}` as never)}
         markers={markers}
